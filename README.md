@@ -1,0 +1,3 @@
+# GamesmanExperiment
+
+GamesmanClassic rewrite endeavor.
