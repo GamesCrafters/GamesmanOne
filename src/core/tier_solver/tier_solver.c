@@ -190,7 +190,7 @@ static bool Step1_1LoadNonCanonical(int child_index) {
     int64_t child_tier_size = GetTierSize(canonical_tier);
     bool success = true;
 #pragma omp parallel for
-    for (uint64_t position = 0; position < child_tier_size; ++position) {
+    for (int64_t position = 0; position < child_tier_size; ++position) {
         Value value = DbGetValue(position);
 
         // No need to convert hash if position does not need to be loaded.
