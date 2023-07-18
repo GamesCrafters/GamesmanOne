@@ -1,17 +1,19 @@
-#include "int64_array.h"
+#include "core/data_structures/int64_array.h"
 
+#include <assert.h>
+#include <malloc.h>  // free, realloc
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-inline void Int64ArrayInit(Int64Array *array) {
+void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
 }
 
 void Int64ArrayDestroy(Int64Array *array) {
-    if (array->array) free(array->array);
+    free(array->array);
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
@@ -30,7 +32,7 @@ bool Int64ArrayExpand(Int64Array *array) {
 bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
     // Expand array if necessary.
     if (array->size == array->capacity) {
-        if (!TierStackExpand(array)) {
+        if (!Int64ArrayExpand(array)) {
             return false;
         }
     }
@@ -39,21 +41,19 @@ bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
     return true;
 }
 
-inline void Int64ArrayPopBack(Int64Array *array) {
+void Int64ArrayPopBack(Int64Array *array) {
     assert(array->size > 0);
     --array->size;
 }
 
-inline int64_t Int64ArrayBack(Int64Array *array) {
+int64_t Int64ArrayBack(const Int64Array *array) {
     assert(array->array && array->size > 0);
-    return array->array[array->size];
+    return array->array[array->size - 1];
 }
 
-inline bool Int64ArrayEmpty(Int64Array *array) {
-    return array->size == 0;
-}
+bool Int64ArrayEmpty(const Int64Array *array) { return array->size == 0; }
 
-bool Int64ArrayContains(Int64Array *array, int64_t item) {
+bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     for (int64_t i = 0; i < array->size; ++i) {
         if (array->array[i] == item) return true;
     }

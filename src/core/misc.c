@@ -1,55 +1,119 @@
-#include "misc.h"
+#include "core/misc.h"
 
-#include <assert.h>  // assert
-#include <malloc.h>  // free
+#include <malloc.h>   // free
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>  // int64_t
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // exit
 
-#include "int64_array.h"
+#include "core/data_structures/int64_array.h"
+#include "core/data_structures/int64_hash_map.h"
+#include "core/data_structures/int64_queue.h"
 
-inline void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
-
-inline void PositionArrayDestroy(PositionArray *array) {
-    Int64ArrayDestroy(array);
+void NotReached(const char *message) {
+    fprintf(stderr,
+            "(FATAL) You entered a branch that is marked as NotReached. The "
+            "error message was %s\n",
+            message);
+    exit(1);
 }
 
-inline bool PositionArrayAppend(PositionArray *array, Position position) {
+void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
+
+void PositionArrayDestroy(PositionArray *array) { Int64ArrayDestroy(array); }
+
+bool PositionArrayAppend(PositionArray *array, Position position) {
     return Int64ArrayPushBack(array, position);
 }
 
-inline bool PositionArrayContains(PositionArray *array, Position position) {
+bool PositionArrayContains(PositionArray *array, Position position) {
     return Int64ArrayContains(array, position);
 }
 
-void MoveListDestroy(MoveList list) {
-    while (list != NULL) {
-        MoveListItem *next = list->next;
-        free(list);
-        list = next;
-    }
+void MoveArrayInit(MoveArray *array) { Int64ArrayInit(array); }
+
+void MoveArrayDestroy(MoveArray *array) { Int64ArrayDestroy(array); }
+
+bool MoveArrayAppend(MoveArray *array, Move move) {
+    return Int64ArrayPushBack(array, move);
 }
 
-inline void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
+void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
 
-inline void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
+void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
 
-inline bool TierArrayAppend(TierArray *array, Tier tier) {
+bool TierArrayAppend(TierArray *array, Tier tier) {
     return Int64ArrayPushBack(array, tier);
 }
 
-inline void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
+void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
 
-inline void TierStackDestroy(TierStack *stack) { Int64ArrayDestroy(stack); }
+void TierStackDestroy(TierStack *stack) { Int64ArrayDestroy(stack); }
 
-inline bool TierStackPush(TierStack *stack, Tier tier) {
+bool TierStackPush(TierStack *stack, Tier tier) {
     Int64ArrayPushBack(stack, tier);
 }
 
-inline void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
+void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
 
-inline Tier TierStackTop(TierStack *stack) { return Int64ArrayBack(stack); }
+Tier TierStackTop(const TierStack *stack) { return Int64ArrayBack(stack); }
 
-inline bool TierStackEmpty(TierStack *stack) { return Int64ArrayEmpty(stack); }
+bool TierStackEmpty(const TierStack *stack) { return Int64ArrayEmpty(stack); }
+
+void TierQueueInit(TierQueue *queue) { Int64QueueInit(queue); }
+
+void TierQueueDestroy(TierQueue *queue) { Int64QueueDestroy(queue); }
+
+bool TierQueueIsEmpty(const TierQueue *queue) {
+    return Int64QueueIsEmpty(queue);
+}
+
+int64_t TierQueueSize(const TierQueue *queue) { return Int64QueueSize(queue); }
+
+bool TierQueuePush(TierQueue *queue, Tier tier) {
+    return Int64QueuePush(queue, tier);
+}
+
+Tier TierQueuePop(TierQueue *queue) { return Int64QueuePop(queue); }
+
+void TierHashMapInit(TierHashMap *map, double max_load_factor) {
+    Int64HashMapInit(map, max_load_factor);
+}
+
+void TierHashMapDestroy(TierHashMap *map) { Int64HashMapDestroy(map); }
+
+TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key) {
+    return Int64HashMapGet(map, key);
+}
+
+bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value) {
+    return Int64HashMapSet(map, tier, value);
+}
+
+bool TierHashMapContains(TierHashMap *map, Tier tier) {
+    return Int64HashMapContains(map, tier);
+}
+
+void TierHashMapIteratorInit(TierHashMapIterator *it, TierHashMap *map) {
+    Int64HashMapIteratorInit(it, map);
+}
+
+Tier TierHashMapIteratorKey(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorKey(it);
+}
+
+int64_t TierHashMapIteratorValue(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorValue(it);
+}
+
+bool TierHashMapIteratorIsValid(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorIsValid(it);
+}
+
+bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
+                             int64_t *value) {
+    return Int64HashMapIteratorNext(iterator, tier, value);
+}
 
 bool IsPrime(int64_t n) {
     if (n <= 1) return false;
@@ -65,14 +129,14 @@ bool IsPrime(int64_t n) {
 
 int64_t PrevPrime(int64_t n) {
     if (n < 2) return 2;
-    while (!is_prime(n)) {
+    while (!IsPrime(n)) {
         --n;
     }
     return n;
 }
 
 int64_t NextPrime(int64_t n) {
-    while (!is_prime(n)) {
+    while (!IsPrime(n)) {
         ++n;
     }
     return n;

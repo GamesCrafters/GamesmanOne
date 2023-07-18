@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "core/solver.h"
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
@@ -8,19 +8,21 @@
 #include <stdio.h>     // printf
 #include <string.h>    // memset
 
-#include "gamesman.h"
-#include "gamesman_types.h"
-#include "misc.h"
-#include "tier_hash_table.h"
-#include "tier_solver.h"
+#include "core/gamesman.h"
+#include "core/gamesman_types.h"
+#include "core/misc.h"
+#include "core/naivedb.h"
+#include "core/tier_solver/tier_solver.h"
 
-static const int8_t kStatusNotVisited = 0;
-static const int8_t kStatusInProgress = 1;
-static const int8_t kStatusClosed = 2;
+enum TierGraphNodeStatus {
+    kStatusNotVisited,
+    kStatusInProgress,
+    kStatusClosed,
+    kNumStatus
+};
 
-static TierHashTable table;
-static TierHashTableEntryList solvable_tiers;
-static TierSolverStatistics global_stat;
+static TierHashMap map;
+static TierQueue solvable_tiers;
 static int64_t solved_tiers = 0;
 static int64_t skipped_tiers = 0;
 static int64_t failed_tiers = 0;
@@ -29,38 +31,38 @@ static bool SelectApiFunctions(void);
 static bool SelectTierApi(void);
 static bool SelectRegularApi(void);
 
-static bool InitializeGlobalVariables(void);
+static bool InitGlobalVariables(void);
 static void DestroyGlobalVariables(void);
-static void CreateSolverTable(void);
-static bool CreateSolverTableProcessChildren(Tier parent, TierStack *fringe);
-static void SeparatePrimitiveTiers(void);
+static bool CreateTierTree(void);
+static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe);
+static void EnqueuePrimitiveTiers(void);
+static int64_t CalcVal(int num_unsolved_child_tiers, int status);
+static int CalcStatus(int64_t value);
+static int CalcNumUnsolvedChildTiers(int64_t value);
+static int64_t GetValue(Tier tier);
+static int GetStatus(Tier tier);
+static int GetNumUnsolvedChildTiers(Tier tier);
+static bool SetStatus(Tier tier, int status);
+static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers);
 
-static Value SolveTierTree(void);
-static int8_t *TierHashTableEntryGetStatus(TierHashTableEntry *entry);
-static int32_t *TierHashTableEntryGetNumUnsolvedChildren(
-    TierHashTableEntry *entry);
-static TierHashTableEntry *GetTierHashTableEntryListTail(
-    TierHashTableEntryList list);
-static void UpdateTierHashTable(Tier solved_tier,
-                                TierHashTableEntry **solvable_tail);
-static void UpdateGlobalStatistics(TierSolverStatistics stat);
-static void PrintStatistics(Tier solved_tier, TierSolverStatistics stat);
+static Value SolveTierTree(bool force);
+static void UpdateTierTree(Tier solved_tie);
 static void PrintSolverResult(void);
 
 // ----------------------------------------------------------------------------
-Value SolverSolve(void) {
+Value SolverSolve(bool force) {
     if (!SelectApiFunctions()) {
         fprintf(stderr,
                 "failed to set up solver due to missing required API.\n");
         return kUndecided;
     }
-    if (!InitializeGlobalVariables()) {
+    if (!InitGlobalVariables()) {
         fprintf(stderr,
                 "initialization failed because there is a loop in the tier "
                 "graph.\n");
         return kUndecided;
     }
-    Value ret = SolveTierTree();
+    Value ret = SolveTierTree(force);
     DestroyGlobalVariables();
     return ret;
 }
@@ -83,94 +85,107 @@ static bool SelectTierApi(void) {
 }
 
 static bool SelectRegularApi(void) {
-    // TODO: Double check this function!
-    if (!GenerateMoves || !Primitive || !DoMove) return false;
+    // Check for required API.
+    assert(global_num_positions > 0);
     if (global_initial_position < 0) return false;
-    TierGenerateMoves = &GamesmanTierGenerateMoves;
-    TierPrimitive = &GamesmanTierPrimitive;
-    TierDoMove = &GamesmanTierDoMove;
-    if (!GetNumberOfChildPositions)
-        GetNumberOfChildPositions = &GamesmanGetNumberOfChildPositions;
-    if (!GetChildPositions) GetChildPositions = &GamesmanGetChildPositions;
+    if (GenerateMoves == NULL || Primitive == NULL || DoMove == NULL)
+        return false;
 
-    TierGetNumberOfChildPositions = &GamesmanTierGetNumberOfChildPositions;
-    GetTierSize = &GamesmanGetTierSize;
+    // Generate optional regular API if needed.
+    if (GetNumberOfChildPositions == NULL)
+        GetNumberOfChildPositions = &GamesmanGetNumberOfChildPositions;
+    if (GetChildPositions == NULL)
+        GetChildPositions = &GamesmanGetChildPositions;
+
+    // Convert regular API to tier API.
+    global_initial_tier = 0;
+    TierGenerateMoves = &GamesmanTierGenerateMovesConverted;
+    TierPrimitive = &GamesmanTierPrimitiveConverted;
+    TierDoMove = &GamesmanTierDoMoveConverted;
+    TierIsLegalPosition = &GamesmanTierIsLegalPositionConverted;
+
+    // Tier position API.
+    TierGetNumberOfChildPositions =
+        &GamesmanTierGetNumberOfChildPositionsConverted;
+    GetTierSize = &GamesmanGetTierSizeConverted;
     if (GetParentPositions) {
-        TierGetParentPositions = &GamesmanTierGetParentPositions;
+        TierGetParentPositions = &GamesmanTierGetParentPositionsConverted;
     } else {
         // TODO: Otherwise, build backward graph in memory.
         return false;
     }
+
+    // Tier tree API.
+    GetChildTiers = &GamesmanGetChildTiersConverted;
+    GetParentTiers = &GamesmanGetParentTiersConverted;
+    IsCanonicalTier = &GamesmanIsCanonicalTierConverted;
+    GetCanonicalTier = &GamesmanGetCanonicalTierConverted;
     return true;
 }
 
-static bool InitializeGlobalVariables(void) {
-    memset(&global_stat, 0, sizeof(global_stat));
+static bool InitGlobalVariables(void) {
     solved_tiers = 0;
     skipped_tiers = 0;
     failed_tiers = 0;
-    solvable_tiers = NULL;
-    if (!TierHashTableInitialize(&table)) return false;
-    CreateSolverTable();  // Also sets solvable_tiers if successful.
-    // Otherwise, solvable_tiers is not set.
-    return (solvable_tiers != NULL);
+    TierQueueInit(&solvable_tiers);
+    TierHashMapInit(&map, 0.5);
+    return CreateTierTree();
 }
 
 static void DestroyGlobalVariables(void) {
-    TierHashTableDestroy(&table);
-    while (solvable_tiers) {
-        TierHashTableEntry *next = solvable_tiers->next;
-        free(solvable_tiers);
-        solvable_tiers = next;
-    }
+    TierHashMapDestroy(&map);
+    TierQueueDestroy(&solvable_tiers);
 }
 
 /**
+ * Iterative topological sort using DFS and node coloring.
  * Algorithm by Ctrl, stackoverflow.com.
  * https://stackoverflow.com/a/73210346
  */
-static void CreateSolverTable(void) {
+static bool CreateTierTree(void) {
     // DFS from initial tier with loop detection.
     TierStack fringe;
     TierStackInit(&fringe);
     TierStackPush(&fringe, global_initial_tier);
-    TierHashTableAdd(global_initial_position);
+    TierHashMapSet(&map, global_initial_tier, CalcVal(0, kStatusNotVisited));
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);
-        TierHashTableEntry *entry = TierHashTableFind(&table, parent);
-        assert(entry);
-        if (*TierHashTableEntryGetStatus(entry) == kStatusInProgress) {
-            *TierHashTableEntryGetStatus(entry) = kStatusClosed;
+        int status = GetStatus(parent);
+        if (status == kStatusInProgress) {
+            SetStatus(parent, kStatusClosed);
             TierStackPop(&fringe);
             continue;
-        } else if (*TierHashTableEntryGetStatus(entry) == kStatusClosed) {
+        } else if (status == kStatusClosed) {
             TierStackPop(&fringe);
             continue;
         }
-        *TierHashTableEntryGetStatus(entry) = kStatusInProgress;
-        if (!CreateSolverTableProcessChildren(parent, &fringe)) {
-            TierHashTableClear(&table);
+        SetStatus(parent, kStatusInProgress);
+        if (!CreateTierTreeProcessChildren(parent, &fringe)) {
+            // Consider printing debug info here.
+            TierHashMapDestroy(&map);
             TierStackDestroy(&fringe);
-            return;
+            return false;
         }
     }
     TierStackDestroy(&fringe);
-    SeparatePrimitiveTiers();
+    EnqueuePrimitiveTiers();
+    return true;
 }
 
-static bool CreateSolverTableProcessChildren(Tier parent, TierStack *fringe) {
+static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
     TierArray tier_children = GetChildTiers(parent);
+    SetNumUnsolvedChildTiers(parent, (int)tier_children.size);
     for (int64_t i = 0; i < tier_children.size; ++i) {
         Tier child = tier_children.array[i];
-        TierHashTableEntry *child_entry = TierHashTableFind(&table, child);
-        if (child_entry == NULL) {
-            TierHashTableAdd(child);
+        if (!TierHashMapContains(&map, child)) {
+            TierHashMapSet(&map, child, CalcVal(0, kStatusNotVisited));
             TierStackPush(fringe, child);
-        } else if (*TierHashTableEntryGetStatus(child_entry) ==
-                   kStatusNotVisited) {
+            continue;
+        }
+        int status = GetStatus(child);
+        if (status == kStatusNotVisited) {
             TierStackPush(fringe, child);
-        } else if (*TierHashTableEntryGetStatus(child_entry) ==
-                   kStatusInProgress) {
+        } else if (status == kStatusInProgress) {
             TierArrayDestroy(&tier_children);
             return false;
         }  // else, child tier is already closed and we take no action.
@@ -179,130 +194,109 @@ static bool CreateSolverTableProcessChildren(Tier parent, TierStack *fringe) {
     return true;
 }
 
-static void SeparatePrimitiveTiers(void) {
-    TierHashTableIterator it;
-    bool success = TierHashTableIteratorInit(&it, &table);
-    assert(success);
-    for (Tier current = TierHashTableIteratorGetNext(&it); current >= 0;
-         current = TierHashTableIteratorGetNext(&it)) {
-        TierHashTableEntry *entry = TierHashTableRemove(&table, current);
-        entry->next = solvable_tiers;
-        solvable_tiers = entry;
+static void EnqueuePrimitiveTiers(void) {
+    TierHashMapIterator it;
+    TierHashMapIteratorInit(&it, &map);
+    Tier tier;
+    int64_t value;
+    while (TierHashMapIteratorNext(&it, &tier, &value)) {
+        if (CalcNumUnsolvedChildTiers(value) == 0) {
+            TierQueuePush(&solvable_tiers, tier);
+        }
     }
     // A well-formed tier DAG should have at least one primitive tier.
-    assert(solvable_tiers);
+    assert(!TierQueueIsEmpty(&solvable_tiers));
 }
 
-static Value SolveTierTree(void) {
-    TierHashTableEntry *solvable_tail =
-        GetTierHashTableEntryListTail(solvable_tiers);
-    TierHashTableEntry *tmp;
-
-    while (solvable_tiers != NULL) {
-        if (IsCanonicalTier(solvable_tiers->item)) {
+static Value SolveTierTree(bool force) {
+    while (!TierQueueIsEmpty(&solvable_tiers)) {
+        Tier tier = TierQueuePop(&solvable_tiers);
+        if (IsCanonicalTier(tier)) {
             // Only solve canonical tiers.
-            TierSolverStatistics stat = TierSolverSolve(solvable_tiers->item);
-            if (stat.num_legal_pos > 0) {
+            int error = TierSolverSolve(tier, force);
+            if (error == 0) {
                 // Solve succeeded.
-                UpdateTierHashTable(solvable_tiers->item, &solvable_tail);
-                UpdateGlobalStatistics(stat);
-                PrintStatistics(solvable_tiers->item, stat);
+                UpdateTierTree(tier);
+                // UpdateGlobalStatistics(stat);
+                // PrintStatistics(tier, stat);
+                DbDumpTierAnalysisToGlobal();
                 ++solved_tiers;
             } else {
+                // There might be more error types in the future.
                 printf("Failed to solve tier %" PRId64 ": not enough memory\n",
-                       solvable_tiers->item);
+                       tier);
                 ++failed_tiers;
             }
         } else {
             ++skipped_tiers;
         }
-        tmp = solvable_tiers;
-        solvable_tiers = solvable_tiers->next;
-        free(tmp);
     }
-    PrintSolverResult();
+    // PrintSolverResult();
+    AnalysisPrintSummary(&global_analysis);
 
     // TODO: link prober and return value of initial position if possible.
     return kUndecided;
 }
 
-static inline int8_t *TierHashTableEntryGetStatus(TierHashTableEntry *entry) {
-    return &((TierHashTableEntryExtra *)entry->reserved)->status;
-}
-
-static inline int32_t *TierHashTableEntryGetNumUnsolvedChildren(
-    TierHashTableEntry *entry) {
-    return &((TierHashTableEntryExtra *)entry->reserved)->num_unsolved_children;
-}
-
-static TierHashTableEntry *GetTierHashTableEntryListTail(
-    TierHashTableEntryList list) {
-    if (list == NULL) return NULL;
-    while (list->next) {
-        list = list->next;
-    }
-    return list;
-}
-
-static void UpdateTierHashTable(Tier solved_tier,
-                                TierHashTableEntry **solvable_tail) {
-    TierHashTableEntry *tmp;
+static void UpdateTierTree(Tier solved_tier) {
     TierArray parent_tiers = GetParentTiers(solved_tier);
-    TierArray canonical_parents;
-    TierArrayInit(&canonical_parents);
+    TierHashMap canonical_parents;  // Using TierHashMap as a hash set.
+    TierHashMapInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
         // Update canonical parent's number of unsolved children only.
         Tier canonical = GetCanonicalTier(parent_tiers.array[i]);
-        if (TierArrayContains(&canonical_parents, canonical)) {
-            /* It is possible that a child has two parents that are symmetrical
-               to each other. In this case, we should only decrement the child
-               counter once. */
+        if (TierHashMapContains(&canonical_parents, canonical)) {
+            // It is possible that a child has two parents that are symmetrical
+            // to each other. In this case, we should only decrement the child
+            // counter once.
             continue;
         }
-        TierArrayAppend(&canonical_parents, canonical);
-        tmp = TierHashTableFind(&table, canonical);
-        if (tmp && --(*TierHashTableEntryGetNumUnsolvedChildren(tmp)) == 0) {
-            tmp = TierHashTableRemove(&table, canonical);
-            (*solvable_tail)->next = tmp;
-            tmp->next = NULL;
-            *solvable_tail = tmp;
-        }
+        TierHashMapSet(&canonical_parents, canonical,
+                       0);  // Value is arbitrary.
+        int num_unsolved_child_tiers = GetNumUnsolvedChildTiers(canonical);
+        assert(num_unsolved_child_tiers > 0);
+        SetNumUnsolvedChildTiers(canonical, num_unsolved_child_tiers - 1);
+        if (num_unsolved_child_tiers == 1)
+            TierQueuePush(&solvable_tiers, canonical);
     }
-    TierArrayDestroy(&canonical_parents);
+    TierHashMapDestroy(&canonical_parents);
     TierArrayDestroy(&parent_tiers);
 }
 
-static void UpdateGlobalStatistics(TierSolverStatistics stat) {
-    global_stat.num_win += stat.num_win;
-    global_stat.num_lose += stat.num_lose;
-    global_stat.num_legal_pos += stat.num_legal_pos;
-    if (stat.longest_num_steps_to_p1_win >
-        global_stat.longest_num_steps_to_p1_win) {
-        global_stat.longest_num_steps_to_p1_win =
-            stat.longest_num_steps_to_p1_win;
-        global_stat.longest_pos_to_p1_win = stat.longest_pos_to_p1_win;
-    }
-    if (stat.longest_num_steps_to_p2_win >
-        global_stat.longest_num_steps_to_p2_win) {
-        global_stat.longest_num_steps_to_p2_win =
-            stat.longest_num_steps_to_p2_win;
-        global_stat.longest_pos_to_p2_win = stat.longest_pos_to_p2_win;
-    }
+static int64_t CalcVal(int num_unsolved_child_tiers, int status) {
+    return num_unsolved_child_tiers * kNumStatus + status;
 }
 
-static void PrintStatistics(Tier solved_tier, TierSolverStatistics stat) {
-    if (solved_tier > 0) printf("Tier %" PRId64 ":\n", solved_tier);
-    printf("total legal positions: %" PRId64 "\n", stat.num_legal_pos);
-    printf("number of winning positions: %" PRId64 "\n", stat.num_win);
-    printf("number of losing positions: %" PRId64 "\n", stat.num_lose);
-    printf("number of drawing positions: %" PRId64 "\n",
-           stat.num_legal_pos - stat.num_win - stat.num_lose);
-    printf("longest win for player 1 is %" PRId64 " steps at position %" PRId64
-           "\n",
-           stat.longest_num_steps_to_p1_win, stat.longest_pos_to_p1_win);
-    printf("longest win for player 2 is %" PRId64 " steps at position %" PRId64
-           "\n\n",
-           stat.longest_num_steps_to_p2_win, stat.longest_pos_to_p2_win);
+static int CalcStatus(int64_t value) { return value % kNumStatus; }
+
+static int CalcNumUnsolvedChildTiers(int64_t value) {
+    return value / kNumStatus;
+}
+
+static int64_t GetValue(Tier tier) {
+    TierHashMapIterator it = TierHashMapGet(&map, tier);
+    assert(TierHashMapIteratorIsValid(&it));
+    return TierHashMapIteratorValue(&it);
+}
+
+static int GetStatus(Tier tier) { return CalcStatus(GetValue(tier)); }
+
+static int GetNumUnsolvedChildTiers(Tier tier) {
+    return CalcNumUnsolvedChildTiers(GetValue(tier));
+}
+
+static bool SetStatus(Tier tier, int status) {
+    int64_t value = GetValue(tier);
+    int num_unsolved_child_tiers = CalcNumUnsolvedChildTiers(value);
+    value = CalcVal(num_unsolved_child_tiers, status);
+    TierHashMapSet(&map, tier, value);
+}
+
+static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers) {
+    int64_t value = GetValue(tier);
+    int status = CalcStatus(value);
+    value = CalcVal(num_unsolved_child_tiers, status);
+    TierHashMapSet(&map, tier, value);
 }
 
 static void PrintSolverResult(void) {
@@ -317,6 +311,5 @@ static void PrintSolverResult(void) {
         "Total tiers scanned: %" PRId64 "\n",
         solved_tiers, skipped_tiers, failed_tiers,
         solved_tiers + skipped_tiers + failed_tiers);
-    PrintStatistics(-1, global_stat);
     printf("\n");
 }

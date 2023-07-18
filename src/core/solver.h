@@ -1,8 +1,10 @@
 #ifndef GAMESMANEXPERIMENT_CORE_SOLVER_H_
 #define GAMESMANEXPERIMENT_CORE_SOLVER_H_
 
-#include "gamesman_types.h"
+#include <stdbool.h>
 
-Value SolverSolve(void);
+#include "core/gamesman_types.h"
+
+Value SolverSolve(bool force);
 
 #endif  // GAMESMANEXPERIMENT_CORE_SOLVER_H_

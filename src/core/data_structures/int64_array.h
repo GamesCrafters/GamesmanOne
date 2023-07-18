@@ -14,8 +14,8 @@ void Int64ArrayInit(Int64Array *array);
 void Int64ArrayDestroy(Int64Array *array);
 bool Int64ArrayPushBack(Int64Array *array, int64_t item);
 void Int64ArrayPopBack(Int64Array *array);
-int64_t Int64ArrayBack(Int64Array *array);
-bool Int64ArrayEmpty(Int64Array *array);
-bool Int64ArrayContains(Int64Array *array, int64_t item);
+int64_t Int64ArrayBack(const Int64Array *array);
+bool Int64ArrayEmpty(const Int64Array *array);
+bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INT64_ARRAY_H_

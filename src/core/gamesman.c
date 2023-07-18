@@ -1,20 +1,29 @@
-#include "gamesman.h"
+#include "core/gamesman.h"
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // exit
 
-#include "gamesman_types.h"
-#include "misc.h"
+#include "core/gamesman_types.h"
+#include "core/misc.h"
+
+const Position kDefaultGlobalNumberOfPositions = -1;
+const Position kTierGamesmanGlobalNumberOfPositions = 0;
+const Position kDefaultInitialPosition = -1;
+const Tier kDefaultInitialTier = -1;
 
 Position global_num_positions = kDefaultGlobalNumberOfPositions;
 Position global_initial_position = kDefaultInitialPosition;
 Tier global_initial_tier = kDefaultInitialTier;
+Analysis global_analysis = {0};
 
 /* Regular, no tier */
-MoveList (*GenerateMoves)(Position position) = NULL;
+MoveArray (*GenerateMoves)(Position position) = NULL;
 Value (*Primitive)(Position position) = NULL;
 Position (*DoMove)(Position position, Move move) = NULL;
+bool (*IsLegalPosition)(Position position) = NULL;
 int (*GetNumberOfChildPositions)(Position position) = NULL;
 PositionArray (*GetChildPositions)(Position position) = NULL;
 PositionArray (*GetParentPositions)(Position position) = NULL;
@@ -27,12 +36,15 @@ Tier (*GetCanonicalTier)(Tier tier) = NULL;
 
 /* Tier position stuff */
 int64_t (*GetTierSize)(Tier tier) = NULL;
-MoveList (*TierGenerateMoves)(Tier tier, Position position) = NULL;
+MoveArray (*TierGenerateMoves)(Tier tier, Position position) = NULL;
 Value (*TierPrimitive)(Tier tier, Position position) = NULL;
 TierPosition (*TierDoMove)(Tier tier, Position position, Move move) = NULL;
+bool (*TierIsLegalPosition)(Tier tier, Position position) = NULL;
 int (*TierGetNumberOfChildPositions)(Tier tier, Position position) = NULL;
 PositionArray (*TierGetParentPositions)(Tier tier, Position position,
                                         Tier parent_tier) = NULL;
+Position (*TierGetNonCanonicalPosition)(Tier canonical_tier, Position position,
+                                        Tier noncanonical_tier) = NULL;
 
 // Generic Derived API functions.
 int GamesmanGetNumberOfChildPositions(Position position) {
@@ -41,14 +53,14 @@ int GamesmanGetNumberOfChildPositions(Position position) {
     // can be big.
     PositionArray children;
     PositionArrayInit(&children);
-    MoveList moves = GenerateMoves(position);
-    for (MoveListItem *move = moves; move != NULL; move = move->next) {
-        Position child = DoMove(position, move);
+    MoveArray moves = GenerateMoves(position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        Position child = DoMove(position, moves.array[i]);
         if (!PositionArrayContains(&children, child)) {
             PositionArrayAppend(&children, child);
         }
     }
-    MoveListDestroy(moves);
+    MoveArrayDestroy(&moves);
     // Again, we are assuming this number is small.
     int num_children = (int)children.size;
     PositionArrayDestroy(&children);
@@ -59,35 +71,36 @@ int GamesmanGetNumberOfChildPositions(Position position) {
 PositionArray GamesmanGetChildPositions(Position position) {
     PositionArray children;
     PositionArrayInit(&children);
-    MoveList moves = GenerateMoves(position);
-    for (MoveListItem *move = moves; move != NULL; move = move->next) {
-        Position child = DoMove(position, move);
+    MoveArray moves = GenerateMoves(position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        Position child = DoMove(position, moves.array[i]);
         PositionArrayAppend(&children, child);
     }
-    MoveListDestroy(moves);
+    MoveArrayDestroy(&moves);
     return children;
 }
 
 // Only used by regular solver.
-int64_t GamesmanGetTierSize(Tier tier) {
+int64_t GamesmanGetTierSizeConverted(Tier tier) {
     (void)tier;
     return global_num_positions;
 }
 
 // Only used by regular solver.
-MoveList GamesmanTierGenerateMoves(Tier tier, Position position) {
+MoveArray GamesmanTierGenerateMovesConverted(Tier tier, Position position) {
     (void)tier;
     return GenerateMoves(position);
 }
 
 // Only used by regular solver.
-Value GamesmanTierPrimitive(Tier tier, Position position) {
+Value GamesmanTierPrimitiveConverted(Tier tier, Position position) {
     (void)tier;
     return Primitive(position);
 }
 
 // Only used by regular solver.
-TierPosition GamesmanTierDoMove(Tier tier, Position position, Move move) {
+TierPosition GamesmanTierDoMoveConverted(Tier tier, Position position,
+                                         Move move) {
     Position child = DoMove(position, move);
     TierPosition ret;
     ret.position = child;
@@ -95,9 +108,42 @@ TierPosition GamesmanTierDoMove(Tier tier, Position position, Move move) {
     return ret;
 }
 
-int GamesmanTierGetNumberOfChildPositions(Tier tier, Position position) {
-    // TODO: need a TierPositionArray here...
+bool GamesmanTierIsLegalPositionConverted(Tier tier, Position position) {
+    (void)tier;
+    return IsLegalPosition(position);
 }
 
-PositionArray GamesmanTierGetParentPositions(Tier tier, Position position,
-                                             Tier parent_tier) {}
+int GamesmanTierGetNumberOfChildPositionsConverted(Tier tier,
+                                                   Position position) {
+    (void)tier;
+    return GetNumberOfChildPositions(position);
+}
+
+PositionArray GamesmanTierGetParentPositionsConverted(Tier tier,
+                                                      Position position,
+                                                      Tier parent_tier) {
+    (void)tier;
+    (void)parent_tier;
+    return GetParentPositions(position);
+}
+
+TierArray GamesmanGetChildTiersConverted(Tier tier) {
+    (void)tier;
+    TierArray ret;
+    Int64ArrayInit(&ret);
+    return ret;
+}
+
+TierArray GamesmanGetParentTiersConverted(Tier tier) {
+    (void)tier;
+    TierArray ret;
+    Int64ArrayInit(&ret);
+    return ret;
+}
+
+bool GamesmanIsCanonicalTierConverted(Tier tier) {
+    (void)tier;
+    return true;
+}
+
+Tier GamesmanGetCanonicalTierConverted(Tier tier) { return tier; }

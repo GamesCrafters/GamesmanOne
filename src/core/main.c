@@ -1,14 +1,17 @@
+#include <stdbool.h>
 #include <stdio.h>
 
-#include "gamesman.h"
+#include "core/gamesman.h"
+#include "core/solver.h"
 #include "games/mttt/mttt.h"
 
 int main(void) {
-    printf("main() begins.\n");
+    // This should be in a DbInit function.
+    AnalysisInit(&global_analysis);
 
+    // These should be in a MainMenu function.
     MtttInitialize();
-    
-    SolverSolve();
+    SolverSolve(false);
 
     return 0;
 }

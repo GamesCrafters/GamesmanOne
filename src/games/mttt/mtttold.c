@@ -92,7 +92,7 @@ typedef enum PossibleBoardPieces {
 const char *gBlankOXString[] = { " ", "o", "x" };
 
 /* Powers of 3 - this is the way I encode the position, as an integer */
-int g3Array[] = { 1, 3, 9, 27, 81, 243, 729, 2187, 6561 };
+int three_to_the[] = { 1, 3, 9, 27, 81, 243, 729, 2187, 6561 };
 
 /* Global position solver variables.*/
 struct {
@@ -308,7 +308,7 @@ Position DoMove(Position position, Move move)
 
 		PositionToBlankOX(position, board);
 
-		return position + g3Array[move] * (int) WhoseTurn(board);
+		return position + three_to_the[move] * (int) WhoseTurn(board);
 	}
 }
 
@@ -586,17 +586,17 @@ BlankOX *theBlankOX;
 {
 	int i;
 	for(i = 8; i >= 0; i--) {
-		if(thePos >= (Position)(x * g3Array[i])) {
+		if(thePos >= (Position)(x * three_to_the[i])) {
 			theBlankOX[i] = x;
-			thePos -= x * g3Array[i];
+			thePos -= x * three_to_the[i];
 		}
-		else if(thePos >= (Position)(o * g3Array[i])) {
+		else if(thePos >= (Position)(o * three_to_the[i])) {
 			theBlankOX[i] = o;
-			thePos -= o * g3Array[i];
+			thePos -= o * three_to_the[i];
 		}
-		else if(thePos >= (Position)(Blank * g3Array[i])) {
+		else if(thePos >= (Position)(Blank * three_to_the[i])) {
 			theBlankOX[i] = Blank;
-			thePos -= Blank * g3Array[i];
+			thePos -= Blank * three_to_the[i];
 		}
 		else
 			BadElse("PositionToBlankOX");
@@ -622,7 +622,7 @@ BlankOX *theBlankOX;
 	Position position = 0;
 
 	for(i = 0; i < BOARD_SIZE; i++)
-		position += g3Array[i] * (int)theBlankOX[i]; /* was (int)position... */
+		position += three_to_the[i] * (int)theBlankOX[i]; /* was (int)position... */
 
 	return(position);
 }
