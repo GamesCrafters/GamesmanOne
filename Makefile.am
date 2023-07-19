@@ -1,4 +1,5 @@
 AM_CFLAGS = -I$(srcdir)/src
+AM_CFLAGS += -Wall -Wextra
 
 noinst_PROGRAMS = bin/gamesman
 

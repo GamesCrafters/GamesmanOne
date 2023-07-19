@@ -14,6 +14,7 @@ typedef int64_t Move;
 typedef enum { kUndecided, kLose, kDraw, kTie, kWin } Value;
 
 typedef Int64Array PositionArray;
+typedef Int64HashMap PositionHashSet;
 
 typedef Int64Array MoveArray;
 
@@ -23,6 +24,7 @@ typedef Int64Array TierStack;
 typedef Int64Queue TierQueue;
 typedef Int64HashMap TierHashMap;
 typedef Int64HashMapIterator TierHashMapIterator;
+typedef Int64HashMap TierHashSet;
 
 typedef struct {
     Tier tier;

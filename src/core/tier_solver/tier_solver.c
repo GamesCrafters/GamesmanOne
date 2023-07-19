@@ -1,11 +1,28 @@
 /**
  * @file tier_solver.c
  * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *		   Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Loopy tier solver.
- * @version 0.1
- * @date 2023-07-14
+ * @version 0.2
+ * @date 2023-07-18
  *
- * @copyright Copyright (c) Robert Shi, 2023. All rights reserved.
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  * @todo
  * 1. Implement symmetries
  * 2. Link database system
@@ -22,11 +39,11 @@
 #include <stdio.h>     // fprintf, stderr
 #include <string.h>    // memset
 
-#include "core/tier_solver/frontier.h"
 #include "core/gamesman.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 #include "core/naivedb.h"
+#include "core/tier_solver/frontier.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -47,9 +64,9 @@ static const int kFrontierSize = 1024;
 // num_undecided_children array.
 static const uint8_t kIllegalNumChildren = UINT8_MAX;
 
-static Tier this_tier;                  // The tier being solved.
-static int64_t this_tier_size;          // Size of the tier being solved.
-static TierArray child_tiers;           // Array of child tiers.
+static Tier this_tier;          // The tier being solved.
+static int64_t this_tier_size;  // Size of the tier being solved.
+static TierArray child_tiers;   // Array of child tiers.
 
 static Frontier win_frontier;   // Solved but unprocessed winning positions.
 static Frontier lose_frontier;  // Solved but unprocessed losing positions.
@@ -197,7 +214,7 @@ static bool Step1_1LoadNonCanonical(int child_index) {
         if (value == kUndecided || value == kDraw) continue;
 
         int remoteness = DbGetRemoteness(position);
-        Position noncanonical_position = TierGetNonCanonicalPosition(
+        Position noncanonical_position = TierGetPositionInNonCanonicalTier(
             canonical_tier, position, original_tier);
         if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
                                   remoteness)) {
@@ -210,7 +227,7 @@ static bool Step1_1LoadNonCanonical(int child_index) {
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
                                  int remoteness) {
     if (value == kUndecided || value == kDraw) return true;
-    Frontier *dest;
+    Frontier *dest = NULL;
     switch (value) {
         case kUndecided:
         case kDraw:
@@ -227,6 +244,9 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
         case kTie:
             dest = &tie_frontier;
             break;
+
+        default:
+            NotReached("CheckAndLoadFrontier: unknown value.\n");
     }
     return FrontierAdd(dest, position, remoteness, child_index);
 }
@@ -248,8 +268,9 @@ static bool Step3ScanTier(void) {
     bool success = true;
 #pragma omp parallel for
     for (Position position = 0; position < this_tier_size; ++position) {
-        if (!TierIsLegalPosition(this_tier, position)) {
-            // Skip illegal positions.
+        if (!TierIsLegalPosition(this_tier, position) ||
+            TierGetCanonicalPosition(this_tier, position) != position) {
+            // Skip illegal positions and non-canonical positions.
             num_undecided_children[position] = kIllegalNumChildren;
             continue;
         }
@@ -262,7 +283,8 @@ static bool Step3ScanTier(void) {
                 success = false;
             }
         } else {
-            num_children = TierGetNumberOfChildPositions(this_tier, position);
+            num_children =
+                TierGetNumberOfCanonicalChildPositions(this_tier, position);
             if (num_children < 0) success = false;  // OOM.
         }
         num_undecided_children[position] = num_children;
@@ -328,7 +350,8 @@ static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
 
 static bool ProcessLoseOrTiePosition(int remoteness, Tier tier,
                                      Position position, bool processing_lose) {
-    PositionArray parents = TierGetParentPositions(tier, position, this_tier);
+    PositionArray parents =
+        TierGetCanonicalParentPositions(tier, position, this_tier);
     if (parents.size < 0) {  // OOM.
         TierArrayDestroy(&parents);
         return false;
@@ -344,10 +367,7 @@ static bool ProcessLoseOrTiePosition(int remoteness, Tier tier,
 #ifdef _OPENMP
         omp_unset_lock(&num_undecided_children_lock);
 #endif
-        if (child_remaining == 0) {
-            // This parent has been solved already.
-            continue;
-        }
+        if (child_remaining == 0) continue; // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
         DbSetValueRemoteness(parents.array[i], value, remoteness + 1);
@@ -366,7 +386,8 @@ static bool ProcessLosePosition(int remoteness, Tier tier, Position position) {
 }
 
 static bool ProcessWinPosition(int remoteness, Tier tier, Position position) {
-    PositionArray parents = TierGetParentPositions(tier, position, this_tier);
+    PositionArray parents =
+        TierGetCanonicalParentPositions(tier, position, this_tier);
     if (parents.size < 0) {  // OOM.
         TierArrayDestroy(&parents);
         return false;

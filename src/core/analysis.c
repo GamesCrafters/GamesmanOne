@@ -94,7 +94,7 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
                                 ? analysis->tie_summary.array[remoteness]
                                 : 0;
         int64_t total = win_count + lose_count + tie_count;
-        char remoteness_string[10];
+        char remoteness_string[12];  // Covers the range [-2147483647, 2147483647].
         sprintf(remoteness_string, "%d", remoteness);
         printf(format, remoteness_string, win_count, lose_count, tie_count, 0,
                total);

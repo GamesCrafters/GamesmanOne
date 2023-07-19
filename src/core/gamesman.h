@@ -122,8 +122,25 @@ extern Position (*DoMove)(Position position, Move move);
 extern bool (*IsLegalPosition)(Position position);
 
 /**
- * @brief Returns the number of unique child positions of the given position.
+ * @brief Returns the canonical position that is symmetric to the given
+ * position.
  *
+ * @details By convention, a canonical position is one with the smallest hash
+ * value in a set of symmetrical positions. For each position[i] within the set
+ * including the canonical position itself, calling
+ * GetCanonicalPosition(position[i]) returns the canonical position. Assumes the
+ * given position is legal. Passing an illegal position to this function is
+ * undefined behavior.
+ *
+ * @note Optional for the regular solver, but is required for the Position
+ * Symmetry Removal Optimization. If not implemented, the Optimization will be
+ * disabled.
+ */
+extern Position (*GetCanonicalPosition)(Position position);
+
+/**
+ * @brief Returns the number of unique canonical child positions of the given
+ * position.
  *
  * @details The word unique is emphasized here because it is possible in some
  * games that making different moves results in the same child position. Assumes
@@ -135,27 +152,31 @@ extern bool (*IsLegalPosition)(Position position);
  * implemented, the system will use a naive version that calls GenerateMoves()
  * and DoMove().
  */
-extern int (*GetNumberOfChildPositions)(Position position);
+extern int (*GetNumberOfCanonicalChildPositions)(Position position);
 
 /**
- * @brief Returns an array of child positions (duplicates allowed) at the given
- * position.
+ * @brief Returns an array of canonical child positions (duplicates allowed) at
+ * the given position. For games that do not support the Position Symmetry
+ * Removal Optimization, all child positions are included.
  *
  * @details Assumes the given position is legal. Passing an illegal position
  * to this function is undefined behavior.
  *
  * @note Optional for the regular solver, but can be implemented as an
  * optimization to first generating moves and then doing moves. If not
- * implemented, the system will use a naive version that calls GenerateMoves()
- * and DoMove().
+ * implemented, the system will use a naive version that calls GenerateMoves(),
+ * DoMove(), and GetCanonicalPosition().
  */
-extern PositionArray (*GetChildPositions)(Position position);
+extern PositionArray (*GetCanonicalChildPositions)(Position position);
 
 /**
- * @brief Returns an array of parent positions (duplicates allowed) at the
- * given position.
+ * @brief Returns an array of unique canonical parent positions of the given
+ * position. For games that do not support the Position Symmetry Removal
+ * Optimization, all unique parent positions are included.
  *
- * @details Assumes the given position is legal. Passing an illegal position
+ * @details The word unique is emphasized here because it is possible in some
+ * games that a child position has two parent positions that are symmetric to
+ * each other. Assumes the given position is legal. Passing an illegal position
  * to this function is undefined behavior.
  *
  * @note Optional for the regular solver, but is required by the Undo-Move
@@ -163,7 +184,7 @@ extern PositionArray (*GetChildPositions)(Position position);
  * disabled and a backward graph will be built and stored in memory using
  * depth-first search from the initial game position.
  */
-extern PositionArray (*GetParentPositions)(Position position);
+extern PositionArray (*GetCanonicalParentPositions)(Position position);
 
 /****************************** Tier Solver API ******************************/
 // If you are implementing a tier game, implement the following
@@ -251,8 +272,27 @@ extern TierPosition (*TierDoMove)(Tier tier, Position position, Move move);
 extern bool (*TierIsLegalPosition)(Tier tier, Position position);
 
 /**
- * @brief Returns the number of unique child positions of the given tier
- * position.
+ * @brief Returns the canonical position within the given tier that is symmetric
+ * to the given tier position.
+ *
+ * @details GAMESMAN currently does not support position symmetry removal across
+ * tiers. By convention, a canonical position is one with the smallest hash
+ * value in a set of symmetrical positions which all belong to the same tier.
+ * For each position[i] within the set including the canonical position itself,
+ * calling TierGetCanonicalPosition(tier, position[i]) returns the canonical
+ * position. Assumes the given tier position is legal. Passing an invalid tier,
+ * or an illegal position within the given tier to this function is undefined
+ * behavior.
+ *
+ * @note Optional for the tier solver, but is required for the Position Symmetry
+ * Removal Optimization. If not implemented, the Optimization will be disabled.
+ */
+extern Position (*TierGetCanonicalPosition)(Tier tier, Position position);
+
+/**
+ * @brief Returns the number of unique canonical child positions of the given
+ * tier position. For games that do not support the Position Symmetry Removal
+ * Optimization, all unique child positions are included.
  *
  * @details The word unique is emphasized here because it is possible in some
  * games that making different moves results in the same child position. Assumes
@@ -261,30 +301,35 @@ extern bool (*TierIsLegalPosition)(Tier tier, Position position);
  *
  * @note Optional for the tier solver, but can be implemented as an optimization
  * to first generating moves and then doing moves. If not implemented, the
- * system will use a naive version that calls TierGenerateMoves() and
- * TierDoMove(). Used by tier_solver.c::Step3ScanTier.
+ * system will use a naive version that calls TierGenerateMoves(), TierDoMove(),
+ * and TierGetCanonicalPosition(). Used by tier_solver.c::Step3ScanTier.
  */
-extern int (*TierGetNumberOfChildPositions)(Tier tier, Position position);
+extern int (*TierGetNumberOfCanonicalChildPositions)(Tier tier,
+                                                     Position position);
 
 /**
- * @brief Returns an array of positions within the given parent_tier that are
- * parents of the given tier position.
+ * @brief Returns an array of unique canonical parent positions of the given
+ * position. Furthermore, these parent positions must be in the given
+ * parent_tier. For games that do not support the Position Symmetry Removal
+ * Optimization, all parent positions are included.
  *
- * @details All positions returned by this function are guaranteed to be part
- * of the given parent_tier. Assumes the given parent_tier and the given tier
- * position are valid. Passing an invalid tier, an illegal position within
- * the tier, an invalid parent_tier, or a "parent_tier" that is not a parent
- * of the given tier is undefined behavior.
+ * @details The word unique is emphasized here because it is possible in some
+ * games that a child position has two parent positions that are symmetric to
+ * each other. Assumes the given parent_tier and the given tier position are
+ * valid. Passing an invalid tier, an illegal position within the tier, an
+ * invalid parent_tier, or a "parent_tier" that is not a parent of the given
+ * tier is undefined behavior.
  *
  * @note Optional for the tier solver, but is required for the Undo-Move
- * Optimization. If not implemented, the Undo-Move Optimization will be
- * disabled and a backward graph for each tier will be built and stored
- * in memory by calling TierDoMove() on all legal positions in the tier
- * that is being solved. Used by tier_solver.c::ProcessLoseOrTiePosition
- * and tier_solver.c::ProcessWinPosition.
+ * Optimization. If not implemented, the Undo-Move Optimization will be disabled
+ * and a backward graph for each tier will be built and stored in memory by
+ * calling TierDoMove() on all legal positions in the tier that is being solved.
+ * Used by tier_solver.c::ProcessLoseOrTiePosition and
+ * tier_solver.c::ProcessWinPosition.
  */
-extern PositionArray (*TierGetParentPositions)(Tier tier, Position position,
-                                               Tier parent_tier);
+extern PositionArray (*TierGetCanonicalParentPositions)(Tier tier,
+                                                        Position position,
+                                                        Tier parent_tier);
 
 /**
  * @brief Returns the position in the given noncanonical_tier that is
@@ -300,9 +345,9 @@ extern PositionArray (*TierGetParentPositions)(Tier tier, Position position,
  * and all tiers will be treated as canonical. Used by
  * tier_solver.c::Step1_1LoadNonCanonical.
  */
-extern Position (*TierGetNonCanonicalPosition)(Tier canonical_tier,
-                                               Position position,
-                                               Tier noncanonical_tier);
+extern Position (*TierGetPositionInNonCanonicalTier)(Tier canonical_tier,
+                                                     Position position,
+                                                     Tier noncanonical_tier);
 
 /* * * * * * * * * * * * * * * Tier tree related * * * * * * * * * * * * * * */
 
@@ -376,8 +421,9 @@ extern const Tier kDefaultInitialTier;
 
 /***************************** Default Functions *****************************/
 
-int GamesmanGetNumberOfChildPositions(Position position);
-PositionArray GamesmanGetChildPositions(Position position);
+Position GamesmanGetCanonicalPosition(Position position);
+int GamesmanGetNumberOfCanonicalChildPositions(Position position);
+PositionArray GamesmanGetCanonicalChildPositions(Position position);
 
 int64_t GamesmanGetTierSizeConverted(Tier tier);
 MoveArray GamesmanTierGenerateMovesConverted(Tier tier, Position position);
@@ -385,11 +431,12 @@ Value GamesmanTierPrimitiveConverted(Tier tier, Position position);
 TierPosition GamesmanTierDoMoveConverted(Tier tier, Position position,
                                          Move move);
 bool GamesmanTierIsLegalPositionConverted(Tier tier, Position position);
-int GamesmanTierGetNumberOfChildPositionsConverted(Tier tier,
+Position GamesmanTierGetCanonicalPositionConverted(Tier tier,
                                                    Position position);
-PositionArray GamesmanTierGetParentPositionsConverted(Tier tier,
-                                                      Position position,
-                                                      Tier parent_tier);
+int GamesmanTierGetNumberOfCanonicalChildPositionsConverted(Tier tier,
+                                                            Position position);
+PositionArray GamesmanTierGetCanonicalParentPositionsConverted(
+    Tier tier, Position position, Tier parent_tier);
 
 TierArray GamesmanGetChildTiersConverted(Tier tier);
 TierArray GamesmanGetParentTiersConverted(Tier tier);

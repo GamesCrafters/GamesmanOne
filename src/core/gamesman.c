@@ -19,86 +19,86 @@ Position global_initial_position = kDefaultInitialPosition;
 Tier global_initial_tier = kDefaultInitialTier;
 Analysis global_analysis = {0};
 
-/* Regular, no tier */
+// Regular API.
+
 MoveArray (*GenerateMoves)(Position position) = NULL;
 Value (*Primitive)(Position position) = NULL;
 Position (*DoMove)(Position position, Move move) = NULL;
 bool (*IsLegalPosition)(Position position) = NULL;
-int (*GetNumberOfChildPositions)(Position position) = NULL;
-PositionArray (*GetChildPositions)(Position position) = NULL;
-PositionArray (*GetParentPositions)(Position position) = NULL;
+int (*GetNumberOfCanonicalChildPositions)(Position position) = NULL;
+PositionArray (*GetCanonicalChildPositions)(Position position) = NULL;
+PositionArray (*GetCanonicalParentPositions)(Position position) = NULL;
+Position (*GetCanonicalPosition)(Position position) = NULL;
 
-/* Tier tree stuff */
-TierArray (*GetChildTiers)(Tier tier) = NULL;
-TierArray (*GetParentTiers)(Tier tier) = NULL;
-bool (*IsCanonicalTier)(Tier tier) = NULL;
-Tier (*GetCanonicalTier)(Tier tier) = NULL;
+// Tier position related API.
 
-/* Tier position stuff */
 int64_t (*GetTierSize)(Tier tier) = NULL;
 MoveArray (*TierGenerateMoves)(Tier tier, Position position) = NULL;
 Value (*TierPrimitive)(Tier tier, Position position) = NULL;
 TierPosition (*TierDoMove)(Tier tier, Position position, Move move) = NULL;
 bool (*TierIsLegalPosition)(Tier tier, Position position) = NULL;
-int (*TierGetNumberOfChildPositions)(Tier tier, Position position) = NULL;
-PositionArray (*TierGetParentPositions)(Tier tier, Position position,
-                                        Tier parent_tier) = NULL;
-Position (*TierGetNonCanonicalPosition)(Tier canonical_tier, Position position,
-                                        Tier noncanonical_tier) = NULL;
+int (*TierGetNumberOfCanonicalChildPositions)(Tier tier,
+                                              Position position) = NULL;
+PositionArray (*TierGetCanonicalParentPositions)(Tier tier, Position position,
+                                                 Tier parent_tier) = NULL;
+Position (*TierGetCanonicalPosition)(Tier tier, Position position) = NULL;
+Position (*TierGetPositionInNonCanonicalTier)(Tier canonical_tier,
+                                              Position position,
+                                              Tier noncanonical_tier) = NULL;
 
-// Generic Derived API functions.
-int GamesmanGetNumberOfChildPositions(Position position) {
-    // Using a naive O(n^2) algorithm, assuming number is small.
-    // May want to use a hash table instead if branching factor
-    // can be big.
-    PositionArray children;
-    PositionArrayInit(&children);
+// Tier tree related API.
+
+TierArray (*GetChildTiers)(Tier tier) = NULL;
+TierArray (*GetParentTiers)(Tier tier) = NULL;
+bool (*IsCanonicalTier)(Tier tier) = NULL;
+Tier (*GetCanonicalTier)(Tier tier) = NULL;
+
+Position GamesmanGetCanonicalPosition(Position position) { return position; }
+
+int GamesmanGetNumberOfCanonicalChildPositions(Position position) {
+    PositionHashSet children;
+    PositionHashSetInit(&children, 0.5);
     MoveArray moves = GenerateMoves(position);
     for (int64_t i = 0; i < moves.size; ++i) {
         Position child = DoMove(position, moves.array[i]);
-        if (!PositionArrayContains(&children, child)) {
-            PositionArrayAppend(&children, child);
+        child = GetCanonicalPosition(child);
+        if (!PositionHashSetContains(&children, child)) {
+            PositionHashSetAdd(&children, child);
         }
     }
     MoveArrayDestroy(&moves);
-    // Again, we are assuming this number is small.
     int num_children = (int)children.size;
-    PositionArrayDestroy(&children);
+    PositionHashSetDestroy(&children);
     return num_children;
 }
 
-// Duplicated child positions are allowed.
-PositionArray GamesmanGetChildPositions(Position position) {
+PositionArray GamesmanGetCanonicalChildPositions(Position position) {
     PositionArray children;
     PositionArrayInit(&children);
     MoveArray moves = GenerateMoves(position);
     for (int64_t i = 0; i < moves.size; ++i) {
-        Position child = DoMove(position, moves.array[i]);
+        Position child = GetCanonicalPosition(DoMove(position, moves.array[i]));
         PositionArrayAppend(&children, child);
     }
     MoveArrayDestroy(&moves);
     return children;
 }
 
-// Only used by regular solver.
 int64_t GamesmanGetTierSizeConverted(Tier tier) {
     (void)tier;
     return global_num_positions;
 }
 
-// Only used by regular solver.
 MoveArray GamesmanTierGenerateMovesConverted(Tier tier, Position position) {
     (void)tier;
     return GenerateMoves(position);
 }
 
-// Only used by regular solver.
 Value GamesmanTierPrimitiveConverted(Tier tier, Position position) {
     (void)tier;
     return Primitive(position);
 }
 
-// Only used by regular solver.
 TierPosition GamesmanTierDoMoveConverted(Tier tier, Position position,
                                          Move move) {
     Position child = DoMove(position, move);
@@ -113,18 +113,23 @@ bool GamesmanTierIsLegalPositionConverted(Tier tier, Position position) {
     return IsLegalPosition(position);
 }
 
-int GamesmanTierGetNumberOfChildPositionsConverted(Tier tier,
+Position GamesmanTierGetCanonicalPositionConverted(Tier tier,
                                                    Position position) {
     (void)tier;
-    return GetNumberOfChildPositions(position);
+    return GetCanonicalPosition(position);
 }
 
-PositionArray GamesmanTierGetParentPositionsConverted(Tier tier,
-                                                      Position position,
-                                                      Tier parent_tier) {
+int GamesmanTierGetNumberOfCanonicalChildPositionsConverted(Tier tier,
+                                                            Position position) {
+    (void)tier;
+    return GetNumberOfCanonicalChildPositions(position);
+}
+
+PositionArray GamesmanTierGetCanonicalParentPositionsConverted(
+    Tier tier, Position position, Tier parent_tier) {
     (void)tier;
     (void)parent_tier;
-    return GetParentPositions(position);
+    return GetCanonicalParentPositions(position);
 }
 
 TierArray GamesmanGetChildTiersConverted(Tier tier) {

@@ -53,6 +53,7 @@ bool Int64QueuePush(Int64Queue *queue, int64_t element) {
     int64_t back = (queue->front + queue->size) % queue->capacity;
     queue->array[back] = element;
     ++queue->size;
+    return true;
 }
 
 // Function to remove an element from the queue

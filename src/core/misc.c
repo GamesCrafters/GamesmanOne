@@ -30,6 +30,22 @@ bool PositionArrayContains(PositionArray *array, Position position) {
     return Int64ArrayContains(array, position);
 }
 
+void PositionHashSetInit(PositionHashSet *set, double max_load_factor) {
+    Int64HashMapInit(set, max_load_factor);
+}
+
+void PositionHashSetDestroy(PositionHashSet *set) {
+    Int64HashMapDestroy(set);
+}
+
+bool PositionHashSetContains(PositionHashSet *set, Position position) {
+    return Int64HashMapContains(set, position);
+}
+
+bool PositionHashSetAdd(PositionHashSet *set, Position position) {
+    return Int64HashMapSet(set, position, 0);
+}
+
 void MoveArrayInit(MoveArray *array) { Int64ArrayInit(array); }
 
 void MoveArrayDestroy(MoveArray *array) { Int64ArrayDestroy(array); }
@@ -51,7 +67,7 @@ void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
 void TierStackDestroy(TierStack *stack) { Int64ArrayDestroy(stack); }
 
 bool TierStackPush(TierStack *stack, Tier tier) {
-    Int64ArrayPushBack(stack, tier);
+    return Int64ArrayPushBack(stack, tier);
 }
 
 void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
@@ -113,6 +129,22 @@ bool TierHashMapIteratorIsValid(const TierHashMapIterator *it) {
 bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
                              int64_t *value) {
     return Int64HashMapIteratorNext(iterator, tier, value);
+}
+
+void TierHashSetInit(TierHashSet *set, double max_load_factor) {
+    Int64HashMapInit(set, max_load_factor);
+}
+
+void TierHashSetDestroy(TierHashSet *set) {
+    Int64HashMapDestroy(set);
+}
+
+bool TierHashSetContains(TierHashSet *set, Tier tier) {
+    return Int64HashMapContains(set, tier);
+}
+
+bool TierHashSetAdd(TierHashSet *set, Tier tier) {
+    return Int64HashMapSet(set, tier, 0);
 }
 
 bool IsPrime(int64_t n) {

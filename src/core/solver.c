@@ -92,10 +92,13 @@ static bool SelectRegularApi(void) {
         return false;
 
     // Generate optional regular API if needed.
-    if (GetNumberOfChildPositions == NULL)
-        GetNumberOfChildPositions = &GamesmanGetNumberOfChildPositions;
-    if (GetChildPositions == NULL)
-        GetChildPositions = &GamesmanGetChildPositions;
+    if (GetCanonicalPosition == NULL)
+        GetCanonicalPosition = &GamesmanGetCanonicalPosition;
+    if (GetNumberOfCanonicalChildPositions == NULL)
+        GetNumberOfCanonicalChildPositions =
+            &GamesmanGetNumberOfCanonicalChildPositions;
+    if (GetCanonicalChildPositions == NULL)
+        GetCanonicalChildPositions = &GamesmanGetCanonicalChildPositions;
 
     // Convert regular API to tier API.
     global_initial_tier = 0;
@@ -103,13 +106,15 @@ static bool SelectRegularApi(void) {
     TierPrimitive = &GamesmanTierPrimitiveConverted;
     TierDoMove = &GamesmanTierDoMoveConverted;
     TierIsLegalPosition = &GamesmanTierIsLegalPositionConverted;
+    TierGetCanonicalPosition = &GamesmanTierGetCanonicalPositionConverted;
 
     // Tier position API.
-    TierGetNumberOfChildPositions =
-        &GamesmanTierGetNumberOfChildPositionsConverted;
+    TierGetNumberOfCanonicalChildPositions =
+        &GamesmanTierGetNumberOfCanonicalChildPositionsConverted;
     GetTierSize = &GamesmanGetTierSizeConverted;
-    if (GetParentPositions) {
-        TierGetParentPositions = &GamesmanTierGetParentPositionsConverted;
+    if (GetCanonicalParentPositions) {
+        TierGetCanonicalParentPositions =
+            &GamesmanTierGetCanonicalParentPositionsConverted;
     } else {
         // TODO: Otherwise, build backward graph in memory.
         return false;
@@ -174,7 +179,10 @@ static bool CreateTierTree(void) {
 
 static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
     TierArray tier_children = GetChildTiers(parent);
-    SetNumUnsolvedChildTiers(parent, (int)tier_children.size);
+    if (!SetNumUnsolvedChildTiers(parent, (int)tier_children.size)) {
+        TierArrayDestroy(&tier_children);
+        return false;
+    }
     for (int64_t i = 0; i < tier_children.size; ++i) {
         Tier child = tier_children.array[i];
         if (!TierHashMapContains(&map, child)) {
@@ -231,7 +239,7 @@ static Value SolveTierTree(bool force) {
             ++skipped_tiers;
         }
     }
-    // PrintSolverResult();
+    PrintSolverResult();
     AnalysisPrintSummary(&global_analysis);
 
     // TODO: link prober and return value of initial position if possible.
@@ -240,26 +248,27 @@ static Value SolveTierTree(bool force) {
 
 static void UpdateTierTree(Tier solved_tier) {
     TierArray parent_tiers = GetParentTiers(solved_tier);
-    TierHashMap canonical_parents;  // Using TierHashMap as a hash set.
-    TierHashMapInit(&canonical_parents, 0.5);
+    TierHashSet canonical_parents;
+    TierHashSetInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
         // Update canonical parent's number of unsolved children only.
         Tier canonical = GetCanonicalTier(parent_tiers.array[i]);
-        if (TierHashMapContains(&canonical_parents, canonical)) {
+        if (TierHashSetContains(&canonical_parents, canonical)) {
             // It is possible that a child has two parents that are symmetrical
             // to each other. In this case, we should only decrement the child
             // counter once.
             continue;
         }
-        TierHashMapSet(&canonical_parents, canonical,
-                       0);  // Value is arbitrary.
+        TierHashSetAdd(&canonical_parents, canonical);
         int num_unsolved_child_tiers = GetNumUnsolvedChildTiers(canonical);
         assert(num_unsolved_child_tiers > 0);
-        SetNumUnsolvedChildTiers(canonical, num_unsolved_child_tiers - 1);
+        bool success =
+            SetNumUnsolvedChildTiers(canonical, num_unsolved_child_tiers - 1);
+        assert(success);
         if (num_unsolved_child_tiers == 1)
             TierQueuePush(&solvable_tiers, canonical);
     }
-    TierHashMapDestroy(&canonical_parents);
+    TierHashSetDestroy(&canonical_parents);
     TierArrayDestroy(&parent_tiers);
 }
 
@@ -289,14 +298,14 @@ static bool SetStatus(Tier tier, int status) {
     int64_t value = GetValue(tier);
     int num_unsolved_child_tiers = CalcNumUnsolvedChildTiers(value);
     value = CalcVal(num_unsolved_child_tiers, status);
-    TierHashMapSet(&map, tier, value);
+    return TierHashMapSet(&map, tier, value);
 }
 
 static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers) {
     int64_t value = GetValue(tier);
     int status = CalcStatus(value);
     value = CalcVal(num_unsolved_child_tiers, status);
-    TierHashMapSet(&map, tier, value);
+    return TierHashMapSet(&map, tier, value);
 }
 
 static void PrintSolverResult(void) {

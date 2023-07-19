@@ -13,6 +13,11 @@ void PositionArrayDestroy(PositionArray *array);
 bool PositionArrayAppend(PositionArray *array, Position position);
 bool PositionArrayContains(PositionArray *array, Position position);
 
+void PositionHashSetInit(PositionHashSet *set, double max_load_factor);
+void PositionHashSetDestroy(PositionHashSet *set);
+bool PositionHashSetContains(PositionHashSet *set, Position position);
+bool PositionHashSetAdd(PositionHashSet *set, Position position);
+
 void MoveArrayInit(MoveArray *array);
 void MoveArrayDestroy(MoveArray *array);
 bool MoveArrayAppend(MoveArray *array,  Move move);
@@ -47,6 +52,11 @@ int64_t TierHashMapIteratorValue(const TierHashMapIterator *it);
 bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
 bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
                              int64_t *value);
+
+void TierHashSetInit(TierHashSet *set, double max_load_factor);
+void TierHashSetDestroy(TierHashSet *set);
+bool TierHashSetContains(TierHashSet *set, Tier tier);
+bool TierHashSetAdd(TierHashSet *set, Tier tier);
 
 /**
  * @brief Tests if N is prime. Returns false if N is non-possitive.
