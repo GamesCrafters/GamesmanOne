@@ -4,7 +4,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_ts
 
-typedef struct {
+typedef struct Int64Queue {
     int64_t *array;
     int64_t front;
     int64_t size;

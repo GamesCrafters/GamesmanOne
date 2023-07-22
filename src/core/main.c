@@ -10,7 +10,7 @@ int main(void) {
     AnalysisInit(&global_analysis);
 
     // These should be in a MainMenu function.
-    MtttInitialize();
+    MtttInit();
     SolverSolve(false);
 
     return 0;

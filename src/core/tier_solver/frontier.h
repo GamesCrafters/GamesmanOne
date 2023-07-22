@@ -10,7 +10,7 @@
 #include <omp.h>
 #endif
 
-typedef struct {
+typedef struct Frontier {
     PositionArray *buckets;
     int64_t **dividers;
 #ifdef _OPENMP

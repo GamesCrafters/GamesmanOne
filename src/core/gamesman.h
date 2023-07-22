@@ -11,7 +11,7 @@
  * @brief If you are implementing a game without tiers, implement the following
  * API functions and ignore the TierSolverAPI.
  */
-typedef struct {
+typedef struct RegularSolverAPI {
     /**
      * @brief Returns an array of available moves at the given position.
      *
@@ -146,7 +146,7 @@ typedef struct {
  * @brief If you are implementing a tier game, implement the following
  * API functions and ignore the RegularSolverAPI.
  */
-typedef struct {
+typedef struct TierSolverAPI {
     /**
      * @brief Returns the size of the given tier.
      *

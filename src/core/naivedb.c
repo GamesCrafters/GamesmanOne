@@ -24,7 +24,7 @@
 #define PRAGMA_OMP_CRITICAL(name)
 #endif
 
-typedef struct {
+typedef struct NaiveDbEntry {
     Value value;
     int remoteness;
 } NaiveDbEntry;

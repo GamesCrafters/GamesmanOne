@@ -10,7 +10,7 @@ typedef struct Int64HashMapEntry {
     bool used;
 } Int64HashMapEntry;
 
-typedef struct {
+typedef struct Int64HashMap {
     Int64HashMapEntry *entries;
     int64_t capacity;
     int64_t size;
@@ -26,7 +26,7 @@ typedef struct {
  *        // Do stuff.
  *    }
  */
-typedef struct {
+typedef struct Int64HashMapIterator {
     Int64HashMap *map;
     int64_t index;
 } Int64HashMapIterator;

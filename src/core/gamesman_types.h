@@ -26,12 +26,12 @@ typedef Int64HashMap TierHashMap;
 typedef Int64HashMapIterator TierHashMapIterator;
 typedef Int64HashMap TierHashSet;
 
-typedef struct {
+typedef struct TierPosition {
     Tier tier;
     Position position;
 } TierPosition;
 
-typedef struct {
+typedef struct TierPositionArray {
     TierPosition *array;
     int64_t size;
     int64_t capacity;
@@ -42,7 +42,7 @@ typedef struct TierPositionHashSetEntry {
     bool used;
 } TierPositionHashSetEntry;
 
-typedef struct {
+typedef struct TierPositionHashSet {
     TierPositionHashSetEntry *entries;
     int64_t capacity;
     int64_t size;

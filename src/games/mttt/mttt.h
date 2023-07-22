@@ -1,6 +1,6 @@
 #ifndef GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 #define GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 
-void MtttInitialize(void);
+void MtttInit(void);
 
 #endif  // GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_

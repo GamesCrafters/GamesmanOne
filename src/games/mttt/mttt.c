@@ -1,13 +1,12 @@
 #include "games/mttt/mttt.h"
 
-#include <stdbool.h>
-#include <stdio.h>
+#include <stdbool.h>  // bool, true, false
 
-#include "core/gamesman.h"
+#include "core/gamesman.h"  // regular_solver
 #include "core/gamesman_types.h"
 #include "core/misc.h"  // NotReached
 
-// API Function
+// API Functions
 
 static MoveArray MtttGenerateMoves(Position position);
 static Value MtttPrimitive(Position position);
@@ -29,7 +28,7 @@ static const int kRowsToCheck[8][3] = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
                                        {0, 4, 8}, {2, 4, 6}};
 
 // 8 symmetries, each one is a reordering of the 9 slots on the board.
-// This will be initialized in the MtttInitialize function.
+// This will be initialized in the MtttInit function.
 static const int num_symmetries = 8;
 static int symmetry_matrix[8][9];
 
@@ -61,7 +60,7 @@ static void CountPieces(BlankOX *board, int *xcount, int *ocount);
 static BlankOX WhoseTurn(BlankOX *board);
 
 //-----------------------------------------------------------------------------
-void MtttInitialize(void) {
+void MtttInit(void) {
     global_num_positions = 19683;  // 3**9.
     global_initial_position = 0;
 
@@ -70,8 +69,8 @@ void MtttInitialize(void) {
     regular_solver.DoMove = &MtttDoMove;
     regular_solver.IsLegalPosition = &MtttIsLegalPosition;
     regular_solver.GetCanonicalPosition = &MtttGetCanonicalPosition;
-    // regular_solver.GetCanonicalParentPositions =
-    // &MtttGetCanonicalParentPositions;
+    regular_solver.GetCanonicalParentPositions =
+        &MtttGetCanonicalParentPositions;
 
     InitSymmetryMatrix();
 }

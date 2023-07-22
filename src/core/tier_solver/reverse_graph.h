@@ -10,7 +10,7 @@
 #include <omp.h>
 #endif
 
-typedef struct {
+typedef struct ReverseGraph {
     PositionArray *parents_of;
 #ifdef _OPENMP
     omp_lock_t *locks;

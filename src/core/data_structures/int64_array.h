@@ -4,7 +4,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-typedef struct {
+typedef struct Int64Array {
     int64_t *array;
     int64_t size;
     int64_t capacity;

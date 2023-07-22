@@ -5,7 +5,7 @@
 #include "core/data_structures/int64_array.h"
 #include "core/gamesman_types.h"
 
-typedef struct {
+typedef struct Analysis {
     int64_t total_positions;
     int64_t total_legal_positions;
 
