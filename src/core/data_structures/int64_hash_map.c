@@ -1,7 +1,7 @@
 #include "core/data_structures/int64_hash_map.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // malloc, free
+#include <malloc.h>   // calloc, free
 #include <math.h>     // INFINITY
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
@@ -9,11 +9,11 @@
 
 #include "core/misc.h"  // NextPrime
 
-static int64_t hash(int64_t key, int64_t capacity) {
-    return (uint64_t)key % capacity;
+static int64_t Hash(int64_t key, int64_t capacity) {
+    return ((uint64_t)key) % capacity;
 }
 
-static int64_t next_index(int64_t index, int64_t capacity) {
+static int64_t NextIndex(int64_t index, int64_t capacity) {
     return (index + 1) % capacity;
 }
 
@@ -44,12 +44,12 @@ Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key) {
     int64_t capacity = map->capacity;
     // Edge case: return invalid iterator if map is empty.
     if (map->capacity == 0) return NewIterator(map, capacity);
-    int64_t index = hash(key, capacity);
+    int64_t index = Hash(key, capacity);
     while (map->entries[index].used) {
         if (map->entries[index].key == key) {
             return NewIterator(map, index);
         }
-        index = next_index(index, capacity);
+        index = NextIndex(index, capacity);
     }
     return NewIterator(map, capacity);
 }
@@ -57,16 +57,13 @@ Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key) {
 static bool Expand(Int64HashMap *map) {
     int64_t new_capacity = NextPrime(map->capacity * 2);
     Int64HashMapEntry *new_entries =
-        (Int64HashMapEntry*)malloc(sizeof(Int64HashMapEntry) * new_capacity);
+        (Int64HashMapEntry *)calloc(new_capacity, sizeof(Int64HashMapEntry));
     if (new_entries == NULL) return false;
-    for (int64_t i = 0; i < new_capacity; ++i) {
-        new_entries[i].used = false;
-    }
     for (int64_t i = 0; i < map->capacity; ++i) {
         if (map->entries[i].used) {
-            int64_t new_index = hash(map->entries[i].key, new_capacity);
+            int64_t new_index = Hash(map->entries[i].key, new_capacity);
             while (new_entries[new_index].used) {
-                new_index = next_index(new_index, new_capacity);
+                new_index = NextIndex(new_index, new_capacity);
             }
             new_entries[new_index] = map->entries[i];
         }
@@ -91,13 +88,13 @@ bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value) {
 
     // Set value at key.
     int64_t capacity = map->capacity;
-    int64_t index = hash(key, capacity);
+    int64_t index = Hash(key, capacity);
     while (map->entries[index].used) {
         if (map->entries[index].key == key) {
             map->entries[index].value = value;
             return true;
         }
-        index = next_index(index, capacity);
+        index = NextIndex(index, capacity);
     }
     map->entries[index].key = key;
     map->entries[index].value = value;

@@ -1,11 +1,12 @@
 #include "core/data_structures/int64_queue.h"
 
-#include <assert.h>
-#include <malloc.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <assert.h>   // assert
+#include <malloc.h>   // realloc, free
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <string.h>   // memcpy
 
 static bool Expand(Int64Queue *queue) {
     int64_t new_capacity = queue->capacity == 0 ? 1 : queue->capacity * 2;
@@ -37,9 +38,7 @@ void Int64QueueDestroy(Int64Queue *queue) {
 }
 
 // Function to check if the queue is empty
-bool Int64QueueIsEmpty(const Int64Queue *queue) {
-    return (queue->size == 0);
-}
+bool Int64QueueIsEmpty(const Int64Queue *queue) { return (queue->size == 0); }
 
 // Function to check the size of the queue
 int64_t Int64QueueSize(const Int64Queue *queue) { return queue->size; }

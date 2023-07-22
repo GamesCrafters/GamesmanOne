@@ -65,12 +65,13 @@ void MtttInitialize(void) {
     global_num_positions = 19683;  // 3**9.
     global_initial_position = 0;
 
-    GenerateMoves = &MtttGenerateMoves;
-    Primitive = &MtttPrimitive;
-    DoMove = &MtttDoMove;
-    IsLegalPosition = &MtttIsLegalPosition;
-    GetCanonicalPosition = &MtttGetCanonicalPosition;
-    GetCanonicalParentPositions = &MtttGetCanonicalParentPositions;
+    regular_solver.GenerateMoves = &MtttGenerateMoves;
+    regular_solver.Primitive = &MtttPrimitive;
+    regular_solver.DoMove = &MtttDoMove;
+    regular_solver.IsLegalPosition = &MtttIsLegalPosition;
+    regular_solver.GetCanonicalPosition = &MtttGetCanonicalPosition;
+    // regular_solver.GetCanonicalParentPositions =
+    // &MtttGetCanonicalParentPositions;
 
     InitSymmetryMatrix();
 }
@@ -183,8 +184,7 @@ static void InitSymmetryMatrix(void) {
     for (int i = 0; i < 9; ++i) {
         int temp = i;
         for (int j = 0; j < num_symmetries; ++j) {
-            if (j == num_symmetries / 2)
-                temp = flip_new_position[i];
+            if (j == num_symmetries / 2) temp = flip_new_position[i];
             if (j < num_symmetries / 2) {
                 temp = symmetry_matrix[j][i] =
                     rotate_90_clockwise_new_position[temp];

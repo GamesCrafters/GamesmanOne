@@ -2,8 +2,8 @@
 #define GAMESMANEXPERIMENT_CORE_ANALYSIS_H_
 #include <stdint.h>
 
-#include "core/gamesman_types.h"
 #include "core/data_structures/int64_array.h"
+#include "core/gamesman_types.h"
 
 typedef struct {
     int64_t total_positions;

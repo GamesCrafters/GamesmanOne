@@ -36,7 +36,8 @@ static void DestroyGlobalVariables(void);
 static bool CreateTierTree(void);
 static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe);
 static void EnqueuePrimitiveTiers(void);
-static int64_t CalcVal(int num_unsolved_child_tiers, int status);
+static int64_t CalcVal(int num_unsolved_child_tiers,
+                       int status);  // TODO: rename these
 static int CalcStatus(int64_t value);
 static int CalcNumUnsolvedChildTiers(int64_t value);
 static int64_t GetValue(Tier tier);
@@ -44,6 +45,7 @@ static int GetStatus(Tier tier);
 static int GetNumUnsolvedChildTiers(Tier tier);
 static bool SetStatus(Tier tier, int status);
 static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers);
+static bool IsCanonicalTier(Tier tier);
 
 static Value SolveTierTree(bool force);
 static void UpdateTierTree(Tier solved_tie);
@@ -88,43 +90,42 @@ static bool SelectRegularApi(void) {
     // Check for required API.
     assert(global_num_positions > 0);
     if (global_initial_position < 0) return false;
-    if (GenerateMoves == NULL || Primitive == NULL || DoMove == NULL)
-        return false;
+    if (regular_solver.GenerateMoves == NULL) return false;
+    if (regular_solver.Primitive == NULL) return false;
+    if (regular_solver.DoMove == NULL) return false;
 
     // Generate optional regular API if needed.
-    if (GetCanonicalPosition == NULL)
-        GetCanonicalPosition = &GamesmanGetCanonicalPosition;
-    if (GetNumberOfCanonicalChildPositions == NULL)
-        GetNumberOfCanonicalChildPositions =
+    if (regular_solver.GetCanonicalPosition == NULL)
+        regular_solver.GetCanonicalPosition = &GamesmanGetCanonicalPosition;
+    if (regular_solver.GetNumberOfCanonicalChildPositions == NULL)
+        regular_solver.GetNumberOfCanonicalChildPositions =
             &GamesmanGetNumberOfCanonicalChildPositions;
-    if (GetCanonicalChildPositions == NULL)
-        GetCanonicalChildPositions = &GamesmanGetCanonicalChildPositions;
+    if (regular_solver.GetCanonicalChildPositions == NULL)
+        regular_solver.GetCanonicalChildPositions =
+            &GamesmanGetCanonicalChildPositions;
 
     // Convert regular API to tier API.
     global_initial_tier = 0;
-    TierGenerateMoves = &GamesmanTierGenerateMovesConverted;
-    TierPrimitive = &GamesmanTierPrimitiveConverted;
-    TierDoMove = &GamesmanTierDoMoveConverted;
-    TierIsLegalPosition = &GamesmanTierIsLegalPositionConverted;
-    TierGetCanonicalPosition = &GamesmanTierGetCanonicalPositionConverted;
-
-    // Tier position API.
-    TierGetNumberOfCanonicalChildPositions =
+    tier_solver.GetTierSize = &GamesmanGetTierSizeConverted;
+    tier_solver.GenerateMoves = &GamesmanTierGenerateMovesConverted;
+    tier_solver.Primitive = &GamesmanTierPrimitiveConverted;
+    tier_solver.DoMove = &GamesmanTierDoMoveConverted;
+    tier_solver.IsLegalPosition = &GamesmanTierIsLegalPositionConverted;
+    tier_solver.GetNumberOfCanonicalChildPositions =
         &GamesmanTierGetNumberOfCanonicalChildPositionsConverted;
-    GetTierSize = &GamesmanGetTierSizeConverted;
-    if (GetCanonicalParentPositions) {
-        TierGetCanonicalParentPositions =
+    tier_solver.GetCanonicalChildPositions =
+        &GamesmanTierGetCanonicalChildPositionsConverted;
+    tier_solver.GetCanonicalPosition =
+        &GamesmanTierGetCanonicalPositionConverted;
+    if (regular_solver.GetCanonicalParentPositions != NULL) {
+        tier_solver.GetCanonicalParentPositions =
             &GamesmanTierGetCanonicalParentPositionsConverted;
-    } else {
-        // TODO: Otherwise, build backward graph in memory.
-        return false;
     }
 
     // Tier tree API.
-    GetChildTiers = &GamesmanGetChildTiersConverted;
-    GetParentTiers = &GamesmanGetParentTiersConverted;
-    IsCanonicalTier = &GamesmanIsCanonicalTierConverted;
-    GetCanonicalTier = &GamesmanGetCanonicalTierConverted;
+    tier_solver.GetChildTiers = &GamesmanGetChildTiersConverted;
+    tier_solver.GetParentTiers = &GamesmanGetParentTiersConverted;
+    tier_solver.GetCanonicalTier = &GamesmanGetCanonicalTierConverted;
     return true;
 }
 
@@ -178,7 +179,7 @@ static bool CreateTierTree(void) {
 }
 
 static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
-    TierArray tier_children = GetChildTiers(parent);
+    TierArray tier_children = tier_solver.GetChildTiers(parent);
     if (!SetNumUnsolvedChildTiers(parent, (int)tier_children.size)) {
         TierArrayDestroy(&tier_children);
         return false;
@@ -247,12 +248,12 @@ static Value SolveTierTree(bool force) {
 }
 
 static void UpdateTierTree(Tier solved_tier) {
-    TierArray parent_tiers = GetParentTiers(solved_tier);
+    TierArray parent_tiers = tier_solver.GetParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
         // Update canonical parent's number of unsolved children only.
-        Tier canonical = GetCanonicalTier(parent_tiers.array[i]);
+        Tier canonical = tier_solver.GetCanonicalTier(parent_tiers.array[i]);
         if (TierHashSetContains(&canonical_parents, canonical)) {
             // It is possible that a child has two parents that are symmetrical
             // to each other. In this case, we should only decrement the child
@@ -265,6 +266,7 @@ static void UpdateTierTree(Tier solved_tier) {
         bool success =
             SetNumUnsolvedChildTiers(canonical, num_unsolved_child_tiers - 1);
         assert(success);
+        (void)success;
         if (num_unsolved_child_tiers == 1)
             TierQueuePush(&solvable_tiers, canonical);
     }
@@ -306,6 +308,10 @@ static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers) {
     int status = CalcStatus(value);
     value = CalcVal(num_unsolved_child_tiers, status);
     return TierHashMapSet(&map, tier, value);
+}
+
+static bool IsCanonicalTier(Tier tier) {
+    return tier_solver.GetCanonicalTier(tier) == tier;
 }
 
 static void PrintSolverResult(void) {

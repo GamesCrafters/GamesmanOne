@@ -1,10 +1,10 @@
 #include "core/data_structures/int64_array.h"
 
-#include <assert.h>
-#include <malloc.h>  // free, realloc
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <assert.h>   // assert
+#include <malloc.h>   // free, realloc
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   //int64_t
 
 void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;

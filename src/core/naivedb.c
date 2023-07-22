@@ -1,20 +1,27 @@
 #include "core/naivedb.h"
 
-#include <assert.h>
-#include <inttypes.h>
-#include <malloc.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <assert.h>    // assert
+#include <inttypes.h>  // PRId64
+#include <malloc.h>    // malloc, calloc, free
+#include <stddef.h>    // NULL
+#include <stdint.h>    // int64_t
+#include <stdio.h>     // fprintf, stderr
 
-#include "core/analysis.h"
-#include "core/gamesman.h"
-#include "core/gamesman_types.h"
+#include "core/analysis.h"  // Analysis
 #include "core/data_structures/int64_array.h"
+#include "core/gamesman.h"  // tier_solver
+#include "core/gamesman_types.h"
 #include "core/misc.h"
 
 #ifdef _OPENMP
 #include <omp.h>
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_ATOMIC PRAGMA(omp atomic)
+#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
+#else
+#define PRAGMA
+#define PRAGMA_OMP_ATOMIC
+#define PRAGMA_OMP_CRITICAL(name)
 #endif
 
 typedef struct {
@@ -32,7 +39,7 @@ bool DbCreateTier(Tier tier) {
     current_tier = tier;
 
     AnalysisInit(&tier_analysis);
-    int64_t size = GetTierSize(tier);
+    int64_t size = tier_solver.GetTierSize(tier);
     tier_analysis.total_positions = size;
 
     free(records);
@@ -45,7 +52,7 @@ bool DbCreateTier(Tier tier) {
 }
 
 bool DbLoadTier(Tier tier) {
-    int64_t size = GetTierSize(tier);
+    int64_t size = tier_solver.GetTierSize(tier);
     free(records);
     records = (NaiveDbEntry *)malloc(size * sizeof(NaiveDbEntry));
     if (records == NULL) {
@@ -58,17 +65,19 @@ bool DbLoadTier(Tier tier) {
     assert(dbfile);
     int64_t n = fread(records, sizeof(NaiveDbEntry), size, dbfile);
     assert(n == size);
+    (void)n;
     fclose(dbfile);
     return true;
 }
 
 void DbSave(Tier tier) {
-    int64_t size = GetTierSize(tier);
+    int64_t size = tier_solver.GetTierSize(tier);
     char filename[100];
     sprintf(filename, "%" PRId64, tier);
     FILE *dbfile = fopen(filename, "wb");
     int64_t n = fwrite(records, sizeof(NaiveDbEntry), size, dbfile);
     assert(n == size);
+    (void)n;
     fclose(dbfile);
 }
 
@@ -84,26 +93,25 @@ int DbGetRemoteness(Position position) {
 
 static void UpdateCountAndSummary(int remoteness, int64_t *count,
                                   Int64Array *summary) {
-#pragma omp atomic
+    PRAGMA_OMP_ATOMIC
     ++(*count);
 
     // Fill summary array with zero entries up to remoteness.
-#pragma omp critical(UpdateCountAndSummary)
-    {
+    PRAGMA_OMP_CRITICAL(UpdateCountAndSummary) {
         while (summary->size <= remoteness) {
             Int64ArrayPushBack(summary, 0);
         }
     }
 
-#pragma omp atomic
+    PRAGMA_OMP_ATOMIC
     ++summary->array[remoteness];
 }
 
 static void UpdateTierAnalysis(Position position, Value value, int remoteness) {
-#pragma omp atomic
+    PRAGMA_OMP_ATOMIC
     ++tier_analysis.total_legal_positions;
-#pragma omp critical(UpdateTierAnalysis)
-    {
+
+    PRAGMA_OMP_CRITICAL(UpdateTierAnalysis) {
         if (remoteness > tier_analysis.largest_found_remoteness) {
             tier_analysis.largest_found_remoteness = remoteness;
             tier_analysis.largest_remoteness_position =
@@ -127,7 +135,7 @@ static void UpdateTierAnalysis(Position position, Value value, int remoteness) {
             break;
 
         case kDraw:
-#pragma omp atomic
+            PRAGMA_OMP_ATOMIC
             ++tier_analysis.draw_count;
             break;
 
@@ -176,3 +184,7 @@ void DbDumpTierAnalysisToGlobal(void) {
     DumpSummaryToGlobal(&global_analysis.tie_summary,
                         &tier_analysis.tie_summary);
 }
+
+#undef PRAGMA
+#undef PRAGMA_OMP_ATOMIC
+#undef PRAGMA_OMP_CRITICAL

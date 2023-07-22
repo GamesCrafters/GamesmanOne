@@ -1,7 +1,7 @@
 #ifndef GAMESMANEXPERIMENT_CORE_NAIVEDB_H_
 #define GAMESMANEXPERIMENT_CORE_NAIVEDB_H_
 
-#include <stdbool.h>
+#include <stdbool.h>  // bool
 
 #include "core/gamesman_types.h"
 

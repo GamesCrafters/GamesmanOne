@@ -3,6 +3,7 @@
 #include <assert.h>   // assert
 #include <malloc.h>   // calloc, free
 #include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // memset
@@ -12,6 +13,13 @@
 
 #ifdef _OPENMP
 #include <omp.h>
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_ATOMIC PRAGMA(omp atomic)
+#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#else
+#define PRAGMA
+#define PRAGMA_OMP_ATOMIC
+#define PRAGMA_OMP_PARALLEL_FOR
 #endif
 
 static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
@@ -152,14 +160,14 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
 #endif
     if (!success) return false;
 
-        // Update divider.
-#pragma omp atomic
+    // Update divider.
+    PRAGMA_OMP_ATOMIC
     ++frontier->dividers[remoteness][child_tier_index];
     return true;
 }
 
 void FrontierAccumulateDividers(Frontier *frontier) {
-#pragma omp parallel for
+    PRAGMA_OMP_PARALLEL_FOR
     for (int remoteness = 0; remoteness < frontier->size; ++remoteness) {
         // This for-loop must be executed sequentially.
         for (int i = 1; i < frontier->dividers_size; ++i) {
@@ -174,3 +182,7 @@ void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
     free(frontier->dividers[remoteness]);
     frontier->dividers[remoteness] = NULL;
 }
+
+#undef PRAGMA
+#undef PRAGMA_OMP_ATOMIC
+#undef PRAGMA_OMP_PARALLEL_FOR

@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #include "core/data_structures/int64_array.h"
-#include "core/data_structures/int64_queue.h"
 #include "core/data_structures/int64_hash_map.h"
+#include "core/data_structures/int64_queue.h"
 
 typedef int64_t Position;
 typedef int64_t Move;
@@ -30,5 +30,23 @@ typedef struct {
     Tier tier;
     Position position;
 } TierPosition;
+
+typedef struct {
+    TierPosition *array;
+    int64_t size;
+    int64_t capacity;
+} TierPositionArray;
+
+typedef struct TierPositionHashSetEntry {
+    TierPosition key;
+    bool used;
+} TierPositionHashSetEntry;
+
+typedef struct {
+    TierPositionHashSetEntry *entries;
+    int64_t capacity;
+    int64_t size;
+    double max_load_factor;
+} TierPositionHashSet;
 
 #endif  // GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_

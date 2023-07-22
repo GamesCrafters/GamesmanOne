@@ -1,7 +1,8 @@
-#ifndef GAMESMANEXPERIMENT_CORE_INT64_HASH_MAP_H_
-#define GAMESMANEXPERIMENT_CORE_INT64_HASH_MAP_H_
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
+#define GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
+
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 typedef struct Int64HashMapEntry {
     int64_t key;
@@ -16,12 +17,14 @@ typedef struct {
     double max_load_factor;
 } Int64HashMap;
 
-/* Usage:
-    Int64HashMapIterator it;
-    Int64HashMapIteratorInit(&it);
-    while (Int64HashMapIteratorNext) {
-        // Do stuff.
-    }
+/**
+ * @note
+ * Example usage:
+ *   Int64HashMapIterator it;
+ *   Int64HashMapIteratorInit(&it);
+ *    while (Int64HashMapIteratorNext) {
+ *        // Do stuff.
+ *    }
  */
 typedef struct {
     Int64HashMap *map;
@@ -41,4 +44,4 @@ bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it);
 bool Int64HashMapIteratorNext(Int64HashMapIterator *iterator, int64_t *key,
                               int64_t *value);
 
-#endif  // GAMESMANEXPERIMENT_CORE_INT64_HASH_MAP_H_
+#endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_

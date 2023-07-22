@@ -1,8 +1,8 @@
-#ifndef GAMESMANEXPERIMENT_CORE_INT64_ARRAY_H_
-#define GAMESMANEXPERIMENT_CORE_INT64_ARRAY_H_
+#ifndef GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
+#define GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 typedef struct {
     int64_t *array;
@@ -18,4 +18,4 @@ int64_t Int64ArrayBack(const Int64Array *array);
 bool Int64ArrayEmpty(const Int64Array *array);
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
-#endif  // GAMESMANEXPERIMENT_CORE_INT64_ARRAY_H_
+#endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_

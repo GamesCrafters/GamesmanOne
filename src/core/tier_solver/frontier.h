@@ -1,7 +1,8 @@
-#ifndef GAMESMANEXPERIMENT_CORE_FRONTIER_H_
-#define GAMESMANEXPERIMENT_CORE_FRONTIER_H_
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_
+#define GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_
+
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/gamesman_types.h"  // PositionArray
 
@@ -27,4 +28,4 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
 void FrontierAccumulateDividers(Frontier *frontier);
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness);
 
-#endif  // GAMESMANEXPERIMENT_CORE_FRONTIER_H_
+#endif  // GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_

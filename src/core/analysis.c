@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/gamesman_types.h"
 #include "core/data_structures/int64_array.h"
+#include "core/gamesman_types.h"
 
 void AnalysisInit(Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
@@ -94,7 +94,8 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
                                 ? analysis->tie_summary.array[remoteness]
                                 : 0;
         int64_t total = win_count + lose_count + tie_count;
-        char remoteness_string[12];  // Covers the range [-2147483647, 2147483647].
+        char remoteness_string[12];  // Covers the range [-2147483647,
+                                     // 2147483647].
         sprintf(remoteness_string, "%d", remoteness);
         printf(format, remoteness_string, win_count, lose_count, tie_count, 0,
                total);

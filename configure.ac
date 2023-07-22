@@ -2,13 +2,17 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.71])
-AC_INIT([GamesmanExperiment], [0.01], [robertyishi@berkeley.edu])
+AC_INIT([GamesmanExperiment], [0.2], [robertyishi@berkeley.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AC_CONFIG_SRCDIR([src/core/main.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+
+# Enables OpenMP if possible.
+# Pass "--disable-openmp" to configure to force disable.
+AC_OPENMP
 
 # Checks for libraries.
 
