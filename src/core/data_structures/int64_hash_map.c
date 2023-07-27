@@ -7,7 +7,7 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
 
-#include "core/misc.h"  // NextPrime
+#include "core/gamesman_math.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
     return ((uint64_t)key) % capacity;

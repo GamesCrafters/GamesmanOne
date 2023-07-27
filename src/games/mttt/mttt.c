@@ -4,7 +4,7 @@
 
 #include "core/gamesman.h"  // regular_solver
 #include "core/gamesman_types.h"
-#include "core/misc.h"  // NotReached
+#include "core/misc.h"  // NotReached, PositionArray utilities.
 
 // API Functions
 

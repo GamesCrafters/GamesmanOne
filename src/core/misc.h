@@ -67,33 +67,4 @@ void TierPositionHashSetDestroy(TierPositionHashSet *set);
 bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
 
-/**
- * @brief Tests if N is prime. Returns false if N is non-possitive.
- *
- * @param n Integer.
- * @return True if N is a positive prime number, false otherwise.
- * @author Naman_Garg, geeksforgeeks.org.
- * https://www.geeksforgeeks.org/program-to-find-the-next-prime-number/
- */
-bool IsPrime(int64_t n);
-
-/**
- * @brief Returns the largest prime number that is smaller than
- * or equal to N, unless N is less than 2, in which case 2 is
- * returned.
- *
- * @param n Reference.
- * @return Previous prime of N.
- */
-int64_t PrevPrime(int64_t n);
-
-/**
- * @brief Returns the smallest prime number that is greater than
- * or equal to N, assuming no integer overflow occurs.
- *
- * @param n Reference.
- * @return Next prime of N.
- */
-int64_t NextPrime(int64_t n);
-
 #endif  // GAMESMANEXPERIMENT_CORE_MISC_H_

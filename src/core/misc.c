@@ -11,6 +11,7 @@
 #include "core/data_structures/int64_array.h"
 #include "core/data_structures/int64_hash_map.h"
 #include "core/data_structures/int64_queue.h"
+#include "core/gamesman_math.h"
 
 void NotReached(const char *message) {
     fprintf(stderr,
@@ -263,31 +264,4 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     set->entries[index].used = true;
     ++set->size;
     return true;
-}
-
-bool IsPrime(int64_t n) {
-    if (n <= 1) return false;
-    if (n <= 3) return true;
-    if (n % 2 == 0 || n % 3 == 0) return false;
-    for (int64_t i = 5; i * i <= n; i += 6) {
-        if (n % i == 0 || n % (i + 2) == 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
-int64_t PrevPrime(int64_t n) {
-    if (n < 2) return 2;
-    while (!IsPrime(n)) {
-        --n;
-    }
-    return n;
-}
-
-int64_t NextPrime(int64_t n) {
-    while (!IsPrime(n)) {
-        ++n;
-    }
-    return n;
 }
