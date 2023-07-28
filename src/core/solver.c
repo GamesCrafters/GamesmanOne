@@ -36,15 +36,19 @@ static void DestroyGlobalVariables(void);
 static bool CreateTierTree(void);
 static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe);
 static void EnqueuePrimitiveTiers(void);
-static int64_t CalcVal(int num_unsolved_child_tiers,
-                       int status);  // TODO: rename these
-static int CalcStatus(int64_t value);
-static int CalcNumUnsolvedChildTiers(int64_t value);
+
+static int64_t NumUnsolvedChildTiersAndStatusToValue(
+    int num_unsolved_child_tiers, int status);
+static int ValueToStatus(int64_t value);
+static int ValueToNumUnsolvedChildTiers(int64_t value);
+
 static int64_t GetValue(Tier tier);
 static int GetStatus(Tier tier);
 static int GetNumUnsolvedChildTiers(Tier tier);
+
 static bool SetStatus(Tier tier, int status);
 static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers);
+
 static bool IsCanonicalTier(Tier tier);
 
 static Value SolveTierTree(bool force);
@@ -82,8 +86,39 @@ static bool SelectApiFunctions(void) {
 }
 
 static bool SelectTierApi(void) {
-    // TODO
-    return false;
+    // Check for required API.
+    if (global_initial_tier < 0) return false;
+    if (global_initial_position < 0) return false;
+    if (tier_solver.GetTierSize == NULL) return false;
+    if (tier_solver.GenerateMoves == NULL) return false;
+    if (tier_solver.Primitive == NULL) return false;
+    if (tier_solver.DoMove == NULL) return false;
+    if (tier_solver.IsLegalPosition == NULL) return false;
+    if (tier_solver.GetChildTiers == NULL) return false;
+    if (tier_solver.GetParentTiers == NULL) return false;
+
+    // Turn off Tier Symmetry Removal if all required functions are not set.
+    if (tier_solver.GetCanonicalTier == NULL ||
+        tier_solver.GetPositionInNonCanonicalTier == NULL) {
+        tier_solver.GetCanonicalTier = &GamesmanGetCanonicalTierDefault;
+        tier_solver.GetPositionInNonCanonicalTier = NULL;
+    }
+
+    // Turn off Position Symmetry Removal if GetCanonicalPosition is not set.
+    if (tier_solver.GetCanonicalPosition == NULL) {
+        tier_solver.GetCanonicalPosition =
+            &GamesmanTierGetCanonicalPositionDefault;
+    }
+
+    if (tier_solver.GetNumberOfCanonicalChildPositions == NULL) {
+        tier_solver.GetNumberOfCanonicalChildPositions =
+            GamesmanTierGetNumberOfCanonicalChildPositionsDefault;
+    }
+    if (tier_solver.GetCanonicalChildPositions == NULL) {
+        tier_solver.GetCanonicalChildPositions =
+            GamesmanTierGetCanonicalChildPositionsDefault;
+    }
+    return true;
 }
 
 static bool SelectRegularApi(void) {
@@ -93,16 +128,19 @@ static bool SelectRegularApi(void) {
     if (regular_solver.GenerateMoves == NULL) return false;
     if (regular_solver.Primitive == NULL) return false;
     if (regular_solver.DoMove == NULL) return false;
+    if (regular_solver.IsLegalPosition == NULL) return false;
 
     // Generate optional regular API if needed.
     if (regular_solver.GetCanonicalPosition == NULL)
         regular_solver.GetCanonicalPosition = &GamesmanGetCanonicalPosition;
-    if (regular_solver.GetNumberOfCanonicalChildPositions == NULL)
+    if (regular_solver.GetNumberOfCanonicalChildPositions == NULL) {
         regular_solver.GetNumberOfCanonicalChildPositions =
             &GamesmanGetNumberOfCanonicalChildPositions;
-    if (regular_solver.GetCanonicalChildPositions == NULL)
+    }
+    if (regular_solver.GetCanonicalChildPositions == NULL) {
         regular_solver.GetCanonicalChildPositions =
             &GamesmanGetCanonicalChildPositions;
+    }
 
     // Convert regular API to tier API.
     global_initial_tier = 0;
@@ -125,7 +163,7 @@ static bool SelectRegularApi(void) {
     // Tier tree API.
     tier_solver.GetChildTiers = &GamesmanGetChildTiersConverted;
     tier_solver.GetParentTiers = &GamesmanGetParentTiersConverted;
-    tier_solver.GetCanonicalTier = &GamesmanGetCanonicalTierConverted;
+    tier_solver.GetCanonicalTier = &GamesmanGetCanonicalTierDefault;
     return true;
 }
 
@@ -153,7 +191,8 @@ static bool CreateTierTree(void) {
     TierStack fringe;
     TierStackInit(&fringe);
     TierStackPush(&fringe, global_initial_tier);
-    TierHashMapSet(&map, global_initial_tier, CalcVal(0, kStatusNotVisited));
+    TierHashMapSet(&map, global_initial_tier,
+                   NumUnsolvedChildTiersAndStatusToValue(0, kStatusNotVisited));
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);
         int status = GetStatus(parent);
@@ -187,7 +226,9 @@ static bool CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
     for (int64_t i = 0; i < tier_children.size; ++i) {
         Tier child = tier_children.array[i];
         if (!TierHashMapContains(&map, child)) {
-            TierHashMapSet(&map, child, CalcVal(0, kStatusNotVisited));
+            TierHashMapSet(
+                &map, child,
+                NumUnsolvedChildTiersAndStatusToValue(0, kStatusNotVisited));
             TierStackPush(fringe, child);
             continue;
         }
@@ -209,7 +250,7 @@ static void EnqueuePrimitiveTiers(void) {
     Tier tier;
     int64_t value;
     while (TierHashMapIteratorNext(&it, &tier, &value)) {
-        if (CalcNumUnsolvedChildTiers(value) == 0) {
+        if (ValueToNumUnsolvedChildTiers(value) == 0) {
             TierQueuePush(&solvable_tiers, tier);
         }
     }
@@ -274,13 +315,14 @@ static void UpdateTierTree(Tier solved_tier) {
     TierArrayDestroy(&parent_tiers);
 }
 
-static int64_t CalcVal(int num_unsolved_child_tiers, int status) {
+static int64_t NumUnsolvedChildTiersAndStatusToValue(
+    int num_unsolved_child_tiers, int status) {
     return num_unsolved_child_tiers * kNumStatus + status;
 }
 
-static int CalcStatus(int64_t value) { return value % kNumStatus; }
+static int ValueToStatus(int64_t value) { return value % kNumStatus; }
 
-static int CalcNumUnsolvedChildTiers(int64_t value) {
+static int ValueToNumUnsolvedChildTiers(int64_t value) {
     return value / kNumStatus;
 }
 
@@ -290,23 +332,25 @@ static int64_t GetValue(Tier tier) {
     return TierHashMapIteratorValue(&it);
 }
 
-static int GetStatus(Tier tier) { return CalcStatus(GetValue(tier)); }
+static int GetStatus(Tier tier) { return ValueToStatus(GetValue(tier)); }
 
 static int GetNumUnsolvedChildTiers(Tier tier) {
-    return CalcNumUnsolvedChildTiers(GetValue(tier));
+    return ValueToNumUnsolvedChildTiers(GetValue(tier));
 }
 
 static bool SetStatus(Tier tier, int status) {
     int64_t value = GetValue(tier);
-    int num_unsolved_child_tiers = CalcNumUnsolvedChildTiers(value);
-    value = CalcVal(num_unsolved_child_tiers, status);
+    int num_unsolved_child_tiers = ValueToNumUnsolvedChildTiers(value);
+    value =
+        NumUnsolvedChildTiersAndStatusToValue(num_unsolved_child_tiers, status);
     return TierHashMapSet(&map, tier, value);
 }
 
 static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers) {
     int64_t value = GetValue(tier);
-    int status = CalcStatus(value);
-    value = CalcVal(num_unsolved_child_tiers, status);
+    int status = ValueToStatus(value);
+    value =
+        NumUnsolvedChildTiersAndStatusToValue(num_unsolved_child_tiers, status);
     return TierHashMapSet(&map, tier, value);
 }
 

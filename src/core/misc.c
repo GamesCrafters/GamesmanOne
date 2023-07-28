@@ -169,7 +169,7 @@ static bool TierPositionArrayExpand(TierPositionArray *array) {
     return true;
 }
 
-bool TierPositionArrayAdd(TierPositionArray *array,
+bool TierPositionArrayAppend(TierPositionArray *array,
                           TierPosition tier_position) {
     if (array->size == array->capacity) {
         if (!TierPositionArrayExpand(array)) return false;

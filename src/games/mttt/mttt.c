@@ -29,7 +29,7 @@ static const int kRowsToCheck[8][3] = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
 
 // 8 symmetries, each one is a reordering of the 9 slots on the board.
 // This will be initialized in the MtttInit function.
-static const int num_symmetries = 8;
+static const int kNumSymmetries = 8;
 static int symmetry_matrix[8][9];
 
 // Proofs of correctness for the below arrays:
@@ -60,7 +60,7 @@ static void CountPieces(BlankOX *board, int *xcount, int *ocount);
 static BlankOX WhoseTurn(BlankOX *board);
 
 //-----------------------------------------------------------------------------
-void MtttInit(void) {
+bool MtttInit(void) {
     global_num_positions = 19683;  // 3**9.
     global_initial_position = 0;
 
@@ -73,6 +73,7 @@ void MtttInit(void) {
         &MtttGetCanonicalParentPositions;
 
     InitSymmetryMatrix();
+    return true;
 }
 //-----------------------------------------------------------------------------
 
@@ -138,7 +139,7 @@ static Position MtttGetCanonicalPosition(Position position) {
     Position canonical_position = position;
     Position new_position;
 
-    for (int i = 0; i < num_symmetries; ++i) {
+    for (int i = 0; i < kNumSymmetries; ++i) {
         new_position = DoSymmetry(position, i);
         if (new_position < canonical_position) {
             // By GAMESMAN convention, the canonical position is the one with
@@ -182,9 +183,9 @@ static PositionArray MtttGetCanonicalParentPositions(Position position) {
 static void InitSymmetryMatrix(void) {
     for (int i = 0; i < 9; ++i) {
         int temp = i;
-        for (int j = 0; j < num_symmetries; ++j) {
-            if (j == num_symmetries / 2) temp = flip_new_position[i];
-            if (j < num_symmetries / 2) {
+        for (int j = 0; j < kNumSymmetries; ++j) {
+            if (j == kNumSymmetries / 2) temp = flip_new_position[i];
+            if (j < kNumSymmetries / 2) {
                 temp = symmetry_matrix[j][i] =
                     rotate_90_clockwise_new_position[temp];
             } else {

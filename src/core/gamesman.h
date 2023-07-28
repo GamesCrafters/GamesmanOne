@@ -56,10 +56,8 @@ typedef struct RegularSolverAPI {
      * global_num_positions - 1. Passing an out-of-bounds position to this
      * function is undefined behavior.
      *
-     * @note Optional for the regular solver, but is required by the Undo-Move
-     * Optimization. If not implemented, the Undo-Move Optimization will be
-     * disabled and a reverse graph will be built and stored in memory using
-     * depth-first search from the initial game position.
+     * @note REQUIRED by the regular solver. The regular solver will panic if
+     * this function is not implemented.
      *
      * @attention If we simply assume that all positions are legal and don't
      * perform a search from the initial position, the solver statistics may
@@ -68,7 +66,7 @@ typedef struct RegularSolverAPI {
      * positions that seem to be legal may not be reachable from the initial
      * position. Another warning is that if the game designer implements this
      * function but fails to account for the aforementioned illegal positions,
-     * the statistics will also be inaccurate.
+     * the statistics will still be inaccurate.
      *
      * @todo Decide whether or not to make this function optional for undo-move.
      */
@@ -364,8 +362,6 @@ typedef struct TierSolverAPI {
 
 /****************************** Global variables ******************************/
 
-extern int global_solver;
-
 /**
  * @brief The maximum expected hash value of the game.
  *
@@ -437,15 +433,20 @@ TierPosition GamesmanTierDoMoveConverted(Tier tier, Position position,
 bool GamesmanTierIsLegalPositionConverted(Tier tier, Position position);
 Position GamesmanTierGetCanonicalPositionConverted(Tier tier,
                                                    Position position);
+Position GamesmanTierGetCanonicalPositionDefault(Tier tier, Position position);
 int GamesmanTierGetNumberOfCanonicalChildPositionsConverted(Tier tier,
                                                             Position position);
+int GamesmanTierGetNumberOfCanonicalChildPositionsDefault(Tier tier,
+                                                          Position position);
 TierPositionArray GamesmanTierGetCanonicalChildPositionsConverted(
+    Tier tier, Position position);
+TierPositionArray GamesmanTierGetCanonicalChildPositionsDefault(
     Tier tier, Position position);
 PositionArray GamesmanTierGetCanonicalParentPositionsConverted(
     Tier tier, Position position, Tier parent_tier);
 
 TierArray GamesmanGetChildTiersConverted(Tier tier);
 TierArray GamesmanGetParentTiersConverted(Tier tier);
-Tier GamesmanGetCanonicalTierConverted(Tier tier);
+Tier GamesmanGetCanonicalTierDefault(Tier tier);
 
 #endif  // GAMESMANEXPERIMENT_CORE_GAMESMAN_H_

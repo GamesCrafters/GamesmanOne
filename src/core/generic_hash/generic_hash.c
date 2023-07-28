@@ -32,9 +32,8 @@ static bool ManagerExpand(void) {
 }
 
 bool GenericHashAddContext(
-    const int *pieces_init_array,
-    bool (*IsValidConfiguration)(const int *configuration), int player,
-    int64_t label) {
+    int player, int board_size, const int *pieces_init_array,
+    bool (*IsValidConfiguration)(const int *configuration), int64_t label) {
     // Return false if label already exists.
     if (Int64HashMapContains(&manager.labels, label)) return false;
 
@@ -44,8 +43,8 @@ bool GenericHashAddContext(
     assert(manager.capacity > manager.size);
 
     GenericHashContext *target = &manager.contexts[manager.size];
-    bool success = GenericHashContextInit(target, pieces_init_array,
-                                          IsValidConfiguration, player);
+    bool success = GenericHashContextInit(
+        target, board_size, player, pieces_init_array, IsValidConfiguration);
     if (!success) return false;
     return Int64HashMapSet(&manager.labels, label, manager.size++);
 }
@@ -77,6 +76,11 @@ static bool ManagerCheckUniqueContext(void) {
     return true;
 }
 
+Position GenericHashNumPositions(void) {
+    if (!ManagerCheckUniqueContext()) return -1;
+    return GenericHashContextNumPositions(&manager.contexts[0]);
+}
+
 Position GenericHashHash(const char *board, int turn) {
     if (!ManagerCheckUniqueContext()) return -1;
     return GenericHashContextHash(&manager.contexts[0], board, turn);
@@ -93,6 +97,12 @@ static int64_t ManagerGetContextIndex(int64_t context_label) {
     Int64HashMapIterator it = Int64HashMapGet(&manager.labels, context_label);
     if (!Int64HashMapIteratorIsValid(&it)) return -1;
     return Int64HashMapIteratorValue(&it);
+}
+
+Position GenericHashNumPositionsLabel(int64_t context_label) {
+    int64_t context_index = ManagerGetContextIndex(context_label);
+    if (context_index < 0) return -1;
+    return GenericHashContextNumPositions(&manager.contexts[context_index]);
 }
 
 Position GenericHashHashLabel(int64_t context_label, const char *board,

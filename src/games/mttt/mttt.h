@@ -1,6 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 #define GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 
-void MtttInit(void);
+#include <stdbool.h>
+
+bool MtttInit(void);
 
 #endif  // GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_

@@ -96,14 +96,39 @@ Position GamesmanTierGetCanonicalPositionConverted(Tier tier,
     return regular_solver.GetCanonicalPosition(position);
 }
 
+Position GamesmanTierGetCanonicalPositionDefault(Tier tier, Position position) {
+    (void)tier;
+    return position;
+}
+
 int GamesmanTierGetNumberOfCanonicalChildPositionsConverted(Tier tier,
                                                             Position position) {
     (void)tier;
     return regular_solver.GetNumberOfCanonicalChildPositions(position);
 }
 
+int GamesmanTierGetNumberOfCanonicalChildPositionsDefault(Tier tier,
+                                                          Position position) {
+    TierPositionHashSet children;
+    TierPositionHashSetInit(&children, 0.5);
+    MoveArray moves = tier_solver.GenerateMoves(tier, position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        TierPosition child = tier_solver.DoMove(tier, position, moves.array[i]);
+        child.position =
+            tier_solver.GetCanonicalPosition(child.tier, child.position);
+        if (!TierPositionHashSetContains(&children, child)) {
+            TierPositionHashSetAdd(&children, child);
+        }
+    }
+    MoveArrayDestroy(&moves);
+    int num_children = (int)children.size;
+    TierPositionHashSetDestroy(&children);
+    return num_children;
+}
+
 TierPositionArray GamesmanTierGetCanonicalChildPositionsConverted(
     Tier tier, Position position) {
+    //
     (void)tier;
     PositionArray children =
         regular_solver.GetCanonicalChildPositions(position);
@@ -113,14 +138,40 @@ TierPositionArray GamesmanTierGetCanonicalChildPositionsConverted(
         TierPosition this_child;
         this_child.position = children.array[i];
         this_child.tier = 0;  // Dummy value.
-        TierPositionArrayAdd(&ret, this_child);
+        TierPositionArrayAppend(&ret, this_child);
     }
     PositionArrayDestroy(&children);
     return ret;
 }
 
+TierPositionArray GamesmanTierGetCanonicalChildPositionsDefault(
+    Tier tier, Position position) {
+    //
+    TierPositionHashSet deduplication_set;
+    TierPositionHashSetInit(&deduplication_set, 0.5);
+
+    TierPositionArray children;
+    TierPositionArrayInit(&children);
+
+    MoveArray moves = tier_solver.GenerateMoves(tier, position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        TierPosition child = tier_solver.DoMove(tier, position, moves.array[i]);
+        child.position =
+            tier_solver.GetCanonicalPosition(child.tier, child.position);
+        if (!TierPositionHashSetContains(&deduplication_set, child)) {
+            TierPositionHashSetAdd(&deduplication_set, child);
+            TierPositionArrayAppend(&children, child);
+        }
+    }
+
+    MoveArrayDestroy(&moves);
+    TierPositionHashSetDestroy(&deduplication_set);
+    return children;
+}
+
 PositionArray GamesmanTierGetCanonicalParentPositionsConverted(
     Tier tier, Position position, Tier parent_tier) {
+    //
     (void)tier;
     (void)parent_tier;
     return regular_solver.GetCanonicalParentPositions(position);
@@ -140,4 +191,4 @@ TierArray GamesmanGetParentTiersConverted(Tier tier) {
     return ret;
 }
 
-Tier GamesmanGetCanonicalTierConverted(Tier tier) { return tier; }
+Tier GamesmanGetCanonicalTierDefault(Tier tier) { return tier; }

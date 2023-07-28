@@ -155,6 +155,7 @@ _bailout:
 
 static bool Step0Initialize(Tier tier) {
     // Initialize child tier array.
+    this_tier = tier;
     child_tiers = tier_solver.GetChildTiers(this_tier);
     if (child_tiers.size == -1) return false;
 
@@ -171,7 +172,6 @@ static bool Step0Initialize(Tier tier) {
     if (!Step0_0InitFrontiers(child_tiers.size + 1)) return false;
 
     // Non-memory-allocating initializations.
-    this_tier = tier;
     this_tier_size = tier_solver.GetTierSize(tier);
 #ifdef _OPENMP
     omp_init_lock(&num_undecided_children_lock);
@@ -531,7 +531,11 @@ static void Step7Cleanup(void) {
     DestroyFrontiers();
     free(num_undecided_children);
     num_undecided_children = NULL;
-    ReverseGraphDestroy(&reverse_graph);
+    if (use_reverse_graph) {
+        ReverseGraphDestroy(&reverse_graph);
+        // Unset the local function pointer.
+        tier_solver.GetCanonicalParentPositions = NULL;
+    }
 #ifdef _OPENMP
     omp_destroy_lock(&num_undecided_children_lock);
 #endif

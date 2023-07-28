@@ -60,7 +60,7 @@ bool TierHashSetAdd(TierHashSet *set, Tier tier);
 
 void TierPositionArrayInit(TierPositionArray *array);
 void TierPositionArrayDestroy(TierPositionArray *array);
-bool TierPositionArrayAdd(TierPositionArray *array, TierPosition tier_position);
+bool TierPositionArrayAppend(TierPositionArray *array, TierPosition tier_position);
 
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 void TierPositionHashSetDestroy(TierPositionHashSet *set);
