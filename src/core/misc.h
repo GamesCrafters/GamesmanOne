@@ -2,11 +2,14 @@
 #define GAMESMANEXPERIMENT_CORE_MISC_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 
 #include "core/gamesman_types.h"
 
 void NotReached(const char *message);
+void *SafeMalloc(size_t size);
+void *SafeCalloc(size_t n, size_t size);
 
 void PositionArrayInit(PositionArray *array);
 void PositionArrayDestroy(PositionArray *array);
@@ -21,6 +24,8 @@ bool PositionHashSetAdd(PositionHashSet *set, Position position);
 void MoveArrayInit(MoveArray *array);
 void MoveArrayDestroy(MoveArray *array);
 bool MoveArrayAppend(MoveArray *array, Move move);
+bool MoveArrayPopBack(MoveArray *array);
+bool MoveArrayContains(const MoveArray *array, Move move);
 
 void TierArrayInit(TierArray *array);
 void TierArrayDestroy(TierArray *array);
@@ -60,11 +65,15 @@ bool TierHashSetAdd(TierHashSet *set, Tier tier);
 
 void TierPositionArrayInit(TierPositionArray *array);
 void TierPositionArrayDestroy(TierPositionArray *array);
-bool TierPositionArrayAppend(TierPositionArray *array, TierPosition tier_position);
+bool TierPositionArrayAppend(TierPositionArray *array,
+                             TierPosition tier_position);
+TierPosition TierPositionArrayBack(const TierPositionArray *array);
 
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 void TierPositionHashSetDestroy(TierPositionHashSet *set);
 bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
+
+int GameVariantToIndex(const GameVariant *variant);
 
 #endif  // GAMESMANEXPERIMENT_CORE_MISC_H_

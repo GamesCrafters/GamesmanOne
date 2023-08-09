@@ -18,7 +18,30 @@ void NotReached(const char *message) {
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
-    exit(1);
+    exit(EXIT_FAILURE);
+}
+
+void *SafeMalloc(size_t size) {
+    void *ret = malloc(size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeMalloc: failed to allocate %zd bytes. This ususally "
+                "indicates a bug.\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return ret;
+}
+
+void *SafeCalloc(size_t n, size_t size) {
+    void *ret = calloc(n, size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeCalloc: failed to allocate %zd elements each of %zd "
+                "bytes. This ususally "
+                "indicates a bug.\n", n, size);
+        exit(EXIT_FAILURE);
+    }
+    return ret;
 }
 
 void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
@@ -53,6 +76,16 @@ void MoveArrayDestroy(MoveArray *array) { Int64ArrayDestroy(array); }
 
 bool MoveArrayAppend(MoveArray *array, Move move) {
     return Int64ArrayPushBack(array, move);
+}
+
+bool MoveArrayPopBack(MoveArray *array) {
+    if (array->size <= 0) return false;
+    --array->size;
+    return true;
+}
+
+bool MoveArrayContains(const MoveArray *array, Move move) {
+    return Int64ArrayContains(array, move);
 }
 
 void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
@@ -170,13 +203,17 @@ static bool TierPositionArrayExpand(TierPositionArray *array) {
 }
 
 bool TierPositionArrayAppend(TierPositionArray *array,
-                          TierPosition tier_position) {
+                             TierPosition tier_position) {
     if (array->size == array->capacity) {
         if (!TierPositionArrayExpand(array)) return false;
     }
     assert(array->size < array->capacity);
     array->array[array->size++] = tier_position;
     return true;
+}
+
+TierPosition TierPositionArrayBack(const TierPositionArray *array) {
+    return array->array[array->size - 1];
 }
 
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
@@ -264,4 +301,12 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     set->entries[index].used = true;
     ++set->size;
     return true;
+}
+
+int GameVariantToIndex(const GameVariant *variant) {
+    int ret = 0;
+    for (int i = 0; variant->options[i].num_choices > 0; ++i) {
+        ret = ret * variant->options[i].num_choices + variant->selections[i];
+    }
+    return ret;
 }

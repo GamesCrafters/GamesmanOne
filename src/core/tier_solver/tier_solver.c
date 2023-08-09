@@ -2,7 +2,7 @@
  * @file tier_solver.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
- *		   Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Loopy tier solver.
  * @version 0.2
  * @date 2023-07-18
