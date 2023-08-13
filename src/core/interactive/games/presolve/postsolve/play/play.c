@@ -3,62 +3,23 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
+#include <string.h>   // strncmp
 
+#include "core/db_manager.h"
 #include "core/gamesman_types.h"  // Game
 #include "core/interactive/games/presolve/match.h"
-#include "core/misc.h"  // SafeMalloc
+#include "core/misc.h"  // SafeMalloc, GameVariantToIndex
 
-static bool BasicApiImplemented(const GameplayApi *api) {
-    // "Move to string" related functions.
-    if (api->move_string_length_max <= 0) return false;
-    if (api->MoveToString == NULL) return false;
-
-    // "String to Move" related functions.
-    if (api->IsValidMoveString == NULL) return false;
-    if (api->StringToMove == NULL) return false;
-
-    // Common functions to both APIs.
-    if (api->position_string_length_max <= 0) return false;
-
-    return true;
-}
-
-static bool TierApiImplemented(const GameplayApi *api) {
-    if (!BasicApiImplemented(api)) return false;
-    if (api->TierPositionToString == NULL) return false;
-    if (api->TierGenerateMoves == NULL) return false;
-    if (api->TierDoMove == NULL) return false;
-    if (api->TierPrimitive == NULL) return false;
-
-    return true;
-}
-
-static bool RegularApiImplemented(const GameplayApi *api) {
-    if (!BasicApiImplemented(api)) return false;
-    if (api->PositionToString == NULL) return false;
-    if (api->GenerateMoves == NULL) return false;
-    if (api->DoMove == NULL) return false;
-    if (api->Primitive == NULL) return false;
-
-    return true;
-}
-
-static void PrintCurrentPosition(const Game *game, bool is_tier_game) {
+static void PrintCurrentPosition(const Game *game) {
     int position_string_size = game->gameplay_api->position_string_length_max;
     char *position_string =
         (char *)SafeMalloc(position_string_size * sizeof(char));
 
-    TierPosition current_position = InteractiveMatchGetCurrentPosition();
-    int result;
-    if (is_tier_game) {
-        result = game->gameplay_api->TierPositionToString(
-            current_position.tier, current_position.position, position_string);
-    } else {
-        result = game->gameplay_api->PositionToString(current_position.position,
-                                                      position_string);
-    }
+    TierPosition current = InteractiveMatchGetCurrentPosition();
+    int result = InteractiveMatchPositionToString(current, position_string);
     if (result < 0) {
         fprintf(stderr,
                 "PlayTierGame: %s's PositionToString function returned error "
@@ -70,26 +31,54 @@ static void PrintCurrentPosition(const Game *game, bool is_tier_game) {
     free(position_string);
 }
 
-static Value GetPrimitiveValue(const Game *game, bool is_tier_game) {
-    TierPosition current_position = InteractiveMatchGetCurrentPosition();
-    if (is_tier_game) {
-        return game->gameplay_api->TierPrimitive(current_position.tier,
-                                                 current_position.position);
+static bool IsBestChild(Value parent_value, int parent_remoteness,
+                        Value child_value, int child_remoteness) {
+    switch (parent_value) {
+        case kLose:
+            assert(child_value == kWin);
+            return (child_remoteness == parent_remoteness - 1);
+
+        case kWin:
+            return (child_value == kLose &&
+                    child_remoteness == parent_remoteness - 1);
+
+        case kTie:
+            assert(child_value != kLose);
+            return (child_value == kTie &&
+                    child_remoteness == parent_remoteness - 1);
+
+        case kDraw:
+            assert(child_value != kLose);
+            return (child_value == kDraw);
+
+        default:
+            NotReached("IsBestChild: unknown parent value.\n");
     }
-    return game->gameplay_api->Primitive(current_position.position);
+    return false;
 }
 
-static bool PromptForAndProcessUserMove(const Game *game, bool is_tier_game) {
+static void MakeComputerMove(const Game *game) {
+    TierPosition current = InteractiveMatchGetCurrentPosition();
+    MoveArray moves = InteractiveMatchGenerateMoves();
+    Value current_value = DbManagerGetValue(current);
+    int current_remoteness = DbManagerGetRemoteness(current);
+
+    for (int64_t i = 0; i < moves.size; ++i) {
+        TierPosition child = InteractiveMatchDoMove(current, moves.array[i]);
+        Value value = DbManagerGetValue(child);
+        int remoteness = DbManagerGetRemoteness(child);
+        if (IsBestChild(current_value, current_remoteness, value, remoteness)) {
+            InteractiveMatchCommitMove(moves.array[i]);
+            break;
+        }
+    }
+    MoveArrayDestroy(&moves);
+}
+
+static bool PromptForAndProcessUserMove(const Game *game) {
     int move_string_size = game->gameplay_api->move_string_length_max;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
-    TierPosition current_position = InteractiveMatchGetCurrentPosition();
-    MoveArray moves;
-    if (is_tier_game) {
-        moves = game->gameplay_api->TierGenerateMoves(
-            current_position.tier, current_position.position);
-    } else {
-        moves = game->gameplay_api->GenerateMoves(current_position.position);
-    }
+    MoveArray moves = InteractiveMatchGenerateMoves();
 
     // Print all valid move strings.
     printf("Player %d's move [(u)ndo", InteractiveMatchGetTurn() + 1);
@@ -104,6 +93,9 @@ static bool PromptForAndProcessUserMove(const Game *game, bool is_tier_game) {
         fprintf(stderr, "PlayTierGame: unexpcted fgets error. Aborting...\n");
         exit(EXIT_FAILURE);
     }
+    if (strncmp(move_string, "u", 1) == 0) {
+        return InteractiveMatchUndo();
+    }
     if (!game->gameplay_api->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
@@ -117,7 +109,7 @@ static bool PromptForAndProcessUserMove(const Game *game, bool is_tier_game) {
     }
     MoveArrayDestroy(&moves);
     free(move_string);
-    InteractiveMatchDoMove(user_move);
+    InteractiveMatchCommitMove(user_move);
     return true;
 }
 
@@ -156,46 +148,32 @@ static void PrintGameResult(const Game *game, bool is_tier_game) {
     }
 }
 
-static void PlayGame(const Game *game, bool is_tier_game) {
-    InteractiveMatchRestart(game);
-    PrintCurrentPosition(game, is_tier_game);
-    Value primitive_value = GetPrimitiveValue(game, is_tier_game);
+void InteractivePlay(const char *key) {
+    (void)key;  // Unused.
+    if (!InteractiveMatchRestart()) {
+        fprintf(stderr,
+                "InteractivePlay: (BUG) attempting to launch game when the "
+                "game is uninitialized. Aborting...\n");
+        exit(EXIT_FAILURE);
+    }
+
+    const Game *game = InteractiveMatchGetCurrentGame();
+    PrintCurrentPosition(game);
+    Value primitive_value = GetPrimitiveValue(game);
     bool game_over = (primitive_value != kUndecided);
 
     while (!game_over) {
         int turn = InteractiveMatchGetTurn();
         if (InteractiveMatchPlayerIsComputer(turn)) {
             // Generate computer move
-        } else if (!PromptForAndProcessUserMove(game, is_tier_game)) {
+            MakeComputerMove(game);
+        } else if (!PromptForAndProcessUserMove(game)) {
             // If user entered an unknown command, restart the loop.
             continue;
         }
         // Else, move has been successfully processed. Print the new position.
-        PrintCurrentPosition(game, is_tier_game);
-        primitive_value = GetPrimitiveValue(game, is_tier_game);
+        PrintCurrentPosition(game);
+        primitive_value = GetPrimitiveValue(game);
         game_over = (primitive_value != kUndecided);
-    }
-}
-
-void InteractivePlay(const char *key) {
-    (void)key;  // Unused.
-    const Game *current_game = InteractiveMatchGetCurrentGame();
-    assert(current_game != NULL);
-    if (current_game->gameplay_api == NULL) {
-        fprintf(stderr,
-                "InteractivePlay: %s does not have its Gameplay API "
-                "initialized. Please check the game module.\n",
-                current_game->formal_name);
-        return;
-    }
-    if (RegularApiImplemented(current_game->gameplay_api)) {
-        PlayGame(current_game, false);
-    } else if (TierApiImplemented(current_game->gameplay_api)) {
-        PlayGame(current_game, true);
-    } else {
-        fprintf(stderr,
-                "InteractivePlay: %s's Gameplay API is incomplete. "
-                "Please check the game module.\n",
-                current_game->formal_name);
     }
 }

@@ -11,6 +11,7 @@
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
+#include "core/misc.h"
 #include "core/solver_manager.h"
 #include "games/game_manager.h"
 

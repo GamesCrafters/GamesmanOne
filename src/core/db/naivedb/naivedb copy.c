@@ -1,17 +1,17 @@
-#include "core/naivedb.h"
+#include "core/db/naivedb/naivedb.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <malloc.h>    // malloc, calloc, free
+// #include <assert.h>    // assert
+// #include <inttypes.h>  // PRId64
+// #include <malloc.h>    // malloc, calloc, free
 #include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
+// #include <stdint.h>    // int64_t
 #include <stdio.h>     // fprintf, stderr
 
-#include "core/analysis.h"  // Analysis
-#include "core/data_structures/int64_array.h"
-#include "core/gamesman.h"  // tier_solver
+#include "core/analysis.h"
+// #include "core/data_structures/int64_array.h"
+// #include "core/gamesman.h"  // tier_solver
 #include "core/gamesman_types.h"
-#include "core/misc.h"
+// #include "core/misc.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -24,28 +24,57 @@
 #define PRAGMA_OMP_CRITICAL(name)
 #endif
 
+static int NaiveDbInit(const char *game_name, int variant, void *aux);
+static void NaiveDbFinalize(void);
+
+static int NaiveDbCreateSolvingTier(Tier tier, int64_t size);
+static int NaiveDbFlushSolvingTier(void *aux);
+static int NaiveDbFreeSolvingTier(void);
+
+static int NaiveDbSetValue(TierPosition tier_position, Value value);
+static int NaiveDbSetRemoteness(TierPosition tier_position, int remoteness);
+static Value NaiveDbGetValue(TierPosition tier_position);
+static int NaiveDbGetRemoteness(TierPosition tier_position);
+
+const Database kNaiveDb = {
+    .name = "Naive DB",
+
+    .Init = &NaiveDbInit,
+    .Finalize = &NaiveDbFinalize,
+
+    // Solving
+    .CreateSolvingTier = &NaiveDbCreateSolvingTier,
+    .FlushSolvingTier = &NaiveDbFlushSolvingTier,
+    .FreeSolvingTier = &NaiveDbFreeSolvingTier,
+    .SetValue = &NaiveDbSetValue,
+    .SetRemoteness = &NaiveDbSetRemoteness,
+
+    // Probing
+    .GetValue = &NaiveDbGetValue,
+    .GetRemoteness = &NaiveDbGetRemoteness
+};
+
+// File name = <prefix>/[<extra>/...]/<tier>
+
 typedef struct NaiveDbEntry {
     Value value;
     int remoteness;
 } NaiveDbEntry;
 
 static Tier current_tier = -1;
-
 static NaiveDbEntry *records = NULL;
-
 static Analysis tier_analysis;
 
-bool DbCreateTier(Tier tier) {
+static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
     current_tier = tier;
 
     AnalysisInit(&tier_analysis);
-    int64_t size = tier_solver.GetTierSize(tier);
     tier_analysis.total_positions = size;
 
     free(records);
     records = (NaiveDbEntry *)calloc(size, sizeof(NaiveDbEntry));
     if (records == NULL) {
-        fprintf(stderr, "DbCreateTier: failed to malloc records.\n");
+        fprintf(stderr, "NaiveDbCreateSolvingTier: failed to calloc records.\n");
         return false;
     }
     return true;

@@ -5,14 +5,26 @@
 
 #include "core/gamesman_types.h"
 
+typedef enum InteractiveMatchSetGameErrorCode {
+    kInteractiveMatchSetGameOk = 0,
+    kInteractiveMatchSetGameBasicApiIncomplete,
+    kInteractiveMatchSetGameRegularOrTierApiIncomplete,
+} InteractiveMatchSetGameErrorCode;
+
+int InteractiveMatchSetGame(const Game *game);
 const Game *InteractiveMatchGetCurrentGame(void);
-void InteractiveMatchRestart(const Game *game);
+
+bool InteractiveMatchRestart(void);
 void InteractiveMatchTogglePlayerType(int player);
 bool InteractiveMatchPlayerIsComputer(int player);
 
 TierPosition InteractiveMatchGetCurrentPosition(void);
 int InteractiveMatchGetTurn(void);
-bool InteractiveMatchDoMove(Move move);
+MoveArray InteractiveMatchGenerateMoves(void);
+TierPosition InteractiveMatchDoMove(TierPosition tier_position, Move move);
+bool InteractiveMatchCommitMove(Move move);
+Value InteractiveMatchPrimitive(void);
 bool InteractiveMatchUndo(void);
+int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_

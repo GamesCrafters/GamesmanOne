@@ -24,9 +24,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @todo
- * 1. Implement symmetries
- * 2. Link database system
- * 3. Check all malloc error handling
+ * Check all malloc error handling
  */
 
 #include "core/tier_solver/tier_solver.h"
@@ -35,7 +33,7 @@
 #include <inttypes.h>  // PRId64
 #include <malloc.h>    // calloc, free
 #include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t, uing8_t, UINT8_MAX
+#include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
 #include <stdio.h>     // fprintf, stderr
 #include <string.h>    // memset
 
@@ -62,11 +60,10 @@
 // in this file: if (!condition) success = false; Be careful that this is not
 // equivalent to "success &= condition" or "success = condition". The former
 // creates a race condition whereas the latter may overwrite an already failing
-// result with a TRUE value.
+// result with TRUE.
 
-// Largest remoteness expected. Increase this value and recompile if
-// this value is not large enough for a specific game.
-static const int kFrontierSize = 1024;
+// Create a frontier array for each possible remoteness.
+static const int kFrontierSize = kRemotenessMax + 1;
 
 // Illegal positions are marked with this number of undecided children.
 // This value should be chosen based on the integer type of the
@@ -84,17 +81,18 @@ static Frontier tie_frontier;   // Solved but unprocessed tying positions.
 // Number of undecided child positions array (heap). Note that we are assuming
 // the number of children of ANY position is no more than 254. This allows us to
 // use uint8_t to save memory. If this assumption is no longer true for any new
-// games in the future, use a wider integer type, such as int16_t, instead.
+// games in the future, the programmer should change this type to a wider
+// integer type such as int16_t.
 static uint8_t *num_undecided_children = NULL;
+
+#ifdef _OPENMP
+// Lock for the array above.
+static omp_lock_t num_undecided_children_lock;
+#endif
 
 // Cached reverse position graph of the current tier.
 ReverseGraph reverse_graph;
 static bool use_reverse_graph = false;
-
-#ifdef _OPENMP
-// Lock for the above array.
-static omp_lock_t num_undecided_children_lock;
-#endif
 
 static bool Step0Initialize(Tier tier);
 static bool Step0_0InitFrontiers(int dividers_size);

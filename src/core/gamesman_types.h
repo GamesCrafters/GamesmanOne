@@ -1,8 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_
 #define GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/data_structures/int64_array.h"
 #include "core/data_structures/int64_hash_map.h"
@@ -51,6 +51,11 @@ typedef struct TierPositionHashSet {
 } TierPositionHashSet;
 
 typedef enum GamesmanTypesLimits {
+    /**
+     * Largest remoteness expected. Increase this value and recompile if
+     * this value is not large enough for a game in the future.
+     */
+    kRemotenessMax = 1023,
     kDbNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
     kSolverNameLengthMax = 63,
@@ -61,13 +66,21 @@ typedef enum GamesmanTypesLimits {
 
 typedef struct Database {
     char name[kDbNameLengthMax + 1];
-    int (*DbInit)(const char *game_name, int variant, void *aux);
-    int (*DbFlush)(void *aux);
 
-    int (*SetValue)(Tier tier, Position position, Value value);
-    int (*SetRemoteness)(Tier tier, Position position, int remoteness);
-    Value (*GetValue)(Tier tier, Position position);
-    int (*GetRemoteness)(Tier tier, Position position);
+    int (*Init)(const char *game_name, int variant, const char *path,
+                void *aux);
+    void (*Finalize)(void);
+
+    // Solving
+    int (*CreateSolvingTier)(Tier tier, int64_t size);
+    int (*FlushSolvingTier)(void *aux);
+    int (*FreeSolvingTier)(void);
+    int (*SetValue)(Position position, Value value);
+    int (*SetRemoteness)(Position position, int remoteness);
+
+    // Probing
+    Value (*GetValue)(TierPosition tier_position);
+    int (*GetRemoteness)(TierPosition tier_position);
 } Database;
 
 typedef struct SolverOption {
@@ -81,10 +94,12 @@ typedef struct SolverConfiguration {
 
 typedef struct Solver {
     char name[kSolverNameLengthMax + 1];
+    const Database *db;
+
     int (*Init)(const void *solver_api);
-    const Database *(*GetDatabase)(void);
     int (*Solve)(void *aux);
     int (*GetStatus)(void);
+    
     const SolverConfiguration *(*GetCurrentConfiguration)(void);
     int (*SetOption)(int option, int selection);
 } Solver;
@@ -103,9 +118,10 @@ typedef struct GameVariant {
 typedef struct GameplayApi {
     Tier default_initial_tier;
     Position default_initial_position;
+
     int position_string_length_max;
     int (*PositionToString)(Position position, char *buffer);
-    int (*TierPositionToString)(Tier tier, Position position, char *buffer);
+    int (*TierPositionToString)(TierPosition tier_position, char *buffer);
 
     int move_string_length_max;
     int (*MoveToString)(Move move, char *buffer);
@@ -114,13 +130,13 @@ typedef struct GameplayApi {
     Move (*StringToMove)(const char *move_string);
 
     MoveArray (*GenerateMoves)(Position position);
-    MoveArray (*TierGenerateMoves)(Tier tier, Position position);
+    MoveArray (*TierGenerateMoves)(TierPosition tier_position);
 
     Position (*DoMove)(Position position, Move move);
-    TierPosition (*TierDoMove)(Tier tier, Position position, Move move);
+    TierPosition (*TierDoMove)(TierPosition tier_position, Move move);
 
     Value (*Primitive)(Position position);
-    Value (*TierPrimitive)(Tier tier, Position position);
+    Value (*TierPrimitive)(TierPosition tier_position);
 } GameplayApi;
 
 typedef struct Game {
