@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "core/db_manager.h"
+#include "core/gamesman_types.h"
 
 static Solver *current_solver;
 

@@ -54,6 +54,22 @@ int DbManagerInitDb(const Solver *solver) {
     return 0;
 }
 
+void DbManagerFinalizeDb(void) {
+    current_db->Finalize();
+}
+
+int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
+    return current_db->CreateSolvingTier(tier, size);
+}
+
+int DbManagerFlushSolvingTier(void *aux) {
+    return current_db->FlushSolvingTier(aux);
+}
+
+int DbManagerFreeSolvingTier(void) {
+    return current_db->FreeSolvingTier();
+}
+
 int DbManagerSetValue(Position position, Value value) {
     return current_db->SetValue(position, value);
 }
@@ -62,10 +78,26 @@ int DbManagerSetRemoteness(Position position, int remoteness) {
     return current_db->SetRemoteness(position, remoteness);
 }
 
-Value DbManagerGetValue(TierPosition tier_position) {
-    return current_db->GetValue(tier_position);
+Value DbManagerGetValue(Position position) {
+    return current_db->GetValue(position);
 }
 
-int DbManagerGetRemoteness(TierPosition tier_position) {
-    return current_db->GetRemoteness(tier_position);
+int DbManagerGetRemoteness(Position position) {
+    return current_db->GetRemoteness(position);
+}
+
+int DbManagerProbeInit(DbProbe *probe) {
+    return current_db->ProbeInit(probe);
+}
+
+int DbManagerProbeDestroy(DbProbe *probe) {
+    return current_db->ProbeDestroy(probe);
+}
+
+Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position) {
+    return current_db->ProbeValue(probe, tier_position);
+}
+
+int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
+    return current_db->ProbeRemoteness(probe, tier_position);
 }

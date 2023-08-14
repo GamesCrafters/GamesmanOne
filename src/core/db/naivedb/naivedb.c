@@ -19,24 +19,35 @@ static int NaiveDbFreeSolvingTier(void);
 
 static int NaiveDbSetValue(Position position, Value value);
 static int NaiveDbSetRemoteness(Position position, int remoteness);
-static Value NaiveDbGetValue(TierPosition tier_position);
-static int NaiveDbGetRemoteness(TierPosition tier_position);
+static Value NaiveDbGetValue(Position position);
+static int NaiveDbGetRemoteness(Position position);
 
-const Database kNaiveDb = {.name = "Naive DB",
+static int NaiveDbProbeInit(DbProbe *probe);
+static int NaiveDbProbeDestroy(DbProbe *probe);
+static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
+static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
-                           .Init = &NaiveDbInit,
-                           .Finalize = &NaiveDbFinalize,
+const Database kNaiveDb = {
+    .name = "Naive DB",
 
-                           // Solving
-                           .CreateSolvingTier = &NaiveDbCreateSolvingTier,
-                           .FlushSolvingTier = &NaiveDbFlushSolvingTier,
-                           .FreeSolvingTier = &NaiveDbFreeSolvingTier,
-                           .SetValue = &NaiveDbSetValue,
-                           .SetRemoteness = &NaiveDbSetRemoteness,
+    .Init = &NaiveDbInit,
+    .Finalize = &NaiveDbFinalize,
 
-                           // Probing
-                           .GetValue = &NaiveDbGetValue,
-                           .GetRemoteness = &NaiveDbGetRemoteness};
+    // Solving
+    .CreateSolvingTier = &NaiveDbCreateSolvingTier,
+    .FlushSolvingTier = &NaiveDbFlushSolvingTier,
+    .FreeSolvingTier = &NaiveDbFreeSolvingTier,
+    .SetValue = &NaiveDbSetValue,
+    .SetRemoteness = &NaiveDbSetRemoteness,
+    .GetValue = &NaiveDbGetValue,
+    .GetRemoteness = &NaiveDbGetRemoteness,
+
+    // Probing
+    .ProbeInit = &NaiveDbProbeInit,
+    .ProbeDestroy = &NaiveDbProbeDestroy,
+    .ProbeValue = &NaiveDbProbeValue,
+    .ProbeRemoteness = &NaiveDbProbeRemoteness,
+};
 
 // -----------------------------------------------------------------------------
 
@@ -44,6 +55,9 @@ typedef struct NaiveDbEntry {
     Value value;
     int remoteness;
 } NaiveDbEntry;
+
+// 1 MiB.
+static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -72,11 +86,9 @@ static char *GetFullPathToFile(Tier tier) {
     return full_path;
 }
 
-static NaiveDbEntry ReadEntryFromFile(TierPosition tier_position) {
-    NaiveDbEntry entry = {.value = kUndecided, .remoteness = -1};
-
+static int ReadFromFile(TierPosition tier_position, void *buffer) {
     char *full_path = GetFullPathToFile(tier_position.tier);
-    if (full_path == NULL) return entry;
+    if (full_path == NULL) return 1;  // OOM.
 
     FILE *file = fopen(full_path, "rb");
     free(full_path);
@@ -84,27 +96,29 @@ static NaiveDbEntry ReadEntryFromFile(TierPosition tier_position) {
     if (file == NULL) {
         perror("fopen");
         fclose(file);
-        return entry;
+        return 2;
     }
 
-    if (fseek(file, tier_position.position * sizeof(NaiveDbEntry), SEEK_SET) !=
-        0) {
+    int64_t offset = tier_position.position * sizeof(NaiveDbEntry);
+    if (fseek(file, offset, SEEK_SET) != 0) {
         perror("fseek");
         fclose(file);
-        return entry;
+        return 2;
     }
 
-    if (fread(&entry, sizeof(entry), 1, file) != 1) {
+    size_t num_entries = kBufferSize / sizeof(NaiveDbEntry);
+    if (fread(buffer, sizeof(NaiveDbEntry), num_entries, file) != num_entries &&
+        !feof(file)) {
         perror("fread");
         fclose(file);
-        return entry;
+        return 2;
     }
 
     if (fclose(file) != 0) {
         perror("fclose");
     }
 
-    return entry;
+    return 0;
 }
 
 static int NaiveDbInit(const char *game_name, int variant, const char *path,
@@ -188,17 +202,72 @@ static int NaiveDbSetRemoteness(Position position, int remoteness) {
     return 0;
 }
 
-static Value NaiveDbGetValue(TierPosition tier_position) {
-    if (tier_position.tier == current_tier) {
-        return records[tier_position.position].value;
-    }
-    NaiveDbEntry entry = ReadEntryFromFile(tier_position);
-    return entry.value;
+static Value NaiveDbGetValue(Position position) {
+    return records[position].value;
 }
 
-static int NaiveDbGetRemoteness(TierPosition tier_position) {
-    if (tier_position.tier == current_tier) {
-        return records[tier_position.position].remoteness;
+static int NaiveDbGetRemoteness(Position position) {
+    return records[position].remoteness;
+}
+
+static int NaiveDbProbeInit(DbProbe *probe) {
+    probe->buffer = malloc(kBufferSize);
+    if (probe->buffer == NULL) return 1;
+
+    probe->tier = -1;
+    probe->begin = 0;
+    probe->size = kBufferSize;
+
+    return 0;
+}
+
+static int NaiveDbProbeDestroy(DbProbe *probe) {
+    free(probe->buffer);
+    memset(probe, 0, sizeof(*probe));
+    return 0;
+}
+
+static bool ProbeBufferHit(DbProbe *probe, TierPosition tier_position) {
+    if (probe->tier != tier_position.tier) return false;
+    int64_t record_offset = tier_position.position * sizeof(NaiveDbEntry);
+    if (record_offset < probe->begin) return false;
+    if (record_offset >= probe->begin + probe->size) return false;
+    return true;
+}
+
+static bool ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
+    if (!ProbeBufferHit(probe, tier_position)) {
+        if (ReadFromFile(tier_position, probe->buffer) != 0) {
+            fprintf(stderr, "ProbeFillBuffer: failed to read from file.\n");
+            return false;
+        }
+        probe->tier = tier_position.tier;
+        probe->begin = tier_position.position * sizeof(NaiveDbEntry);
     }
-    NaiveDbEntry entry = ReadEntryFromFile(tier_position);
-    return entry.remoteness;}
+    return true;
+}
+
+static void *VoidPointerShift(void *pointer, int64_t offset) {
+    return (void *)((int8_t *)pointer + offset);
+}
+
+static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
+    int64_t offset = position * sizeof(NaiveDbEntry) - probe->begin;
+    assert(offset >= 0);
+    NaiveDbEntry entry;
+    memcpy(&entry, VoidPointerShift(probe->buffer, offset),
+           sizeof(NaiveDbEntry));
+    return entry;
+}
+
+static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position) {
+    if (!ProbeFillBuffer(probe, tier_position)) return kErrorValue;
+    NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
+    return record.value;
+}
+
+static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
+    if (!ProbeFillBuffer(probe, tier_position)) return -1;
+    NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
+    return record.remoteness;
+}

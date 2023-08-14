@@ -1,11 +1,11 @@
 /**
- * @file tier_solver.c
+ * @file tier_worker.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Loopy tier solver.
- * @version 0.2
- * @date 2023-07-18
+ * @brief Worker module of the Loopy Tier Solver.
+ * @version 0.3
+ * @date 2023-08-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,10 +26,9 @@
  * @todo
  * Check all malloc error handling
  */
+#include "core/solvers/tier_solver/tier_worker.h"
 
-#include "core/tier_solver/tier_solver.h"
-
-#include <assert.h>
+#include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
 #include <malloc.h>    // calloc, free
 #include <stddef.h>    // NULL
@@ -37,37 +36,44 @@
 #include <stdio.h>     // fprintf, stderr
 #include <string.h>    // memset
 
-#include "core/gamesman.h"
+#include "core/db_manager.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
-#include "core/naivedb.h"
-#include "core/tier_solver/frontier.h"
-#include "core/tier_solver/reverse_graph.h"
+#include "core/solvers/tier_solver/frontier.h"
+#include "core/solvers/tier_solver/reverse_graph.h"
+#include "core/solvers/tier_solver/tier_solver.h"
 
+// Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
 #define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
+#define PRAGMA_OMP_FOR PRAGMA(omp for)
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 #define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var) \
     PRAGMA(omp parallel for firstprivate(var))
+
+// Otherwise, the following macros do nothing.
 #else
 #define PRAGMA
+#define PRAGMA_OMP_PARALLEL
+#define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_PARALLEL_FOR
 #define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var)
 #endif
 
-// Note on multithreading: there is a lot of code with the following pattern
-// in this file: if (!condition) success = false; Be careful that this is not
-// equivalent to "success &= condition" or "success = condition". The former
-// creates a race condition whereas the latter may overwrite an already failing
-// result with TRUE.
+// Note on multithreading:
+//   Be careful that "if (!condition) success = false;" is not equivalent to
+//   "success &= condition" or "success = condition". The former creates a race
+//   condition whereas the latter may overwrite an already failing result.
 
-// Create a frontier array for each possible remoteness.
+static TierSolverApi current_api;
+
+// A frontier array will be created for each possible remoteness.
 static const int kFrontierSize = kRemotenessMax + 1;
 
-// Illegal positions are marked with this number of undecided children.
-// This value should be chosen based on the integer type of the
-// num_undecided_children array.
+// Illegal positions are marked with this value, which should be chosen based on
+// the integer type of the num_undecided_children array.
 static const uint8_t kIllegalNumChildren = UINT8_MAX;
 
 static Tier this_tier;          // The tier being solved.
@@ -92,12 +98,13 @@ static omp_lock_t num_undecided_children_lock;
 
 // Cached reverse position graph of the current tier.
 ReverseGraph reverse_graph;
+// The reverse graph is used if the Undo Move Optimization is turned off.
 static bool use_reverse_graph = false;
 
 static bool Step0Initialize(Tier tier);
 static bool Step0_0InitFrontiers(int dividers_size);
 static PositionArray TierGetCanonicalParentPositionsFromReverseGraph(
-    Tier tier, Position position, Tier parent_tier);
+    TierPosition child, Tier parent_tier);
 
 static bool Step1LoadChildren(void);
 static bool IsCanonicalTier(Tier tier);
@@ -119,20 +126,25 @@ static bool PushFrontierHelper(Frontier *frontier, int remoteness,
                                                        Position position));
 static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
                             int i);
-static bool ProcessLosePosition(int remoteness, Tier tier, Position position);
-static bool ProcessWinPosition(int remoteness, Tier tier, Position position);
-static bool ProcessTiePosition(int remoteness, Tier tier, Position position);
+static bool ProcessLosePosition(int remoteness, TierPosition tier_position);
+static bool ProcessWinPosition(int remoteness, TierPosition tier_position);
+static bool ProcessTiePosition(int remoteness, TierPosition tier_position);
 
 static void Step5MarkDrawPositions(void);
 static void Step6SaveValues(void);
 static void Step7Cleanup(void);
 static void DestroyFrontiers(void);
 
-// ----------------------------------------------------------------------------
-int TierSolverSolve(Tier tier, bool force) {
+// -----------------------------------------------------------------------------
+
+void TierWorkerInit(const TierSolverApi *api) {
+    memcpy(&current_api, api, sizeof(current_api));
+}
+
+int TierWorkerSolve(Tier tier, bool force) {
     int ret = -1;
     if (!force) {
-        // Check if tier has already been solved.
+        // TODO: Check if tier has already been solved.
     }
 
     /* Solver main algorithm. */
@@ -149,20 +161,21 @@ _bailout:
     Step7Cleanup();
     return ret;
 }
-// ----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 
 static bool Step0Initialize(Tier tier) {
     // Initialize child tier array.
     this_tier = tier;
-    child_tiers = tier_solver.GetChildTiers(this_tier);
+    child_tiers = current_api.GetChildTiers(this_tier);
     if (child_tiers.size == -1) return false;
 
-    use_reverse_graph = (tier_solver.GetCanonicalParentPositions == NULL);
+    use_reverse_graph = (current_api.GetCanonicalParentPositions == NULL);
     if (use_reverse_graph) {
         bool success =
             ReverseGraphInit(&reverse_graph, &child_tiers, this_tier);
         if (!success) return false;
-        tier_solver.GetCanonicalParentPositions =
+        current_api.GetCanonicalParentPositions =
             &TierGetCanonicalParentPositionsFromReverseGraph;
     }
 
@@ -170,7 +183,7 @@ static bool Step0Initialize(Tier tier) {
     if (!Step0_0InitFrontiers(child_tiers.size + 1)) return false;
 
     // Non-memory-allocating initializations.
-    this_tier_size = tier_solver.GetTierSize(tier);
+    this_tier_size = current_api.GetTierSize(tier);
 #ifdef _OPENMP
     omp_init_lock(&num_undecided_children_lock);
 #endif
@@ -185,14 +198,11 @@ static bool Step0_0InitFrontiers(int dividers_size) {
 }
 
 static PositionArray TierGetCanonicalParentPositionsFromReverseGraph(
-    Tier tier, Position position, Tier parent_tier) {
+    TierPosition child, Tier parent_tier) {
     // Unused, since all children were generated by positions in this_tier.
     (void)parent_tier;
 
-    TierPosition tier_position;
-    tier_position.tier = tier;
-    tier_position.position = position;
-    int64_t index = ReverseGraphGetIndex(&reverse_graph, tier_position);
+    int64_t index = ReverseGraphGetIndex(&reverse_graph, child);
     PositionArray ret = reverse_graph.parents_of[index];
 
     // Clears the entry in reverse graph since it is no longer needed.
@@ -223,58 +233,79 @@ static bool Step1LoadChildren(void) {
 }
 
 static bool IsCanonicalTier(Tier tier) {
-    return tier_solver.GetCanonicalTier(tier) == tier;
+    return current_api.GetCanonicalTier(tier) == tier;
 }
 
 static bool Step1_0LoadCanonicalTier(int child_index) {
     Tier child_tier = child_tiers.array[child_index];
-    if (!DbLoadTier(child_tier)) return false;  // OOM.
 
     // Scan child tier and load non-drawing positions into frontier.
-    int64_t child_tier_size = tier_solver.GetTierSize(child_tier);
+    int64_t child_tier_size = current_api.GetTierSize(child_tier);
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
-    for (Position position = 0; position < child_tier_size; ++position) {
-        Value value = DbGetValue(position);
-        int remoteness = DbGetRemoteness(position);
-        if (!CheckAndLoadFrontier(child_index, position, value, remoteness)) {
-            success = false;
+    PRAGMA_OMP_PARALLEL  // TODO: Test if this comment can be removed.
+    {
+        DbProbe probe;
+        DbManagerProbeInit(&probe);
+        TierPosition child_tier_position = {.tier = child_tier};
+
+        PRAGMA_OMP_FOR
+        for (Position position = 0; position < child_tier_size; ++position) {
+            child_tier_position.position = position;
+            Value value = DbManagerProbeValue(&probe, child_tier_position);
+            int remoteness =
+                DbManagerProbeRemoteness(&probe, child_tier_position);
+            if (!CheckAndLoadFrontier(child_index, position, value,
+                                      remoteness)) {
+                success = false;
+            }
         }
+        DbManagerProbeDestroy(&probe);
     }
+
     return success;
 }
 
 static bool Step1_1LoadNonCanonicalTier(int child_index) {
     Tier original_tier = child_tiers.array[child_index];
-    Tier canonical_tier = tier_solver.GetCanonicalTier(original_tier);
-    if (!DbLoadTier(canonical_tier)) return false;  // OOM.
+    Tier canonical_tier = current_api.GetCanonicalTier(original_tier);
 
     // Scan child tier and load winning/losing positions into frontier.
-    int64_t child_tier_size = tier_solver.GetTierSize(canonical_tier);
+    int64_t child_tier_size = current_api.GetTierSize(canonical_tier);
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
-    for (int64_t position = 0; position < child_tier_size; ++position) {
-        Value value = DbGetValue(position);
+    PRAGMA_OMP_PARALLEL  // TODO: remove this comment if possible.
+    {
+        DbProbe probe;
+        DbManagerProbeInit(&probe);
+        TierPosition canonical_tier_position = {.tier = canonical_tier};
 
-        // No need to convert hash if position does not need to be loaded.
-        if (value == kUndecided || value == kDraw) continue;
+        PRAGMA_OMP_FOR
+        for (int64_t position = 0; position < child_tier_size; ++position) {
+            canonical_tier_position.position = position;
+            Value value = DbManagerProbeValue(&probe, canonical_tier_position);
 
-        int remoteness = DbGetRemoteness(position);
-        Position noncanonical_position =
-            tier_solver.GetPositionInNonCanonicalTier(canonical_tier, position,
-                                                      original_tier);
-        if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
-                                  remoteness)) {
-            success = false;
+            // No need to convert hash if position does not need to be loaded.
+            if (value == kUndecided || value == kDraw) continue;
+
+            int remoteness =
+                DbManagerProbeRemoteness(&probe, canonical_tier_position);
+            Position noncanonical_position =
+                current_api.GetPositionInNonCanonicalTier(
+                    canonical_tier_position, original_tier);
+            if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
+                                      remoteness)) {
+                success = false;
+            }
         }
+        DbManagerProbeDestroy(&probe);
     }
     return success;
 }
 
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
                                  int remoteness) {
+    if (remoteness < 0) return false;  // Error probing remoteness.
     if (value == kUndecided || value == kDraw) return true;
     Frontier *dest = NULL;
     switch (value) {
@@ -295,7 +326,7 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
             break;
 
         default:
-            NotReached("CheckAndLoadFrontier: unknown value.\n");
+            return false;  // Error probing value.
     }
     return FrontierAdd(dest, position, remoteness, child_index);
 }
@@ -304,7 +335,8 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
  * @brief Initializes database and number of undecided children array.
  */
 static bool Step2SetupSolverArrays(void) {
-    bool success = DbCreateTier(this_tier);
+    bool success = DbManagerCreateSolvingTier(
+        this_tier, current_api.GetTierSize(this_tier));
     num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
     return success && (num_undecided_children != NULL);
 }
@@ -318,29 +350,27 @@ static bool Step3ScanTier(void) {
 
     PRAGMA_OMP_PARALLEL_FOR
     for (Position position = 0; position < this_tier_size; ++position) {
-        if (!tier_solver.IsLegalPosition(this_tier, position) ||
+        TierPosition tier_position = {.tier = this_tier, .position = position};
+
+        // Skip illegal positions and non-canonical positions.
+        if (!current_api.IsLegalPosition(tier_position) ||
             !IsCanonicalPosition(position)) {
-            // Skip illegal positions and non-canonical positions.
             num_undecided_children[position] = kIllegalNumChildren;
             continue;
         }
-        Value value = tier_solver.Primitive(this_tier, position);
-        bool is_primitive = (value != kUndecided);
-        if (is_primitive) {
-            DbSetValueRemoteness(position, value, 0);
+
+        Value value = current_api.Primitive(tier_position);
+        if (value != kUndecided) {  // If tier_position is primitive...
+            // Set its value immediately and push it into the frontier.
+            DbManagerSetValue(position, value);
+            DbManagerSetRemoteness(position, 0);
             if (!CheckAndLoadFrontier(child_tiers.size, position, value, 0)) {
                 success = false;
             }
             num_undecided_children[position] = 0;
             continue;
-        }
-        int num_children;
-        if (use_reverse_graph) {
-            num_children = Step3_0CountChildren(position);
-        } else {
-            num_children = tier_solver.GetNumberOfCanonicalChildPositions(
-                this_tier, position);
-        }
+        }  // Execute the following lines if tier_position is not primitive.
+        int num_children = Step3_0CountChildren(position);
         if (num_children <= 0) success = false;  // Either OOM or no children.
         num_undecided_children[position] = num_children;
     }
@@ -352,12 +382,20 @@ static bool Step3ScanTier(void) {
 }
 
 static bool IsCanonicalPosition(Position position) {
-    return tier_solver.GetCanonicalPosition(this_tier, position) == position;
+    TierPosition tier_position = {.tier = this_tier, .position = position};
+    return current_api.GetCanonicalPosition(tier_position) == position;
 }
 
 static int Step3_0CountChildren(Position position) {
+    TierPosition tier_position = {.tier = this_tier, .position = position};
+    if (!use_reverse_graph) {
+        return current_api.GetNumberOfCanonicalChildPositions(tier_position);
+    }
+    // Else, count children manually and add position as their parent in the
+    // reverse graph.
     TierPositionArray children =
-        tier_solver.GetCanonicalChildPositions(this_tier, position);
+        current_api.GetCanonicalChildPositions(tier_position);
+
     for (int64_t i = 0; i < children.size; ++i) {
         if (!ReverseGraphAdd(&reverse_graph, children.array[i], position)) {
             return -1;
@@ -376,10 +414,12 @@ static bool Step4PushFrontierUp(void) {
     // Remotenesses must be processed sequentially.
     for (int remoteness = 0; remoteness < kFrontierSize; ++remoteness) {
         if (!PushFrontierHelper(&lose_frontier, remoteness,
-                                &ProcessLosePosition))
+                                &ProcessLosePosition)) {
             return false;
-        if (!PushFrontierHelper(&win_frontier, remoteness, &ProcessWinPosition))
+        } else if (!PushFrontierHelper(&win_frontier, remoteness,
+                                       &ProcessWinPosition)) {
             return false;
+        }
     }
 
     // Then move on to tying positions.
@@ -423,10 +463,10 @@ static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
     return child_index;
 }
 
-static bool ProcessLoseOrTiePosition(int remoteness, Tier tier,
-                                     Position position, bool processing_lose) {
+static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
+                                     bool processing_lose) {
     PositionArray parents =
-        tier_solver.GetCanonicalParentPositions(tier, position, this_tier);
+        current_api.GetCanonicalParentPositions(tier_position, this_tier);
     if (parents.size < 0) {  // OOM.
         TierArrayDestroy(&parents);
         return false;
@@ -445,7 +485,8 @@ static bool ProcessLoseOrTiePosition(int remoteness, Tier tier,
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
-        DbSetValueRemoteness(parents.array[i], value, remoteness + 1);
+        DbManagerSetValue(parents.array[i], value);
+        DbManagerSetRemoteness(parents.array[i], remoteness + 1);
         if (!FrontierAdd(frontier, parents.array[i], remoteness + 1,
                          child_tiers.size)) {  // OOM.
             TierArrayDestroy(&parents);
@@ -456,13 +497,13 @@ static bool ProcessLoseOrTiePosition(int remoteness, Tier tier,
     return true;
 }
 
-static bool ProcessLosePosition(int remoteness, Tier tier, Position position) {
-    return ProcessLoseOrTiePosition(remoteness, tier, position, true);
+static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
+    return ProcessLoseOrTiePosition(remoteness, tier_position, true);
 }
 
-static bool ProcessWinPosition(int remoteness, Tier tier, Position position) {
+static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     PositionArray parents =
-        tier_solver.GetCanonicalParentPositions(tier, position, this_tier);
+        current_api.GetCanonicalParentPositions(tier_position, this_tier);
     if (parents.size < 0) {  // OOM.
         PositionArrayDestroy(&parents);
         return false;
@@ -487,7 +528,8 @@ static bool ProcessWinPosition(int remoteness, Tier tier, Position position) {
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
         if (child_remaining == 0) {
-            DbSetValueRemoteness(parents.array[i], kLose, remoteness + 1);
+            DbManagerSetValue(parents.array[i], kLose);
+            DbManagerSetRemoteness(parents.array[i], remoteness + 1);
             if (!FrontierAdd(&lose_frontier, parents.array[i], remoteness + 1,
                              child_tiers.size)) {  // OOM.
                 PositionArrayDestroy(&parents);
@@ -499,8 +541,8 @@ static bool ProcessWinPosition(int remoteness, Tier tier, Position position) {
     return true;
 }
 
-static bool ProcessTiePosition(int remoteness, Tier tier, Position position) {
-    return ProcessLoseOrTiePosition(remoteness, tier, position, false);
+static bool ProcessTiePosition(int remoteness, TierPosition tier_position) {
+    return ProcessLoseOrTiePosition(remoteness, tier_position, false);
 }
 
 static void Step5MarkDrawPositions(void) {
@@ -511,7 +553,8 @@ static void Step5MarkDrawPositions(void) {
 
         if (num_undecided_children[position] > 0) {
             // A position is drawing if it still has undecided children.
-            DbSetValueRemoteness(position, kDraw, 0);
+            DbManagerSetValue(position, kDraw);
+            DbManagerSetRemoteness(position, 0);
             continue;
         }
         assert(num_undecided_children[position] == 0);
@@ -520,7 +563,21 @@ static void Step5MarkDrawPositions(void) {
     num_undecided_children = NULL;
 }
 
-static void Step6SaveValues(void) { DbSave(this_tier); }
+static void Step6SaveValues(void) {
+    if (DbManagerFlushSolvingTier(NULL) != 0) {
+        fprintf(stderr,
+                "Step6SaveValues: an error has occurred while flushing of the "
+                "current tier. The database file for tier %" PRId64
+                " may be corrupt.\n",
+                this_tier);
+    }
+    if (DbManagerFreeSolvingTier() != 0) {
+        fprintf(stderr,
+                "Step6SaveValues: an error has occurred while freeing of the "
+                "current tier's in-memory database. Tier: %" PRId64 "\n",
+                this_tier);
+    }
+}
 
 static void Step7Cleanup(void) {
     this_tier = -1;
@@ -532,7 +589,7 @@ static void Step7Cleanup(void) {
     if (use_reverse_graph) {
         ReverseGraphDestroy(&reverse_graph);
         // Unset the local function pointer.
-        tier_solver.GetCanonicalParentPositions = NULL;
+        current_api.GetCanonicalParentPositions = NULL;
     }
 #ifdef _OPENMP
     omp_destroy_lock(&num_undecided_children_lock);
@@ -546,5 +603,7 @@ static void DestroyFrontiers(void) {
 }
 
 #undef PRAGMA
+#undef PRAGMA_OMP_PARALLEL
+#undef PRAGMA_OMP_FOR
 #undef PRAGMA_OMP_PARALLEL_FOR
 #undef PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE

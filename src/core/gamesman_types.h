@@ -12,7 +12,7 @@ typedef int64_t Position;
 typedef int64_t Move;
 
 // Always make sure that kUndecided is 0.
-typedef enum { kUndecided, kLose, kDraw, kTie, kWin } Value;
+typedef enum { kUndecided, kLose, kDraw, kTie, kWin, kErrorValue } Value;
 
 typedef Int64Array PositionArray;
 typedef Int64HashMap PositionHashSet;
@@ -64,6 +64,13 @@ typedef enum GamesmanTypesLimits {
     kGameFormalNameLengthMax = 127,
 } GamesmanTypesLimits;
 
+typedef struct DbProbe {
+    Tier tier;
+    void *buffer;
+    int64_t begin;
+    int64_t size;
+} DbProbe;
+
 typedef struct Database {
     char name[kDbNameLengthMax + 1];
 
@@ -77,10 +84,14 @@ typedef struct Database {
     int (*FreeSolvingTier)(void);
     int (*SetValue)(Position position, Value value);
     int (*SetRemoteness)(Position position, int remoteness);
+    Value (*GetValue)(Position position);
+    int (*GetRemoteness)(Position position);
 
     // Probing
-    Value (*GetValue)(TierPosition tier_position);
-    int (*GetRemoteness)(TierPosition tier_position);
+    int (*ProbeInit)(DbProbe *probe);
+    int (*ProbeDestroy)(DbProbe *probe);
+    Value (*ProbeValue)(DbProbe *probe, TierPosition tier_position);
+    int (*ProbeRemoteness)(DbProbe *probe, TierPosition tier_position);
 } Database;
 
 typedef struct SolverOption {
@@ -90,6 +101,8 @@ typedef struct SolverOption {
 } SolverOption;
 
 typedef struct SolverConfiguration {
+    const SolverOption *options;  // Zero-terminated.
+    const int *selections;        // Aligned with options, Zero-terminated.
 } SolverConfiguration;
 
 typedef struct Solver {
@@ -97,9 +110,11 @@ typedef struct Solver {
     const Database *db;
 
     int (*Init)(const void *solver_api);
+    int (*Finalize)(void);
+
     int (*Solve)(void *aux);
     int (*GetStatus)(void);
-    
+
     const SolverConfiguration *(*GetCurrentConfiguration)(void);
     int (*SetOption)(int option, int selection);
 } Solver;

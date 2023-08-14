@@ -1,16 +1,16 @@
 #ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
 #define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/gamesman_types.h"
 
 extern Solver kTierSolver;
 
-struct TierSolverApi {
-    Position initial_position;
+typedef struct TierSolverApi {
     Tier initial_tier;
+    Position initial_position;
 
     int64_t (*GetTierSize)(Tier tier);
     MoveArray (*GenerateMoves)(TierPosition tier_position);

@@ -1,5 +1,5 @@
-#ifndef GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_
-#define GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_
+#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -28,4 +28,4 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
 void FrontierAccumulateDividers(Frontier *frontier);
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness);
 
-#endif  // GAMESMANEXPERIMENT_CORE_TIER_SOLVER_FRONTIER_H_
+#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
