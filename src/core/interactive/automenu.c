@@ -16,7 +16,7 @@ static void FormatInput(char *input) {
     for (int i = 0; input[i] != '\0'; ++i) {
         input[i] = tolower(input[i]);
     }
-    // Remove the trailing newline character, if any.
+    // Remove the trailing newline character, if it exists.
     // Algorithm by Tim Čas,
     // https://stackoverflow.com/a/28462221.
     input[strcspn(input, "\r\n")] = '\0';
@@ -41,7 +41,7 @@ void AutoMenu(const char *title, int num_items, const char *const *items,
             printf("%s) %s\n", keys[i], items[i]);
         }
         printf("\n(b) Go back\n");
-        printf("(q) Quit");
+        printf("(q) Quit\n");
 
         // Prompt for input.
         bool accepted = false;
@@ -49,7 +49,7 @@ void AutoMenu(const char *title, int num_items, const char *const *items,
             printf("=>");
             char *input =
                 (char *)SafeMalloc((kKeyLengthMax + 1) * sizeof(char));
-            if (fgets(input, kKeyLengthMax + 1, stdin) == NULL) return;
+            if (fgets(input, kKeyLengthMax + 2, stdin) == NULL) return;
             FormatInput(input);
             if (StringEqual(input, "b", kKeyLengthMax)) return;
             if (StringEqual(input, "q", kKeyLengthMax)) GamesmanExit(input);

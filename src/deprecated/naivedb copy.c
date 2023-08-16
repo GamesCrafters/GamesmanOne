@@ -37,7 +37,7 @@ static Value NaiveDbGetValue(TierPosition tier_position);
 static int NaiveDbGetRemoteness(TierPosition tier_position);
 
 const Database kNaiveDb = {
-    .name = "Naive DB",
+    .formal_name = "Naive DB",
 
     .Init = &NaiveDbInit,
     .Finalize = &NaiveDbFinalize,

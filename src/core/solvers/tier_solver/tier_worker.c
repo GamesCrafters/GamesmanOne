@@ -120,10 +120,9 @@ static bool IsCanonicalPosition(Position position);
 static int Step3_0CountChildren(Position position);
 
 static bool Step4PushFrontierUp(void);
-static bool PushFrontierHelper(Frontier *frontier, int remoteness,
-                               bool (*ProcessPosition)(int remoteness,
-                                                       Tier tier,
-                                                       Position position));
+static bool PushFrontierHelper(
+    Frontier *frontier, int remoteness,
+    bool (*ProcessPosition)(int remoteness, TierPosition tier_position));
 static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
                             int i);
 static bool ProcessLosePosition(int remoteness, TierPosition tier_position);
@@ -172,8 +171,8 @@ static bool Step0Initialize(Tier tier) {
 
     use_reverse_graph = (current_api.GetCanonicalParentPositions == NULL);
     if (use_reverse_graph) {
-        bool success =
-            ReverseGraphInit(&reverse_graph, &child_tiers, this_tier);
+        bool success = ReverseGraphInit(&reverse_graph, &child_tiers, this_tier,
+                                        current_api.GetTierSize);
         if (!success) return false;
         current_api.GetCanonicalParentPositions =
             &TierGetCanonicalParentPositionsFromReverseGraph;
@@ -433,23 +432,24 @@ static bool Step4PushFrontierUp(void) {
     return true;
 }
 
-static bool PushFrontierHelper(Frontier *frontier, int remoteness,
-                               bool (*ProcessPosition)(int remoteness,
-                                                       Tier tier,
-                                                       Position position)) {
+static bool PushFrontierHelper(
+    Frontier *frontier, int remoteness,
+    bool (*ProcessPosition)(int remoteness, TierPosition tier_position)) {
+    //
     bool success = true;
     int child_index = 0;
 
     PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(child_index)
     for (int64_t i = 0; i < frontier->buckets[remoteness].size; ++i) {
         child_index = UpdateChildIndex(child_index, frontier, remoteness, i);
-        Tier tier = child_index < child_tiers.size
-                        ? child_tiers.array[child_index]
-                        : this_tier;
-        if (!ProcessPosition(remoteness, tier,
-                             frontier->buckets[remoteness].array[i])) {
-            success = false;
+        TierPosition tier_position;
+        tier_position.position = frontier->buckets[remoteness].array[i];
+        if (child_index < child_tiers.size) {
+            tier_position.tier = child_tiers.array[child_index];
+        } else {
+            tier_position.tier = this_tier;
         }
+        if (!ProcessPosition(remoteness, tier_position)) success = false;
     }
     FrontierFreeRemoteness(frontier, remoteness);
     return success;

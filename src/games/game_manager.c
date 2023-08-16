@@ -1,24 +1,15 @@
 #include "games/game_manager.h"
 
-#include <stddef.h>
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
 
-#include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
 
-static const Game kAllGames[] = {
-    // TODO
+static const Game *const kAllGames[] = {
+    &kMtttier, NULL
 };
 
-/*
-static const GamesmanGame kAllGames[] = {
-    {.name = "mttt", .formal_name = "Tic-Tac-Toe", .Init = &MtttInit},
-
-    {.name = "mtttier",
-     .formal_name = "Tic-Tac-Toe (Tier)",
-     .Init = &MtttierInit}};
-*/
-
-const Game *GameManagerGetAllGames(void) {
+const Game *const *GameManagerGetAllGames(void) {
     return kAllGames;
 }
 
@@ -26,7 +17,7 @@ int GameManagerNumGames(void) {
     static int count = -1;
     if (count >= 0) return count;
     int i = 0;
-    while (kAllGames[i].solver_api != NULL) {
+    while (kAllGames[i] != NULL) {
         ++i;
     }
     return count = i;

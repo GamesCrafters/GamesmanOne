@@ -95,8 +95,10 @@ static bool CreateTierTree(void) {
     // DFS from initial tier with loop detection.
     TierStack fringe;
     TierStackInit(&fringe);
-    TierStackPush(&fringe, current_api->initial_tier);
-    TierHashMapSet(&tier_to_value, current_api->initial_tier,
+
+    Tier initial_tier = current_api->GetInitialTier();
+    TierStackPush(&fringe, initial_tier);
+    TierHashMapSet(&tier_to_value, initial_tier,
                    NumUnsolvedChildTiersAndStatusToValue(0, kStatusNotVisited));
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);

@@ -6,7 +6,6 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman.h"        // tier_solver
 #include "core/gamesman_types.h"  // PositionArray, TierArray, TierPosition
 #include "core/misc.h"            // Gamesman Array utilities
 
@@ -15,7 +14,7 @@
 #endif
 
 static bool InitOffsetMap(ReverseGraph *graph, const TierArray *child_tiers,
-                          Tier this_tier) {
+                          Tier this_tier, int64_t (*GetTierSize)(Tier tier)) {
     TierHashMapInit(&graph->offset_map, 0.5);
     graph->size = 0;
 
@@ -27,7 +26,7 @@ static bool InitOffsetMap(ReverseGraph *graph, const TierArray *child_tiers,
             TierHashMapDestroy(&graph->offset_map);
             return false;
         }
-        graph->size += tier_solver.GetTierSize(child_tiers->array[i]);
+        graph->size += GetTierSize(child_tiers->array[i]);
     }
 
     // Map currently solving tier.
@@ -36,7 +35,7 @@ static bool InitOffsetMap(ReverseGraph *graph, const TierArray *child_tiers,
         TierHashMapDestroy(&graph->offset_map);
         return false;
     }
-    graph->size += tier_solver.GetTierSize(this_tier);
+    graph->size += GetTierSize(this_tier);
 
     return true;
 }
@@ -65,8 +64,10 @@ static bool InitLocks(ReverseGraph *graph) {
 
 // Assumes GetTierSize() has been set up correctly.
 bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
-                      Tier this_tier) {
-    if (!InitOffsetMap(graph, child_tiers, this_tier)) return false;
+                      Tier this_tier, int64_t (*GetTierSize)(Tier tier)) {
+    if (!InitOffsetMap(graph, child_tiers, this_tier, GetTierSize)) {
+        return false;
+    }
     if (!InitParentPositionArrays(graph)) {
         TierHashMapDestroy(&graph->offset_map);
         return false;

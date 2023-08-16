@@ -56,7 +56,8 @@ typedef enum GamesmanTypesLimits {
      * this value is not large enough for a game in the future.
      */
     kRemotenessMax = 1023,
-    kDbNameLengthMax = 63,
+    kDbNameLengthMax = 31,
+    kDbFormalNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
     kSolverNameLengthMax = 63,
     kGameVariantOptionNameMax = 63,
@@ -73,6 +74,7 @@ typedef struct DbProbe {
 
 typedef struct Database {
     char name[kDbNameLengthMax + 1];
+    char formal_name[kDbFormalNameLengthMax + 1];
 
     int (*Init)(const char *game_name, int variant, const char *path,
                 void *aux);
@@ -131,8 +133,8 @@ typedef struct GameVariant {
 } GameVariant;
 
 typedef struct GameplayApi {
-    Tier default_initial_tier;
-    Position default_initial_position;
+    Tier (*GetInitialTier)(void);
+    Position (*GetInitialPosition)(void);
 
     int position_string_length_max;
     int (*PositionToString)(Position position, char *buffer);
@@ -160,6 +162,10 @@ typedef struct Game {
     const Solver *solver;
     const void *solver_api;
     const GameplayApi *gameplay_api;
+
+    int (*Init)(void *aux);
+    int (*Finalize)(void);
+
     const GameVariant *(*GetCurrentVariant)(void);
     int (*SetVariantOption)(int option, int selection);
 } Game;

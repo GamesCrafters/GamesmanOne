@@ -32,7 +32,7 @@ static HookFunctionPointer *ListOfGamesAllocateHooks(int num_items) {
 }
 
 static void ListOfGamesFreeAll(int num_items, char **items, char **keys,
-                               HookFunctionPointer **hooks) {
+                               HookFunctionPointer *hooks) {
     for (int i = 0; i < num_items; ++i) {
         free(items[i]);
         free(keys[i]);
@@ -44,17 +44,19 @@ static void ListOfGamesFreeAll(int num_items, char **items, char **keys,
 
 void InteractiveGames(const char *key) {
     (void)key;  // Unused.
-    const Game *all_games = GameManagerGetAllGames();
+
+    const Game *const *all_games = GameManagerGetAllGames();
     static const char *title = "List of All Games";
     int num_items = GameManagerNumGames();
     char **items = ListOfGamesAllocateItems(num_items);
     char **keys = ListOfGamesAllocateKeys(num_items);
     HookFunctionPointer *hooks = ListOfGamesAllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        strncpy(items[i], all_games[i].formal_name, kGameFormalNameLengthMax);
+        strncpy(items[i], all_games[i]->formal_name, kGameFormalNameLengthMax);
         snprintf(keys[i], kKeyLengthMax, "%d", i);
         hooks[i] = &InteractivePresolve;
     }
-    AutoMenu(title, num_items, items, keys, hooks);
+    AutoMenu(title, num_items, (const char *const *)items,
+             (const char *const *)keys, (const HookFunctionPointer *)hooks);
     ListOfGamesFreeAll(num_items, items, keys, hooks);
 }

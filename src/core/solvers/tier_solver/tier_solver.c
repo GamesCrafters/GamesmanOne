@@ -7,6 +7,7 @@
 
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 
 static int TierSolverInit(const void *solver_api);
@@ -30,21 +31,27 @@ Solver kTierSolver = {
     .GetStatus = &TierSolverGetStatus,
 
     .GetCurrentConfiguration = &TierSolverGetCurrentConfiguration,
-    .SetOption = &TierSolverSetOption};
+    .SetOption = &TierSolverSetOption,
+};
 
+static const char *const kChoices[] = {"On", "Off"};
 static const SolverOption kTierSymmetryRemoval = {
     .name = "Tier Symmetry Removal",
     .num_choices = 2,
-    .choices = {"On", "Off"}};
+    .choices = kChoices,
+};
 
 static const SolverOption kPositionSymmetryRemoval = {
     .name = "Position Symmetry Removal",
     .num_choices = 2,
-    .choices = {"On", "Off"}};
+    .choices = kChoices,
+};
 
-static const SolverOption kUseRetrograde = {.name = "Use Retrograde Analysis",
-                                            .num_choices = 2,
-                                            .choices = {"On", "Off"}};
+static const SolverOption kUseRetrograde = {
+    .name = "Use Retrograde Analysis",
+    .num_choices = 2,
+    .choices = kChoices,
+};
 
 // Backup of the original API functions. If the user decides to turn off some
 // settings and then turn them back on, those functions will be read from this
@@ -101,7 +108,8 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverSolve(void *aux) {
-    bool force = *((bool *)aux);
+    bool force = false;
+    if (aux != NULL) force = *((bool *)aux);
     return TierManagerSolve(&current_api, force);
 }
 
@@ -145,8 +153,10 @@ static int TierSolverSetOption(int option, int selection) {
 // Helper functions
 
 static bool RequiredApiFunctionsImplemented(const TierSolverApi *api) {
-    if (api->initial_tier < 0) return false;
-    if (api->initial_position < 0) return false;
+    if (api->GetInitialTier == NULL) return false;
+    if (api->GetInitialTier() < 0) return false;
+    if (api->GetInitialPosition == NULL) return false;
+    if (api->GetInitialPosition() < 0) return false;
 
     if (api->GetTierSize == NULL) return false;
     if (api->GenerateMoves == NULL) return false;

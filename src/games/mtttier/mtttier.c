@@ -6,79 +6,156 @@
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // atoi
 
-#include "core/gamesman.h"  // tier_solver
 #include "core/gamesman_types.h"
 #include "core/generic_hash/generic_hash.h"
-#include "core/misc.h"  // Gamesman types utilities
+#include "core/misc.h"
+#include "core/solvers/tier_solver/tier_solver.h"
 
-// API Functions
+// Game, Solver, and Gameplay API Functions
+
+static int MtttierInit(void *aux);
+static int MtttierFinalize(void);
+
+static const GameVariant *MtttierGetCurrentVariant(void);
+static int MtttierSetVariantOption(int option, int selection);
+
+static Tier MtttierGetInitialTier(void);
+static Position MtttierGetInitialPosition(void);
 
 static int64_t MtttierGetTierSize(Tier tier);
-static MoveArray MtttierGenerateMoves(Tier tier, Position position);
-static Value MtttierPrimitive(Tier tier, Position position);
-static TierPosition MtttierDoMove(Tier tier, Position position, Move move);
-static bool MtttierIsLegalPosition(Tier tier, Position position);
-static Position MtttierGetCanonicalPosition(Tier tier, Position position);
-static PositionArray MtttierGetCanonicalParentPositions(Tier tier,
-                                                        Position position,
-                                                        Tier parent_tier);
+static MoveArray MtttierGenerateMoves(TierPosition tier_position);
+static Value MtttierPrimitive(TierPosition tier_position);
+static TierPosition MtttierDoMove(TierPosition tier_position, Move move);
+static bool MtttierIsLegalPosition(TierPosition tier_position);
+static Position MtttierGetCanonicalPosition(TierPosition tier_position);
+static PositionArray MtttierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
 static TierArray MtttierGetParentTiers(Tier tier);
+
+static int MtttierTierPositionToString(TierPosition tier_position,
+                                       char *buffer);
+static int MtttierMoveToString(Move move, char *buffer);
+static bool MtttierIsValidMoveString(const char *move_string);
+static Move MtttierStringToMove(const char *move_string);
+
+// Solver API Setup
+static const TierSolverApi kSolverApi = {
+    .GetInitialTier = &MtttierGetInitialTier,
+    .GetInitialPosition = &MtttierGetInitialPosition,
+
+    .GetTierSize = &MtttierGetTierSize,
+    .GenerateMoves = &MtttierGenerateMoves,
+    .Primitive = &MtttierPrimitive,
+    .DoMove = &MtttierDoMove,
+    .IsLegalPosition = &MtttierIsLegalPosition,
+    .GetCanonicalPosition = &MtttierGetCanonicalPosition,
+    .GetCanonicalChildPositions = NULL,
+    .GetCanonicalParentPositions = &MtttierGetCanonicalParentPositions,
+    .GetPositionInNonCanonicalTier = NULL,
+    .GetChildTiers = &MtttierGetChildTiers,
+    .GetParentTiers = &MtttierGetParentTiers,
+    .GetCanonicalTier = NULL,
+};
+
+// Gameplay API Setup
+static const GameplayApi kGameplayApi = {
+    .GetInitialTier = &MtttierGetInitialTier,
+    .GetInitialPosition = &MtttierGetInitialPosition,
+
+    .position_string_length_max = 120,
+    .TierPositionToString = &MtttierTierPositionToString,
+
+    .move_string_length_max = 1,
+    .MoveToString = &MtttierMoveToString,
+
+    .IsValidMoveString = &MtttierIsValidMoveString,
+    .StringToMove = &MtttierStringToMove,
+
+    .TierGenerateMoves = &MtttierGenerateMoves,
+    .TierDoMove = &MtttierDoMove,
+    .TierPrimitive = &MtttierPrimitive,
+};
+
+const Game kMtttier = {
+    .name = "mtttier",
+    .formal_name = "Tic-Tac-Tier",
+    .solver = &kTierSolver,
+    .solver_api = (const void *)&kSolverApi,
+    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+
+    .Init = &MtttierInit,
+    .Finalize = &MtttierFinalize,
+
+    .GetCurrentVariant = &MtttierGetCurrentVariant,
+    .SetVariantOption = &MtttierSetVariantOption,
+};
 
 // Helper Types and Global Variables
 
 static const int kNumRowsToCheck = 8;
-static const int kRowsToCheck[8][3] = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
-                                       {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
-                                       {0, 4, 8}, {2, 4, 6}};
+static const int kRowsToCheck[8][3] = {
+    {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6},
+    {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6},
+};
 static const int kNumSymmetries = 8;
 static const int kSymmetryMatrix[8][9] = {
     {0, 1, 2, 3, 4, 5, 6, 7, 8}, {2, 5, 8, 1, 4, 7, 0, 3, 6},
     {8, 7, 6, 5, 4, 3, 2, 1, 0}, {6, 3, 0, 7, 4, 1, 8, 5, 2},
     {2, 1, 0, 5, 4, 3, 8, 7, 6}, {0, 3, 6, 1, 4, 7, 2, 5, 8},
-    {6, 7, 8, 3, 4, 5, 0, 1, 2}, {8, 5, 2, 7, 4, 1, 6, 3, 0}};
+    {6, 7, 8, 3, 4, 5, 0, 1, 2}, {8, 5, 2, 7, 4, 1, 6, 3, 0},
+};
 
 // Helper Functions
 
 static bool InitGenericHash(void);
-static Position GetGlobalInitialPosition(void);
 static char ThreeInARow(const char *board, const int *indices);
 static bool AllFilledIn(const char *board);
 static void CountPieces(const char *board, int *xcount, int *ocount);
 static char WhoseTurn(const char *board);
-static Position DoSymmetry(Tier tier, Position position, int symmetry);
+static Position DoSymmetry(TierPosition tier_position, int symmetry);
+static char ConvertBlankToken(char piece);
 
-// ----------------------------------------------------------------------------
-bool MtttierInit(void) {
-    if (!InitGenericHash()) return false;
-    global_num_positions = kTierGamesmanGlobalNumberOfPositions;
-    global_initial_tier = 0;
-    global_initial_position = GetGlobalInitialPosition();
-    tier_solver.GetTierSize = &MtttierGetTierSize;
-    tier_solver.GenerateMoves = &MtttierGenerateMoves;
-    tier_solver.Primitive = &MtttierPrimitive;
-    tier_solver.DoMove = &MtttierDoMove;
-    tier_solver.IsLegalPosition = &MtttierIsLegalPosition;
-    tier_solver.GetCanonicalPosition = &MtttierGetCanonicalPosition;
-    // tier_solver.GetCanonicalParentPositions =
-    //     &MtttierGetCanonicalParentPositions;
-    tier_solver.GetChildTiers = &MtttierGetChildTiers;
-    tier_solver.GetParentTiers = &MtttierGetParentTiers;
-    return true;
+static int MtttierInit(void *aux) {
+    (void)aux;  // Unused.
+    return !InitGenericHash();
 }
-// ----------------------------------------------------------------------------
+
+static int MtttierFinalize(void) { return 0; }
+
+static const GameVariant *MtttierGetCurrentVariant(void) {
+    return NULL;  // Not implemented.
+}
+
+static int MtttierSetVariantOption(int option, int selection) {
+    (void)option;
+    (void)selection;
+    return 0;  // Not implemented.
+}
+
+static Tier MtttierGetInitialTier(void) { return 0; }
+
+// Assumes Generic Hash has been initialized.
+static Position MtttierGetInitialPosition(void) {
+    char board[9];
+    for (int i = 0; i < 9; ++i) {
+        board[i] = '-';
+    }
+    return GenericHashHashLabel(0, board, 1);
+}
 
 static int64_t MtttierGetTierSize(Tier tier) {
     return GenericHashNumPositionsLabel(tier);
 }
 
-static MoveArray MtttierGenerateMoves(Tier tier, Position position) {
+static MoveArray MtttierGenerateMoves(TierPosition tier_position) {
     MoveArray moves;
     MoveArrayInit(&moves);
 
     char board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     for (Move i = 0; i < 9; ++i) {
         if (board[i] == '-') {
             MoveArrayAppend(&moves, i);
@@ -87,9 +164,9 @@ static MoveArray MtttierGenerateMoves(Tier tier, Position position) {
     return moves;
 }
 
-static Value MtttierPrimitive(Tier tier, Position position) {
+static Value MtttierPrimitive(TierPosition tier_position) {
     char board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
 
     for (int i = 0; i < kNumRowsToCheck; ++i) {
         if (ThreeInARow(board, kRowsToCheck[i]) > 0) return kLose;
@@ -98,25 +175,25 @@ static Value MtttierPrimitive(Tier tier, Position position) {
     return kUndecided;
 }
 
-static TierPosition MtttierDoMove(Tier tier, Position position, Move move) {
+static TierPosition MtttierDoMove(TierPosition tier_position, Move move) {
     char board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     char turn = WhoseTurn(board);
     board[move] = turn;
     TierPosition ret;
-    ret.tier = tier + 1;
-    ret.position = GenericHashHashLabel(tier, board, 1);
+    ret.tier = tier_position.tier + 1;
+    ret.position = GenericHashHashLabel(tier_position.tier, board, 1);
     return ret;
 }
 
-static bool MtttierIsLegalPosition(Tier tier, Position position) {
+static bool MtttierIsLegalPosition(TierPosition tier_position) {
     // A position is legal if and only if:
     // 1. xcount == ocount or xcount = ocount + 1 if no one is winning and
     // 2. xcount == ocount if O is winning and
     // 3. xcount == ocount + 1 if X is winning and
     // 4. only one player can be winning
     char board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
 
     int xcount, ocount;
     CountPieces(board, &xcount, &ocount);
@@ -134,12 +211,12 @@ static bool MtttierIsLegalPosition(Tier tier, Position position) {
     return true;
 }
 
-static Position MtttierGetCanonicalPosition(Tier tier, Position position) {
-    Position canonical_position = position;
+static Position MtttierGetCanonicalPosition(TierPosition tier_position) {
+    Position canonical_position = tier_position.position;
     Position new_position;
 
     for (int i = 0; i < kNumSymmetries; ++i) {
-        new_position = DoSymmetry(tier, position, i);
+        new_position = DoSymmetry(tier_position, i);
         if (new_position < canonical_position) {
             // By GAMESMAN convention, the canonical position is the one with
             // the smallest hash value.
@@ -150,13 +227,15 @@ static Position MtttierGetCanonicalPosition(Tier tier, Position position) {
     return canonical_position;
 }
 
-static PositionArray MtttierGetCanonicalParentPositions(Tier tier,
-                                                        Position position,
-                                                        Tier parent_tier) {
+static PositionArray MtttierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier) {
+    //
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
     PositionArray parents;
     PositionArrayInit(&parents);
     if (parent_tier != tier - 1) return parents;
-    
+
     PositionHashSet deduplication_set;
     PositionHashSetInit(&deduplication_set, 0.5);
 
@@ -168,18 +247,20 @@ static PositionArray MtttierGetCanonicalParentPositions(Tier tier,
         if (board[i] == prev_turn) {
             // Take piece off the board.
             board[i] = '-';
-            Position parent = GenericHashHashLabel(tier - 1, board, 1);
+            TierPosition parent = {
+                .tier = tier - 1,
+                .position = GenericHashHashLabel(tier - 1, board, 1)};
             // Add piece back to the board.
             board[i] = prev_turn;
-            if (!MtttierIsLegalPosition(tier - 1, parent)) {
+            if (!MtttierIsLegalPosition(parent)) {
                 continue;  // Illegal.
             }
-            parent = MtttierGetCanonicalPosition(tier - 1, parent);
-            if (PositionHashSetContains(&deduplication_set, parent)) {
+            parent.position = MtttierGetCanonicalPosition(parent);
+            if (PositionHashSetContains(&deduplication_set, parent.position)) {
                 continue;  // Already included.
             }
-            PositionHashSetAdd(&deduplication_set, parent);
-            PositionArrayAppend(&parents, parent);
+            PositionHashSetAdd(&deduplication_set, parent.position);
+            PositionArrayAppend(&parents, parent.position);
         }
     }
     PositionHashSetDestroy(&deduplication_set);
@@ -201,9 +282,65 @@ static TierArray MtttierGetParentTiers(Tier tier) {
     return parents;
 }
 
+static int MtttierTierPositionToString(TierPosition tier_position,
+                                       char *buffer) {
+    char board[9] = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return 1;
+
+    for (int i = 0; i < 9; ++i) {
+        board[i] = ConvertBlankToken(board[i]);
+    }
+
+    static const char *format =
+        "         ( 1 2 3 )           : %c %c %c\n"
+        "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
+        "         ( 7 8 9 )           : %c %c %c";
+    int actual_length =
+        snprintf(buffer, kGameplayApi.position_string_length_max + 1, format,
+                 board[0], board[1], board[2], board[3], board[4], board[5],
+                 board[6], board[7], board[8]);
+    if (actual_length >= kGameplayApi.position_string_length_max + 1) {
+        fprintf(
+            stderr,
+            "MtttierTierPositionToString: (BUG) not enough space was allocated "
+            "to buffer. Please increase position_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int MtttierMoveToString(Move move, char *buffer) {
+    int actual_length = snprintf(
+        buffer, kGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
+    if (actual_length >= kGameplayApi.move_string_length_max + 1) {
+        fprintf(stderr,
+                "MtttierMoveToString: (BUG) not enough space was allocated "
+                "to buffer. Please increase move_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+static bool MtttierIsValidMoveString(const char *move_string) {
+    // Only "1" - "9" are valid move strings.
+    if (move_string[0] < '1') return false;
+    if (move_string[0] > '9') return false;
+    if (move_string[1] != '\0') return false;
+
+    return true;
+}
+
+static Move MtttierStringToMove(const char *move_string) {
+    assert(MtttierIsValidMoveString(move_string));
+    return (Move)atoi(move_string) - 1;
+}
+
 // Helper functions implementation
 
 static bool InitGenericHash(void) {
+    GenericHashReinitialize();
     int player = 1;  // No turn bit needed as we can infer the turn from board.
     int board_size = 9;
     int pieces_init_array[10] = {'-', 9, 9, 'O', 0, 0, 'X', 0, 0, -1};
@@ -224,14 +361,6 @@ static bool InitGenericHash(void) {
         }
     }
     return true;
-}
-
-static Position GetGlobalInitialPosition(void) {
-    char board[9];
-    for (int i = 0; i < 9; ++i) {
-        board[i] = '-';
-    }
-    return GenericHashHashLabel(0, board, 1);
 }
 
 static char ThreeInARow(const char *board, const int *indices) {
@@ -263,14 +392,19 @@ static char WhoseTurn(const char *board) {
     return 'O';
 }
 
-static Position DoSymmetry(Tier tier, Position position, int symmetry) {
+static Position DoSymmetry(TierPosition tier_position, int symmetry) {
     char board[9] = {0}, symmetry_board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
 
     // Copy from the symmetry matrix.
     for (int i = 0; i < 9; ++i) {
         symmetry_board[i] = board[kSymmetryMatrix[symmetry][i]];
     }
 
-    return GenericHashHashLabel(tier, symmetry_board, 1);
+    return GenericHashHashLabel(tier_position.tier, symmetry_board, 1);
+}
+
+static char ConvertBlankToken(char piece) {
+    if (piece == '-') return ' ';
+    return piece;
 }

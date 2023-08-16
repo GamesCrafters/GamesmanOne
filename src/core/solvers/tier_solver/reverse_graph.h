@@ -20,7 +20,7 @@ typedef struct ReverseGraph {
 } ReverseGraph;
 
 bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
-                      Tier this_tier);
+                      Tier this_tier, int64_t (*GetTierSize)(Tier tier));
 void ReverseGraphDestroy(ReverseGraph *graph);
 int64_t ReverseGraphGetIndex(ReverseGraph *graph, TierPosition tier_position);
 bool ReverseGraphAdd(ReverseGraph *graph, TierPosition child, Position parent);

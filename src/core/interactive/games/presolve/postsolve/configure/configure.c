@@ -31,11 +31,11 @@ void InteractivePostSolveConfigure(const char *key) {
     (void)key;  // Unused.
     PrintPlayerConfiguration();
     static const char *title = "Configuration Menu";
-    static const char *const *items = {
+    static const char *const items[] = {
         "Toggle player type of the first player",
         "Toggle player type of the second player"};
-    static const char *const *keys = {"1", "2"};
-    static const HookFunctionPointer *hooks = {&ToggleFirstPlayerType,
-                                               &ToggleSecondPlayerType};
+    static const char *const keys[] = {"1", "2"};
+    static const HookFunctionPointer hooks[] = {&ToggleFirstPlayerType,
+                                                &ToggleSecondPlayerType};
     AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
 }

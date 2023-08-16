@@ -2,7 +2,7 @@
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
-#include <stdio.h>   // printf
+#include <stdio.h>   // printf, fprintf, stderr
 #include <stdlib.h>  // atoi
 
 #include "core/gamesman_types.h"
@@ -11,17 +11,19 @@
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
-#include "core/misc.h"
 #include "core/solver_manager.h"
 #include "games/game_manager.h"
 
-static void SetCurrentGame(const char *key) {
+static int SetCurrentGame(const char *key) {
     int game_index = atoi(key);
     assert(game_index >= 0 && game_index < GameManagerNumGames());
-    const Game *all_games = GameManagerGetAllGames();
-    const Game *current_game = &all_games[game_index];
-    InteractiveMatchRestart(current_game);
-    SolverManagerInitSolver(current_game);
+
+    const Game *const *all_games = GameManagerGetAllGames();
+    const Game *current_game = all_games[game_index];
+    int error = InteractiveMatchSetGame(current_game);
+    if (error != 0) return error;
+
+    return SolverManagerInitSolver(current_game);
 }
 
 static void SolveAndStart(const char *key) {
@@ -30,10 +32,16 @@ static void SolveAndStart(const char *key) {
 }
 
 void InteractivePresolve(const char *key) {
-    SetCurrentGame(key);
+    int error = SetCurrentGame(key);
+    if (error != 0) {
+        fprintf(stderr,
+                "InteractivePresolve: failed to set game. Error code %d\n",
+                error);
+        return;
+    }
+
     const Game *current_game = InteractiveMatchGetCurrentGame();
-    const GameVariant *variant = current_game->GetCurrentVariant();
-    int variant_index = GameVariantToIndex(variant);
+    int variant_index = InteractiveMatchGetCurrentVariant();
 
     // Hard-coded size based on the title definition below.
     char title[43 + kGameFormalNameLengthMax + kUint32Base10StringLengthMax];

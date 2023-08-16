@@ -1,7 +1,9 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_
 
-extern const int kKeyLengthMax;
+#include <stddef.h>  // size_t
+
+extern const size_t kKeyLengthMax;
 
 typedef void (*HookFunctionPointer)(const char *key);
 

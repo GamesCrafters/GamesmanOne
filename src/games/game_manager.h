@@ -3,7 +3,7 @@
 
 #include "core/gamesman_types.h"
 
-const Game *GameManagerGetAllGames(void);
+const Game *const *GameManagerGetAllGames(void);
 
 int GameManagerNumGames(void);
 

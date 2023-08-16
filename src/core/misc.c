@@ -378,6 +378,8 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
 }
 
 int GameVariantToIndex(const GameVariant *variant) {
+    if (variant == NULL) return 0;
+    
     int ret = 0;
     for (int i = 0; variant->options[i].num_choices > 0; ++i) {
         ret = ret * variant->options[i].num_choices + variant->selections[i];

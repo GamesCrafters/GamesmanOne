@@ -5,15 +5,20 @@
 
 #include "core/db_manager.h"
 #include "core/gamesman_types.h"
+#include "core/misc.h"
 
-static Solver *current_solver;
+static const Solver *current_solver;
 
 int SolverManagerInitSolver(const Game *game) {
     current_solver = game->solver;
-    int result = current_solver->Init(game->solver_api);
-    if (result != 0) return result;
-    result = DbManagerInitDb(current_solver);
-    if (result != 0) return result;
+    int error = current_solver->Init(game->solver_api);
+    if (error != 0) return error;
+
+    const GameVariant *variant = game->GetCurrentVariant();
+    int variant_index = GameVariantToIndex(variant);
+    error = DbManagerInitDb(current_solver, game->name, variant_index, NULL);
+    if (error != 0) return error;
+    
     return 0;
 }
 
@@ -22,4 +27,4 @@ int SolverManagerGetSolverStatus(void) {
     return current_solver->GetStatus();
 }
 
-int SolverManagerSolve(void *aux) { current_solver->Solve(aux); }
+int SolverManagerSolve(void *aux) { return current_solver->Solve(aux); }

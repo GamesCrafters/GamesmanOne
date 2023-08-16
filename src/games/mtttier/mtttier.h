@@ -1,8 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_GAMES_MTTTIER_MTTTIER_H_
 #define GAMESMANEXPERIMENT_GAMES_MTTTIER_MTTTIER_H_
 
-#include <stdbool.h>
+#include "core/gamesman_types.h"
 
-bool MtttierInit(void);
+extern const Game kMtttier;
 
 #endif  // GAMESMANEXPERIMENT_GAMES_MTTTIER_MTTTIER_H_

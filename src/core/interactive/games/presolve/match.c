@@ -33,10 +33,12 @@ static void MatchDestroy(void) {
 
 static bool ImplementsBasicGameplayApi(const GameplayApi *api) {
     if (api == NULL) return false;
-    
+
     // Common.
-    if (api->default_initial_tier < 0) return false;
-    if (api->default_initial_position < 0) return false;
+    if (api->GetInitialTier == NULL) return false;
+    if (api->GetInitialTier() < 0) return false;
+    if (api->GetInitialPosition == NULL) return false;
+    if (api->GetInitialPosition() < 0) return false;
     if (api->position_string_length_max <= 0) return false;
 
     // "Move to string" related functions.
@@ -74,6 +76,7 @@ int InteractiveMatchSetGame(const Game *game) {
     MatchDestroy();
     memset(&match, 0, sizeof(match));
     match.game = game;
+    game->Init(NULL);
     if (!ImplementsBasicGameplayApi(game->gameplay_api)) {
         return kInteractiveMatchSetGameBasicApiIncomplete;
     } else if (ImplementsRegularGameplayApi(game->gameplay_api)) {
@@ -96,13 +99,12 @@ bool InteractiveMatchRestart(void) {
 
     TierPosition initial_position;
     if (match.is_tier_game) {
-        initial_position.tier = match.game->gameplay_api->default_initial_tier;
+        initial_position.tier = match.game->gameplay_api->GetInitialTier();
     } else {
         // By convention, all non-tier games use 0 as the only tier index.
         initial_position.tier = 0;
     }
-    initial_position.position =
-        match.game->gameplay_api->default_initial_position;
+    initial_position.position = match.game->gameplay_api->GetInitialPosition();
     TierPositionArrayAppend(&match.position_history, initial_position);
     return true;
 }
@@ -113,6 +115,15 @@ void InteractiveMatchTogglePlayerType(int player) {
 
 bool InteractiveMatchPlayerIsComputer(int player) {
     return match.is_computer[player];
+}
+
+int InteractiveMatchGetCurrentVariant(void) {
+    if (match.game->GetCurrentVariant == NULL) return 0;
+
+    const GameVariant *variant = match.game->GetCurrentVariant();
+    if (variant == NULL) return 0;
+
+    return GameVariantToIndex(variant);
 }
 
 TierPosition InteractiveMatchGetCurrentPosition(void) {

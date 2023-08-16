@@ -5,7 +5,8 @@
 
 #include "core/gamesman_types.h"
 
-int DbManagerInitDb(const Solver *solver);
+int DbManagerInitDb(const Solver *solver, const char *game_name, int variant,
+                    void *aux);
 void DbManagerFinalizeDb(void);
 
 // Solving Interface.

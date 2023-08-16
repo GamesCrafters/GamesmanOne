@@ -28,7 +28,7 @@ static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 const Database kNaiveDb = {
-    .name = "Naive DB",
+    .formal_name = "Naive DB",
 
     .Init = &NaiveDbInit,
     .Finalize = &NaiveDbFinalize,
@@ -79,8 +79,10 @@ static char *GetFullPathToFile(Tier tier) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
     }
+
     char file_name[kInt64Base10StringLengthMax + 2];
     snprintf(file_name, kInt64Base10StringLengthMax, "/%" PRId64, tier);
+
     strcat(full_path, current_path);
     strcat(full_path, file_name);
     return full_path;
@@ -123,6 +125,7 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
 
 static int NaiveDbInit(const char *game_name, int variant, const char *path,
                        void *aux) {
+    (void)aux;  // Unused.
     assert(current_path == NULL);
 
     current_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
@@ -130,6 +133,7 @@ static int NaiveDbInit(const char *game_name, int variant, const char *path,
         fprintf(stderr, "NaiveDbInit: failed to malloc path.\n");
         return 1;
     }
+    strcpy(current_path, path);
 
     strncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_variant = variant;
@@ -162,6 +166,8 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
 }
 
 static int NaiveDbFlushSolvingTier(void *aux) {
+    (void)aux;  // Unused.
+
     // Create a file <tier> at the given path
     char *full_path = GetFullPathToFile(current_tier);
     if (full_path == NULL) return 1;
@@ -190,6 +196,7 @@ static int NaiveDbFreeSolvingTier(void) {
     records = NULL;
     current_tier = -1;
     current_tier_size = -1;
+    return 0;
 }
 
 static int NaiveDbSetValue(Position position, Value value) {

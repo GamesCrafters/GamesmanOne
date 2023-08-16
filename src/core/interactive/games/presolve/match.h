@@ -18,6 +18,7 @@ bool InteractiveMatchRestart(void);
 void InteractiveMatchTogglePlayerType(int player);
 bool InteractiveMatchPlayerIsComputer(int player);
 
+int InteractiveMatchGetCurrentVariant(void);
 TierPosition InteractiveMatchGetCurrentPosition(void);
 int InteractiveMatchGetTurn(void);
 MoveArray InteractiveMatchGenerateMoves(void);

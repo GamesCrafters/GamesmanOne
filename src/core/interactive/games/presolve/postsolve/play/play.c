@@ -13,6 +13,8 @@
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"  // SafeMalloc, GameVariantToIndex
 
+static DbProbe probe;
+
 static void PrintCurrentPosition(const Game *game) {
     int position_string_size = game->gameplay_api->position_string_length_max;
     char *position_string =
@@ -57,16 +59,16 @@ static bool IsBestChild(Value parent_value, int parent_remoteness,
     return false;
 }
 
-static void MakeComputerMove(const Game *game) {
+static void MakeComputerMove(void) {
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
-    Value current_value = DbManagerGetValue(current);
-    int current_remoteness = DbManagerGetRemoteness(current);
+    Value current_value = DbManagerProbeValue(&probe, current);
+    int current_remoteness = DbManagerProbeRemoteness(&probe, current);
 
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = InteractiveMatchDoMove(current, moves.array[i]);
-        Value value = DbManagerGetValue(child);
-        int remoteness = DbManagerGetRemoteness(child);
+        Value value = DbManagerProbeValue(&probe, child);
+        int remoteness = DbManagerProbeRemoteness(&probe, child);
         if (IsBestChild(current_value, current_remoteness, value, remoteness)) {
             InteractiveMatchCommitMove(moves.array[i]);
             break;
@@ -76,7 +78,7 @@ static void MakeComputerMove(const Game *game) {
 }
 
 static bool PromptForAndProcessUserMove(const Game *game) {
-    int move_string_size = game->gameplay_api->move_string_length_max;
+    int move_string_size = game->gameplay_api->move_string_length_max + 1;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
     MoveArray moves = InteractiveMatchGenerateMoves();
 
@@ -89,10 +91,13 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     printf("]: ");
 
     // Prompt for input.
-    if (fgets(move_string, move_string_size, stdin) == NULL) {
+    if (fgets(move_string, move_string_size + 1, stdin) == NULL) {
         fprintf(stderr, "PlayTierGame: unexpcted fgets error. Aborting...\n");
         exit(EXIT_FAILURE);
     }
+    move_string[strcspn(move_string, "\r\n")] = '\0';
+
+    if (strncmp(move_string, "b", 1) == 0) return true;  // Exit game.
     if (strncmp(move_string, "u", 1) == 0) {
         return InteractiveMatchUndo();
     }
@@ -113,9 +118,8 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     return true;
 }
 
-static void PrintGameResult(const Game *game, bool is_tier_game) {
-    TierPosition current_position = InteractiveMatchGetCurrentPosition();
-    Value value = GetPrimitiveValue(game, is_tier_game);
+static void PrintGameResult(const char *game_formal_name) {
+    Value value = InteractiveMatchPrimitive();
     int turn = InteractiveMatchGetTurn();
     switch (value) {
         case kUndecided:
@@ -142,7 +146,7 @@ static void PrintGameResult(const Game *game, bool is_tier_game) {
                 stderr,
                 "PlayGame: (BUG) game ended at a position of unknown value %d. "
                 "Check the implementation of %s. Aborting...\n",
-                (int)value, game->formal_name);
+                (int)value, game_formal_name);
             exit(EXIT_FAILURE);
             break;
     }
@@ -150,6 +154,7 @@ static void PrintGameResult(const Game *game, bool is_tier_game) {
 
 void InteractivePlay(const char *key) {
     (void)key;  // Unused.
+
     if (!InteractiveMatchRestart()) {
         fprintf(stderr,
                 "InteractivePlay: (BUG) attempting to launch game when the "
@@ -157,23 +162,32 @@ void InteractivePlay(const char *key) {
         exit(EXIT_FAILURE);
     }
 
+    if (DbManagerProbeInit(&probe) != 0) {
+        fprintf(stderr,
+                "InteractivePlay: failed to initialize DB probe. Most likely "
+                "ran out of memory.\n");
+        return;
+    }
+
     const Game *game = InteractiveMatchGetCurrentGame();
     PrintCurrentPosition(game);
-    Value primitive_value = GetPrimitiveValue(game);
+    Value primitive_value = InteractiveMatchPrimitive();
     bool game_over = (primitive_value != kUndecided);
 
     while (!game_over) {
         int turn = InteractiveMatchGetTurn();
         if (InteractiveMatchPlayerIsComputer(turn)) {
             // Generate computer move
-            MakeComputerMove(game);
+            MakeComputerMove();
         } else if (!PromptForAndProcessUserMove(game)) {
             // If user entered an unknown command, restart the loop.
             continue;
         }
         // Else, move has been successfully processed. Print the new position.
         PrintCurrentPosition(game);
-        primitive_value = GetPrimitiveValue(game);
+        primitive_value = InteractiveMatchPrimitive();
         game_over = (primitive_value != kUndecided);
     }
+    PrintGameResult(game->formal_name);
+    DbManagerProbeDestroy(&probe);
 }

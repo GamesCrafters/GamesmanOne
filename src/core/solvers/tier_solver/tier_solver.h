@@ -9,8 +9,8 @@
 extern Solver kTierSolver;
 
 typedef struct TierSolverApi {
-    Tier initial_tier;
-    Position initial_position;
+    Tier (*GetInitialTier)(void);
+    Position (*GetInitialPosition)(void);
 
     int64_t (*GetTierSize)(Tier tier);
     MoveArray (*GenerateMoves)(TierPosition tier_position);
