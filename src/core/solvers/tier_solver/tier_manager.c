@@ -165,8 +165,7 @@ static int CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
 }
 
 static void EnqueuePrimitiveTiers(void) {
-    TierHashMapIterator it;
-    TierHashMapIteratorInit(&it, &tier_to_value);
+    TierHashMapIterator it = TierHashMapBegin(&tier_to_value);
     Tier tier;
     int64_t value;
     while (TierHashMapIteratorNext(&it, &tier, &value)) {

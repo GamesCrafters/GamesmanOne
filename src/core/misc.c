@@ -218,8 +218,8 @@ bool TierHashMapContains(TierHashMap *map, Tier tier) {
     return Int64HashMapContains(map, tier);
 }
 
-void TierHashMapIteratorInit(TierHashMapIterator *it, TierHashMap *map) {
-    Int64HashMapIteratorInit(it, map);
+TierHashMapIterator TierHashMapBegin(TierHashMap *map) {
+    return Int64HashMapBegin(map);
 }
 
 Tier TierHashMapIteratorKey(const TierHashMapIterator *it) {

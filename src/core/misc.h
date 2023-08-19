@@ -65,7 +65,7 @@ TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key);
 bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value);
 bool TierHashMapContains(TierHashMap *map, Tier tier);
 
-void TierHashMapIteratorInit(TierHashMapIterator *it, TierHashMap *map);
+TierHashMapIterator TierHashMapBegin(TierHashMap *map);
 Tier TierHashMapIteratorKey(const TierHashMapIterator *it);
 int64_t TierHashMapIteratorValue(const TierHashMapIterator *it);
 bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
