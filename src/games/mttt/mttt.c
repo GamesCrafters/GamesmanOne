@@ -1,12 +1,26 @@
 #include "games/mttt/mttt.h"
 
-#include <stdbool.h>  // bool, true, false
+#include <assert.h>    // assert
+#include <inttypes.h>  // PRId64
+#include <stdbool.h>   // bool, true, false
+#include <stdint.h>    // int64_t
+#include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // atoi
 
-#include "core/gamesman.h"  // regular_solver
 #include "core/gamesman_types.h"
-#include "core/misc.h"  // NotReached, PositionArray utilities.
+#include "core/misc.h"
+#include "core/solvers/regular_solver/regular_solver.h"
 
-// API Functions
+// Game, Solver, and Gameplay API Functions
+
+static int MtttInit(void *aux);
+static int MtttFinalize(void);
+
+static const GameVariant *MtttGetCurrentVariant(void);
+static int MtttSetVariantOption(int option, int selection);
+
+static int64_t MtttGetNumPositions(void);
+static Position MtttGetInitialPosition(void);
 
 static MoveArray MtttGenerateMoves(Position position);
 static Value MtttPrimitive(Position position);
@@ -14,6 +28,59 @@ static Position MtttDoMove(Position position, Move move);
 static bool MtttIsLegalPosition(Position position);
 static Position MtttGetCanonicalPosition(Position position);
 static PositionArray MtttGetCanonicalParentPositions(Position position);
+
+static int MtttPositionToString(Position position, char *buffer);
+static int MtttMoveToString(Move move, char *buffer);
+static bool MtttIsValidMoveString(const char *move_string);
+static Move MtttStringToMove(const char *move_string);
+
+// Solver API Setup
+static const RegularSolverApi kSolverApi = {
+    .GetNumPositions = &MtttGetNumPositions,
+    .GetInitialPosition = &MtttGetInitialPosition,
+
+    .GenerateMoves = &MtttGenerateMoves,
+    .Primitive = &MtttPrimitive,
+    .DoMove = &MtttDoMove,
+    .IsLegalPosition = &MtttIsLegalPosition,
+    .GetCanonicalPosition = &MtttGetCanonicalPosition,
+    .GetCanonicalChildPositions = NULL,
+    .GetCanonicalParentPositions = &MtttGetCanonicalParentPositions,
+};
+
+// Gameplay API Setup
+static const GameplayApi kGameplayApi = {
+    .GetInitialPosition = &MtttGetInitialPosition,
+
+    .position_string_length_max = 120,
+    .PositionToString = &MtttPositionToString,
+
+    .move_string_length_max = 1,
+    .MoveToString = MtttMoveToString,
+
+    .IsValidMoveString = MtttIsValidMoveString,
+    .StringToMove = MtttStringToMove,
+
+    .GenerateMoves = &MtttGenerateMoves,
+    .DoMove = &MtttDoMove,
+    .Primitive = &MtttPrimitive,
+
+    .GetCanonicalPosition = &MtttGetCanonicalPosition,
+};
+
+const Game kMttt = {
+    .name = "mttt",
+    .formal_name = "Tic-Tac-Toe",
+    .solver = &kRegularSolver,
+    .solver_api = (const void *)&kSolverApi,
+    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+
+    .Init = &MtttInit,
+    .Finalize = &MtttFinalize,
+
+    .GetCurrentVariant = &MtttGetCurrentVariant,
+    .SetVariantOption = &MtttSetVariantOption,
+};
 
 // Helper Types and Global Variables
 
@@ -59,25 +126,34 @@ static bool AllFilledIn(BlankOX *board);
 static void CountPieces(BlankOX *board, int *xcount, int *ocount);
 static BlankOX WhoseTurn(BlankOX *board);
 
-//-----------------------------------------------------------------------------
-bool MtttInit(void) {
-    global_num_positions = 19683;  // 3**9.
-    global_initial_position = 0;
-
-    regular_solver.GenerateMoves = &MtttGenerateMoves;
-    regular_solver.Primitive = &MtttPrimitive;
-    regular_solver.DoMove = &MtttDoMove;
-    regular_solver.IsLegalPosition = &MtttIsLegalPosition;
-    regular_solver.GetCanonicalPosition = &MtttGetCanonicalPosition;
-    regular_solver.GetCanonicalParentPositions =
-        &MtttGetCanonicalParentPositions;
-
-    InitSymmetryMatrix();
-    return true;
-}
-//-----------------------------------------------------------------------------
-
 // API Implementation
+
+static int MtttInit(void *aux) {
+    (void)aux;  // Unused.
+    InitSymmetryMatrix();
+    return 0;
+}
+
+static int MtttFinalize(void) {
+    // Nothing to deallocate.
+    return 0;
+}
+
+static const GameVariant *MtttGetCurrentVariant(void) {
+    return NULL;  // Not implemented.
+}
+
+static int MtttSetVariantOption(int option, int selection) {
+    (void)option;
+    (void)selection;
+    return 0;  // Not implemented.
+}
+
+static int64_t MtttGetNumPositions(void) {
+    return 19683;  // 3 ** 9.
+}
+
+static Position MtttGetInitialPosition(void) { return 0; }
 
 static MoveArray MtttGenerateMoves(Position position) {
     MoveArray moves;
@@ -176,6 +252,57 @@ static PositionArray MtttGetCanonicalParentPositions(Position position) {
     PositionHashSetDestroy(&deduplication_set);
 
     return parents;
+}
+
+static int MtttPositionToString(Position position, char *buffer) {
+    static const char kPieceMap[3] = {' ', 'O', 'X'};
+
+    BlankOX board[9] = {0};
+    Unhash(position, board);
+
+    static const char *format =
+        "         ( 1 2 3 )           : %c %c %c\n"
+        "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
+        "         ( 7 8 9 )           : %c %c %c";
+    int actual_length =
+        snprintf(buffer, kGameplayApi.position_string_length_max + 1, format,
+                 kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
+                 kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
+                 kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
+    if (actual_length >= kGameplayApi.position_string_length_max + 1) {
+        fprintf(
+            stderr,
+            "MtttTierPositionToString: (BUG) not enough space was allocated "
+            "to buffer. Please increase position_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int MtttMoveToString(Move move, char *buffer) {
+    int actual_length = snprintf(
+        buffer, kGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
+    if (actual_length >= kGameplayApi.move_string_length_max + 1) {
+        fprintf(stderr,
+                "MtttMoveToString: (BUG) not enough space was allocated "
+                "to buffer. Please increase move_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+static bool MtttIsValidMoveString(const char *move_string) {
+    // Only "1" - "9" are valid move strings.
+    if (move_string[0] < '1') return false;
+    if (move_string[0] > '9') return false;
+    if (move_string[1] != '\0') return false;
+
+    return true;
+}
+
+static Move MtttStringToMove(const char *move_string) {
+    assert(MtttIsValidMoveString(move_string));
+    return (Move)atoi(move_string) - 1;
 }
 
 // Helper functions implementation

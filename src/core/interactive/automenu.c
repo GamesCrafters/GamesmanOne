@@ -36,12 +36,12 @@ void AutoMenu(const char *title, int num_items, const char *const *items,
               const char *const *keys, const HookFunctionPointer *hooks) {
     while (1) {
         // Print menu.
-        printf("%s\n\n", title);
+        printf("\n\t----- %s -----\n\n", title);
         for (int i = 0; i < num_items; ++i) {
-            printf("%s) %s\n", keys[i], items[i]);
+            printf("\t%s) %s\n", keys[i], items[i]);
         }
-        printf("\n(b) Go back\n");
-        printf("(q) Quit\n");
+        printf("\n\t(b) Go back\n");
+        printf("\t(q) Quit\n\n");
 
         // Prompt for input.
         bool accepted = false;

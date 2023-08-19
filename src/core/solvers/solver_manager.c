@@ -1,9 +1,9 @@
-#include "core/solver_manager.h"
+#include "core/solvers/solver_manager.h"
 
 #include <assert.h>
 #include <stddef.h>
 
-#include "core/db_manager.h"
+#include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 

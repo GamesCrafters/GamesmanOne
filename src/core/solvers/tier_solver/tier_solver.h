@@ -6,7 +6,7 @@
 
 #include "core/gamesman_types.h"
 
-extern Solver kTierSolver;
+extern const Solver kTierSolver;
 
 typedef struct TierSolverApi {
     Tier (*GetInitialTier)(void);
@@ -22,8 +22,8 @@ typedef struct TierSolverApi {
     TierPositionArray (*GetCanonicalChildPositions)(TierPosition tier_position);
     PositionArray (*GetCanonicalParentPositions)(TierPosition child,
                                                  Tier parent_tier);
-    Position (*GetPositionInNonCanonicalTier)(TierPosition canonical,
-                                              Tier noncanonical_tier);
+    Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
+                                           Tier symmetric);
     TierArray (*GetChildTiers)(Tier tier);
     TierArray (*GetParentTiers)(Tier tier);
     Tier (*GetCanonicalTier)(Tier tier);

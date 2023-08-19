@@ -10,7 +10,7 @@
 #include "core/data_structures/int64_array.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
-#include "core/solver_manager.h"
+#include "core/solvers/solver_manager.h"
 
 typedef struct Match {
     const Game *game;
@@ -35,8 +35,6 @@ static bool ImplementsBasicGameplayApi(const GameplayApi *api) {
     if (api == NULL) return false;
 
     // Common.
-    if (api->GetInitialTier == NULL) return false;
-    if (api->GetInitialTier() < 0) return false;
     if (api->GetInitialPosition == NULL) return false;
     if (api->GetInitialPosition() < 0) return false;
     if (api->position_string_length_max <= 0) return false;
@@ -54,6 +52,8 @@ static bool ImplementsBasicGameplayApi(const GameplayApi *api) {
 
 static bool ImplementsTierGameplayApi(const GameplayApi *api) {
     if (!ImplementsBasicGameplayApi(api)) return false;
+    if (api->GetInitialTier == NULL) return false;
+    if (api->GetInitialTier() < 0) return false;
     if (api->TierPositionToString == NULL) return false;
     if (api->TierGenerateMoves == NULL) return false;
     if (api->TierDoMove == NULL) return false;
@@ -205,4 +205,33 @@ int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer) {
     }
     return match.game->gameplay_api->PositionToString(tier_position.position,
                                                       buffer);
+}
+
+TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position) {
+    TierPosition canonical = tier_position;
+
+    // Convert to the tier position inside the canonical tier.
+    if (match.game->gameplay_api->GetCanonicalTier != NULL &&
+        match.game->gameplay_api->GetPositionInSymmetricTier != NULL) {
+        //
+        canonical.tier =
+            match.game->gameplay_api->GetCanonicalTier(tier_position.tier);
+        canonical.position =
+            match.game->gameplay_api->GetPositionInSymmetricTier(
+                tier_position, canonical.tier);
+    }
+
+    // Find the canonical position inside the canonical tier.
+    if (match.is_tier_game &&
+        match.game->gameplay_api->TierGetCanonicalPosition != NULL) {
+        //
+        canonical.position =
+            match.game->gameplay_api->TierGetCanonicalPosition(canonical);
+    } else if (!match.is_tier_game &&
+               match.game->gameplay_api->GetCanonicalPosition != NULL) {
+        canonical.position =
+            match.game->gameplay_api->GetCanonicalPosition(canonical.position);
+    }
+
+    return canonical;
 }

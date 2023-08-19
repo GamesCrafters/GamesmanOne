@@ -3,12 +3,14 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 #include <stdio.h>   // fprintf, stderr
-#include <string.h>  // memcpy, strncmp
+#include <string.h>  // memset, memcpy, strncmp
 
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
+
+// Solver API functions.
 
 static int TierSolverInit(const void *solver_api);
 static int TierSolverFinalize(void);
@@ -20,7 +22,7 @@ static int TierSolverSetOption(int option, int selection);
 /**
  * @brief The Tier Solver definition. Used externally.
  */
-Solver kTierSolver = {
+const Solver kTierSolver = {
     .name = "Tier Solver",
     .db = &kNaiveDb,
 
@@ -56,7 +58,7 @@ static const SolverOption kUseRetrograde = {
 // Backup of the original API functions. If the user decides to turn off some
 // settings and then turn them back on, those functions will be read from this
 // object.
-static TierSolverApi original_api;
+static TierSolverApi default_api;
 
 // The API currently being used.
 static TierSolverApi current_api;
@@ -98,7 +100,7 @@ static int TierSolverInit(const void *solver_api) {
 }
 
 static int TierSolverFinalize(void) {
-    memset(&original_api, 0, sizeof(original_api));
+    memset(&default_api, 0, sizeof(default_api));
     memset(&current_api, 0, sizeof(current_api));
     memset(&current_config, 0, sizeof(current_config));
     memset(&current_options, 0, sizeof(current_options));
@@ -172,7 +174,7 @@ static bool RequiredApiFunctionsImplemented(const TierSolverApi *api) {
 
 static bool TierSymmetryRemovalImplemented(const TierSolverApi *api) {
     if (api->GetCanonicalTier == NULL) return false;
-    if (api->GetPositionInNonCanonicalTier == NULL) return false;
+    if (api->GetPositionInSymmetricTier == NULL) return false;
 
     return true;
 }
@@ -189,14 +191,14 @@ static void ToggleTierSymmetryRemoval(bool on) {
     if (on) {
         // This function should not be used to turn on Tier Symmetry Removal if
         // it's not an option.
-        assert(original_api.GetCanonicalTier != NULL);
-        assert(original_api.GetPositionInNonCanonicalTier != NULL);
-        current_api.GetCanonicalTier = original_api.GetCanonicalTier;
-        current_api.GetPositionInNonCanonicalTier =
-            original_api.GetPositionInNonCanonicalTier;
+        assert(default_api.GetCanonicalTier != NULL);
+        assert(default_api.GetPositionInSymmetricTier != NULL);
+        current_api.GetCanonicalTier = default_api.GetCanonicalTier;
+        current_api.GetPositionInSymmetricTier =
+            default_api.GetPositionInSymmetricTier;
     } else {
         current_api.GetCanonicalTier = &DefaultGetCanonicalTier;
-        current_api.GetPositionInNonCanonicalTier = NULL;
+        current_api.GetPositionInSymmetricTier = NULL;
     }
 }
 
@@ -204,8 +206,8 @@ static void TogglePositionSymmetryRemoval(bool on) {
     if (on) {
         // This function should not be used to turn on Position Symmetry Removal
         // if it's not an option.
-        assert(original_api.GetCanonicalPosition != NULL);
-        current_api.GetCanonicalPosition = original_api.GetCanonicalPosition;
+        assert(default_api.GetCanonicalPosition != NULL);
+        current_api.GetCanonicalPosition = default_api.GetCanonicalPosition;
     } else {
         current_api.GetCanonicalPosition = &DefaultGetCanonicalPosition;
     }
@@ -215,9 +217,9 @@ static void ToggleRetrogradeAnalysis(bool on) {
     if (on) {
         // This function should not be used to turn on Retrograde Analysis
         // if it's not an option.
-        assert(original_api.GetCanonicalParentPositions != NULL);
+        assert(default_api.GetCanonicalParentPositions != NULL);
         current_api.GetCanonicalParentPositions =
-            original_api.GetCanonicalParentPositions;
+            default_api.GetCanonicalParentPositions;
     } else {
         current_api.GetCanonicalParentPositions = NULL;
     }
@@ -225,7 +227,7 @@ static void ToggleRetrogradeAnalysis(bool on) {
 
 static bool SetCurrentApi(const TierSolverApi *api) {
     if (!RequiredApiFunctionsImplemented(api)) return false;
-    memcpy(&original_api, api, sizeof(original_api));
+    memcpy(&default_api, api, sizeof(default_api));
     memcpy(&current_api, api, sizeof(current_api));
 
     // Assuming solver options and configuration objects, both external and

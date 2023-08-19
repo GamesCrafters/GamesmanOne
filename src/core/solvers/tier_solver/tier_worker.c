@@ -36,7 +36,7 @@
 #include <stdio.h>     // fprintf, stderr
 #include <string.h>    // memset
 
-#include "core/db_manager.h"
+#include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/frontier.h"
@@ -290,7 +290,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
             int remoteness =
                 DbManagerProbeRemoteness(&probe, canonical_tier_position);
             Position noncanonical_position =
-                current_api.GetPositionInNonCanonicalTier(
+                current_api.GetPositionInSymmetricTier(
                     canonical_tier_position, original_tier);
             if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
                                       remoteness)) {

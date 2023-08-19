@@ -1,8 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 #define GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
 
-#include <stdbool.h>
+#include "core/gamesman_types.h"
 
-bool MtttInit(void);
+extern const Game kMttt;
 
 #endif  // GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_

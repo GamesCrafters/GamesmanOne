@@ -3,10 +3,11 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 
+#include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
 
 static const Game *const kAllGames[] = {
-    &kMtttier, NULL
+    &kMtttier, &kMttt, NULL
 };
 
 const Game *const *GameManagerGetAllGames(void) {

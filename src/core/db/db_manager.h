@@ -1,5 +1,5 @@
-#ifndef GAMESMANEXPERIMENT_CORE_DB_MANAGER_H_
-#define GAMESMANEXPERIMENT_CORE_DB_MANAGER_H_
+#ifndef GAMESMANEXPERIMENT_CORE_DB_DB_MANAGER_H_
+#define GAMESMANEXPERIMENT_CORE_DB_DB_MANAGER_H_
 
 #include <stdint.h>  // int64_t
 
@@ -24,4 +24,4 @@ int DbManagerProbeDestroy(DbProbe *probe);
 Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
 int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DB_MANAGER_H_
+#endif  // GAMESMANEXPERIMENT_CORE_DB_DB_MANAGER_H_

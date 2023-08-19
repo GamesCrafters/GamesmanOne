@@ -154,6 +154,13 @@ typedef struct GameplayApi {
 
     Value (*Primitive)(Position position);
     Value (*TierPrimitive)(TierPosition tier_position);
+
+    Position (*GetCanonicalPosition)(Position position);
+    Position (*TierGetCanonicalPosition)(TierPosition tier_position);
+
+    Tier (*GetCanonicalTier)(Tier tier);
+    Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
+                                           Tier symmetric);
 } GameplayApi;
 
 typedef struct Game {

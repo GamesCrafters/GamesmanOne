@@ -35,7 +35,7 @@ static PositionArray MtttierGetCanonicalParentPositions(
 static TierArray MtttierGetChildTiers(Tier tier);
 static TierArray MtttierGetParentTiers(Tier tier);
 
-static int MtttierTierPositionToString(TierPosition tier_position,
+static int MtttTierPositionToString(TierPosition tier_position,
                                        char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
 static bool MtttierIsValidMoveString(const char *move_string);
@@ -54,7 +54,7 @@ static const TierSolverApi kSolverApi = {
     .GetCanonicalPosition = &MtttierGetCanonicalPosition,
     .GetCanonicalChildPositions = NULL,
     .GetCanonicalParentPositions = &MtttierGetCanonicalParentPositions,
-    .GetPositionInNonCanonicalTier = NULL,
+    .GetPositionInSymmetricTier = NULL,
     .GetChildTiers = &MtttierGetChildTiers,
     .GetParentTiers = &MtttierGetParentTiers,
     .GetCanonicalTier = NULL,
@@ -66,7 +66,7 @@ static const GameplayApi kGameplayApi = {
     .GetInitialPosition = &MtttierGetInitialPosition,
 
     .position_string_length_max = 120,
-    .TierPositionToString = &MtttierTierPositionToString,
+    .TierPositionToString = &MtttTierPositionToString,
 
     .move_string_length_max = 1,
     .MoveToString = &MtttierMoveToString,
@@ -77,6 +77,11 @@ static const GameplayApi kGameplayApi = {
     .TierGenerateMoves = &MtttierGenerateMoves,
     .TierDoMove = &MtttierDoMove,
     .TierPrimitive = &MtttierPrimitive,
+
+    .TierGetCanonicalPosition = &MtttierGetCanonicalPosition,
+
+    .GetCanonicalTier = NULL,
+    .GetPositionInSymmetricTier = NULL,
 };
 
 const Game kMtttier = {
@@ -282,7 +287,7 @@ static TierArray MtttierGetParentTiers(Tier tier) {
     return parents;
 }
 
-static int MtttierTierPositionToString(TierPosition tier_position,
+static int MtttTierPositionToString(TierPosition tier_position,
                                        char *buffer) {
     char board[9] = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,

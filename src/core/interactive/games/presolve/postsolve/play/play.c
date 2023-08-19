@@ -8,29 +8,79 @@
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strncmp
 
-#include "core/db_manager.h"
+#include "core/db/db_manager.h"
 #include "core/gamesman_types.h"  // Game
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"  // SafeMalloc, GameVariantToIndex
 
 static DbProbe probe;
 
+static Value ProbeValue(TierPosition tier_position) {
+    TierPosition canonical =
+        InteractiveMatchGetCanonicalPosition(tier_position);
+    return DbManagerProbeValue(&probe, canonical);
+}
+
+static int ProbeRemoteness(TierPosition tier_position) {
+    TierPosition canonical =
+        InteractiveMatchGetCanonicalPosition(tier_position);
+    return DbManagerProbeRemoteness(&probe, canonical);
+}
+
+static void PrintPrediction(void) {
+    int turn = InteractiveMatchGetTurn();
+    bool is_computer = InteractiveMatchPlayerIsComputer(turn);
+    const char *controller = is_computer ? "Computer" : "Human";
+    const char *prediction = is_computer ? "will" : "should";
+
+    TierPosition current = InteractiveMatchGetCurrentPosition();
+    Value value = ProbeValue(current);
+    char value_string[32];
+    switch (value) {
+        case kWin:
+            sprintf(value_string, "win");
+            break;
+
+        case kTie:
+            sprintf(value_string, "tie");
+            break;
+
+        case kDraw:
+            printf("Player 1 and Player 2 are in a draw.\n");
+            return;
+
+        case kLose:
+            sprintf(value_string, "lose");
+            break;
+
+        default:
+            printf("Current position has undecided value.\n");
+            return;
+    }
+
+    int remoteness = ProbeRemoteness(current);
+    printf("Player %d (%s) %s %s in %d.\n", turn + 1, controller, prediction,
+           value_string, remoteness);
+}
+
 static void PrintCurrentPosition(const Game *game) {
-    int position_string_size = game->gameplay_api->position_string_length_max;
+    int position_string_size =
+        game->gameplay_api->position_string_length_max + 1;
     char *position_string =
         (char *)SafeMalloc(position_string_size * sizeof(char));
 
     TierPosition current = InteractiveMatchGetCurrentPosition();
-    int result = InteractiveMatchPositionToString(current, position_string);
-    if (result < 0) {
+    int error = InteractiveMatchPositionToString(current, position_string);
+    if (error < 0) {
         fprintf(stderr,
                 "PlayTierGame: %s's PositionToString function returned error "
                 "code %d. Aborting...\n",
-                game->formal_name, result);
+                game->formal_name, error);
         exit(EXIT_FAILURE);
     }
-    printf("%s\n", position_string);
+    printf("%s\t", position_string);
     free(position_string);
+    PrintPrediction();
 }
 
 static bool IsBestChild(Value parent_value, int parent_remoteness,
@@ -62,13 +112,13 @@ static bool IsBestChild(Value parent_value, int parent_remoteness,
 static void MakeComputerMove(void) {
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
-    Value current_value = DbManagerProbeValue(&probe, current);
-    int current_remoteness = DbManagerProbeRemoteness(&probe, current);
+    Value current_value = ProbeValue(current);
+    int current_remoteness = ProbeRemoteness(current);
 
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = InteractiveMatchDoMove(current, moves.array[i]);
-        Value value = DbManagerProbeValue(&probe, child);
-        int remoteness = DbManagerProbeRemoteness(&probe, child);
+        Value value = ProbeRemoteness(child);
+        int remoteness = ProbeRemoteness(child);
         if (IsBestChild(current_value, current_remoteness, value, remoteness)) {
             InteractiveMatchCommitMove(moves.array[i]);
             break;

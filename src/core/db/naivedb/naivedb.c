@@ -28,6 +28,7 @@ static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 const Database kNaiveDb = {
+    .name = "naivedb",
     .formal_name = "Naive DB",
 
     .Init = &NaiveDbInit,

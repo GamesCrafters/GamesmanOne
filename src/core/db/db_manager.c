@@ -1,4 +1,4 @@
-#include "core/db_manager.h"
+#include "core/db/db_manager.h"
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL

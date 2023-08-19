@@ -11,7 +11,7 @@
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
-#include "core/solver_manager.h"
+#include "core/solvers/solver_manager.h"
 #include "games/game_manager.h"
 
 static int SetCurrentGame(const char *key) {
