@@ -27,11 +27,11 @@
 #include "core/data_structures/int64_queue.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // realloc, free
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // realloc, free
 #include <string.h>   // memcpy
 
 static bool Expand(Int64Queue *queue) {

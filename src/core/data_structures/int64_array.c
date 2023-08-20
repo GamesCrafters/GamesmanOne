@@ -27,7 +27,7 @@
 #include "core/data_structures/int64_array.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // free, realloc
+#include <stdlib.h>   // free, realloc
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t

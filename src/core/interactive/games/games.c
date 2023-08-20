@@ -1,7 +1,7 @@
 #include "core/interactive/games/games.h"
 
-#include <malloc.h>  // free
 #include <stdio.h>   // sprintf
+#include <stdlib.h>  // free
 #include <string.h>  // strncpy
 
 #include "core/gamesman_types.h"  // Game

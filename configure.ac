@@ -17,7 +17,7 @@ AC_OPENMP
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([inttypes.h malloc.h stdint.h unistd.h])
+AC_CHECK_HEADERS([inttypes.h stdint.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

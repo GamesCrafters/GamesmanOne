@@ -1,9 +1,9 @@
 #include "core/generic_hash/context.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // malloc, free
 #include <stdbool.h>  // bool
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // malloc, free
 #include <string.h>   // memset, memcpy
 
 #include "core/gamesman_math.h"
@@ -282,7 +282,7 @@ static bool InitStep2_2AllocateSpaces(GenericHashContext *context) {
     context->config_hash_offsets =
         (Position *)malloc(context->num_valid_configs * sizeof(Position));
     if (context->config_hash_offsets == NULL) return false;
-    
+
     return true;
 }
 

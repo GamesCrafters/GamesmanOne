@@ -1,10 +1,10 @@
 #include "core/solvers/tier_solver/reverse_graph.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // malloc, free
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
+#include <stdlib.h>   // malloc, free
 
 #include "core/gamesman_types.h"  // PositionArray, TierArray, TierPosition
 #include "core/misc.h"            // Gamesman Array utilities

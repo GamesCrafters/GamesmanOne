@@ -30,10 +30,10 @@
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
-#include <malloc.h>    // calloc, free
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
 #include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // calloc, free
 #include <string.h>    // memset
 
 #include "core/db/db_manager.h"
@@ -290,8 +290,8 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
             int remoteness =
                 DbManagerProbeRemoteness(&probe, canonical_tier_position);
             Position noncanonical_position =
-                current_api.GetPositionInSymmetricTier(
-                    canonical_tier_position, original_tier);
+                current_api.GetPositionInSymmetricTier(canonical_tier_position,
+                                                       original_tier);
             if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
                                       remoteness)) {
                 success = false;

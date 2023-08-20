@@ -1,10 +1,10 @@
 #include "core/generic_hash/generic_hash.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // free, realloc
 #include <stdbool.h>  // bool, true, false
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // free, realloc
 #include <string.h>   // memset
 
 #include "core/data_structures/int64_hash_map.h"

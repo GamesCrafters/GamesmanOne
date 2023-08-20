@@ -2,12 +2,11 @@
 
 #include <assert.h>     // assert
 #include <errno.h>      // errno
-#include <malloc.h>     // malloc, calloc, realloc, free
 #include <math.h>       // INFINITY
 #include <stdbool.h>    // bool, true, false
 #include <stdint.h>     // int64_t
 #include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // exit
+#include <stdlib.h>     // exit malloc, calloc, realloc, free
 #include <string.h>     // strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t

@@ -27,11 +27,11 @@
 #include "core/data_structures/int64_hash_map.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // calloc, free
 #include <math.h>     // INFINITY
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
+#include <stdlib.h>   // calloc, free
 
 #include "core/gamesman_math.h"  // NextPrime
 

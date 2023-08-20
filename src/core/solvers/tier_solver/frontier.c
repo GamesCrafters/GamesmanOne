@@ -1,11 +1,11 @@
 #include "core/solvers/tier_solver/frontier.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // calloc, free
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
 #include "core/gamesman_types.h"  // PositionArray

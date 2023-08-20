@@ -29,9 +29,9 @@
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
-#include <malloc.h>    // malloc, calloc, free
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // malloc, calloc, free
 #include <string.h>    // strncpy, memset
 
 #include "core/gamesman_types.h"
