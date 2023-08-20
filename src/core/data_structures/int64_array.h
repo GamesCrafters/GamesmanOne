@@ -73,7 +73,7 @@ void Int64ArrayDestroy(Int64Array *array);
  *
  * @param array Destiniation.
  * @param item New item.
- * @return true if successful,
+ * @return true on success,
  * @return false otherwise.
  */
 bool Int64ArrayPushBack(Int64Array *array, int64_t item);

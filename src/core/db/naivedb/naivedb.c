@@ -1,3 +1,30 @@
+/**
+ * @file naivedb.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of a naive database which stores Values and
+ * Remotenesses in uncompressed raw bytes.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/db/naivedb/naivedb.h"
 
 #include <assert.h>    // assert
@@ -8,6 +35,8 @@
 #include <string.h>    // strncpy, memset
 
 #include "core/gamesman_types.h"
+
+// Database API.
 
 static int NaiveDbInit(const char *game_name, int variant, const char *path,
                        void *aux);
@@ -52,12 +81,17 @@ const Database kNaiveDb = {
 
 // -----------------------------------------------------------------------------
 
+/**
+ * @brief Each entry is a simple structure containing the value and remoteness
+ * of the position. Currently 8 bytes in size.
+ *
+ */
 typedef struct NaiveDbEntry {
     Value value;
     int remoteness;
 } NaiveDbEntry;
 
-// 1 MiB.
+// Probe buffer size, fixed at 1 MiB.
 static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];

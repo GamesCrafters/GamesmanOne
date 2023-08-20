@@ -124,7 +124,7 @@ Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key);
  * @param map Destination hash map.
  * @param key Key of the entry.
  * @param value Value of the entry.
- * @return true if successful,
+ * @return true on success,
  * @return false otherwise.
  */
 bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value);
