@@ -1,3 +1,34 @@
+/**
+ * @file context.c
+ * @author Scott Lindeneau: designer of the original version.
+ * @author Optimized and adapted by Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of the Generic Hash Context module.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @note This module is for Generic Hash system internal use only. The user of
+ * the Generic Hash system should use the accessor functions provided in
+ * generic_hash.h.
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/generic_hash/context.h"
 
 #include <assert.h>   // assert
@@ -53,6 +84,9 @@ static void UnhashStep0HashUncruncher(GenericHashContext *context,
 bool GenericHashContextInit(GenericHashContext *context, int board_size,
                             int player, const int *pieces_init_array,
                             bool (*IsValidConfig)(const int *config)) {
+    // PLAYER must be 0, 1, or 2.
+    if (player < 0 || player > 2) return false;
+    
     // Throughout the whole initialization process, all pointers should remain
     // NULL if they are unset.
     InitStep0MemsetToDefaultValues(context);

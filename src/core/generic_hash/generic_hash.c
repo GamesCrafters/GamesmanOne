@@ -1,3 +1,36 @@
+/**
+ * @file generic_hash.h
+ * @author Dan Garcia: Designer of the original (3-variable only) version
+ * @author Attila Gyulassy: Developer of the original (3-variable only) version
+ * @author Michel D'Sa: Designer and developer of user-specified variables
+ * version
+ * @author Scott Lindeneau: Designer and developer of multiple contexts;
+ * optimized for efficiency and readability.
+ * @author Robert Shi (robertyishi@berkeley.edu): adapted and further optimized
+ * for efficiency and readability
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Generic Hash system for finite board games with fixed sets of pieces.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/generic_hash/generic_hash.h"
 
 #include <assert.h>   // assert
@@ -18,6 +51,18 @@ typedef struct ContextManager {
     Int64HashMap labels;
 } ContextManager;
 static ContextManager manager;
+
+void GenericHashReinitialize(void) {
+    if (manager.contexts != NULL) {
+        for (int64_t i = 0; i < manager.size; ++i) {
+            GenericHashContextDestroy(&manager.contexts[i]);
+        }
+        free(manager.contexts);
+        Int64HashMapDestroy(&manager.labels);
+    }
+    memset(&manager, 0, sizeof(manager));
+    multi_context_warning_shown = false;
+}
 
 static bool multi_context_warning_shown;
 
@@ -47,18 +92,6 @@ bool GenericHashAddContext(
         target, board_size, player, pieces_init_array, IsValidConfiguration);
     if (!success) return false;
     return Int64HashMapSet(&manager.labels, label, manager.size++);
-}
-
-void GenericHashReinitialize(void) {
-    if (manager.contexts != NULL) {
-        for (int64_t i = 0; i < manager.size; ++i) {
-            GenericHashContextDestroy(&manager.contexts[i]);
-        }
-        free(manager.contexts);
-        Int64HashMapDestroy(&manager.labels);
-    }
-    memset(&manager, 0, sizeof(manager));
-    multi_context_warning_shown = false;
 }
 
 // Convenience functions for working with only one context.

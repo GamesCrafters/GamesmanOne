@@ -1,11 +1,16 @@
 /**
  * @file context.h
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author Scott Lindeneau: designer of the original version.
+ * @author Optimized and adapted by Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
  * @version 1.0
  * @date 2023-08-19
+ *
+ * @note This module is for Generic Hash system internal use only. The user of
+ * the Generic Hash system should use the accessor functions provided in
+ * generic_hash.h.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -67,8 +72,9 @@ typedef struct GenericHashContext {
     int board_size;
 
     /**
-     * @brief May take values 0, 1, or 2. 0: Both Player boards (default),
-     * 1: 1st Player only, 2: 2nd player only.
+     * @brief May take values 0, 1, or 2. 0: Initialized in two-player mode and
+     * a turn bit is added to the final hash to distinguish between first player
+     * vs. second player's turn; 1: 1st Player only; 2: 2nd player only.
      */
     int player;
 
@@ -143,6 +149,10 @@ typedef struct GenericHashContext {
  * - The $U_i$'s are the maximum allowable number of occurrences of each piece
  *   type on the board.
  * - The $-1$ is used to mark the end of the array.
+ * E.g., set this to {'-', 0, 9, 'O', 0, 4, 'X', 0, 5, -1} for the game of
+ * Tic-Tac-Toe. Explanation: there can be at least 0 or at most 9 blank slots,
+ * there can be at least 0 or at most 4 O's on the board, and there can be at
+ * least 0 or at most 5 X's on the board, assuming X always goes first.
  * @param IsValidConfig Pointer to a user-defined configuration validation
  * function which returns true if the given piece configuration is valid based
  * on game rules. The system will determine if configuration is valid using this
