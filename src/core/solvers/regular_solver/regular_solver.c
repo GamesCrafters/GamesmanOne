@@ -1,9 +1,11 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // fprintf, stderr
-#include <string.h>  // memset
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <string.h>   // memset
 
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
@@ -24,7 +26,7 @@ static int RegularSolverSetOption(int option, int selection);
  * @brief The Regular Solver definition. Used externally.
  */
 const Solver kRegularSolver = {
-    .name = "Tier Solver",
+    .name = "Regular Solver",
     .db = &kNaiveDb,
 
     .Init = &RegularSolverInit,
@@ -346,9 +348,7 @@ static TierArray GetParentTiers(Tier tier) {
     return ret;
 }
 
-static Tier GetCanonicalTier(Tier tier) {
-    return tier;
-}
+static Tier GetCanonicalTier(Tier tier) { return tier; }
 
 // Default API Functions
 
