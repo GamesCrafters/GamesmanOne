@@ -1,11 +1,15 @@
 /**
  * @file tier_worker.c
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author Max Delgadillo: designed and implemented the original version
+ * of tier solver (solveretrograde.c in GamesmanClassic.)
+ * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
+ * solving of a single tier into its own module, implemented multithreading
+ * using OpenMP, and reformatted functions for readability.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Worker module of the Loopy Tier Solver.
- * @version 0.3
- * @date 2023-08-13
+ * @brief Implementation of the worker module for the Loopy Tier Solver.
+ * @version 1.0
+ * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +32,7 @@
  * 2. Try solving new losing positions immediately instead of pushing them into
  * the frontier.
  */
+
 #include "core/solvers/tier_solver/tier_worker.h"
 
 #include <assert.h>    // assert
