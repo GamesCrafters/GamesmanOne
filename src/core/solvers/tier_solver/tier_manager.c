@@ -43,7 +43,6 @@
 #include <stdio.h>     // fprintf, stderr
 
 #include "core/gamesman_types.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 

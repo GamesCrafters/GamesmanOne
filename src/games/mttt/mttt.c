@@ -8,7 +8,6 @@
 #include <stdlib.h>    // atoi
 
 #include "core/gamesman_types.h"
-#include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 
 // Game, Solver, and Gameplay API Functions

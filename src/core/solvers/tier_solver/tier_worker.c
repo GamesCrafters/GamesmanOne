@@ -45,7 +45,6 @@
 
 #include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/frontier.h"
 #include "core/solvers/tier_solver/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"

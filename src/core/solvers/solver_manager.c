@@ -40,7 +40,6 @@
 
 #include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
-#include "core/misc.h"
 
 static const Solver *current_solver;
 

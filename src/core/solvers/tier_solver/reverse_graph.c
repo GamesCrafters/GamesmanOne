@@ -39,7 +39,6 @@
 #include <stdlib.h>   // malloc, free
 
 #include "core/gamesman_types.h"  // PositionArray, TierArray, TierPosition
-#include "core/misc.h"            // Gamesman Array utilities
 
 #ifdef _OPENMP
 #include <omp.h>

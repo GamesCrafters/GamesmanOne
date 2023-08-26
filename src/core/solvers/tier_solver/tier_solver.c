@@ -37,7 +37,6 @@
 
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 
 // Solver API functions.

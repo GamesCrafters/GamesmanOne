@@ -50,6 +50,7 @@ bin_gamesman_SOURCES += src/core/analysis.c
 bin_gamesman_SOURCES += src/core/gamesman_headless.c
 bin_gamesman_SOURCES += src/core/gamesman_interactive.c
 bin_gamesman_SOURCES += src/core/gamesman_math.c
+bin_gamesman_SOURCES += src/core/gamesman_types.c
 bin_gamesman_SOURCES += src/core/misc.c
 
 # src/games

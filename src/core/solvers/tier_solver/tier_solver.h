@@ -43,7 +43,7 @@ extern const Solver kTierSolver;
  * @brief Tier Solver API.
  *
  * @note The functions may behave differently under different game variants,
- * even though the function pointers are constants.
+ * even though the function pointers are constant.
  */
 typedef struct TierSolverApi {
     /**
@@ -68,12 +68,12 @@ typedef struct TierSolverApi {
      *
      * @details The size of a tier is defined as (the maximum hash value + 1)
      * within the tier. The database will allocate an array of records for each
-     * position within the given tier based on this size. If this function
-     * returns a value smaller than the actual maximum hash, the database system
-     * will at some point complain about an out-of-bounds array access and the
-     * solver will fail. If this function returns a value larger than the
-     * actual maximum hash, there will be no error but more memory will be used
-     * and the size of the database may increase.
+     * position within the given tier of this size. If this function returns a
+     * value smaller than the actual size, the database system will, at some
+     * point, complain about an out-of-bounds array access and the solver will
+     * fail. If this function returns a value larger than the actual size, there
+     * will be no error but more memory will be used and the size of the
+     * database may increase.
      *
      * @note Assumes TIER is a valid tier reachable from the initial tier.
      * Passing an illegal tier results in undefined behavior.
@@ -126,14 +126,15 @@ typedef struct TierSolverApi {
      *
      * @details A tier position is legal if and only if it is reachable from the
      * initial tier position. Note that this function is for speed optimization
-     * only. It is not intended for statistical purposes. If this function
+     * only. It is not intended for statistical purposes. Even if this function
      * reports that TIER_POSITION is legal, that position might in fact be
      * unreachable from the initial tier position. However, if this function
      * reports that TIER_POSITION is illegal, then TIER_POSITION is definitely
-     * unreachable from the inital tier position.
+     * not reachable from the inital tier position.
      *
-     * @note Assumes TIER_POSITION is between 0 and GetTierSize(tier) - 1.
-     * Passing an out-of-bounds position results in undefined behavior.
+     * @note Assumes TIER_POSITION.position is between 0 and
+     * GetTierSize(TIER_POSITION.tier) - 1. Passing an out-of-bounds position
+     * results in undefined behavior.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -141,14 +142,14 @@ typedef struct TierSolverApi {
     bool (*IsLegalPosition)(TierPosition tier_position);
 
     /**
-     * @brief Returns the canonical position, which is symmetric to
-     * TIER_POSITION, within the same tier.
+     * @brief Returns the canonical position that is symmetric to TIER_POSITION
+     * within the same tier.
      *
      * @details GAMESMAN currently does not support position symmetry removal
      * across tiers. By convention, a canonical position is one with the
-     * smallest hash value in a set of symmetrical positions which all belong to
-     * the same tier. For each position[i] within the set including the
-     * canonical position itself, calling GetCanonicalPosition() on position[i]
+     * smallest hash value in a set of symmetrical positions that all belong to
+     * the same tier. For each position[i] within the set (including the
+     * canonical position itself), calling GetCanonicalPosition() on position[i]
      * returns the canonical position.
      *
      * @note Assumes TIER_POSITION is legal. Passing an invalid tier, or an

@@ -41,7 +41,6 @@
 #include <string.h>   // memset
 
 #include "core/gamesman_types.h"  // PositionArray
-#include "core/misc.h"            // PositionArray utilities.
 
 #ifdef _OPENMP
 #include <omp.h>

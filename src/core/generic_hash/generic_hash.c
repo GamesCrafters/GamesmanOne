@@ -54,6 +54,8 @@ typedef struct ContextManager {
 } ContextManager;
 static ContextManager manager;
 
+static bool multi_context_warning_shown;
+
 void GenericHashReinitialize(void) {
     if (manager.contexts != NULL) {
         for (int64_t i = 0; i < manager.size; ++i) {
@@ -65,8 +67,6 @@ void GenericHashReinitialize(void) {
     memset(&manager, 0, sizeof(manager));
     multi_context_warning_shown = false;
 }
-
-static bool multi_context_warning_shown;
 
 static bool ManagerExpand(void) {
     int64_t new_capacity = manager.capacity == 0 ? 1 : manager.capacity * 2;
