@@ -1,7 +1,6 @@
 /**
  * @file gamesman_types.h
- * @author Robert Shi (robertyishi@berkeley.edu): adapted and further optimized
- * for efficiency and readability
+ * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
@@ -89,7 +88,7 @@ typedef Int64Array TierStack;
 typedef Int64Queue TierQueue;
 
 /**
- * @brief Linear-probing Tier hash map using Int64HashMap.
+ * @brief Linear-probing Tier to int64_t hash map using Int64HashMap.
  */
 typedef Int64HashMap TierHashMap;
 

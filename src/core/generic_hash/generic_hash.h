@@ -6,8 +6,9 @@
  * version
  * @author Scott Lindeneau: Designer and developer of multiple contexts;
  * optimized for efficiency and readability.
- * @author Robert Shi (robertyishi@berkeley.edu): adapted and further optimized
- * for efficiency and readability
+ * @author Robert Shi (robertyishi@berkeley.edu): further optimized for
+ * efficiency and readability, adapted to the new system and implemented
+ * thread-safety
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash system for finite board games with fixed sets of pieces.

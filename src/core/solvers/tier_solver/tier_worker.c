@@ -24,7 +24,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @todo
- * Check all malloc error handling
+ * 1. Check all malloc error handling
+ * 2. Try solving new losing positions immediately instead of pushing them into
+ * the frontier.
  */
 #include "core/solvers/tier_solver/tier_worker.h"
 
