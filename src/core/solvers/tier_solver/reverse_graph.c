@@ -1,5 +1,5 @@
 /**
- * @file reverse_graph.h
+ * @file reverse_graph.c
  * @author Max Delgadillo: designed and implemented the original version
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Extracted the reverse graph

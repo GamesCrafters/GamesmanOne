@@ -1,5 +1,5 @@
 /**
- * @file generic_hash.h
+ * @file generic_hash.c
  * @author Dan Garcia: Designer of the original (3-variable only) version
  * @author Attila Gyulassy: Developer of the original (3-variable only) version
  * @author Michel D'Sa: Designer and developer of user-specified variables
@@ -11,7 +11,8 @@
  * thread-safety
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Generic Hash system for finite board games with fixed sets of pieces.
+ * @brief Implementation of the Generic Hash system for finite board games with
+ * fixed sets of pieces.
  * @version 1.0
  * @date 2023-08-19
  *

@@ -1,5 +1,5 @@
 /**
- * @file tier_manager.h
+ * @file tier_manager.c
  * @author Max Delgadillo: designed and implemented the original version
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Separated functions that
