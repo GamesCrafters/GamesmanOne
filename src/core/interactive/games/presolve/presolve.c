@@ -49,12 +49,18 @@ void InteractivePresolve(const char *key) {
     char title[43 + kGameFormalNameLengthMax + kUint32Base10StringLengthMax];
     sprintf(title, "Main (Pre-Solved) Menu for %s (variant %d)",
             current_game->formal_name, variant_index);
-    static const char *const items[] = {"Solve and start",
-                                        "Start without solving", "Game options",
-                                        "Solver options"};
+    static const char *const items[] = {
+        "Solve and start",
+        "Start without solving",
+        "Game options",
+        "Solver options",
+    };
     static const char *const keys[] = {"s", "w", "g", "o"};
     static const HookFunctionPointer hooks[] = {
-        &SolveAndStart, &InteractivePostSolve, &InteractiveGameOptions,
-        &InteractiveSolverOptions};
+        &SolveAndStart,
+        &InteractivePostSolve,
+        &InteractiveGameOptions,
+        &InteractiveSolverOptions,
+    };
     AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
 }

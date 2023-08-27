@@ -65,8 +65,7 @@ static PositionArray MtttierGetCanonicalParentPositions(
 static TierArray MtttierGetChildTiers(Tier tier);
 static TierArray MtttierGetParentTiers(Tier tier);
 
-static int MtttTierPositionToString(TierPosition tier_position,
-                                       char *buffer);
+static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
 static bool MtttierIsValidMoveString(const char *move_string);
 static Move MtttierStringToMove(const char *move_string);
@@ -284,7 +283,8 @@ static PositionArray MtttierGetCanonicalParentPositions(
             board[i] = '-';
             TierPosition parent = {
                 .tier = tier - 1,
-                .position = GenericHashHashLabel(tier - 1, board, 1)};
+                .position = GenericHashHashLabel(tier - 1, board, 1),
+            };
             // Add piece back to the board.
             board[i] = prev_turn;
             if (!MtttierIsLegalPosition(parent)) {
@@ -317,8 +317,7 @@ static TierArray MtttierGetParentTiers(Tier tier) {
     return parents;
 }
 
-static int MtttTierPositionToString(TierPosition tier_position,
-                                       char *buffer) {
+static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
     char board[9] = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);

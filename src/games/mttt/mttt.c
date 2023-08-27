@@ -2,7 +2,7 @@
  * @file mttt.c
  * @author Dan Garcia: designed and developed of the original version (mttt.c in
  * GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and 
+ * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and
  * adapted to the new system.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
@@ -119,9 +119,10 @@ typedef enum PossibleBoardPieces { kBlank, kO, kX } BlankOX;
 static int three_to_the[] = {1, 3, 9, 27, 81, 243, 729, 2187, 6561};
 
 static const int kNumRowsToCheck = 8;
-static const int kRowsToCheck[8][3] = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
-                                       {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
-                                       {0, 4, 8}, {2, 4, 6}};
+static const int kRowsToCheck[8][3] = {
+    {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6},
+    {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6},
+};
 
 // 8 symmetries, each one is a reordering of the 9 slots on the board.
 // This will be initialized in the MtttInit function.
@@ -140,8 +141,9 @@ static int symmetry_matrix[8][9];
 static const int flip_new_position[] = {2, 1, 0, 5, 4, 3, 8, 7, 6};
 
 // This is the array used for rotating 90 degrees clockwise.
-static const int rotate_90_clockwise_new_position[] = {6, 3, 0, 7, 4,
-                                                       1, 8, 5, 2};
+static const int rotate_90_clockwise_new_position[] = {
+    6, 3, 0, 7, 4, 1, 8, 5, 2,
+};
 
 // Helper Functions
 

@@ -106,20 +106,20 @@ static bool SetupCurrentPath(const char *game_name, int variant) {
     return true;
 }
 
-int DbManagerInitDb(const Solver *solver, const char *game_name, int variant,
+int DbManagerInitDb(const Database *db, const char *game_name, int variant,
                     void *aux) {
     if (current_db != NULL) current_db->Finalize();
     current_db = NULL;
     free(current_path);
 
-    if (!BasicDbApiImplemented(solver->db)) {
+    if (!BasicDbApiImplemented(db)) {
         fprintf(stderr,
                 "DbManagerInitDb: The %s does not have all the required "
                 "functions implemented and cannot be used.\n",
                 current_db->formal_name);
         return -1;
     }
-    current_db = solver->db;
+    current_db = db;
 
     SetupCurrentPath(game_name, variant);
     return current_db->Init(game_name, variant, current_path, aux);

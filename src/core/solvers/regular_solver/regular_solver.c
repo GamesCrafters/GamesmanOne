@@ -36,6 +36,7 @@
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // memset
 
+#include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -43,7 +44,8 @@
 
 // Solver API functions.
 
-static int RegularSolverInit(const void *solver_api);
+static int RegularSolverInit(ReadOnlyString game_name, int variant,
+                             const void *solver_api);
 static int RegularSolverFinalize(void);
 static int RegularSolverSolve(void *aux);
 static int RegularSolverGetStatus(void);
@@ -55,7 +57,6 @@ static int RegularSolverSetOption(int option, int selection);
  */
 const Solver kRegularSolver = {
     .name = "Regular Solver",
-    .db = &kNaiveDb,
 
     .Init = &RegularSolverInit,
     .Finalize = &RegularSolverFinalize,
@@ -144,8 +145,11 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 
 // -----------------------------------------------------------------------------
 
-static int RegularSolverInit(const void *solver_api) {
-    return !SetCurrentApi((const RegularSolverApi *)solver_api);
+static int RegularSolverInit(ReadOnlyString game_name, int variant,
+                             const void *solver_api) {
+    bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
+    if (!success) return -1;
+    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
 }
 
 static int RegularSolverFinalize(void) {
@@ -348,8 +352,10 @@ static TierPositionArray TierGetCanonicalChildPositions(
     TierPositionArrayInit(&ret);
 
     for (int64_t i = 0; i < children.size; ++i) {
-        TierPosition this_child = {.tier = kDefaultTier,
-                                   .position = children.array[i]};
+        TierPosition this_child = {
+            .tier = kDefaultTier,
+            .position = children.array[i],
+        };
         TierPositionArrayAppend(&ret, this_child);
     }
     PositionArrayDestroy(&children);

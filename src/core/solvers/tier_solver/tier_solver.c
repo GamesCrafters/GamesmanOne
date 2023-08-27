@@ -35,13 +35,15 @@
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
 
+#include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 
 // Solver API functions.
 
-static int TierSolverInit(const void *solver_api);
+static int TierSolverInit(ReadOnlyString game_name, int variant,
+                          const void *solver_api);
 static int TierSolverFinalize(void);
 static int TierSolverSolve(void *aux);
 static int TierSolverGetStatus(void);
@@ -53,7 +55,6 @@ static int TierSolverSetOption(int option, int selection);
  */
 const Solver kTierSolver = {
     .name = "Tier Solver",
-    .db = &kNaiveDb,
 
     .Init = &TierSolverInit,
     .Finalize = &TierSolverFinalize,
@@ -124,8 +125,11 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 
 // -----------------------------------------------------------------------------
 
-static int TierSolverInit(const void *solver_api) {
-    return !SetCurrentApi((const TierSolverApi *)solver_api);
+static int TierSolverInit(ReadOnlyString game_name, int variant,
+                          const void *solver_api) {
+    bool success = SetCurrentApi((const TierSolverApi *)solver_api);
+    if (!success) return -1;
+    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
 }
 
 static int TierSolverFinalize(void) {

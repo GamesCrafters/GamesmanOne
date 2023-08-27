@@ -147,9 +147,11 @@ TierPosition InteractiveMatchDoMove(TierPosition tier_position, Move move) {
     if (match.is_tier_game) {
         return match.game->gameplay_api->TierDoMove(tier_position, move);
     }
-    return (TierPosition){.tier = 0,
-                          .position = match.game->gameplay_api->DoMove(
-                              tier_position.position, move)};
+    return (TierPosition){
+        .tier = 0,
+        .position =
+            match.game->gameplay_api->DoMove(tier_position.position, move),
+    };
 }
 
 bool InteractiveMatchCommitMove(Move move) {
@@ -236,10 +238,6 @@ TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position) {
     return canonical;
 }
 
-void InteractiveMatchSetSolved(bool solved) {
-    match.solved = solved;
-}
+void InteractiveMatchSetSolved(bool solved) { match.solved = solved; }
 
-bool InteractiveMatchSolved(void) {
-    return match.solved;
-}
+bool InteractiveMatchSolved(void) { return match.solved; }

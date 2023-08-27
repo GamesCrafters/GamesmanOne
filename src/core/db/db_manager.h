@@ -32,18 +32,18 @@
 #include "core/gamesman_types.h"
 
 /**
- * @brief Initializes the database system based on the given SOLVER.
+ * @brief Initializes the database system and load the chosen DB module.
  *
  * @note This function must be called before any of the other DbManager
  * functions are used. Otherwise, it results in undefined behavior.
  *
- * @param solver Solver of the current game.
+ * @param db DB to use.
  * @param game_name Internal name of the game.
  * @param variant Index of the game variant as an int.
  * @param aux Auxiliary parameter.
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerInitDb(const Solver *solver, const char *game_name, int variant,
+int DbManagerInitDb(const Database *db, const char *game_name, int variant,
                     void *aux);
 
 /**

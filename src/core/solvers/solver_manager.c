@@ -38,7 +38,6 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 
-#include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
 
 static const Solver *current_solver;
@@ -46,16 +45,11 @@ static const Solver *current_solver;
 int SolverManagerInitSolver(const Game *game) {
     if (game == NULL) return -1;
 
-    current_solver = game->solver;
-    int error = current_solver->Init(game->solver_api);
-    if (error != 0) return error;
-
     const GameVariant *variant = game->GetCurrentVariant();
     int variant_index = GameVariantToIndex(variant);
-    error = DbManagerInitDb(current_solver, game->name, variant_index, NULL);
-    if (error != 0) return error;
 
-    return 0;
+    current_solver = game->solver;
+    return current_solver->Init(game->name, variant_index, game->solver_api);
 }
 
 int SolverManagerGetSolverStatus(void) {

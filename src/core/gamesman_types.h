@@ -35,6 +35,20 @@
 #include "core/data_structures/int64_queue.h"
 
 /**
+ * @brief Pointer to a read-only string cannot be used to modify the contents of
+ * the string.
+ */
+typedef const char *ReadOnlyString;
+
+/**
+ * @brief Constant pointer to a read-only string. The pointer is constant, which
+ * means its value cannot be changed once it is initialized. The string is
+ * read-only, which means that the pointer cannot be used to modify the contents
+ * of the string.
+ */
+typedef const ReadOnlyString ConstantReadOnlyString;
+
+/**
  * @brief Tier as a 64-bit integer.
  */
 typedef int64_t Tier;
@@ -357,15 +371,14 @@ typedef struct Solver {
     /** Human-readable name of the solver. */
     char name[kSolverNameLengthMax + 1];
 
-    /** Database used by the solver. */
-    const Database *db;
-
     /**
      * @brief Initializes the Solver.
      * @note The user is responsible for passing the correct solver API that
      * appies to the current Solver. Passing NULL or an incompatible Solver API
      * results in undefined behavior.
-     *
+     * 
+     * @param game_name Internal name of the game.
+     * @param variant Index of the current game variant.
      * @param solver_api Pointer to a struct that contains the implemented
      * Solver API functions. The game developer is responsible for using the
      * correct type of Solver API that applies to the current Solver,
@@ -374,7 +387,7 @@ typedef struct Solver {
      *
      * @return 0 on success, non-zero error code otherwise.
      */
-    int (*Init)(const void *solver_api);
+    int (*Init)(ReadOnlyString game_name, int variant, const void *solver_api);
 
     /**
      * @brief Finalizes the Solver, freeing all allocated memory.

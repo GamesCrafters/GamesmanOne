@@ -21,10 +21,17 @@ void InteractivePostSolve(const char *key) {
     sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
             current_game->formal_name, variant_index);
     static const char *const items[] = {
-        "Play new game", "Configure play options", "Analyze the game", "Help"};
+        "Play new game",
+        "Configure play options",
+        "Analyze the game",
+        "Help",
+    };
     static const char *const keys[] = {"p", "c", "a", "h"};
     static const HookFunctionPointer hooks[] = {
-        &InteractivePlay, &InteractivePostSolveConfigure, &InteractiveAnalyze,
-        &InteractiveGameHelp};
+        &InteractivePlay,
+        &InteractivePostSolveConfigure,
+        &InteractiveAnalyze,
+        &InteractiveGameHelp,
+    };
     AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
 }
