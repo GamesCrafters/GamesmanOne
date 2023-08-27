@@ -1,6 +1,36 @@
+/**
+ * @file misc.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of miscellaneous utility functions.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/misc.h"
 
+#include <assert.h>     // assert
 #include <errno.h>      // errno
+#include <stdbool.h>    // bool, true, false
+#include <stddef.h>     // size_t
+#include <stdint.h>     // int64_t, INT64_MAX
 #include <stdio.h>      // fprintf, stderr
 #include <stdlib.h>     // exit, malloc, calloc, free
 #include <string.h>     // strlen, strncpy
@@ -107,3 +137,87 @@ _bailout:
     free(path_copy);
     return result;
 }
+
+bool IsPrime(int64_t n) {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 == 0 || n % 3 == 0) return false;
+    for (int64_t i = 5; i * i <= n; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int64_t PrevPrime(int64_t n) {
+    if (n < 2) return 2;
+    while (!IsPrime(n)) {
+        --n;
+    }
+    return n;
+}
+
+int64_t NextPrime(int64_t n) {
+    while (!IsPrime(n)) {
+        ++n;
+    }
+    return n;
+}
+
+int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX - b) return -1;
+    return a + b;
+}
+
+int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX / b) return -1;
+    return a * b;
+}
+
+static int64_t NChooseRFormula(int n, int r) {
+    assert(n >= 0 && r >= 0 && n >= r);
+
+    // nCr(n, r) == nCr(n, n-r). This step can further reduce the largest
+    // intermediate value.
+    if (r > n - r) r = n - r;
+    int64_t result = 1;
+    for (int64_t i = 1; i <= r; ++i) {
+        result = SafeMultiplyNonNegativeInt64(result, n - r + i);
+        if (result < 0) return -1;
+        result /= i;
+    }
+    return result;
+}
+
+#define CACHE_ROWS 100
+#define CACHE_COLS 100
+// Assumes CHOOSE has been zero initialized.
+static void MakeTriangle(int64_t choose[][CACHE_COLS]) {
+    for (int i = 0; i < CACHE_ROWS; ++i) {
+        choose[i][0] = 1;
+        int j_max = (i < CACHE_COLS - 1) ? i : CACHE_COLS - 1;
+        for (int j = 1; j <= j_max; ++j) {
+            choose[i][j] =
+                SafeAddNonNegativeInt64(choose[i - 1][j - 1], choose[i - 1][j]);
+        }
+    }
+}
+
+int64_t NChooseR(int n, int r) {
+    // Initialize cache.
+    static bool choose_initialized = false;
+    static int64_t choose[CACHE_ROWS][CACHE_COLS] = {0};
+
+    if (!choose_initialized) {
+        MakeTriangle(choose);
+        choose_initialized = true;
+    }
+
+    if (n < 0 || r < 0) return -1;  // Negative inputs not supported.
+    if (n < r) return 0;  // Make sure n >= r >= 0 in the following steps.
+    if (n < CACHE_ROWS && r < CACHE_COLS) return choose[n][r];  // Cache hit.
+    return NChooseRFormula(n, r);  // Cache miss. Calculate from formula.
+}
+#undef CACHE_ROWS
+#undef CACHE_COLS

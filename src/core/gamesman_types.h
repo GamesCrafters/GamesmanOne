@@ -816,6 +816,8 @@ typedef enum IntBase10StringLengthLimits {
     kUint64Base10StringLengthMax = 20,
 } IntBase10StringLengthLimits;
 
+// GAMESMAN Types Related Accessor and Mutator Functions.
+
 void PositionArrayInit(PositionArray *array);
 void PositionArrayDestroy(PositionArray *array);
 bool PositionArrayAppend(PositionArray *array, Position position);

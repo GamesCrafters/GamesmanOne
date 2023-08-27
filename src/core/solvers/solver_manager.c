@@ -6,12 +6,12 @@
  * @brief Implementation of the Solver manager module, which handles solver
  * loading, solving, and database status checking.
  *
- * @details One of the key assumptions made by GAMESMAN is that "no more than
- * one game can be loaded at the same time," because a user can always run
- * multiple instances of GAMESMAN if they wish to solve/play multiple games
+ * @details One core assumption made by GAMESMAN is that "no more than one game
+ * can be loaded at the same time." This makes sense because a user can always
+ * run multiple instances of GAMESMAN if they wish to solve/play multiple games
  * simultaneously. As a result, no more than one solver or database can be
  * loaded at the same time. This module handles the loading and deallocation
- * of THE ONE solver used by the current GAMESMAN instance.
+ * of THE solver used by the current GAMESMAN instance.
  *
  * @version 1.0
  * @date 2023-08-19

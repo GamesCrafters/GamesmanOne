@@ -37,7 +37,7 @@
 #include <stdlib.h>   // malloc, free
 #include <string.h>   // memset, memcpy
 
-#include "core/gamesman_math.h"
+#include "core/misc.h"
 
 #define STACK_CONFIG_SIZE 128  // At most 128 pieces.
 
