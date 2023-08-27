@@ -32,10 +32,15 @@
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, INT64_MAX
 #include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // exit, malloc, calloc, free
+#include <stdlib.h>     // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
 #include <string.h>     // strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
+
+void GamesmanExit(void) {
+    printf("Thanks for using GAMESMAN!\n");
+    exit(EXIT_SUCCESS);
+}
 
 void NotReached(const char *message) {
     fprintf(stderr,

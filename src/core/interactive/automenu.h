@@ -13,6 +13,4 @@ typedef void (*HookFunctionPointer)(const char *key);
 void AutoMenu(const char *title, int num_items, const char *const *items,
               const char *const *keys, const HookFunctionPointer *hooks);
 
-void GamesmanExit(const char *key);
-
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_

@@ -1,9 +1,10 @@
 #include "core/interactive/games/presolve/presolve.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf, fprintf, stderr
-#include <stdlib.h>  // atoi
+#include <assert.h>   // assert
+#include <stdbool.h>  // true
+#include <stddef.h>   // NULL
+#include <stdio.h>    // printf, fprintf, stderr
+#include <stdlib.h>   // atoi
 
 #include "core/gamesman_types.h"
 #include "core/interactive/automenu.h"
@@ -28,6 +29,7 @@ static int SetCurrentGame(const char *key) {
 
 static void SolveAndStart(const char *key) {
     SolverManagerSolve(NULL);  // Auxiliary variable currently unused.
+    InteractiveMatchSetSolved(true);
     InteractivePostSolve(key);
 }
 

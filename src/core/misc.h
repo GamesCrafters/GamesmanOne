@@ -31,6 +31,9 @@
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 
+/** @brief Exits GAMESMAN. */
+void GamesmanExit(void);
+
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
 void NotReached(const char *message);
 

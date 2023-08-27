@@ -1,7 +1,7 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_
 
-#include <stdbool.h>
+#include <stdbool.h>  // bool
 
 #include "core/gamesman_types.h"
 
@@ -28,5 +28,8 @@ Value InteractiveMatchPrimitive(void);
 bool InteractiveMatchUndo(void);
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer);
 TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position);
+
+void InteractiveMatchSetSolved(bool solved);
+bool InteractiveMatchSolved(void);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_

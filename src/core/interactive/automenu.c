@@ -7,7 +7,7 @@
 #include <stdlib.h>   // exit, EXIT_SUCCESS
 #include <string.h>   // strcspn, strncmp
 
-#include "core/misc.h"  // SafeMalloc
+#include "core/misc.h"  // SafeMalloc, GamesmanExit
 
 const size_t kKeyLengthMax = 3;
 
@@ -24,12 +24,6 @@ static void FormatInput(char *input) {
 
 static bool StringEqual(const char *s1, const char *s2, size_t n) {
     return (strncmp(s1, s2, n) == 0);
-}
-
-void GamesmanExit(const char *key) {
-    (void)key;  // Unused.
-    printf("Thanks for using GAMESMAN!\n");
-    exit(EXIT_SUCCESS);
 }
 
 void AutoMenu(const char *title, int num_items, const char *const *items,
@@ -52,7 +46,7 @@ void AutoMenu(const char *title, int num_items, const char *const *items,
             if (fgets(input, kKeyLengthMax + 2, stdin) == NULL) return;
             FormatInput(input);
             if (StringEqual(input, "b", kKeyLengthMax)) return;
-            if (StringEqual(input, "q", kKeyLengthMax)) GamesmanExit(input);
+            if (StringEqual(input, "q", kKeyLengthMax)) GamesmanExit();
 
             for (int i = 0; i < num_items; ++i) {
                 if (StringEqual(input, keys[i], kKeyLengthMax)) {

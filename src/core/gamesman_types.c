@@ -36,7 +36,7 @@
 #include "core/data_structures/int64_array.h"
 #include "core/data_structures/int64_hash_map.h"
 #include "core/data_structures/int64_queue.h"
-#include "core/gamesman_math.h"
+#include "core/misc.h"
 
 void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
 

@@ -11,9 +11,10 @@
 #include "core/db/db_manager.h"
 #include "core/gamesman_types.h"  // Game
 #include "core/interactive/games/presolve/match.h"
-#include "core/misc.h"  // SafeMalloc, GameVariantToIndex
+#include "core/misc.h"  // SafeMalloc, GameVariantToIndex, GamesmanExit
 
 static DbProbe probe;
+static bool solved;
 
 static Value ProbeValue(TierPosition tier_position) {
     TierPosition canonical =
@@ -59,7 +60,7 @@ static void PrintPrediction(void) {
     }
 
     int remoteness = ProbeRemoteness(current);
-    printf("Player %d (%s) %s %s in %d.\n", turn + 1, controller, prediction,
+    printf("Player %d (%s) %s %s in %d.", turn + 1, controller, prediction,
            value_string, remoteness);
 }
 
@@ -80,7 +81,8 @@ static void PrintCurrentPosition(const Game *game) {
     }
     printf("%s\t", position_string);
     free(position_string);
-    PrintPrediction();
+    if (solved) PrintPrediction();
+    printf("\n");
 }
 
 static bool IsBestChild(Value parent_value, int parent_remoteness,
@@ -109,6 +111,7 @@ static bool IsBestChild(Value parent_value, int parent_remoteness,
     return false;
 }
 
+// This function should not be called if the current game has not been solved.
 static void MakeComputerMove(void) {
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
@@ -147,7 +150,8 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
-    if (strncmp(move_string, "b", 1) == 0) return true;  // Exit game.
+    if (strncmp(move_string, "q", 1) == 0) GamesmanExit();  // Exit GAMESMAN.
+    if (strncmp(move_string, "b", 1) == 0) return true;     // Exit game.
     if (strncmp(move_string, "u", 1) == 0) {
         return InteractiveMatchUndo();
     }
@@ -220,6 +224,7 @@ void InteractivePlay(const char *key) {
     }
 
     const Game *game = InteractiveMatchGetCurrentGame();
+    solved = InteractiveMatchSolved();
     PrintCurrentPosition(game);
     Value primitive_value = InteractiveMatchPrimitive();
     bool game_over = (primitive_value != kUndecided);

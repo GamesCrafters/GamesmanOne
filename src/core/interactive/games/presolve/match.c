@@ -18,6 +18,7 @@ typedef struct Match {
     MoveArray move_history;
     Int64Array turn_history;  // Future-proof for go-again games.
     bool is_computer[2];
+    bool solved;
 } Match;
 
 static Match match;
@@ -233,4 +234,12 @@ TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position) {
     }
 
     return canonical;
+}
+
+void InteractiveMatchSetSolved(bool solved) {
+    match.solved = solved;
+}
+
+bool InteractiveMatchSolved(void) {
+    return match.solved;
 }
