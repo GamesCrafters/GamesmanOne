@@ -31,8 +31,8 @@ static int ProbeRemoteness(TierPosition tier_position) {
 static void PrintPrediction(void) {
     int turn = InteractiveMatchGetTurn();
     bool is_computer = InteractiveMatchPlayerIsComputer(turn);
-    const char *controller = is_computer ? "Computer" : "Human";
-    const char *prediction = is_computer ? "will" : "should";
+    ReadOnlyString controller = is_computer ? "Computer" : "Human";
+    ReadOnlyString prediction = is_computer ? "will" : "should";
 
     TierPosition current = InteractiveMatchGetCurrentPosition();
     Value value = ProbeValue(current);
@@ -172,7 +172,7 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     return true;
 }
 
-static void PrintGameResult(const char *game_formal_name) {
+static void PrintGameResult(ReadOnlyString game_formal_name) {
     Value value = InteractiveMatchPrimitive();
     int turn = InteractiveMatchGetTurn();
     switch (value) {
@@ -206,7 +206,7 @@ static void PrintGameResult(const char *game_formal_name) {
     }
 }
 
-void InteractivePlay(const char *key) {
+void InteractivePlay(ReadOnlyString key) {
     (void)key;  // Unused.
 
     if (!InteractiveMatchRestart()) {

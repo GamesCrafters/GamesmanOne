@@ -10,7 +10,7 @@
 #include "core/interactive/games/presolve/postsolve/help/game_help.h"
 #include "core/interactive/games/presolve/postsolve/play/play.h"
 
-void InteractivePostSolve(const char *key) {
+void InteractivePostSolve(ReadOnlyString key) {
     (void)key;  // Unused.
 
     const Game *current_game = InteractiveMatchGetCurrentGame();
@@ -20,13 +20,13 @@ void InteractivePostSolve(const char *key) {
     char title[44 + kGameFormalNameLengthMax + kInt32Base10StringLengthMax];
     sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
             current_game->formal_name, variant_index);
-    static const char *const items[] = {
+    static ConstantReadOnlyString items[] = {
         "Play new game",
         "Configure play options",
         "Analyze the game",
         "Help",
     };
-    static const char *const keys[] = {"p", "c", "a", "h"};
+    static ConstantReadOnlyString keys[] = {"p", "c", "a", "h"};
     static const HookFunctionPointer hooks[] = {
         &InteractivePlay,
         &InteractivePostSolveConfigure,

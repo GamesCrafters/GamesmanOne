@@ -60,8 +60,8 @@ static PositionArray MtttGetCanonicalParentPositions(Position position);
 
 static int MtttPositionToString(Position position, char *buffer);
 static int MtttMoveToString(Move move, char *buffer);
-static bool MtttIsValidMoveString(const char *move_string);
-static Move MtttStringToMove(const char *move_string);
+static bool MtttIsValidMoveString(ReadOnlyString move_string);
+static Move MtttStringToMove(ReadOnlyString move_string);
 
 // Solver API Setup
 static const RegularSolverApi kSolverApi = {
@@ -291,12 +291,12 @@ static int MtttPositionToString(Position position, char *buffer) {
     BlankOX board[9] = {0};
     Unhash(position, board);
 
-    static const char *format =
+    static ConstantReadOnlyString kFormat =
         "         ( 1 2 3 )           : %c %c %c\n"
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
     int actual_length =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, format,
+        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
                  kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
                  kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
                  kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
@@ -322,7 +322,7 @@ static int MtttMoveToString(Move move, char *buffer) {
     return 0;
 }
 
-static bool MtttIsValidMoveString(const char *move_string) {
+static bool MtttIsValidMoveString(ReadOnlyString move_string) {
     // Only "1" - "9" are valid move strings.
     if (move_string[0] < '1') return false;
     if (move_string[0] > '9') return false;
@@ -331,7 +331,7 @@ static bool MtttIsValidMoveString(const char *move_string) {
     return true;
 }
 
-static Move MtttStringToMove(const char *move_string) {
+static Move MtttStringToMove(ReadOnlyString move_string) {
     assert(MtttIsValidMoveString(move_string));
     return (Move)atoi(move_string) - 1;
 }

@@ -190,8 +190,8 @@ Position GenericHashContextNumPositions(const GenericHashContext *context);
  * with a single-player.
  * @return Hash of the given BOARD and TURN. -1 if an error occurred.
  */
-Position GenericHashContextHash(GenericHashContext *context, const char *board,
-                                int turn);
+Position GenericHashContextHash(GenericHashContext *context,
+                                ReadOnlyString board, int turn);
 
 /**
  * @brief Unhashes the given HASH value using the given Generic Hash CONTEXT and

@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-void InteractiveGameOptions(const char *key) {
+void InteractiveGameOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveGameOptions: unimplemented\n");

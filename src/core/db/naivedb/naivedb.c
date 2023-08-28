@@ -38,7 +38,7 @@
 
 // Database API.
 
-static int NaiveDbInit(const char *game_name, int variant, const char *path,
+static int NaiveDbInit(ReadOnlyString game_name, int variant, ReadOnlyString path,
                        void *aux);
 static void NaiveDbFinalize(void);
 
@@ -158,7 +158,7 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
     return 0;
 }
 
-static int NaiveDbInit(const char *game_name, int variant, const char *path,
+static int NaiveDbInit(ReadOnlyString game_name, int variant, ReadOnlyString path,
                        void *aux) {
     (void)aux;  // Unused.
     assert(current_path == NULL);

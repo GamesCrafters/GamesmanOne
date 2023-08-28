@@ -209,7 +209,7 @@ typedef struct Database {
      *
      * @return 0 on success, non-zero error code otherwise.
      */
-    int (*Init)(const char *game_name, int variant, const char *path,
+    int (*Init)(ReadOnlyString game_name, int variant, ReadOnlyString path,
                 void *aux);
 
     /** @brief Finalizes the Database, freeing all allocated space. */
@@ -334,9 +334,9 @@ typedef struct SolverOption {
     /** Number of choices associated with the option. */
     int num_choices;
 
-    /** An array of strings, where each string is a name of a choice. Length =
+    /** An array of strings, where each string is the name of a choice. Length =
      * num_choices.  */
-    const char *const *choices;
+    const ConstantReadOnlyString *choices;
 } SolverOption;
 
 /** @brief Solver configuration as an array of selected solver options. */
@@ -376,7 +376,7 @@ typedef struct Solver {
      * @note The user is responsible for passing the correct solver API that
      * appies to the current Solver. Passing NULL or an incompatible Solver API
      * results in undefined behavior.
-     * 
+     *
      * @param game_name Internal name of the game.
      * @param variant Index of the current game variant.
      * @param solver_api Pointer to a struct that contains the implemented
@@ -436,7 +436,7 @@ typedef struct GameVariantOption {
 
     /** An array of strings, where each string is a name of a choice. Length =
      * num_choices.  */
-    const char *const *choices;
+    const ConstantReadOnlyString *choices;
 } GameVariantOption;
 
 /**
@@ -573,7 +573,7 @@ typedef struct GameplayApi {
      * @note Required for ALL games. The gameplay system will reject the game if
      * this function is not implemented.
      */
-    bool (*IsValidMoveString)(const char *move_string);
+    bool (*IsValidMoveString)(ReadOnlyString move_string);
 
     /**
      * @brief Converts the MOVE_STRING to a Move and returns it.
@@ -586,7 +586,7 @@ typedef struct GameplayApi {
      * @note Required for ALL games. The gameplay system will reject the game if
      * this function is not implemented.
      */
-    Move (*StringToMove)(const char *move_string);
+    Move (*StringToMove)(ReadOnlyString move_string);
 
     /**
      * @brief Returns an array of available moves at the given POSITION.

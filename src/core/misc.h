@@ -31,11 +31,13 @@
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 
+#include "core/gamesman_types.h"
+
 /** @brief Exits GAMESMAN. */
 void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
-void NotReached(const char *message);
+void NotReached(ReadOnlyString message);
 
 /**
  * @brief Same behavior as malloc() on success; terminates GAMESMAN on failure.
@@ -59,7 +61,7 @@ void *SafeCalloc(size_t n, size_t size);
  * @link http://stackoverflow.com/a/2336245/119527,
  * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
  */
-int MkdirRecursive(const char *path);
+int MkdirRecursive(ReadOnlyString path);
 
 /**
  * @brief Tests if N is prime. Returns false if N is non-possitive.

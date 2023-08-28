@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 
-void InteractiveSolverOptions(const char *key) {
+#include "core/gamesman_types.h"
+
+void InteractiveSolverOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveSolverOptions: unimplemented\n");

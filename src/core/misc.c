@@ -37,12 +37,14 @@
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 
+#include "core/gamesman_types.h"
+
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
     exit(EXIT_SUCCESS);
 }
 
-void NotReached(const char *message) {
+void NotReached(ReadOnlyString message) {
     fprintf(stderr,
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
@@ -86,7 +88,7 @@ void *SafeCalloc(size_t n, size_t size) {
  * @link
  * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
  */
-static int MaybeMkdir(const char *path, mode_t mode) {
+static int MaybeMkdir(ReadOnlyString path, mode_t mode) {
     errno = 0;
 
     // Try to make the directory
@@ -109,7 +111,7 @@ static int MaybeMkdir(const char *path, mode_t mode) {
     return 0;
 }
 
-int MkdirRecursive(const char *path) {
+int MkdirRecursive(ReadOnlyString path) {
     // Fail if path is NULL.
     if (path == NULL) {
         errno = EINVAL;

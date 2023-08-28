@@ -22,12 +22,13 @@ static void FormatInput(char *input) {
     input[strcspn(input, "\r\n")] = '\0';
 }
 
-static bool StringEqual(const char *s1, const char *s2, size_t n) {
+static bool StringEqual(ReadOnlyString s1, ReadOnlyString s2, size_t n) {
     return (strncmp(s1, s2, n) == 0);
 }
 
-void AutoMenu(const char *title, int num_items, const char *const *items,
-              const char *const *keys, const HookFunctionPointer *hooks) {
+void AutoMenu(ReadOnlyString title, int num_items,
+              ConstantReadOnlyString *items, ConstantReadOnlyString *keys,
+              const HookFunctionPointer *hooks) {
     while (1) {
         // Print menu.
         printf("\n\t----- %s -----\n\n", title);

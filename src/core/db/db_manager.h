@@ -43,7 +43,7 @@
  * @param aux Auxiliary parameter.
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerInitDb(const Database *db, const char *game_name, int variant,
+int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                     void *aux);
 
 /**

@@ -15,30 +15,30 @@ static void PrintPlayerConfiguration(void) {
            second_player_is_computer ? "computer" : "human");
 }
 
-static void ToggleFirstPlayerType(const char *key) {
+static void ToggleFirstPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(false);
     PrintPlayerConfiguration();
 }
 
-static void ToggleSecondPlayerType(const char *key) {
+static void ToggleSecondPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(true);
     PrintPlayerConfiguration();
 }
 
-void InteractivePostSolveConfigure(const char *key) {
+void InteractivePostSolveConfigure(ReadOnlyString key) {
     (void)key;  // Unused.
     PrintPlayerConfiguration();
-    static const char *title = "Configuration Menu";
-    static const char *const items[] = {
+    static ConstantReadOnlyString kTitle = "Configuration Menu";
+    static ConstantReadOnlyString items[] = {
         "Toggle player type of the first player",
         "Toggle player type of the second player",
     };
-    static const char *const keys[] = {"1", "2"};
+    static ConstantReadOnlyString keys[] = {"1", "2"};
     static const HookFunctionPointer hooks[] = {
         &ToggleFirstPlayerType,
         &ToggleSecondPlayerType,
     };
-    AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    AutoMenu(kTitle, sizeof(items) / sizeof(items[0]), items, keys, hooks);
 }

@@ -38,7 +38,7 @@
 static const Database *current_db;
 static char *current_path;
 
-static bool IsValidDbName(const char *name) {
+static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
     for (int i = 0; i < (int)kDbFormalNameLengthMax + 1; ++i) {
         if (name[i] == '\0') {
@@ -70,11 +70,11 @@ static bool BasicDbApiImplemented(const Database *db) {
 }
 
 // Assumes current_db has been set.
-static bool SetupCurrentPath(const char *game_name, int variant) {
+static bool SetupCurrentPath(ReadOnlyString game_name, int variant) {
     // path = "data/<game_name>/<variant>/<db_name>/"
-    static const char *data_path = "data";
+    static ConstantReadOnlyString kDataPath = "data";
 
-    int path_length = strlen(data_path) + 1;  // +1 for '/'.
+    int path_length = strlen(kDataPath) + 1;  // +1 for '/'.
     path_length += strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
     path_length += strlen(current_db->name) + 1;
@@ -84,7 +84,7 @@ static bool SetupCurrentPath(const char *game_name, int variant) {
         return false;
     }
     int actual_length =
-        snprintf(current_path, path_length, "%s/%s/%d/%s/", data_path,
+        snprintf(current_path, path_length, "%s/%s/%d/%s/", kDataPath,
                  game_name, variant, current_db->name);
     if (actual_length >= path_length) {
         fprintf(stderr,
@@ -106,7 +106,7 @@ static bool SetupCurrentPath(const char *game_name, int variant) {
     return true;
 }
 
-int DbManagerInitDb(const Database *db, const char *game_name, int variant,
+int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                     void *aux) {
     if (current_db != NULL) current_db->Finalize();
     current_db = NULL;

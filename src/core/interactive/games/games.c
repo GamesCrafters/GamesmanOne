@@ -42,11 +42,11 @@ static void ListOfGamesFreeAll(int num_items, char **items, char **keys,
     free(hooks);
 }
 
-void InteractiveGames(const char *key) {
+void InteractiveGames(ReadOnlyString key) {
     (void)key;  // Unused.
 
     const Game *const *all_games = GameManagerGetAllGames();
-    static const char *title = "List of All Games";
+    static ConstantReadOnlyString kTitle = "List of All Games";
     int num_items = GameManagerNumGames();
     char **items = ListOfGamesAllocateItems(num_items);
     char **keys = ListOfGamesAllocateKeys(num_items);
@@ -56,7 +56,8 @@ void InteractiveGames(const char *key) {
         snprintf(keys[i], kKeyLengthMax, "%d", i);
         hooks[i] = &InteractivePresolve;
     }
-    AutoMenu(title, num_items, (const char *const *)items,
-             (const char *const *)keys, (const HookFunctionPointer *)hooks);
+    AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,
+             (ConstantReadOnlyString *)keys,
+             (const HookFunctionPointer *)hooks);
     ListOfGamesFreeAll(num_items, items, keys, hooks);
 }

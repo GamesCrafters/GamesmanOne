@@ -113,7 +113,7 @@ Position GenericHashNumPositions(void);
  * Hash Context exists, the BOARD contains an invalid piece, TURN is not in the
  * range [1, 2], or if any other errors such as malloc failure occurred.
  */
-Position GenericHashHash(const char *board, int turn);
+Position GenericHashHash(ReadOnlyString board, int turn);
 
 /**
  * @brief Unhashes the given HASH to fill the given BOARD with pieces using the
@@ -158,7 +158,7 @@ Position GenericHashNumPositionsLabel(int64_t context_label);
  * BOARD contains an invalid piece, TURN is not in the range [1, 2], or if any
  * other errors such as malloc failure occurred.
  */
-Position GenericHashHashLabel(int64_t context_label, const char *board,
+Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
                               int turn);
 
 /**

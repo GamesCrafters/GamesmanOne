@@ -1,6 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_MAIN_MENU_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_MAIN_MENU_H_
 
-void InteractiveMainMenu(const char *key);
+#include "core/gamesman_types.h"
+
+void InteractiveMainMenu(ReadOnlyString key);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_MAIN_MENU_H_

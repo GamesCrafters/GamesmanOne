@@ -67,8 +67,8 @@ static TierArray MtttierGetParentTiers(Tier tier);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
-static bool MtttierIsValidMoveString(const char *move_string);
-static Move MtttierStringToMove(const char *move_string);
+static bool MtttierIsValidMoveString(ReadOnlyString move_string);
+static Move MtttierStringToMove(ReadOnlyString move_string);
 
 // Solver API Setup
 static const TierSolverApi kSolverApi = {
@@ -145,10 +145,10 @@ static const int kSymmetryMatrix[8][9] = {
 // Helper Functions
 
 static bool InitGenericHash(void);
-static char ThreeInARow(const char *board, const int *indices);
-static bool AllFilledIn(const char *board);
-static void CountPieces(const char *board, int *xcount, int *ocount);
-static char WhoseTurn(const char *board);
+static char ThreeInARow(ReadOnlyString board, const int *indices);
+static bool AllFilledIn(ReadOnlyString board);
+static void CountPieces(ReadOnlyString board, int *xcount, int *ocount);
+static char WhoseTurn(ReadOnlyString board);
 static Position DoSymmetry(TierPosition tier_position, int symmetry);
 static char ConvertBlankToken(char piece);
 
@@ -327,12 +327,12 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         board[i] = ConvertBlankToken(board[i]);
     }
 
-    static const char *format =
+    static ConstantReadOnlyString kFormat =
         "         ( 1 2 3 )           : %c %c %c\n"
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
     int actual_length =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, format,
+        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
                  board[0], board[1], board[2], board[3], board[4], board[5],
                  board[6], board[7], board[8]);
     if (actual_length >= kGameplayApi.position_string_length_max + 1) {
@@ -357,7 +357,7 @@ static int MtttierMoveToString(Move move, char *buffer) {
     return 0;
 }
 
-static bool MtttierIsValidMoveString(const char *move_string) {
+static bool MtttierIsValidMoveString(ReadOnlyString move_string) {
     // Only "1" - "9" are valid move strings.
     if (move_string[0] < '1') return false;
     if (move_string[0] > '9') return false;
@@ -366,7 +366,7 @@ static bool MtttierIsValidMoveString(const char *move_string) {
     return true;
 }
 
-static Move MtttierStringToMove(const char *move_string) {
+static Move MtttierStringToMove(ReadOnlyString move_string) {
     assert(MtttierIsValidMoveString(move_string));
     return (Move)atoi(move_string) - 1;
 }
@@ -397,21 +397,21 @@ static bool InitGenericHash(void) {
     return true;
 }
 
-static char ThreeInARow(const char *board, const int *indices) {
+static char ThreeInARow(ReadOnlyString board, const int *indices) {
     if (board[indices[0]] != board[indices[1]]) return 0;
     if (board[indices[1]] != board[indices[2]]) return 0;
     if (board[indices[0]] == '-') return 0;
     return board[indices[0]];
 }
 
-static bool AllFilledIn(const char *board) {
+static bool AllFilledIn(ReadOnlyString board) {
     for (int i = 0; i < 9; ++i) {
         if (board[i] == '-') return false;
     }
     return true;
 }
 
-static void CountPieces(const char *board, int *xcount, int *ocount) {
+static void CountPieces(ReadOnlyString board, int *xcount, int *ocount) {
     *xcount = *ocount = 0;
     for (int i = 0; i < 9; ++i) {
         *xcount += (board[i] == 'X');
@@ -419,7 +419,7 @@ static void CountPieces(const char *board, int *xcount, int *ocount) {
     }
 }
 
-static char WhoseTurn(const char *board) {
+static char WhoseTurn(ReadOnlyString board) {
     int xcount, ocount;
     CountPieces(board, &xcount, &ocount);
     if (xcount == ocount) return 'X';  // In our TicTacToe, x always goes first.

@@ -15,7 +15,7 @@
 #include "core/solvers/solver_manager.h"
 #include "games/game_manager.h"
 
-static int SetCurrentGame(const char *key) {
+static int SetCurrentGame(ReadOnlyString key) {
     int game_index = atoi(key);
     assert(game_index >= 0 && game_index < GameManagerNumGames());
 
@@ -27,13 +27,13 @@ static int SetCurrentGame(const char *key) {
     return SolverManagerInitSolver(current_game);
 }
 
-static void SolveAndStart(const char *key) {
+static void SolveAndStart(ReadOnlyString key) {
     SolverManagerSolve(NULL);  // Auxiliary variable currently unused.
     InteractiveMatchSetSolved(true);
     InteractivePostSolve(key);
 }
 
-void InteractivePresolve(const char *key) {
+void InteractivePresolve(ReadOnlyString key) {
     int error = SetCurrentGame(key);
     if (error != 0) {
         fprintf(stderr,
@@ -49,13 +49,13 @@ void InteractivePresolve(const char *key) {
     char title[43 + kGameFormalNameLengthMax + kUint32Base10StringLengthMax];
     sprintf(title, "Main (Pre-Solved) Menu for %s (variant %d)",
             current_game->formal_name, variant_index);
-    static const char *const items[] = {
+    static ConstantReadOnlyString items[] = {
         "Solve and start",
         "Start without solving",
         "Game options",
         "Solver options",
     };
-    static const char *const keys[] = {"s", "w", "g", "o"};
+    static ConstantReadOnlyString keys[] = {"s", "w", "g", "o"};
     static const HookFunctionPointer hooks[] = {
         &SolveAndStart,
         &InteractivePostSolve,

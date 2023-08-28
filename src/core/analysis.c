@@ -49,7 +49,7 @@ static void PrintDashedLine(int column_width, int num_headers) {
 }
 
 static int PrintSummaryHeader(int column_width) {
-    const char *headers[] = {
+    static ReadOnlyString headers[] = {
         "Remoteness", "Win", "Lose", "Tie", "Draw", "Total",
     };
     const int num_headers = sizeof(headers) / sizeof(headers[0]);

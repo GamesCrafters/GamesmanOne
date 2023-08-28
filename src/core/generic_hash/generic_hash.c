@@ -116,7 +116,7 @@ Position GenericHashNumPositions(void) {
     return GenericHashContextNumPositions(&manager.contexts[0]);
 }
 
-Position GenericHashHash(const char *board, int turn) {
+Position GenericHashHash(ReadOnlyString board, int turn) {
     if (!ManagerCheckUniqueContext()) return -1;
     return GenericHashContextHash(&manager.contexts[0], board, turn);
 }
@@ -140,7 +140,7 @@ Position GenericHashNumPositionsLabel(int64_t context_label) {
     return GenericHashContextNumPositions(&manager.contexts[context_index]);
 }
 
-Position GenericHashHashLabel(int64_t context_label, const char *board,
+Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
                               int turn) {
     int64_t context_index = ManagerGetContextIndex(context_label);
     if (context_index < 0) return -1;

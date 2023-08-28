@@ -66,7 +66,7 @@ const Solver kTierSolver = {
     .SetOption = &TierSolverSetOption,
 };
 
-static const char *const kChoices[] = {"On", "Off"};
+static ConstantReadOnlyString kChoices[] = {"On", "Off"};
 static const SolverOption kTierSymmetryRemoval = {
     .name = "Tier Symmetry Removal",
     .num_choices = 2,

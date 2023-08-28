@@ -92,14 +92,14 @@ static const ConstantReadOnlyString *const messages[] = {
     &kHelpWhatAreHints,
 };
 
-static void PrintGamesmanHelp(const char *key) {
+static void PrintGamesmanHelp(ReadOnlyString key) {
     int index = atoi(key);
     printf("%s\n", *(messages[index]));
 }
 
-void InteractiveHelp(const char *key) {
+void InteractiveHelp(ReadOnlyString key) {
     (void)key;  // Unused.
-    static const char *title = "GAMESMAN Help";
+    static ConstantReadOnlyString kTitle = "GAMESMAN Help";
     static ConstantReadOnlyString items[] = {
         "What is a game VALUE?",
         "What is EVALUATION?",
@@ -113,5 +113,5 @@ void InteractiveHelp(const char *key) {
         &PrintGamesmanHelp,
         &PrintGamesmanHelp,
     };
-    AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    AutoMenu(kTitle, sizeof(items) / sizeof(items[0]), items, keys, hooks);
 }

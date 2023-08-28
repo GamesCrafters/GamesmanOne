@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 
-void InteractiveAnalyze(const char *key) {
+#include "core/gamesman_types.h"
+
+void InteractiveAnalyze(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveAnalyze: unimplemented\n");

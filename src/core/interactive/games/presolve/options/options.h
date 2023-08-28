@@ -1,6 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_OPTIONS_OPTIONS_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_OPTIONS_OPTIONS_H_
 
-void InteractiveGameOptions(const char *key);
+#include "core/gamesman_types.h"
+
+void InteractiveGameOptions(ReadOnlyString key);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_OPTIONS_OPTIONS_H_

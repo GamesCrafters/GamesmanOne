@@ -1,6 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_PRESOLVE_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_PRESOLVE_H_
 
-void InteractivePresolve(const char *key);
+#include "core/gamesman_types.h"
+
+void InteractivePresolve(ReadOnlyString key);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_GAMES_PRESOLVE_PRESOLVE_H_

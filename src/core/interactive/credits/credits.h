@@ -1,6 +1,8 @@
 #ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_CREDITS_CREDITS_H_
 #define GAMESMANEXPERIMENT_CORE_INTERACTIVE_CREDITS_CREDITS_H_
 
-void InteractiveCredits(const char *key);
+#include "core/gamesman_types.h"
+
+void InteractiveCredits(ReadOnlyString key);
 
 #endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_CREDITS_CREDITS_H_

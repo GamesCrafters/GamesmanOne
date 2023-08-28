@@ -68,12 +68,12 @@ static bool InitStep2_3CalculateSizes(GenericHashContext *context,
 
 // Helper functions for GenericHashContextHash().
 
-static bool HashStep0Initialize(GenericHashContext *context, const char *board,
-                                int *config);
+static bool HashStep0Initialize(GenericHashContext *context,
+                                ReadOnlyString board, int *config);
 static int64_t HashStep1FindHashOffsetForConfig(GenericHashContext *context,
                                                 int *config);
 static Position HashStep2HashCruncher(GenericHashContext *context,
-                                      const char *board, int *config);
+                                      ReadOnlyString board, int *config);
 
 // Helper functions for GenericHashContextUnhash().
 
@@ -86,7 +86,7 @@ bool GenericHashContextInit(GenericHashContext *context, int board_size,
                             bool (*IsValidConfig)(const int *config)) {
     // PLAYER must be 0, 1, or 2.
     if (player < 0 || player > 2) return false;
-    
+
     // Throughout the whole initialization process, all pointers should remain
     // NULL if they are unset.
     InitStep0MemsetToDefaultValues(context);
@@ -124,8 +124,8 @@ Position GenericHashContextNumPositions(const GenericHashContext *context) {
     return context->num_positions;
 }
 
-Position GenericHashContextHash(GenericHashContext *context, const char *board,
-                                int turn) {
+Position GenericHashContextHash(GenericHashContext *context,
+                                ReadOnlyString board, int turn) {
     int this_config[STACK_CONFIG_SIZE];
     if (!HashStep0Initialize(context, board, this_config)) return -1;
     int64_t index = HashStep1FindHashOffsetForConfig(context, this_config);
@@ -362,8 +362,8 @@ static void IndexToConfig(GenericHashContext *context, int64_t index,
     }
 }
 
-static bool HashStep0Initialize(GenericHashContext *context, const char *board,
-                                int *config) {
+static bool HashStep0Initialize(GenericHashContext *context,
+                                ReadOnlyString board, int *config) {
     // Count the number of pieces of each type.
     memset(config, 0, sizeof(int) * context->num_pieces);
     for (int i = 0; i < context->board_size; ++i) {
@@ -410,7 +410,7 @@ static int64_t Rearrange(GenericHashContext *context, int *config) {
 }
 
 static Position HashStep2HashCruncher(GenericHashContext *context,
-                                      const char *board, int *config) {
+                                      ReadOnlyString board, int *config) {
     Position final_hash = 0;
 
     // The loop ends with i == 0 because there will be

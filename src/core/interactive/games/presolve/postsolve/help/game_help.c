@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 
-void InteractiveGameHelp(const char *key) {
+#include "core/gamesman_types.h"
+
+void InteractiveGameHelp(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveGameHelp: unimplemented\n");

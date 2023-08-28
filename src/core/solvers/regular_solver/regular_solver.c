@@ -68,7 +68,7 @@ const Solver kRegularSolver = {
     .SetOption = &RegularSolverSetOption,
 };
 
-static const char *const kChoices[] = {"On", "Off"};
+static ConstantReadOnlyString kChoices[] = {"On", "Off"};
 static const SolverOption kPositionSymmetryRemoval = {
     .name = "Position Symmetry Removal",
     .num_choices = 2,
