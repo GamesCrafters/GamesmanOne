@@ -69,7 +69,15 @@ typedef int64_t Move;
  * @note Always make sure that kUndecided is 0 as other components rely on this
  * assumption.
  */
-typedef enum { kUndecided, kLose, kDraw, kTie, kWin, kErrorValue } Value;
+typedef enum {
+    kErrorValue = -1,
+    kUndecided = 0,
+    kLose,
+    kDraw,
+    kTie,
+    kWin,
+    kNumValues,  /**< The number of valid Values. */
+} Value;
 
 /**
  * @brief Dynamic Position array.

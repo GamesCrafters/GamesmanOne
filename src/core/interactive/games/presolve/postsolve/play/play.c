@@ -120,7 +120,7 @@ static void MakeComputerMove(void) {
 
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = InteractiveMatchDoMove(current, moves.array[i]);
-        Value value = ProbeRemoteness(child);
+        Value value = ProbeValue(child);
         int remoteness = ProbeRemoteness(child);
         if (IsBestChild(current_value, current_remoteness, value, remoteness)) {
             InteractiveMatchCommitMove(moves.array[i]);
