@@ -1,13 +1,39 @@
+/**
+ * @file int64_hash_map.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Linear-probing int64_t to int64_t hash map implementation.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/data_structures/int64_hash_map.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // calloc, free
 #include <math.h>     // INFINITY
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
+#include <stdlib.h>   // calloc, free
 
-#include "core/gamesman_math.h"  // NextPrime
+#include "core/misc.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
     return ((uint64_t)key) % capacity;
@@ -108,9 +134,8 @@ bool Int64HashMapContains(Int64HashMap *map, int64_t key) {
     return Int64HashMapIteratorIsValid(&it);
 }
 
-void Int64HashMapIteratorInit(Int64HashMapIterator *it, Int64HashMap *map) {
-    it->map = map;
-    it->index = -1;
+Int64HashMapIterator Int64HashMapBegin(Int64HashMap *map) {
+    return (Int64HashMapIterator){.map = map, .index = -1};
 }
 
 int64_t Int64HashMapIteratorKey(const Int64HashMapIterator *it) {
@@ -125,17 +150,17 @@ bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it) {
     return it->index >= 0 && it->index < it->map->capacity;
 }
 
-bool Int64HashMapIteratorNext(Int64HashMapIterator *iterator, int64_t *key,
+bool Int64HashMapIteratorNext(Int64HashMapIterator *it, int64_t *key,
                               int64_t *value) {
-    Int64HashMap *map = iterator->map;
-    for (int64_t i = iterator->index + 1; i < map->capacity; ++i) {
+    Int64HashMap *map = it->map;
+    for (int64_t i = it->index + 1; i < map->capacity; ++i) {
         if (map->entries[i].used) {
-            iterator->index = i;
+            it->index = i;
             if (key) *key = map->entries[i].key;
             if (value) *value = map->entries[i].value;
             return true;
         }
     }
-    iterator->index = map->capacity;
+    it->index = map->capacity;
     return false;
 }

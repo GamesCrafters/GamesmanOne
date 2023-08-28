@@ -1,267 +1,230 @@
+/**
+ * @file misc.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of miscellaneous utility functions.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/misc.h"
 
-#include <assert.h>   // assert
-#include <malloc.h>   // calloc, realloc, free
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // exit
+#include <assert.h>     // assert
+#include <errno.h>      // errno
+#include <stdbool.h>    // bool, true, false
+#include <stddef.h>     // size_t
+#include <stdint.h>     // int64_t, INT64_MAX
+#include <stdio.h>      // fprintf, stderr
+#include <stdlib.h>     // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
+#include <string.h>     // strlen, strncpy
+#include <sys/stat.h>   // mkdir, struct stat
+#include <sys/types.h>  // mode_t
 
-#include "core/data_structures/int64_array.h"
-#include "core/data_structures/int64_hash_map.h"
-#include "core/data_structures/int64_queue.h"
-#include "core/gamesman_math.h"
+#include "core/gamesman_types.h"
 
-void NotReached(const char *message) {
+void GamesmanExit(void) {
+    printf("Thanks for using GAMESMAN!\n");
+    exit(EXIT_SUCCESS);
+}
+
+void NotReached(ReadOnlyString message) {
     fprintf(stderr,
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
-void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
-
-void PositionArrayDestroy(PositionArray *array) { Int64ArrayDestroy(array); }
-
-bool PositionArrayAppend(PositionArray *array, Position position) {
-    return Int64ArrayPushBack(array, position);
-}
-
-bool PositionArrayContains(PositionArray *array, Position position) {
-    return Int64ArrayContains(array, position);
-}
-
-void PositionHashSetInit(PositionHashSet *set, double max_load_factor) {
-    Int64HashMapInit(set, max_load_factor);
-}
-
-void PositionHashSetDestroy(PositionHashSet *set) { Int64HashMapDestroy(set); }
-
-bool PositionHashSetContains(PositionHashSet *set, Position position) {
-    return Int64HashMapContains(set, position);
-}
-
-bool PositionHashSetAdd(PositionHashSet *set, Position position) {
-    return Int64HashMapSet(set, position, 0);
-}
-
-void MoveArrayInit(MoveArray *array) { Int64ArrayInit(array); }
-
-void MoveArrayDestroy(MoveArray *array) { Int64ArrayDestroy(array); }
-
-bool MoveArrayAppend(MoveArray *array, Move move) {
-    return Int64ArrayPushBack(array, move);
-}
-
-void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
-
-void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
-
-bool TierArrayAppend(TierArray *array, Tier tier) {
-    return Int64ArrayPushBack(array, tier);
-}
-
-void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
-
-void TierStackDestroy(TierStack *stack) { Int64ArrayDestroy(stack); }
-
-bool TierStackPush(TierStack *stack, Tier tier) {
-    return Int64ArrayPushBack(stack, tier);
-}
-
-void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
-
-Tier TierStackTop(const TierStack *stack) { return Int64ArrayBack(stack); }
-
-bool TierStackEmpty(const TierStack *stack) { return Int64ArrayEmpty(stack); }
-
-void TierQueueInit(TierQueue *queue) { Int64QueueInit(queue); }
-
-void TierQueueDestroy(TierQueue *queue) { Int64QueueDestroy(queue); }
-
-bool TierQueueIsEmpty(const TierQueue *queue) {
-    return Int64QueueIsEmpty(queue);
-}
-
-int64_t TierQueueSize(const TierQueue *queue) { return Int64QueueSize(queue); }
-
-bool TierQueuePush(TierQueue *queue, Tier tier) {
-    return Int64QueuePush(queue, tier);
-}
-
-Tier TierQueuePop(TierQueue *queue) { return Int64QueuePop(queue); }
-
-void TierHashMapInit(TierHashMap *map, double max_load_factor) {
-    Int64HashMapInit(map, max_load_factor);
-}
-
-void TierHashMapDestroy(TierHashMap *map) { Int64HashMapDestroy(map); }
-
-TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key) {
-    return Int64HashMapGet(map, key);
-}
-
-bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value) {
-    return Int64HashMapSet(map, tier, value);
-}
-
-bool TierHashMapContains(TierHashMap *map, Tier tier) {
-    return Int64HashMapContains(map, tier);
-}
-
-void TierHashMapIteratorInit(TierHashMapIterator *it, TierHashMap *map) {
-    Int64HashMapIteratorInit(it, map);
-}
-
-Tier TierHashMapIteratorKey(const TierHashMapIterator *it) {
-    return Int64HashMapIteratorKey(it);
-}
-
-int64_t TierHashMapIteratorValue(const TierHashMapIterator *it) {
-    return Int64HashMapIteratorValue(it);
-}
-
-bool TierHashMapIteratorIsValid(const TierHashMapIterator *it) {
-    return Int64HashMapIteratorIsValid(it);
-}
-
-bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
-                             int64_t *value) {
-    return Int64HashMapIteratorNext(iterator, tier, value);
-}
-
-void TierHashSetInit(TierHashSet *set, double max_load_factor) {
-    Int64HashMapInit(set, max_load_factor);
-}
-
-void TierHashSetDestroy(TierHashSet *set) { Int64HashMapDestroy(set); }
-
-bool TierHashSetContains(TierHashSet *set, Tier tier) {
-    return Int64HashMapContains(set, tier);
-}
-
-bool TierHashSetAdd(TierHashSet *set, Tier tier) {
-    return Int64HashMapSet(set, tier, 0);
-}
-
-void TierPositionArrayInit(TierPositionArray *array) {
-    array->array = NULL;
-    array->size = 0;
-    array->capacity = 0;
-}
-
-void TierPositionArrayDestroy(TierPositionArray *array) {
-    free(array->array);
-    array->array = NULL;
-    array->size = 0;
-    array->capacity = 0;
-}
-
-static bool TierPositionArrayExpand(TierPositionArray *array) {
-    int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
-    TierPosition *new_array = (TierPosition *)realloc(
-        array->array, new_capacity * sizeof(TierPosition));
-    if (!new_array) return false;
-    array->array = new_array;
-    array->capacity = new_capacity;
-    return true;
-}
-
-bool TierPositionArrayAppend(TierPositionArray *array,
-                          TierPosition tier_position) {
-    if (array->size == array->capacity) {
-        if (!TierPositionArrayExpand(array)) return false;
+void *SafeMalloc(size_t size) {
+    void *ret = malloc(size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeMalloc: failed to allocate %zd bytes. This ususally "
+                "indicates a bug.\n",
+                size);
+        exit(EXIT_FAILURE);
     }
-    assert(array->size < array->capacity);
-    array->array[array->size++] = tier_position;
-    return true;
+    return ret;
 }
 
-void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    set->max_load_factor = max_load_factor;
-}
-
-void TierPositionHashSetDestroy(TierPositionHashSet *set) {
-    free(set->entries);
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-}
-
-static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
-    int64_t a = (int64_t)key.tier;
-    int64_t b = (int64_t)key.position;
-    int64_t cantor_pairing = (a + b) * (a + b + 1) / 2 + a;
-    return ((uint64_t)cantor_pairing) % capacity;
-}
-
-bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {
-    int64_t capacity = set->capacity;
-    // Edge case: return false if set is empty.
-    if (set->capacity == 0) return false;
-    int64_t index = TierPositionHashSetHash(key, capacity);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
-        }
-        index = (index + 1) % capacity;
+void *SafeCalloc(size_t n, size_t size) {
+    void *ret = calloc(n, size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeCalloc: failed to allocate %zd elements each of %zd "
+                "bytes. This ususally "
+                "indicates a bug.\n",
+                n, size);
+        exit(EXIT_FAILURE);
     }
-    return false;
+    return ret;
 }
 
-static bool TierPositionHashSetExpand(TierPositionHashSet *set) {
-    int64_t new_capacity = NextPrime(set->capacity * 2);
-    TierPositionHashSetEntry *new_entries = (TierPositionHashSetEntry *)calloc(
-        new_capacity, sizeof(TierPositionHashSetEntry));
-    if (new_entries == NULL) return false;
-    for (int64_t i = 0; i < set->capacity; ++i) {
-        if (set->entries[i].used) {
-            int64_t new_index =
-                TierPositionHashSetHash(set->entries[i].key, new_capacity);
-            while (new_entries[new_index].used) {
-                new_index = (new_index + 1) % new_capacity;
-            }
-            new_entries[new_index] = set->entries[i];
+/**
+ * @brief Makes a directory at the given path or does nothing if the directory
+ * already exists.
+ *
+ * @return 0 on success. On error, -1 is returned and errno is set to indicate
+ * the error.
+ *
+ * @author Jonathon Reinhart
+ * @link
+ * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
+ */
+static int MaybeMkdir(ReadOnlyString path, mode_t mode) {
+    errno = 0;
+
+    // Try to make the directory
+    if (mkdir(path, mode) == 0) return 0;
+
+    // If it fails for any reason but EEXIST, fail
+    if (errno != EEXIST) return -1;
+
+    // Check if the existing path is a directory
+    struct stat st;
+    if (stat(path, &st) != 0) return -1;
+
+    // If not, fail with ENOTDIR
+    if (!S_ISDIR(st.st_mode)) {
+        errno = ENOTDIR;
+        return -1;
+    }
+
+    errno = 0;
+    return 0;
+}
+
+int MkdirRecursive(ReadOnlyString path) {
+    // Fail if path is NULL.
+    if (path == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int result = -1;
+    errno = 0;
+
+    // Copy string so it's mutable
+    size_t path_length = strlen(path);
+    char *path_copy = (char *)malloc((path_length + 1) * sizeof(char));
+    if (path_copy == NULL) {
+        errno = ENOMEM;
+        goto _bailout;
+    }
+    strncpy(path_copy, path, path_length + 1);
+
+    for (size_t i = 0; i < path_length; ++i) {
+        if (path_copy[i] == '/') {
+            path_copy[i] = '\0';  // Temporarily truncate
+            if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
+            path_copy[i] = '/';
         }
     }
-    free(set->entries);
-    set->entries = new_entries;
-    set->capacity = new_capacity;
-    return true;
+    if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
+    result = 0;  // Success
+
+_bailout:
+    free(path_copy);
+    return result;
 }
 
-bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
-    // Check if resizing is needed.
-    double load_factor;
-    if (set->capacity == 0) {
-        load_factor = INFINITY;
-    } else {
-        load_factor = (double)(set->size + 1) / (double)set->capacity;
-    }
-    if (load_factor > set->max_load_factor) {
-        if (!TierPositionHashSetExpand(set)) return false;
-    }
-
-    // Set value at key.
-    int64_t capacity = set->capacity;
-    int64_t index = TierPositionHashSetHash(key, capacity);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
+bool IsPrime(int64_t n) {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 == 0 || n % 3 == 0) return false;
+    for (int64_t i = 5; i * i <= n; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) {
+            return false;
         }
-        index = (index + 1) % capacity;
     }
-    set->entries[index].key = key;
-    set->entries[index].used = true;
-    ++set->size;
     return true;
 }
+
+int64_t PrevPrime(int64_t n) {
+    if (n < 2) return 2;
+    while (!IsPrime(n)) {
+        --n;
+    }
+    return n;
+}
+
+int64_t NextPrime(int64_t n) {
+    while (!IsPrime(n)) {
+        ++n;
+    }
+    return n;
+}
+
+int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX - b) return -1;
+    return a + b;
+}
+
+int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX / b) return -1;
+    return a * b;
+}
+
+static int64_t NChooseRFormula(int n, int r) {
+    assert(n >= 0 && r >= 0 && n >= r);
+
+    // nCr(n, r) == nCr(n, n-r). This step can further reduce the largest
+    // intermediate value.
+    if (r > n - r) r = n - r;
+    int64_t result = 1;
+    for (int64_t i = 1; i <= r; ++i) {
+        result = SafeMultiplyNonNegativeInt64(result, n - r + i);
+        if (result < 0) return -1;
+        result /= i;
+    }
+    return result;
+}
+
+#define CACHE_ROWS 100
+#define CACHE_COLS 100
+// Assumes CHOOSE has been zero initialized.
+static void MakeTriangle(int64_t choose[][CACHE_COLS]) {
+    for (int i = 0; i < CACHE_ROWS; ++i) {
+        choose[i][0] = 1;
+        int j_max = (i < CACHE_COLS - 1) ? i : CACHE_COLS - 1;
+        for (int j = 1; j <= j_max; ++j) {
+            choose[i][j] =
+                SafeAddNonNegativeInt64(choose[i - 1][j - 1], choose[i - 1][j]);
+        }
+    }
+}
+
+int64_t NChooseR(int n, int r) {
+    // Initialize cache.
+    static bool choose_initialized = false;
+    static int64_t choose[CACHE_ROWS][CACHE_COLS] = {0};
+
+    if (!choose_initialized) {
+        MakeTriangle(choose);
+        choose_initialized = true;
+    }
+
+    if (n < 0 || r < 0) return -1;  // Negative inputs not supported.
+    if (n < r) return 0;  // Make sure n >= r >= 0 in the following steps.
+    if (n < CACHE_ROWS && r < CACHE_COLS) return choose[n][r];  // Cache hit.
+    return NChooseRFormula(n, r);  // Cache miss. Calculate from formula.
+}
+#undef CACHE_ROWS
+#undef CACHE_COLS

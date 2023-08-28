@@ -1,0 +1,8 @@
+#ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_HELP_HELP_H_
+#define GAMESMANEXPERIMENT_CORE_INTERACTIVE_HELP_HELP_H_
+
+#include "core/gamesman_types.h"
+
+void InteractiveHelp(ReadOnlyString key);
+
+#endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_HELP_HELP_H_

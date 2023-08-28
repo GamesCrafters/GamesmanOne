@@ -1,11 +1,37 @@
+/**
+ * @file int64_queue.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of int64_t queue using dynamic array.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/data_structures/int64_queue.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // realloc, free
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // realloc, free
 #include <string.h>   // memcpy
 
 static bool Expand(Int64Queue *queue) {
@@ -44,13 +70,13 @@ bool Int64QueueIsEmpty(const Int64Queue *queue) { return (queue->size == 0); }
 int64_t Int64QueueSize(const Int64Queue *queue) { return queue->size; }
 
 // Function to add an element to the queue
-bool Int64QueuePush(Int64Queue *queue, int64_t element) {
+bool Int64QueuePush(Int64Queue *queue, int64_t item) {
     if (queue->size == queue->capacity) {
         if (!Expand(queue)) return false;
     }
     assert(queue->size < queue->capacity);
     int64_t back = (queue->front + queue->size) % queue->capacity;
-    queue->array[back] = element;
+    queue->array[back] = item;
     ++queue->size;
     return true;
 }

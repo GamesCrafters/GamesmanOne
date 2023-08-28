@@ -49,8 +49,9 @@ static void PrintDashedLine(int column_width, int num_headers) {
 }
 
 static int PrintSummaryHeader(int column_width) {
-    const char *headers[] = {"Remoteness", "Win",  "Lose",
-                             "Tie",        "Draw", "Total"};
+    static ReadOnlyString headers[] = {
+        "Remoteness", "Win", "Lose", "Tie", "Draw", "Total",
+    };
     const int num_headers = sizeof(headers) / sizeof(headers[0]);
 
     printf("\t");
@@ -94,8 +95,7 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
                                 ? analysis->tie_summary.array[remoteness]
                                 : 0;
         int64_t total = win_count + lose_count + tie_count;
-        char remoteness_string[12];  // Covers the range [-2147483647,
-                                     // 2147483647].
+        char remoteness_string[kInt32Base10StringLengthMax + 1];
         sprintf(remoteness_string, "%d", remoteness);
         printf(format, remoteness_string, win_count, lose_count, tie_count, 0,
                total);
@@ -104,7 +104,9 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
 
 void AnalysisPrintSummary(const Analysis *analysis) {
     int column_width = WidthOf(analysis->total_legal_positions) + 1;
-    if (column_width < 12) column_width = 12;
+    if (column_width < kInt32Base10StringLengthMax + 1) {
+        column_width = kInt32Base10StringLengthMax + 1;
+    }
     int num_headers = PrintSummaryHeader(column_width);
     PrintDashedLine(column_width, num_headers);
     PrintSummaryLine(analysis, -1, column_width);

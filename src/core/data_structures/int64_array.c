@@ -1,10 +1,36 @@
+/**
+ * @file int64_array.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Dynamic int64_t array implementation.
+ * @version 1.0
+ * @date 2023-08-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/data_structures/int64_array.h"
 
 #include <assert.h>   // assert
-#include <malloc.h>   // free, realloc
+#include <stdlib.h>   // free, realloc
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdint.h>   //int64_t
+#include <stdint.h>   // int64_t
 
 void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;
@@ -30,7 +56,7 @@ bool Int64ArrayExpand(Int64Array *array) {
 }
 
 bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
-    // Expand array if necessary.
+    // Expand the array if necessary.
     if (array->size == array->capacity) {
         if (!Int64ArrayExpand(array)) {
             return false;
