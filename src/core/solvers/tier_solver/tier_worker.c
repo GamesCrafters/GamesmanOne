@@ -248,8 +248,7 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
     int64_t child_tier_size = current_api.GetTierSize(child_tier);
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL  // TODO: Test if this comment can be removed.
-    {
+    PRAGMA_OMP_PARALLEL {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
@@ -279,8 +278,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
     int64_t child_tier_size = current_api.GetTierSize(canonical_tier);
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL  // TODO: remove this comment if possible.
-    {
+    PRAGMA_OMP_PARALLEL {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition canonical_tier_position = {.tier = canonical_tier};
@@ -340,10 +338,12 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
  * @brief Initializes database and number of undecided children array.
  */
 static bool Step2SetupSolverArrays(void) {
-    bool success = DbManagerCreateSolvingTier(
-        this_tier, current_api.GetTierSize(this_tier));
+    int error = DbManagerCreateSolvingTier(this_tier,
+                                           current_api.GetTierSize(this_tier));
+    if (error != 0) return false;
+    
     num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
-    return success && (num_undecided_children != NULL);
+    return (num_undecided_children != NULL);
 }
 
 /**
@@ -560,7 +560,6 @@ static void Step5MarkDrawPositions(void) {
         if (num_undecided_children[position] > 0) {
             // A position is drawing if it still has undecided children.
             DbManagerSetValue(position, kDraw);
-            DbManagerSetRemoteness(position, 0);
             continue;
         }
         assert(num_undecided_children[position] == 0);

@@ -30,6 +30,7 @@
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
+#include <stdio.h>    // FILE
 
 #include "core/gamesman_types.h"
 
@@ -48,6 +49,12 @@ void *SafeMalloc(size_t size);
  * @brief Same behavior as calloc() on success; terminates GAMESMAN on failure.
  */
 void *SafeCalloc(size_t n, size_t size);
+
+FILE *SafeFopen(const char *filename, const char *modes);
+
+int SafeFclose(FILE *stream);
+
+int SafeFwrite(void *ptr, size_t size, size_t n, FILE *stream);
 
 /**
  * @brief Recursively makes all directories along the given path.

@@ -69,7 +69,7 @@ typedef int64_t Move;
  * @note Always make sure that kUndecided is 0 as other components rely on this
  * assumption.
  */
-typedef enum {
+typedef enum Value {
     kErrorValue = -1,
     kUndecided = 0,
     kLose,
@@ -169,6 +169,7 @@ typedef enum GamesmanTypesLimits {
      * this value is not large enough for a game in the future.
      */
     kRemotenessMax = 1023,
+    kNumRemotenesses = 1024,
     kDbNameLengthMax = 31,
     kDbFormalNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
@@ -836,6 +837,10 @@ typedef enum IntBase10StringLengthLimits {
     /** uint64_t: [0, 18446744073709551615] */
     kUint64Base10StringLengthMax = 20,
 } IntBase10StringLengthLimits;
+
+typedef enum CommonConstants {
+    kBitsPerByte = 8,
+} CommonConstants;
 
 // GAMESMAN Types Related Accessor and Mutator Functions.
 

@@ -195,9 +195,9 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
     if (records == NULL) {
         fprintf(stderr,
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
-        return false;
+        return 1;
     }
-    return true;
+    return 0;
 }
 
 static int NaiveDbFlushSolvingTier(void *aux) {

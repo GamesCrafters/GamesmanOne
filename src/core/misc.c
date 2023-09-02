@@ -26,15 +26,15 @@
 
 #include "core/misc.h"
 
-#include <assert.h>     // assert
-#include <errno.h>      // errno
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, INT64_MAX
-#include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
-#include <string.h>     // strlen, strncpy
-#include <sys/stat.h>   // mkdir, struct stat
+#include <assert.h>    // assert
+#include <errno.h>     // errno
+#include <stdbool.h>   // bool, true, false
+#include <stddef.h>    // size_t
+#include <stdint.h>    // int64_t, INT64_MAX
+#include <stdio.h>     // fprintf, stderr, FILE
+#include <stdlib.h>    // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
+#include <string.h>    // strlen, strncpy
+#include <sys/stat.h>  // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 
 #include "core/gamesman_types.h"
@@ -75,6 +75,26 @@ void *SafeCalloc(size_t n, size_t size) {
         exit(EXIT_FAILURE);
     }
     return ret;
+}
+
+FILE *SafeFopen(const char *filename, const char *modes) {
+    FILE *f = fopen(filename, modes);
+    if (f == NULL) perror("fopen");
+    return f;
+}
+
+int SafeFclose(FILE *stream) {
+    int error = fclose(stream);
+    if (error != 0) perror("fclose");
+    return error;
+}
+
+int SafeFwrite(void *ptr, size_t size, size_t n, FILE *stream) {
+    if (fwrite(ptr, size, n, stream) != n) {
+        perror("fwrite");
+        return errno;
+    }
+    return 0;
 }
 
 /**
