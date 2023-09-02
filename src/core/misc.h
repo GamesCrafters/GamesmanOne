@@ -31,6 +31,7 @@
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // FILE
+#include <zlib.h>     // gzFile
 
 #include "core/gamesman_types.h"
 
@@ -50,11 +51,37 @@ void *SafeMalloc(size_t size);
  */
 void *SafeCalloc(size_t n, size_t size);
 
-FILE *SafeFopen(const char *filename, const char *modes);
+static void *GenericPointerAdd(const void *p, int64_t offset);
 
-int SafeFclose(FILE *stream);
+FILE *GuardedFopen(const char *filename, const char *modes);
 
-int SafeFwrite(void *ptr, size_t size, size_t n, FILE *stream);
+int GuardedFclose(FILE *stream);
+
+int BailOutFclose(FILE *stream, int error);
+
+int GuardedFseek(FILE *stream, long off, int whence);
+
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream);
+
+int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream);
+
+int GuardedOpen(const char *filename, int flags);
+
+int GuardedClose(int fd);
+
+int BailOutClose(int fd, int error);
+
+int GuardedLseek(int fd, off_t offset, int whence);
+
+gzFile GuardedGzdopen(int fd, const char *mode);
+
+int GuardedGzclose(gzFile file);
+
+int BailOutGzclose(gzFile file, int error);
+
+int GuardedGzseek(gzFile file, off_t off, int whence);
+
+int GuardedGzread(gzFile file, voidp buf, unsigned int length);
 
 /**
  * @brief Recursively makes all directories along the given path.

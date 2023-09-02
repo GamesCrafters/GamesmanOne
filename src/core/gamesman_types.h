@@ -76,7 +76,6 @@ typedef enum Value {
     kDraw,
     kTie,
     kWin,
-    kNumValues,  /**< The number of valid Values. */
 } Value;
 
 /**

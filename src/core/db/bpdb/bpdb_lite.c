@@ -1,12 +1,14 @@
 #include "core/db/bpdb/bpdb_lite.h"
 
+#include <fcntl.h>     // O_RDONLY
 #include <inttypes.h>  // PRId64
-#include <stdbool.h>   // true
+#include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t, uint64_t, uint32_t
-#include <stdio.h>     // fprintf, stderr, FILE, fopen, fwrite, fread, fclose
-#include <stdlib.h>    // malloc, free
+#include <stdint.h>    // int64_t, uint64_t, uint32_t, UINT64_MAX
+#include <stdio.h>     // fprintf, stderr, FILE, SEEK_SET
+#include <stdlib.h>    // malloc, free, realloc
 #include <string.h>    // memset
+#include <zlib.h>
 
 #include "core/db/bpdb/bparray.h"
 #include "core/gamesman_types.h"
@@ -58,18 +60,15 @@ const Database kBpdbLite = {
 
 // -----------------------------------------------------------------------------
 
-static const int64_t kMgzBlockSize = 1 << 14;  // 16 KiB.
-static const int kMgzCompressionLevel = 9;     // Maximum compression.
+static const int kNumValues = 5;            // undecided, lose, draw, tie, win.
+static const int kMgzBlockSize = 1 << 14;   // 16 KiB.
+static const int kMgzCompressionLevel = 9;  // Maximum compression.
 
 static const int kBytesPerRecord = 2;
 static const int kHeaderSize = sizeof(BpdbFileHeader);
-
 static const int kDefaultDecompDictSize =
     (2 << (kBytesPerRecord * kBitsPerByte)) * sizeof(uint32_t);
-
-// Format: [header][decomp_dict][bit_stream_block_0][bit_stream_block_1]
-static const int kBufferSize =
-    kHeaderSize + kDefaultDecompDictSize + kMgzBlockSize * 2;
+static const int kBlocksPerBuffer = 2;
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -79,6 +78,13 @@ static int64_t current_tier_size;
 static BpArray records;
 
 static char *GetFullPathToFile(Tier tier);
+static uint64_t BuildRecord(Value value, int remoteness);
+static Value GetValueFromRecord(uint64_t record);
+static int GetRemotenessFromRecord(uint64_t record);
+static int GetBufferSize(int32_t decomp_dict_size);
+
+// Flush helper functions
+
 static int FlushStep0CompressToBitStream(BpdbFileHeader *header,
                                          BitStream *stream,
                                          uint32_t **decomp_dict);
@@ -86,6 +92,10 @@ static mgz_res_t FlushStep1MgzCompress(BpdbFileHeader *header,
                                        const BitStream *stream);
 static int FlushStep2WriteToFile(const BpdbFileHeader *header,
                                  uint32_t *decomp_dict, mgz_res_t result);
+
+// Probe helper functions
+static uint64_t ProbeRecord(DbProbe *probe, TierPosition tier_position);
+const BpdbFileHeader *ProbeGetHeader(const DbProbe *probe);
 
 static int BpdbLiteInit(ReadOnlyString game_name, int variant,
                         ReadOnlyString path, void *aux) {
@@ -166,7 +176,8 @@ static int BpdbLiteFreeSolvingTier(void) {
 
 static int BpdbLiteSetValue(Position position, Value value) {
     uint64_t record = BpArrayGet(&records, position);
-    record = (record / kNumValues) * kNumValues + value;
+    int remoteness = GetRemotenessFromRecord(record);
+    record = BuildRecord(value, remoteness);
     BpArraySet(&records, position, record);
 
     return 0;
@@ -174,8 +185,8 @@ static int BpdbLiteSetValue(Position position, Value value) {
 
 static int BpdbLiteSetRemoteness(Position position, int remoteness) {
     uint64_t record = BpArrayGet(&records, position);
-    Value value = record % kNumValues;
-    record = remoteness * kNumValues + value;
+    Value value = GetValueFromRecord(record);
+    record = BuildRecord(value, remoteness);
     BpArraySet(&records, position, record);
 
     return 0;
@@ -183,21 +194,22 @@ static int BpdbLiteSetRemoteness(Position position, int remoteness) {
 
 static Value BpdbLiteGetValue(Position position) {
     uint64_t record = BpArrayGet(&records, position);
-    return record % kNumValues;
+    return GetValueFromRecord(record);
 }
 
 static int BpdbLiteGetRemoteness(Position position) {
     uint64_t record = BpArrayGet(&records, position);
-    return record / kNumValues;
+    return GetRemotenessFromRecord(record);
 }
 
 static int BpdbLiteProbeInit(DbProbe *probe) {
-    probe->buffer = malloc(kBufferSize);
+    int default_buffer_size = GetBufferSize(kDefaultDecompDictSize);
+    probe->buffer = malloc(default_buffer_size);
     if (probe->buffer == NULL) return 1;
 
     probe->tier = -1;
-    probe->begin = 0;
-    probe->size = kBufferSize;
+    probe->begin = -1;
+    probe->size = default_buffer_size;
 
     return 0;
 }
@@ -209,13 +221,13 @@ static int BpdbLiteProbeDestroy(DbProbe *probe) {
 }
 
 static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position) {
-    // TODO
-    return kErrorValue;
+    uint64_t record = ProbeRecord(probe, tier_position);
+    return GetValueFromRecord(record);
 }
 
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    // TODO
-    return -1;
+    uint64_t record = ProbeRecord(probe, tier_position);
+    return GetRemotenessFromRecord(record);
 }
 
 /**
@@ -243,6 +255,24 @@ static char *GetFullPathToFile(Tier tier) {
     return full_path;
 }
 
+static uint64_t BuildRecord(Value value, int remoteness) {
+    return remoteness * kNumValues + value;
+}
+
+static Value GetValueFromRecord(uint64_t record) { return record % kNumValues; }
+
+static int GetRemotenessFromRecord(uint64_t record) {
+    return record / kNumValues;
+}
+
+static int GetBufferSize(int32_t decomp_dict_size) {
+    // Header format:
+    // [header][decomp_dict][bit_stream_block_0][bit_stream_block_1][...]
+    // plus 8 bytes of additional space for safe uint64_t masking.
+    return kHeaderSize + decomp_dict_size + kBlocksPerBuffer * kMgzBlockSize +
+           sizeof(uint64_t);
+}
+
 static int FlushStep0CompressToBitStream(BpdbFileHeader *header,
                                          BitStream *stream,
                                          uint32_t **decomp_dict) {
@@ -268,32 +298,250 @@ static int FlushStep2WriteToFile(const BpdbFileHeader *header,
                                  uint32_t *decomp_dict, mgz_res_t result) {
     // Write header to file
     char *full_path_to_file = GetFullPathToFile(current_tier);
-    FILE *db_file = SafeFopen(full_path_to_file, "wb");
+    if (full_path_to_file == NULL) return 1;
+
+    FILE *db_file = GuardedFopen(full_path_to_file, "wb");
+    free(full_path_to_file);
+    full_path_to_file = NULL;
     if (db_file == NULL) return 2;
 
-    int error = SafeFwrite(header, sizeof(*header), 1, db_file);
-    if (error != 0) return error;
+    int error = GuardedFwrite(header, sizeof(*header), 1, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
 
     // Write decomp dict
-    error = SafeFwrite(decomp_dict, sizeof(int32_t),
-                       header->decomp_dict_metadata.size, db_file);
-    if (error != 0) return error;
+    error = GuardedFwrite(decomp_dict, sizeof(int32_t),
+                          header->decomp_dict_metadata.size, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
     free(decomp_dict);
     decomp_dict = NULL;
 
     // Write mgz lookup table
-    error =
-        SafeFwrite(result.lookup, sizeof(int64_t), result.num_blocks, db_file);
-    if (error != 0) return error;
+    error = GuardedFwrite(result.lookup, sizeof(int64_t), result.num_blocks,
+                          db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
     free(result.lookup);
     result.lookup = NULL;
 
     // Write mgz compressed stream
-    error = SafeFwrite(result.out, 1, result.size, db_file);
-    if (error != 0) return error;
+    error = GuardedFwrite(result.out, 1, result.size, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
     free(result.out);
     result.out = NULL;
 
     // Close the file.
-    return SafeFclose(db_file);
+    return GuardedFclose(db_file);
+}
+
+static bool ExpandProbeBuffer(DbProbe *probe, int target_size) {
+    if (probe->size >= target_size) return true;
+    int new_size = probe->size;
+    while (new_size < target_size) {
+        new_size *= 2;
+    }
+
+    void *new_buffer = realloc(probe->buffer, new_size);
+    if (new_buffer == NULL) return false;
+    probe->buffer = new_buffer;
+    probe->size = new_size;
+
+    return true;
+}
+
+// Reloads tier bpdb file header and decomp dict into probe's cache.
+static int ReloadProbeHeader(DbProbe *probe, Tier tier) {
+    char *full_path_to_file = GetFullPathToFile(current_tier);
+    if (full_path_to_file == NULL) return 1;
+
+    FILE *db_file = GuardedFopen(full_path_to_file, "rb");
+    free(full_path_to_file);
+    full_path_to_file = NULL;
+    if (db_file == NULL) return 2;
+
+    // Read header. Assumes probe->buffer has enough space to store the header.
+    int error = GuardedFread(probe->buffer, kHeaderSize, 1, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
+
+    // Make sure probe->buffer has enough space for the next read.
+    const BpdbFileHeader *header = ProbeGetHeader(probe);
+    int target_size = GetBufferSize(header->decomp_dict_metadata.size);
+    if (!ExpandProbeBuffer(probe, target_size)) {
+        fprintf(stderr, "ReloadProbeHeader: failed to expand probe buffer\n");
+        return BailOutFclose(db_file, 1);
+    }
+
+    // Read decompression dictionary.
+    error = GuardedFread(GenericPointerAdd(probe->buffer, kHeaderSize),
+                         header->decomp_dict_metadata.size, 1, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
+
+    // Uninitialize probe->begin so that a cache miss is triggered.
+    probe->begin = -1;
+
+    return GuardedFclose(db_file);
+}
+
+static bool ProbeCacheMiss(const DbProbe *probe, Position position) {
+    if (probe->begin < 0) return true;
+
+    // Read header from probe
+    const BpdbFileHeader *header = ProbeGetHeader(probe);
+    int bits_per_entry = header->stream_metadata.bits_per_entry;
+
+    int64_t entry_bit_begin = position * bits_per_entry;
+    int64_t entry_bit_end = entry_bit_begin + bits_per_entry;
+
+    int64_t buffer_bit_begin = probe->begin * kBitsPerByte;
+    int64_t buffer_bit_end =
+        buffer_bit_begin + kBlocksPerBuffer * kMgzBlockSize * kBitsPerByte;
+
+    if (entry_bit_begin < buffer_bit_begin) return false;
+    if (entry_bit_end > buffer_bit_end) return false;
+    return true;
+}
+
+static int64_t GetBitOffset(Position position, int bits_per_entry) {
+    return (int64_t)position * bits_per_entry;
+}
+
+static int64_t GetByteOffset(Position position, int bits_per_entry) {
+    int64_t bit_offset = GetBitOffset(position, bits_per_entry);
+    return bit_offset / kBitsPerByte;
+}
+
+static int64_t GetBlockOffset(Position position, int bits_per_entry,
+                              int block_size) {
+    int64_t byte_offset = GetByteOffset(position, bits_per_entry);
+    return byte_offset / block_size;
+}
+
+static int64_t ReadCompressedOffset(const char *full_path,
+                                    int32_t decomp_dict_size, Position position,
+                                    int bits_per_entry) {
+    FILE *db_file = GuardedFopen(full_path, "rb");
+    if (db_file == NULL) return -1;
+
+    int64_t block_offset =
+        GetBlockOffset(position, bits_per_entry, kMgzBlockSize);
+
+    // Seek to the entry in lookup that corresponds to block_offset.
+    int64_t seek_length =
+        kHeaderSize + decomp_dict_size + block_offset * sizeof(int64_t);
+    int error = GuardedFseek(db_file, seek_length, SEEK_SET);
+    if (error) return BailOutFclose(db_file, -1);
+
+    // Read offset into the compressed bit stream.
+    int64_t compressed_offset;
+    error = GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file);
+    if (error) return BailOutFclose(db_file, -1);
+
+    // Finalize.
+    error = GuardedFclose(db_file);
+    if (error != 0) return -1;
+
+    return compressed_offset;
+}
+
+static void *ProbeGetBitStream(const DbProbe *probe) {
+    const BpdbFileHeader *header = ProbeGetHeader(probe);
+    int32_t decomp_dict_size = header->decomp_dict_metadata.size;
+    return GenericPointerAdd(probe->buffer, kHeaderSize + decomp_dict_size);
+}
+
+static int LoadBlocks(DbProbe *probe, Position position) {
+    // Calculate the address of probe's bit stream blocks.
+    const BpdbFileHeader *header = ProbeGetHeader(probe);
+    int32_t decomp_dict_size = header->decomp_dict_metadata.size;
+    int32_t lookup_table_size = header->lookup_table_metadata.size;
+    int bits_per_entry = header->stream_metadata.bits_per_entry;
+    void *buffer_blocks = ProbeGetBitStream(probe);
+
+    char *full_path = GetFullPathToFile(probe->tier);
+    if (full_path == NULL) return 1;
+
+    // Get offset into the compressed bit stream.
+    int64_t compressed_offset = ReadCompressedOffset(
+        full_path, decomp_dict_size, position, bits_per_entry);
+    if (compressed_offset == -1) {
+        free(full_path);
+        return -1;
+    }
+    compressed_offset += kHeaderSize + decomp_dict_size + lookup_table_size;
+
+    // Open db_file
+    int db_fd = GuardedOpen(full_path, O_RDONLY);
+    free(full_path);
+    full_path = NULL;
+    if (db_fd == -1) return BailOutClose(db_fd, -1);
+
+    // lseek() to the beginning of the first block that contains POSITION.
+    int error = GuardedLseek(db_fd, compressed_offset, SEEK_SET);
+    if (error != 0) return BailOutClose(db_fd, error);
+
+    // Wrap db_fd in a gzFile container.
+    gzFile compressed_stream = GuardedGzdopen(db_fd, "rb");
+    if (compressed_stream == Z_NULL) return BailOutClose(db_fd, -1);
+
+    // Since the cursor is already at the beginning of the first block,
+    // we can start reading directly from there.
+    error = GuardedGzread(compressed_stream, buffer_blocks,
+                          kBlocksPerBuffer * kMgzBlockSize);
+    if (error != 0) return BailOutGzclose(compressed_stream, error);
+
+    // This will also close db_fd.
+    error = GuardedGzclose(compressed_stream);
+    if (error != Z_OK) return -1;
+
+    // Set PROBE->begin
+    int64_t block_offset =
+        GetBlockOffset(position, bits_per_entry, kMgzBlockSize);
+    probe->begin = block_offset * kMgzBlockSize;
+
+    return 0;
+}
+
+// Loads the record of POSITION, assuming the requested record is in PROBE's
+// buffer.
+static uint64_t ProbeLoadRecord(const DbProbe *probe, Position position) {
+    const BpdbFileHeader *header = ProbeGetHeader(probe);
+    const int32_t *decomp_dict = ProbeGetDecompDict(probe);
+    int bits_per_entry = header->stream_metadata.bits_per_entry;
+
+    int64_t bit_offset = GetBitOffset(position, bits_per_entry);
+    int64_t byte_offset = bit_offset / kBitsPerByte - probe->begin;
+    int local_bit_offset = bit_offset % kBitsPerByte;
+    uint64_t mask = (((uint64_t)1 << bits_per_entry) - 1) << local_bit_offset;
+
+    // Get encoded entry from bit stream.
+    const void *bit_stream = ProbeGetBitStream(probe);
+    const void *byte_address = GenericPointerAdd(bit_stream, byte_offset);
+    uint64_t segment = *((uint64_t *)byte_address);
+    uint64_t entry = (segment & mask) >> local_bit_offset;
+
+    // Decode entry using decompression dictionary.
+    return decomp_dict[entry];
+}
+
+static uint64_t ProbeRecord(DbProbe *probe, TierPosition tier_position) {
+    if (probe->tier != tier_position.tier) {
+        int error = ReloadProbeHeader(probe, tier_position.tier);
+        if (error != 0) {
+            printf(
+                "ProbeRecord: failed to reload header and decompression "
+                "dictionary into probe, code %d\n",
+                error);
+            return UINT64_MAX;
+        }
+    }
+    if (ProbeCacheMiss(probe, tier_position.position)) {
+        LoadBlocks(probe, tier_position.position);
+    }
+    return ProbeLoadRecord(probe, tier_position.position);
+}
+
+const BpdbFileHeader *ProbeGetHeader(const DbProbe *probe) {
+    return (const BpdbFileHeader *)probe->buffer;
+}
+
+const int32_t *ProbeGetDecompDict(const DbProbe *probe) {
+    return (const int32_t *)GenericPointerAdd(probe->buffer, kHeaderSize);
 }

@@ -232,9 +232,7 @@ static void BpArrayCompressStep3_0CompressEntry(const BpArray *array,
     int64_t bit_offset = entry_index * dest->metadata.bits_per_entry;
     int64_t byte_offset = bit_offset / kBitsPerByte;
     int local_bit_offset = bit_offset % kBitsPerByte;
-    int num_bytes =
-        RoundUpDivide(bit_offset + dest->metadata.bits_per_entry, kBitsPerByte);
-    uint64_t masked = mapped << bit_offset;
+    uint64_t masked = mapped << local_bit_offset;
     *((uint64_t *)(dest->stream + byte_offset)) |= masked;
 }
 
