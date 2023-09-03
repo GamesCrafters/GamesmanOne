@@ -36,8 +36,8 @@
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // memset
 
+#include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
-#include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
@@ -149,7 +149,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api) {
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) return -1;
-    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
+    return DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
 }
 
 static int RegularSolverFinalize(void) {

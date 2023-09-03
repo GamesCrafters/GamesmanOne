@@ -1,51 +1,66 @@
 #include "libs/mgz/mgz.h"
 
 #include <assert.h>
-#include <malloc.h>
-#include <omp.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
 
 #include "libs/mgz/gz64.h"
 
-#define CHUNK_SIZE 16384  // 16 KiB
-#define ILLEGAL_CHUNK_SIZE (CHUNK_SIZE + 1)
-#define DEFAULT_OUT_CAPACITY (CHUNK_SIZE << 1)
-#define MIN_BLOCK_SIZE CHUNK_SIZE
-#define DEFAULT_BLOCK_SIZE (1ULL << 20)  // 1 MiB
-#define ILLEGAL_BLOCK_SIZE SIZE_MAX
+// Include and use OpenMP if the _OPENMP flag is set.
+#ifdef _OPENMP
+#include <omp.h>
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
-static inline void *voidp_shift(const void *p, uint64_t offset) {
+// Otherwise, the following macros do nothing.
+#else
+#define PRAGMA
+#define PRAGMA_OMP_PARALLEL_FOR
+#endif
+
+const uInt kChunkSize = 1 << 14;  // 16 KiB
+const uInt kIllegalChunkSize = kChunkSize + 1;
+const int kDefaultOutCapacity = kChunkSize << 1;
+const int kMinBlockSize = kChunkSize;
+const int64_t kDefaultBlockSize = 1 << 20;
+const int64_t kIllegalBlockSize = -1;
+
+static void *VoidpShift(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
 
-static uInt load_input(uint8_t *inBuf, const void *in, uint64_t offset,
-                       uint64_t *remSize) {
+static uInt LoadInput(uint8_t *inBuf, const void *in, int64_t offset,
+                      int64_t *remSize) {
     uInt loadSize = 0;
     if (*remSize == 0) return 0;
-    if (*remSize < CHUNK_SIZE) {
-        loadSize = *remSize;
+    if (*remSize < kChunkSize) {
+        loadSize = (uInt)*remSize;
     } else {
-        loadSize = CHUNK_SIZE;
+        loadSize = kChunkSize;
     }
     *remSize -= loadSize;
-    memcpy(inBuf, voidp_shift(in, offset), loadSize);
+    memcpy(inBuf, VoidpShift(in, offset), loadSize);
+
     return loadSize;
 }
 
-static uInt copy_output(void **out, uint64_t outOffset, uint64_t *outCapacity,
-                        uint8_t *outBuf, uInt have) {
-    if (outOffset + have > *outCapacity) {
+static uInt CopyOutput(void **out, int64_t out_offset, int64_t *out_capacity,
+                       uint8_t *out_buf, uInt have) {
+    if (out_offset + have > *out_capacity) {
         /* Not enough space, reallocate output array. */
         do {
-            (*outCapacity) *= 2;
-        } while (outOffset + have > *outCapacity);
-        void *newOut = realloc(*out, *outCapacity);
-        if (!newOut) return ILLEGAL_CHUNK_SIZE;
-        *out = newOut;
+            (*out_capacity) *= 2;
+        } while (out_offset + have > *out_capacity);
+
+        void *new_out = realloc(*out, *out_capacity);
+        if (!new_out) return kIllegalChunkSize;
+
+        *out = new_out;
     }
-    memcpy(voidp_shift(*out, outOffset), outBuf, have);
+    memcpy(VoidpShift(*out, out_offset), out_buf, have);
     return have;
 }
 
@@ -54,14 +69,15 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
         *out = NULL;
         return 0;
     }
-    int zRet = Z_OK, flush = Z_NO_FLUSH;
-    uint64_t inOffset = 0, outOffset = 0;
-    uint64_t outCapacity = DEFAULT_OUT_CAPACITY;
+
+    int z_ret = Z_OK, flush = Z_NO_FLUSH;
+    int64_t in_offset = 0, out_offset = 0;
+    int64_t out_capacity = kDefaultOutCapacity;
     z_stream strm;
-    uint8_t *inBuf = (uint8_t *)malloc(CHUNK_SIZE);
-    uint8_t *outBuf = (uint8_t *)malloc(CHUNK_SIZE);
-    *out = malloc(outCapacity);
-    if (!inBuf || !outBuf || !(*out)) {
+    uint8_t *in_buf = (uint8_t *)malloc(kChunkSize);
+    uint8_t *out_buf = (uint8_t *)malloc(kChunkSize);
+    *out = malloc(out_capacity);
+    if (!in_buf || !out_buf || !(*out)) {
         fprintf(stderr, "MgzDeflate: malloc failed.\n");
         free(*out);
         *out = NULL;
@@ -72,9 +88,9 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
-    zRet = deflateInit2(&strm, level, Z_DEFLATED, 15 + 16, 8,
-                        Z_DEFAULT_STRATEGY);  // +16 for gzip header.
-    if (zRet != Z_OK) {
+    z_ret = deflateInit2(&strm, level, Z_DEFLATED, 15 + 16, 8,
+                         Z_DEFAULT_STRATEGY);  // +16 for gzip header.
+    if (z_ret != Z_OK) {
         free(*out);
         *out = NULL;
         goto _bailout;
@@ -82,36 +98,36 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
 
     /* Compress until the end of IN. */
     do {
-        strm.avail_in = load_input(inBuf, in, inOffset, &in_size);
-        inOffset += strm.avail_in;
-        if (strm.avail_in < CHUNK_SIZE) flush = Z_FINISH;
-        strm.next_in = inBuf;
+        strm.avail_in = LoadInput(in_buf, in, in_offset, &in_size);
+        in_offset += strm.avail_in;
+        if (strm.avail_in < kChunkSize) flush = Z_FINISH;
+        strm.next_in = in_buf;
 
         /* Run deflate() on input until output buffer not full; finish
          * compression if all of source has been read in. */
         do {
-            strm.avail_out = CHUNK_SIZE;
-            strm.next_out = outBuf;
-            zRet = deflate(&strm, flush);
-            if (zRet == Z_STREAM_ERROR) {
+            strm.avail_out = kChunkSize;
+            strm.next_out = out_buf;
+            z_ret = deflate(&strm, flush);
+            if (z_ret == Z_STREAM_ERROR) {
                 fprintf(stderr,
                         "MgzDeflate: (FATAL) deflate returned "
                         "Z_STREAM_ERROR.\n");
                 exit(1);
             }
-            uInt have = CHUNK_SIZE - strm.avail_out;
+            uInt have = kChunkSize - strm.avail_out;
             uInt copied =
-                copy_output(out, outOffset, &outCapacity, outBuf, have);
-            if (copied == ILLEGAL_CHUNK_SIZE) {
+                CopyOutput(out, out_offset, &out_capacity, out_buf, have);
+            if (copied == kIllegalChunkSize) {
                 fprintf(stderr, "MgzDeflate: output realloc failed.\n");
                 (void)deflateEnd(&strm);
                 free(*out);
                 *out = NULL;
-                outOffset = 0;
+                out_offset = 0;
                 goto _bailout;
             }
             assert(copied == have);
-            outOffset += copied;
+            out_offset += copied;
         } while (strm.avail_out == 0);
     } while (flush != Z_FINISH);
 
@@ -119,27 +135,26 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
     (void)deflateEnd(&strm);
 
 _bailout:
-    free(inBuf);
-    free(outBuf);
-    return outOffset;
+    free(in_buf);
+    free(out_buf);
+    return out_offset;
 }
 
-static uint64_t get_correct_block_size(uint64_t block_size) {
-    if (block_size == 0) return DEFAULT_BLOCK_SIZE;
-    if (block_size < MIN_BLOCK_SIZE) {
-        printf(
-            "mgz_parallel_deflate: resetting block size %zu to the "
-            "minimum required block size %d",
-            block_size, MIN_BLOCK_SIZE);
-        return MIN_BLOCK_SIZE;
+static int64_t GetCorrectBlockSize(int64_t block_size) {
+    if (block_size == 0) return kDefaultBlockSize;
+    if (block_size < kMinBlockSize) {
+        printf("GetCorrectBlockSize: resetting block size %" PRId64
+               " to the minimum required block size %d",
+               block_size, kMinBlockSize);
+        return kMinBlockSize;
     }
     return block_size;
 }
 
-static uint64_t convert_out_block_sizes_to_lookup(uint64_t *outBlockSizes,
-                                                  uint64_t num_blocks) {
-    uint64_t t1 = 0, t2 = 0;
-    for (uint64_t i = 0; i < num_blocks; ++i) {
+static int64_t ConvertOutBlockSizesToLookup(int64_t *outBlockSizes,
+                                            int64_t num_blocks) {
+    int64_t t1 = 0, t2 = 0;
+    for (int64_t i = 0; i < num_blocks; ++i) {
         t2 = t1 + outBlockSizes[i];
         outBlockSizes[i] = t1;
         t1 = t2;
@@ -148,52 +163,54 @@ static uint64_t convert_out_block_sizes_to_lookup(uint64_t *outBlockSizes,
     return t1;
 }
 
-mgz_res_t mgz_parallel_deflate(const void *in, uint64_t in_size, int level,
-                               uint64_t block_size, bool lookup) {
+mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
+                             int64_t block_size, bool lookup) {
     mgz_res_t ret = {0};
-    block_size = get_correct_block_size(block_size);
-    uint64_t num_blocks =
+    block_size = GetCorrectBlockSize(block_size);
+    int64_t num_blocks =
         (in_size + block_size - 1) / block_size;  // Round up division.
     if (num_blocks == 0) return ret;              // INSIZE is 0.
     void *out = NULL;
 
     /* Allocate space for the output of each block. */
-    void **outBlocks = (void **)calloc(num_blocks, sizeof(void *));
+    void **out_blocks = (void **)calloc(num_blocks, sizeof(void *));
 
     /* Shared space for outBlockSizes and lookup. outBlockSizes
        is later converted to lookup in-place. */
-    uint64_t *space = (uint64_t *)malloc((num_blocks + 1) * sizeof(uint64_t));
-    if (!outBlocks || !space) goto _bailout;
+    int64_t *space = (int64_t *)malloc((num_blocks + 1) * sizeof(int64_t));
+    if (!out_blocks || !space) goto _bailout;
 
     /* Compress each block. */
     bool oom = false;
-#pragma omp parallel for
-    for (uint64_t i = 0; i < num_blocks; ++i) {
-        uint64_t thisBlockSize =
+
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < num_blocks; ++i) {
+        int64_t thisBlockSize =
             (i == num_blocks - 1) ? in_size - i * block_size : block_size;
-        space[i] = MgzDeflate(&outBlocks[i], voidp_shift(in, i * block_size),
-                               thisBlockSize, level);
+        space[i] = MgzDeflate(&out_blocks[i], VoidpShift(in, i * block_size),
+                              thisBlockSize, level);
         if (space[i] == 0) oom = true;
     }
     if (oom) goto _bailout;
 
     /* Concatenate blocks to form the final output. */
-    uint64_t outSize = convert_out_block_sizes_to_lookup(space, num_blocks);
-    out = malloc(outSize);
+    int64_t out_size = ConvertOutBlockSizesToLookup(space, num_blocks);
+    out = malloc(out_size);
     if (!out) goto _bailout;
-#pragma omp parallel for
-    for (uint64_t i = 0; i < num_blocks; ++i) {
-        memcpy(voidp_shift(out, space[i]), outBlocks[i],
+
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < num_blocks; ++i) {
+        memcpy(VoidpShift(out, space[i]), out_blocks[i],
                space[i + 1] - space[i]);
-        free(outBlocks[i]);
-        outBlocks[i] = NULL;
+        free(out_blocks[i]);
+        out_blocks[i] = NULL;
     }
 
     /* Reach here only if compression was successful.
      * Setup return value. */
     ret.out = out;
     out = NULL;  // Prevent freeing.
-    ret.size = outSize;
+    ret.size = out_size;
     if (lookup) {
         ret.lookup = space;
         space = NULL;  // Prevent freeing.
@@ -202,38 +219,41 @@ mgz_res_t mgz_parallel_deflate(const void *in, uint64_t in_size, int level,
 
 _bailout:
     free(out);
-    if (outBlocks)
-        for (uint64_t i = 0; i < num_blocks; ++i) free(outBlocks[i]);
-    free(outBlocks);
+    if (out_blocks) {
+        for (int64_t i = 0; i < num_blocks; ++i) {
+            free(out_blocks[i]);
+        }
+    }
+    free(out_blocks);
     free(space);
     return ret;
 }
 
-uint64_t mgz_parallel_create(const void *in, uint64_t size, int level,
-                             uint64_t block_size, FILE *outfile, FILE *lookup) {
-    block_size = get_correct_block_size(block_size);
-    mgz_res_t res = mgz_parallel_deflate(in, size, level, block_size, lookup);
+int64_t MgzParallelCreate(const void *in, int64_t size, int level,
+                          int64_t block_size, FILE *outfile, FILE *lookup) {
+    block_size = GetCorrectBlockSize(block_size);
+    mgz_res_t res = MgzParallelDeflate(in, size, level, block_size, lookup);
     if (!res.out) return 0;
-    if (fwrite(res.out, 1, res.size, outfile) != res.size) {
+    if (fwrite(res.out, 1, res.size, outfile) != (size_t)res.size) {
         fprintf(stderr,
-                "mgz_parallel_create: (FATAL) failed to write to "
+                "MgzParallelCreate: (FATAL) failed to write to "
                 "outfile.\n");
         exit(1);
     }
     if (lookup) {
         /* Write block size. */
-        if (fwrite(&block_size, sizeof(uint64_t), 1, lookup) != 1) {
+        if (fwrite(&block_size, sizeof(int64_t), 1, lookup) != 1) {
             fprintf(stderr,
-                    "mgz_parallel_create: (FATAL) failed to write to "
+                    "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
             exit(1);
         }
 
         /* Write lookup table. */
-        if (fwrite(res.lookup, sizeof(uint64_t), res.num_blocks, lookup) !=
-            res.num_blocks) {
+        if (fwrite(res.lookup, sizeof(int64_t), res.num_blocks, lookup) !=
+            (size_t)res.num_blocks) {
             fprintf(stderr,
-                    "mgz_parallel_create: (FATAL) failed to write to "
+                    "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
             exit(1);
         }
@@ -243,61 +263,60 @@ uint64_t mgz_parallel_create(const void *in, uint64_t size, int level,
     return res.size;
 }
 
-uint64_t mgz_read(void *buf, uint64_t size, uint64_t offset, int fd,
-                  FILE *lookup) {
+int64_t MgzRead(void *buf, int64_t size, int64_t offset, int fd, FILE *lookup) {
     if (!buf || !size || !lookup) return 0;
 
     /* Read block size from lookup file. */
-    uint64_t block_size;
+    int64_t block_size;
     if (fseek(lookup, 0, SEEK_SET) < 0) {
         fprintf(stderr,
-                "mgz_read: failed to seek to the beginning of lookup "
+                "MgzRead: failed to seek to the beginning of lookup "
                 "file.\n");
         return 0;
     }
-    if (fread(&block_size, sizeof(uint64_t), 1, lookup) != 1) {
-        fprintf(stderr, "mgz_read: failed to read block size from lookup.\n");
+    if (fread(&block_size, sizeof(int64_t), 1, lookup) != 1) {
+        fprintf(stderr, "MgzRead: failed to read block size from lookup.\n");
         return 0;
     }
 
     /* Seek to the correct location. */
-    uint64_t block = offset / block_size;
+    int64_t block = offset / block_size;
     off_t into = offset % block_size;
-    if (fseek(lookup, block * sizeof(uint64_t), SEEK_CUR) < 0) {
+    if (fseek(lookup, block * sizeof(int64_t), SEEK_CUR) < 0) {
         fprintf(stderr,
-                "mgz_read: failed to seek to the given block in lookup "
+                "MgzRead: failed to seek to the given block in lookup "
                 "file.\n");
         return 0;
     }
-    uint64_t gzOff;
-    if (fread(&gzOff, sizeof(uint64_t), 1, lookup) != 1) {
-        fprintf(stderr, "mgz_read: failed to read gz offset from lookup.\n");
+    int64_t gz_off;
+    if (fread(&gz_off, sizeof(int64_t), 1, lookup) != 1) {
+        fprintf(stderr, "MgzRead: failed to read gz offset from lookup.\n");
         return 0;
     }
 
-    if (lseek(fd, gzOff, SEEK_SET) != (off_t)gzOff) {
-        fprintf(stderr, "mgz_read: lseek failed.\n");
+    if (lseek(fd, gz_off, SEEK_SET) != (off_t)gz_off) {
+        fprintf(stderr, "MgzRead: lseek failed.\n");
         return 0;
     }
     int gzfd = dup(fd);
     if (gzfd == -1) {
-        fprintf(stderr, "mgz_read: failed to dup() fd.\n");
+        fprintf(stderr, "MgzRead: failed to dup() fd.\n");
         return 0;
     }
     gzFile archive = gzdopen(gzfd, "rb");
     if (!archive) {
-        fprintf(stderr, "mgz_read: failed to gzdopen() the new fd.\n");
+        fprintf(stderr, "MgzRead: failed to gzdopen() the new fd.\n");
         return 0;
     }
     if (gzseek(archive, into, SEEK_CUR) != into) {
         fprintf(stderr,
-                "mgz_read: gzseek not returning an offset equal to "
+                "MgzRead: gzseek not returning an offset equal to "
                 "into.\n");
     }
 
     /* Read the data. */
     if (gz64_read(archive, buf, size) <= 0) {
-        fprintf(stderr, "mgz_read: failed to gz64_read().\n");
+        fprintf(stderr, "MgzRead: failed to gz64_read().\n");
         gzclose(archive);
         return 0;
     }
@@ -305,3 +324,6 @@ uint64_t mgz_read(void *buf, uint64_t size, uint64_t offset, int fd,
     gzclose(archive);
     return size;
 }
+
+#undef PRAGMA
+#undef PRAGMA_OMP_PARALLEL_FOR

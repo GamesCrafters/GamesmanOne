@@ -84,15 +84,15 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level);
  *
  * @example
  * mgz_res_t res =
- *     mgz_parallel_deflate(in, in_size, level, block_size, true);
+ *     MgzParallelDeflate(in, in_size, level, block_size, true);
  * fwrite(res.out, 1, outSize, outfile);
  * free(res.out);
  * fwrite(&block_size, sizeof(int64_t), 1, lookupFile);
  * fwrite(res.lookup, sizeof(int64_t), res.num_blocks, lookupFile);
  * free(res.lookup);
  */
-mgz_res_t mgz_parallel_deflate(const void *in, int64_t in_size, int level,
-                               int64_t block_size, bool lookup);
+mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
+                             int64_t block_size, bool lookup);
 
 /**
  * @brief Splits INSIZE bytes of data from IN into blocks of size BLOCKSIZE,
@@ -113,12 +113,12 @@ mgz_res_t mgz_parallel_deflate(const void *in, int64_t in_size, int level,
  * @param outfile Output stream to which the compressed data is written.
  * @param lookup Lookup stream to which the lookup table is written, or NULL if
  * no lookup table is needed.
- * @return Size written to OUTFILE in bytes, 
+ * @return Size written to OUTFILE in bytes,
  * @return 0 if SIZE is 0, or
  * @return negative error code if an error occurred during compression.
  */
-int64_t mgz_parallel_create(const void *in, int64_t size, int level,
-                            int64_t block_size, FILE *outfile, FILE *lookup);
+int64_t MgzParallelCreate(const void *in, int64_t size, int level,
+                          int64_t block_size, FILE *outfile, FILE *lookup);
 
 /**
  * @brief Reads SIZE bytes of data into BUF from a gzip file created
@@ -136,7 +136,6 @@ int64_t mgz_parallel_create(const void *in, int64_t size, int level,
  * @return Number of bytes read from FD. Returns 0 if size is 0 or
  * an error occurred.
  */
-uint64_t mgz_read(void *buf, uint64_t size, uint64_t offset, int fd,
-                  FILE *lookup);
+int64_t MgzRead(void *buf, int64_t size, int64_t offset, int fd, FILE *lookup);
 
 #endif  // MGZ_H

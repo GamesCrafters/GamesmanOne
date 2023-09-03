@@ -29,22 +29,21 @@ static int64_t RoundUpDivide(int64_t n, int64_t d);
 static int GetBytesPerEntry(uint64_t max_value);
 static int GetBitsPerEntry(int32_t num_unique_values);
 
-static int32_t BpArrayCompressStep0BuildCompressionDict(
-    const BpArray *array, int32_t *compression_dict,
-    int32_t compression_dict_size);
-static void BpArrayCompressStep1BuildDecompDict(const int32_t *compression_dict,
-                                                int32_t compression_dict_size,
-                                                int32_t *decomp_dict);
-static bool BpArrayCompressStep2AllocateBitStream(BitStream *stream,
-                                                  int64_t num_entries,
-                                                  int32_t num_unique_values);
-static void BpArrayCompressStep3CompressAllEntries(const BpArray *array,
-                                                   int32_t *compression_dict,
-                                                   BitStream *dest);
-static void BpArrayCompressStep3_0CompressEntry(const BpArray *array,
-                                                int32_t *compression_dict,
-                                                int64_t entry_index,
-                                                BitStream *dest);
+static int32_t CompressStep0BuildCompressionDict(const BpArray *array,
+                                                 int32_t *compression_dict,
+                                                 int32_t compression_dict_size);
+static void CompressStep1BuildDecompDict(const int32_t *compression_dict,
+                                         int32_t compression_dict_size,
+                                         int32_t *decomp_dict);
+static bool CompressStep2AllocateBitStream(BitStream *stream,
+                                           int64_t num_entries,
+                                           int32_t num_unique_values);
+static void CompressStep3CompressAllEntries(const BpArray *array,
+                                            int32_t *compression_dict,
+                                            BitStream *dest);
+static void CompressStep3_0CompressEntry(const BpArray *array,
+                                         int32_t *compression_dict,
+                                         int64_t entry_index, BitStream *dest);
 
 // -----------------------------------------------------------------------------
 
@@ -53,7 +52,7 @@ int BpArrayInit(BpArray *array, int64_t size, uint64_t max_value) {
         fprintf(stderr, "BpArrayInit: invalid max_value = 0\n");
         return 2;
     }
-
+    
     array->bytes_per_entry = GetBytesPerEntry(max_value);
     array->array = (uint8_t *)calloc(size, array->bytes_per_entry);
     if (array->array == NULL) {
@@ -75,7 +74,7 @@ void BpArrayDestroy(BpArray *array) {
 
 uint64_t BpArrayGet(const BpArray *array, int64_t index) {
     int64_t byte_offset = array->bytes_per_entry * index;
-    uint64_t ret;
+    uint64_t ret = 0;
     memcpy(&ret, array->array + byte_offset, array->bytes_per_entry);
     return ret;
 }
@@ -107,23 +106,24 @@ int BpArrayCompress(const BpArray *array, BitStream *dest,
         fprintf(stderr, "BpArrayCompress: failed to calloc compression_dict\n");
         return 1;
     }
-    *decomp_dict_size = BpArrayCompressStep0BuildCompressionDict(
+
+    int num_unique_values = CompressStep0BuildCompressionDict(
         array, compression_dict, compression_dict_size);
 
     // Construct decomp dictionary.
-    *decomp_dict = (int32_t *)calloc(*decomp_dict_size, sizeof(int32_t));
+    *decomp_dict = (int32_t *)calloc(num_unique_values, sizeof(int32_t));
     if (*decomp_dict == NULL) {
         fprintf(stderr, "BpArrayCompress: failed to calloc decomp_dict\n");
         free(compression_dict);
-        *decomp_dict_size = 0;
         return 1;
     }
-    BpArrayCompressStep1BuildDecompDict(compression_dict, compression_dict_size,
-                                        *decomp_dict);
+    *decomp_dict_size = num_unique_values * sizeof(int32_t);
+    CompressStep1BuildDecompDict(compression_dict, compression_dict_size,
+                                 *decomp_dict);
 
     // Allocate BitStream
-    bool success = BpArrayCompressStep2AllocateBitStream(
-        dest, array->num_entries, *decomp_dict_size);
+    bool success = CompressStep2AllocateBitStream(dest, array->num_entries,
+                                                  *decomp_dict_size);
     if (!success) {
         fprintf(stderr, "BpArrayCompress: failed to allocate bit stream\n");
         free(compression_dict);
@@ -133,7 +133,7 @@ int BpArrayCompress(const BpArray *array, BitStream *dest,
         return 1;
     }
 
-    BpArrayCompressStep3CompressAllEntries(array, compression_dict, dest);
+    CompressStep3CompressAllEntries(array, compression_dict, dest);
 
     free(compression_dict);
     return 0;
@@ -150,7 +150,7 @@ static int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
 
 static int GetBytesPerEntry(uint64_t max_value) {
     assert(max_value > 0);
-    for (int i = 1; i < sizeof(uint64_t); ++i) {
+    for (size_t i = 1; i < sizeof(uint64_t); ++i) {
         if (max_value < (((uint64_t)1) << (i * kBitsPerByte))) {
             return i;
         }
@@ -169,7 +169,7 @@ static int GetBitsPerEntry(int32_t num_unique_values) {
     return kMaxBitsPerEntry;
 }
 
-static int32_t BpArrayCompressStep0BuildCompressionDict(
+static int32_t CompressStep0BuildCompressionDict(
     const BpArray *array, int32_t *compression_dict,
     int32_t compression_dict_size) {
     // Mark all entries that exist in ARRAY.
@@ -191,9 +191,9 @@ static int32_t BpArrayCompressStep0BuildCompressionDict(
     return num_unique_values;
 }
 
-static void BpArrayCompressStep1BuildDecompDict(const int32_t *compression_dict,
-                                                int32_t compression_dict_size,
-                                                int32_t *decomp_dict) {
+static void CompressStep1BuildDecompDict(const int32_t *compression_dict,
+                                         int32_t compression_dict_size,
+                                         int32_t *decomp_dict) {
     for (int32_t i = 0; i < compression_dict_size; ++i) {
         if (compression_dict[i] >= 0) {
             decomp_dict[compression_dict[i]] = i;
@@ -201,9 +201,9 @@ static void BpArrayCompressStep1BuildDecompDict(const int32_t *compression_dict,
     }
 }
 
-static bool BpArrayCompressStep2AllocateBitStream(BitStream *stream,
-                                                  int64_t num_entries,
-                                                  int32_t num_unique_values) {
+static bool CompressStep2AllocateBitStream(BitStream *stream,
+                                           int64_t num_entries,
+                                           int32_t num_unique_values) {
     stream->metadata.bits_per_entry = GetBitsPerEntry(num_unique_values);
     stream->metadata.num_entries = num_entries;
 
@@ -223,10 +223,9 @@ static bool BpArrayCompressStep2AllocateBitStream(BitStream *stream,
     return true;
 }
 
-static void BpArrayCompressStep3_0CompressEntry(const BpArray *array,
-                                                int32_t *compression_dict,
-                                                int64_t entry_index,
-                                                BitStream *dest) {
+static void CompressStep3_0CompressEntry(const BpArray *array,
+                                         int32_t *compression_dict,
+                                         int64_t entry_index, BitStream *dest) {
     uint64_t entry = BpArrayGet(array, entry_index);
     uint64_t mapped = compression_dict[entry];
     int64_t bit_offset = entry_index * dest->metadata.bits_per_entry;
@@ -236,13 +235,12 @@ static void BpArrayCompressStep3_0CompressEntry(const BpArray *array,
     *((uint64_t *)(dest->stream + byte_offset)) |= masked;
 }
 
-static void BpArrayCompressStep3CompressAllEntries(const BpArray *array,
-                                                   int32_t *compression_dict,
-                                                   BitStream *dest) {
+static void CompressStep3CompressAllEntries(const BpArray *array,
+                                            int32_t *compression_dict,
+                                            BitStream *dest) {
     // Compress in chunks
     static const int kEntriesPerChunk = 8;
     int64_t num_chunks = array->num_entries / kEntriesPerChunk;
-    int num_remaining_entries = array->num_entries % kEntriesPerChunk;
 
     // Chunks do not overlap in BitStream and can be processed in parallel.
     PRAGMA_OMP_PARALLEL_FOR
@@ -251,15 +249,15 @@ static void BpArrayCompressStep3CompressAllEntries(const BpArray *array,
         // processed sequentially.
         for (int i = 0; i < kEntriesPerChunk; ++i) {
             int64_t entry_index = chunk * kEntriesPerChunk + i;
-            BpArrayCompressStep3_0CompressEntry(array, compression_dict,
-                                                entry_index, dest);
+            CompressStep3_0CompressEntry(array, compression_dict, entry_index,
+                                         dest);
         }
     }
 
     // Compress remaining entries sequentially.
     int64_t first_remaining_entry = num_chunks * kEntriesPerChunk;
     for (int64_t i = first_remaining_entry; i < array->num_entries; ++i) {
-        BpArrayCompressStep3_0CompressEntry(array, compression_dict, i, dest);
+        CompressStep3_0CompressEntry(array, compression_dict, i, dest);
     }
 }
 

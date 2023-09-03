@@ -18,8 +18,8 @@ typedef struct BitStreamMetadata {
 
 typedef struct LookupTableMetadata {
     /** Size of the lookup table (including this variable) in bytes. */
-    int32_t size;
     int64_t block_size;
+    int32_t size;
 } LookupTableMetadata;
 
 typedef struct BpdbFileHeader {

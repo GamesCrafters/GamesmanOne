@@ -51,7 +51,7 @@ void *SafeMalloc(size_t size);
  */
 void *SafeCalloc(size_t n, size_t size);
 
-static void *GenericPointerAdd(const void *p, int64_t offset);
+void *GenericPointerAdd(const void *p, int64_t offset);
 
 FILE *GuardedFopen(const char *filename, const char *modes);
 
@@ -81,7 +81,7 @@ int BailOutGzclose(gzFile file, int error);
 
 int GuardedGzseek(gzFile file, off_t off, int whence);
 
-int GuardedGzread(gzFile file, voidp buf, unsigned int length);
+int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
 
 /**
  * @brief Recursively makes all directories along the given path.
@@ -125,6 +125,8 @@ int64_t PrevPrime(int64_t n);
  * @return Next prime of N.
  */
 int64_t NextPrime(int64_t n);
+
+int64_t NextMultiple(int64_t n, int64_t multiple);
 
 /**
  * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.

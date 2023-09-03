@@ -13,6 +13,8 @@ bin_gamesman_SOURCES += src/core/data_structures/int64_hash_map.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_queue.c
 
 # src/core/db
+bin_gamesman_SOURCES += src/core/db/bpdb/bparray.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_lite.c
 bin_gamesman_SOURCES += src/core/db/naivedb/naivedb.c
 bin_gamesman_SOURCES += src/core/db/db_manager.c
 
@@ -54,6 +56,10 @@ bin_gamesman_SOURCES += src/core/misc.c
 
 # src/games
 bin_gamesman_SOURCES += src/games/game_manager.c
+
+# src/libs
+bin_gamesman_SOURCES += src/libs/mgz/gz64.c
+bin_gamesman_SOURCES += src/libs/mgz/mgz.c
 
 # All Games
 bin_gamesman_SOURCES += src/games/mttt/mttt.c

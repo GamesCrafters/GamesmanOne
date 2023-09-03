@@ -80,7 +80,7 @@ void *SafeCalloc(size_t n, size_t size) {
     return ret;
 }
 
-static void *GenericPointerAdd(const void *p, int64_t offset) {
+void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
 
@@ -199,12 +199,13 @@ int GuardedGzseek(gzFile file, off_t off, int whence) {
     return 0;
 }
 
-int GuardedGzread(gzFile file, voidp buf, unsigned int length) {
+int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
     int bytes_read = gzread(file, buf, length);
     if ((unsigned int)bytes_read == length) return 0;
 
     int error;
     if (gzeof(file)) {
+        if (eof_ok) return 0;
         fprintf(
             stderr,
             "GuardedGzread: end-of-file reached before reading %d bytes, only "
@@ -312,6 +313,12 @@ int64_t NextPrime(int64_t n) {
         ++n;
     }
     return n;
+}
+
+int64_t NextMultiple(int64_t n, int64_t multiple) {
+    int64_t remainder = n % multiple;
+    if (remainder == 0) return n;
+    return n + multiple - remainder;
 }
 
 int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
