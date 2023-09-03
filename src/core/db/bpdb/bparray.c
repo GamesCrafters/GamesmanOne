@@ -52,7 +52,7 @@ int BpArrayInit(BpArray *array, int64_t size, uint64_t max_value) {
         fprintf(stderr, "BpArrayInit: invalid max_value = 0\n");
         return 2;
     }
-    
+
     array->bytes_per_entry = GetBytesPerEntry(max_value);
     array->array = (uint8_t *)calloc(size, array->bytes_per_entry);
     if (array->array == NULL) {
@@ -226,13 +226,23 @@ static bool CompressStep2AllocateBitStream(BitStream *stream,
 static void CompressStep3_0CompressEntry(const BpArray *array,
                                          int32_t *compression_dict,
                                          int64_t entry_index, BitStream *dest) {
+    int bits_per_entry = dest->metadata.bits_per_entry;
     uint64_t entry = BpArrayGet(array, entry_index);
     uint64_t mapped = compression_dict[entry];
+
     int64_t bit_offset = entry_index * dest->metadata.bits_per_entry;
+    int64_t bit_end = bit_offset + bits_per_entry;
+
     int64_t byte_offset = bit_offset / kBitsPerByte;
+    int64_t byte_end = bit_end / kBitsPerByte;
+    int64_t num_bytes = byte_end - byte_offset + 1;
+
     int local_bit_offset = bit_offset % kBitsPerByte;
+
     uint64_t masked = mapped << local_bit_offset;
-    *((uint64_t *)(dest->stream + byte_offset)) |= masked;
+
+    uint64_t result = *((uint64_t *)(dest->stream + byte_offset)) | masked;
+    memcpy(dest->stream + byte_offset, &result, num_bytes);
 }
 
 static void CompressStep3CompressAllEntries(const BpArray *array,

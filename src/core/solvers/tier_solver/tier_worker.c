@@ -160,6 +160,7 @@ int TierWorkerSolve(Tier tier, bool force) {
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();
     Step6SaveValues();
+    DbManagerTestTier(tier, current_api.GetTierSize(tier));
     ret = 0;  // Success.
 
 _bailout:
@@ -341,7 +342,7 @@ static bool Step2SetupSolverArrays(void) {
     int error = DbManagerCreateSolvingTier(this_tier,
                                            current_api.GetTierSize(this_tier));
     if (error != 0) return false;
-    
+
     num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
     return (num_undecided_children != NULL);
 }

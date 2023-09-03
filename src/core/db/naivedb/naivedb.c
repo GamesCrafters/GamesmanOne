@@ -32,14 +32,15 @@
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // malloc, calloc, free
-#include <string.h>    // strncpy, memset
+#include <string.h>    // memset
 
 #include "core/gamesman_types.h"
+#include "core/misc.h"
 
 // Database API.
 
-static int NaiveDbInit(ReadOnlyString game_name, int variant, ReadOnlyString path,
-                       void *aux);
+static int NaiveDbInit(ReadOnlyString game_name, int variant,
+                       ReadOnlyString path, void *aux);
 static void NaiveDbFinalize(void);
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size);
@@ -158,8 +159,8 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
     return 0;
 }
 
-static int NaiveDbInit(ReadOnlyString game_name, int variant, ReadOnlyString path,
-                       void *aux) {
+static int NaiveDbInit(ReadOnlyString game_name, int variant,
+                       ReadOnlyString path, void *aux) {
     (void)aux;  // Unused.
     assert(current_path == NULL);
 
@@ -170,7 +171,8 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant, ReadOnlyString pat
     }
     strcpy(current_path, path);
 
-    strncpy(current_game_name, game_name, kGameNameLengthMax + 1);
+    SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
+    current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
     current_tier = -1;
     current_tier_size = -1;

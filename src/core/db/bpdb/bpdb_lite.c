@@ -117,7 +117,8 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     }
     strcpy(current_path, path);
 
-    strncpy(current_game_name, game_name, kGameNameLengthMax + 1);
+    SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
+    current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
     current_tier = -1;
     current_tier_size = -1;

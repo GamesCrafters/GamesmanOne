@@ -80,6 +80,12 @@ void *SafeCalloc(size_t n, size_t size) {
     return ret;
 }
 
+char *SafeStrncpy(char *dest, const char *src, size_t n) {
+    char *ret = strncpy(dest, src, n);
+    dest[n - 1] = '\0';
+    return ret;
+}
+
 void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
@@ -271,7 +277,7 @@ int MkdirRecursive(ReadOnlyString path) {
         errno = ENOMEM;
         goto _bailout;
     }
-    strncpy(path_copy, path, path_length + 1);
+    SafeStrncpy(path_copy, path, path_length + 1);
 
     for (size_t i = 0; i < path_length; ++i) {
         if (path_copy[i] == '/') {
