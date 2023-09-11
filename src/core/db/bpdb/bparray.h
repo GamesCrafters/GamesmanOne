@@ -1,56 +1,39 @@
 #ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_
 #define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_
 
-#include <stdint.h>  // uint8_t, int64_t, uint64_t
+#include <stdint.h>  // int8_t, uint8_t, int64_t, uint64_t
 
-typedef struct DecompDictMetadata {
-    /**
-     * Size of the decomp dictionary (including this variable) in bytes.
-     */
-    int32_t size;
-} DecompDictMetadata;
+// Include and use OpenMP if the _OPENMP flag is set.
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
-typedef struct BitStreamMetadata {
+typedef struct BpArrayMeta {
     int64_t stream_length;
     int64_t num_entries;
-    int bits_per_entry;
-} BitStreamMetadata;
+    int8_t bits_per_entry;
+} BpArrayMeta;
 
-typedef struct LookupTableMetadata {
-    /** Size of the lookup table (including this variable) in bytes. */
-    int64_t block_size;
-    int32_t size;
-} LookupTableMetadata;
-
-typedef struct BpdbFileHeader {
-    DecompDictMetadata decomp_dict_metadata;
-    BitStreamMetadata stream_metadata;
-    LookupTableMetadata lookup_table_metadata;
-} BpdbFileHeader;
-
-// Byte-perfect array. The entries are originally uint64_t values but are
-// compressed to use just enough bytes to represent all possible values.
+// Bit-Perfect array
 typedef struct BpArray {
-    uint8_t *array;
-    int64_t num_entries;
-    uint64_t max_value;
-    int bytes_per_entry;
+    uint8_t *stream;
+    uint64_t num_values;
+    BpArrayMeta meta;
+#ifdef _OPENMP
+    omp_lock_t lock;
+#endif
 } BpArray;
 
-typedef struct BitStream {
-    uint8_t *stream;
-    BitStreamMetadata metadata;
-} BitStream;
-
-int BpArrayInit(BpArray *array, int64_t size, uint64_t max_value);
+int BpArrayInit(BpArray *array, int64_t size, uint64_t num_values);
 void BpArrayDestroy(BpArray *array);
 
-uint64_t BpArrayGet(const BpArray *array, int64_t index);
-void BpArraySet(BpArray *array, int64_t index, uint64_t value);
+// Returns the entry at index I.
+uint64_t BpArrayAt(const BpArray *array, int64_t i);
 
-int BpArrayCompress(const BpArray *array, BitStream *dest,
-                    int32_t **decomp_dict, int32_t *decomp_dict_size);
+// Sets the Ith entry to ENTRY.
+void BpArraySet(BpArray *array, int64_t i, uint64_t entry);
 
-void BitStreamDestroy(BitStream *stream);
+// Thread-safe version of BpArraySet().
+int BpArraySetTs(BpArray *array, int64_t i, uint64_t entry);
 
 #endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_

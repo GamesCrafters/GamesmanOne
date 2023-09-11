@@ -152,4 +152,6 @@ int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
  */
 int64_t NChooseR(int n, int r);
 
+int64_t RoundUpDivide(int64_t n, int64_t d);
+
 #endif  // GAMESMANEXPERIMENT_CORE_MISC_H_

@@ -383,3 +383,5 @@ int64_t NChooseR(int n, int r) {
 }
 #undef CACHE_ROWS
 #undef CACHE_COLS
+
+int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }

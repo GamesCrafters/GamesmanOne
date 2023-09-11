@@ -24,7 +24,7 @@
 const uInt kChunkSize = 1 << 14;  // 16 KiB
 const uInt kIllegalChunkSize = kChunkSize + 1;
 const int kDefaultOutCapacity = kChunkSize << 1;
-const int kMinBlockSize = kChunkSize;
+const int kMgzMinBlockSize = kChunkSize;
 const int64_t kDefaultBlockSize = 1 << 20;
 const int64_t kIllegalBlockSize = -1;
 
@@ -142,11 +142,11 @@ _bailout:
 
 static int64_t GetCorrectBlockSize(int64_t block_size) {
     if (block_size == 0) return kDefaultBlockSize;
-    if (block_size < kMinBlockSize) {
+    if (block_size < kMgzMinBlockSize) {
         printf("GetCorrectBlockSize: resetting block size %" PRId64
                " to the minimum required block size %d",
-               block_size, kMinBlockSize);
-        return kMinBlockSize;
+               block_size, kMgzMinBlockSize);
+        return kMgzMinBlockSize;
     }
     return block_size;
 }

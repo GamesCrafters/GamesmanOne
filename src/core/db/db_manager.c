@@ -229,5 +229,6 @@ int DbManagerTestTier(Tier tier, int64_t size) {
 _bailout:
     control_group_db->ProbeDestroy(&c_probe);
     current_db->ProbeDestroy(&t_probe);
+    if (error == 0) printf("DbManagerTestTier: test passed\n");
     return error;
 }
