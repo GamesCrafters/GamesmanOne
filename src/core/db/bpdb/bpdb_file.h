@@ -1,7 +1,7 @@
 #ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
 #define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>  // int64_t, int32_t
 
 #include "core/db/bpdb/bparray.h"
 #include "core/gamesman_types.h"
@@ -26,7 +26,8 @@ typedef struct BpdbFileHeader {
 } BpdbFileHeader;
 
 char *BpdbFileGetFullPath(ConstantReadOnlyString current_path, Tier tier);
-int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
+int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records,
+                  const int32_t *decomp_dict, int32_t num_unique_values);
 int BpdbFileGetBlockSize(int bits_per_entry);
 
 #endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_

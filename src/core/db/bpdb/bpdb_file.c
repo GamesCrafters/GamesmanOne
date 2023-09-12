@@ -7,7 +7,6 @@
 #include <string.h>    // strlen
 
 #include "core/db/bpdb/bparray.h"
-#include "core/db/bpdb/bpcompress.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 #include "libs/mgz/mgz.h"
@@ -16,15 +15,14 @@ static const int kMgzMinBlockSize = 1 << 14;  // 16 KiB as specified by mgz.
 static const int kMgzCompressionLevel = 9;    // Maximum compression.
 static const bool kMgzLookupNeeded = true;
 
-static int FlushStep0CompressToBitStream(BpdbFileHeader *header,
-                                         BpArray *stream,
-                                         const BpArray *records,
-                                         int32_t **decomp_dict);
+static int32_t *FlushStep0BuildDecompDict(const int32_t *compression_dict,
+                                          int32_t compression_dict_size,
+                                          int32_t num_unique_values);
 static mgz_res_t FlushStep1MgzCompress(BpdbFileHeader *header,
                                        const BpArray *stream);
 static int FlushStep2WriteToFile(ReadOnlyString full_path,
                                  const BpdbFileHeader *header,
-                                 int32_t *decomp_dict, mgz_res_t result);
+                                 const int32_t *decomp_dict, mgz_res_t result);
 
 // -----------------------------------------------------------------------------
 
@@ -53,24 +51,14 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString current_path, Tier tier) {
     return full_path;
 }
 
-int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
+int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records,
+                  const int32_t *decomp_dict, int32_t num_unique_values) {
     BpdbFileHeader header;
-    BpArray stream;
-    int32_t *decomp_dict = NULL;
-
-    // Compress BpArray to bit stream.
-    int error =
-        FlushStep0CompressToBitStream(&header, &stream, records, &decomp_dict);
-    if (error != 0) {
-        fprintf(stderr,
-                "BpdbLiteFlushSolvingTier: failed to compress records to "
-                "bit stream, code %d\n",
-                error);
-        return error;
-    }
+    header.decomp_dict_meta.size = num_unique_values * sizeof(int32_t);
+    header.stream_meta = records->meta;
 
     // Compress stream using mgz
-    mgz_res_t result = FlushStep1MgzCompress(&header, &stream);
+    mgz_res_t result = FlushStep1MgzCompress(&header, records);
     if (result.out == NULL) {
         fprintf(stderr,
                 "BpdbLiteFlushSolvingTier: failed to compress records using "
@@ -89,15 +77,18 @@ int BpdbFileGetBlockSize(int bits_per_entry) {
 
 // -----------------------------------------------------------------------------
 
-static int FlushStep0CompressToBitStream(BpdbFileHeader *header,
-                                         BpArray *stream,
-                                         const BpArray *records,
-                                         int32_t **decomp_dict) {
-    int error = BpCompress(stream, records, decomp_dict,
-                           &(header->decomp_dict_meta.size));
-    if (error != 0) return error;
-    header->stream_meta = stream->meta;
-    return 0;
+static int32_t *FlushStep0BuildDecompDict(const int32_t *compression_dict,
+                                          int32_t compression_dict_size,
+                                          int32_t num_unique_values) {
+    int32_t *decomp_dict =
+        (int32_t *)malloc(num_unique_values * sizeof(int32_t));
+    if (decomp_dict == NULL) return NULL;
+
+    for (int32_t i = 0; i < compression_dict_size; ++i) {
+        if (compression_dict[i] >= 0) decomp_dict[compression_dict[i]] = i;
+    }
+
+    return decomp_dict;
 }
 
 static mgz_res_t FlushStep1MgzCompress(BpdbFileHeader *header,
@@ -115,7 +106,7 @@ static mgz_res_t FlushStep1MgzCompress(BpdbFileHeader *header,
 
 static int FlushStep2WriteToFile(ReadOnlyString full_path,
                                  const BpdbFileHeader *header,
-                                 int32_t *decomp_dict, mgz_res_t result) {
+                                 const int32_t *decomp_dict, mgz_res_t result) {
     // Write header to file.
     FILE *db_file = GuardedFopen(full_path, "wb");
     if (db_file == NULL) return 2;
@@ -127,8 +118,6 @@ static int FlushStep2WriteToFile(ReadOnlyString full_path,
     error =
         GuardedFwrite(decomp_dict, 1, header->decomp_dict_meta.size, db_file);
     if (error != 0) return BailOutFclose(db_file, error);
-    free(decomp_dict);
-    decomp_dict = NULL;
 
     // Write mgz lookup table.
     error = GuardedFwrite(result.lookup, sizeof(int64_t), result.num_blocks,

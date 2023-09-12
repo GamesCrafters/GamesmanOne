@@ -17,20 +17,17 @@ typedef struct BpArrayMeta {
 // Bit-Perfect array
 typedef struct BpArray {
     uint8_t *stream;
-    uint64_t num_values;
+    uint64_t max_value;
     BpArrayMeta meta;
-#ifdef _OPENMP
-    omp_lock_t lock;
-#endif
 } BpArray;
 
-int BpArrayInit(BpArray *array, int64_t size, uint64_t num_values);
+int BpArrayInit(BpArray *array, int64_t size);
 void BpArrayDestroy(BpArray *array);
 
 // Returns the entry at index I.
 uint64_t BpArrayAt(const BpArray *array, int64_t i);
 
-// Sets the Ith entry to ENTRY.
+// Sets the I-th entry to ENTRY.
 void BpArraySet(BpArray *array, int64_t i, uint64_t entry);
 
 // Thread-safe version of BpArraySet().

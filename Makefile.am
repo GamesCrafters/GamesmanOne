@@ -14,7 +14,6 @@ bin_gamesman_SOURCES += src/core/data_structures/int64_queue.c
 
 # src/core/db
 bin_gamesman_SOURCES += src/core/db/bpdb/bparray.c
-bin_gamesman_SOURCES += src/core/db/bpdb/bpcompress.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_file.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_lite.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_probe.c

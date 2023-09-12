@@ -14,13 +14,17 @@
 #ifdef _OPENMP
 #include <omp.h>
 #define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
 // Otherwise, the following macros do nothing.
 #else
 #define PRAGMA
+#define PRAGMA_OMP_CRITICAL(name)
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif
+
+static const int kDefaultBitsPerEntry = 1;
 
 /**
  * @brief Maximum number of bits per array entry.
@@ -32,8 +36,9 @@
  */
 static const int kMaxBitsPerEntry = 32;
 
-static int GetBitsPerEntry(uint64_t num_values);
-static int64_t GetStreamSize(int64_t num_entries, int bits_per_entry);
+static int BpArrayInitHelper(BpArray *array, int64_t size, int bits_per_entry);
+
+static int64_t GetStreamLength(int64_t num_entries, int bits_per_entry);
 
 static uint64_t GetSegment(const BpArray *array, int64_t i);
 static void SetSegment(const BpArray *array, int64_t i, uint64_t segment,
@@ -44,39 +49,18 @@ static int64_t GetLocalBitOffset(int64_t i, int bits_per_entry);
 static int64_t GetByteOffset(int64_t i, int bits_per_entry);
 static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset);
 
+static int BpArrayExpandIfNeeded(BpArray *array, uint64_t entry);
+static int BpArrayExpand(BpArray *array, int new_bits_per_entry);
+static int BitsNeededForEntry(uint64_t entry);
+
 // -----------------------------------------------------------------------------
 
-int BpArrayInit(BpArray *array, int64_t size, uint64_t num_values) {
-    int bits_per_entry = GetBitsPerEntry(num_values);
-    if (bits_per_entry < 0) {
-        fprintf(stderr,
-                "BpArrayInit: the given num_values [%" PRIu64
-                "] exceeds %d bits and is not supported by BpArray.\n",
-                num_values, kMaxBitsPerEntry);
-        memset(array, 0, sizeof(*array));
-        return -1;
-    }
-    array->num_values = num_values;
-    array->meta.bits_per_entry = bits_per_entry;
-    array->meta.num_entries = size;
-    array->meta.stream_length = GetStreamSize(size, bits_per_entry);
-    array->stream =
-        (uint8_t *)calloc(array->meta.stream_length, sizeof(uint8_t));
-    if (array->stream == NULL) {
-        memset(array, 0, sizeof(*array));
-        return 1;
-    }
-#ifdef _OPENMP
-    omp_init_lock(&array->lock);
-#endif
-    return 0;
+int BpArrayInit(BpArray *array, int64_t size) {
+    return BpArrayInitHelper(array, size, kDefaultBitsPerEntry);
 }
 
 void BpArrayDestroy(BpArray *array) {
     free(array->stream);
-#ifdef _OPENMP
-    omp_destroy_lock(&array->lock);
-#endif
     memset(array, 0, sizeof(*array));
 }
 
@@ -90,7 +74,7 @@ uint64_t BpArrayAt(const BpArray *array, int64_t i) {
     return (segment & mask) >> local_bit_offset;
 }
 
-// Sets the Ith entry to ENTRY. Assumes ENTRY is strictly less than
+// Sets the I-th entry to ENTRY. Assumes ENTRY is strictly less than
 // ARRAY.num_values.
 void BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
     int bits_per_entry = array->meta.bits_per_entry;
@@ -106,39 +90,44 @@ void BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
     SetSegment(array, i, segment, num_bytes);  // Put segment back.
 }
 
-// Thread-safe version of BpArraySet().
+// Thread-safe version of BpArraySet(). Expands ARRAY to have use enough bits
+// per entry to store ENTRY.
 int BpArraySetTs(BpArray *array, int64_t i, uint64_t entry) {
-    int bits_per_entry = array->meta.bits_per_entry;
-    int local_bit_offset = GetLocalBitOffset(i, bits_per_entry);
-    uint64_t mask = GetEntryMask(bits_per_entry, local_bit_offset);
+    int error;
+    PRAGMA_OMP_CRITICAL(BpArraySetTs) {
+        error = BpArrayExpandIfNeeded(array, entry);
 
-    // Get segment containing the old entry.
-#ifdef _OPENMP
-    omp_set_lock(&array->lock);
-#endif
-    uint64_t segment = GetSegment(array, i);
-    segment &= ~mask;                      // Zero out old entry.
-    segment |= entry << local_bit_offset;  // Put new entry.
-    SetSegmentTs(array, i, segment);       // Put segment back.
-#ifdef _OPENMP
-    omp_unset_lock(&array->lock);
-#endif
-    return 0;
+        int bits_per_entry = array->meta.bits_per_entry;
+        int local_bit_offset = GetLocalBitOffset(i, bits_per_entry);
+        uint64_t mask = GetEntryMask(bits_per_entry, local_bit_offset);
+
+        // Get segment containing the old entry.
+        uint64_t segment = GetSegment(array, i);
+        segment &= ~mask;                      // Zero out old entry.
+        segment |= entry << local_bit_offset;  // Put new entry.
+        SetSegmentTs(array, i, segment);       // Put segment back.
+    }
+    return error;
 }
 
 // -----------------------------------------------------------------------------
 
-static int GetBitsPerEntry(uint64_t num_values) {
-    assert(num_values > 0);
-    for (int i = 1; i <= kMaxBitsPerEntry; ++i) {
-        if (num_values <= ((uint64_t)1) << i) {
-            return i;
-        }
+static int BpArrayInitHelper(BpArray *array, int64_t size, int bits_per_entry) {
+    array->max_value = 0;
+    array->meta.bits_per_entry = bits_per_entry;
+    array->meta.num_entries = size;
+    array->meta.stream_length = GetStreamLength(size, bits_per_entry);
+    array->stream =
+        (uint8_t *)calloc(array->meta.stream_length, sizeof(uint8_t));
+    if (array->stream == NULL) {
+        fprintf(stderr, "BpArrayInit: failed to calloc array\n");
+        memset(array, 0, sizeof(*array));
+        return 1;
     }
-    return -1;
+    return 0;
 }
 
-static int64_t GetStreamSize(int64_t num_entries, int bits_per_entry) {
+static int64_t GetStreamLength(int64_t num_entries, int bits_per_entry) {
     // 8 additional bytes are allocated so that it is always safe to read
     // 8 bytes for an entry.
     return RoundUpDivide(num_entries * bits_per_entry, kBitsPerByte) +
@@ -180,3 +169,64 @@ static int64_t GetByteOffset(int64_t i, int bits_per_entry) {
 static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset) {
     return (((uint64_t)1 << bits_per_entry) - 1) << local_bit_offset;
 }
+
+static int BpArrayExpandIfNeeded(BpArray *array, uint64_t entry) {
+    if (array->max_value >= entry) return 0;
+
+    int new_bits_per_entry = BitsNeededForEntry(entry);
+    if (new_bits_per_entry < 0) {
+        fprintf(stderr,
+                "BpArrayExpandIfNeeded: new entry %" PRIu64
+                " cannot be represented by the longest number of bits allowed "
+                "(%d) and therefore cannot be stored\n",
+                entry, kMaxBitsPerEntry);
+        return -1;
+    }
+
+    // If ENTRY can be stored without expanding, update max value and return.
+    if (array->meta.bits_per_entry >= new_bits_per_entry) {
+        array->max_value = entry;
+        return 0;
+    }
+
+    // Otherwise, we need to expand the array to accomodate the new entry.
+    int error = BpArrayExpand(array, entry);
+    if (error != 0) return error;
+
+    // Update max value only on success.
+    array->max_value = entry;
+    return 0;
+}
+
+static int BpArrayExpand(BpArray *array, int new_bits_per_entry) {
+    BpArray new_array;
+    int64_t size = array->meta.num_entries;
+    int error = BpArrayInitHelper(&new_array, size, new_bits_per_entry);
+    if (error != 0) {
+        fprintf(stderr, "BpArrayExpand: failed to allocate new array\n");
+        return error;
+    }
+
+    // PRAGMA_OMP_PARALLEL_FOR  <- is this nested parallelism safe?
+    for (int64_t i = 0; i < size; ++i) {
+        uint64_t entry = BpArrayAt(array, i);
+        BpArraySet(&new_array, i, entry);  // if parallel, change to Ts version.
+    }
+
+    BpArrayDestroy(array);
+    memcpy(array, &new_array, sizeof(*array));
+    return 0;
+}
+
+static int BitsNeededForEntry(uint64_t entry) {
+    for (int i = 1; i <= kMaxBitsPerEntry; ++i) {
+        if (entry < ((uint64_t)1) << i) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+#undef PRAGMA
+#undef PRAGMA_OMP_CRITICAL
+#undef PRAGMA_OMP_PARALLEL_FOR
