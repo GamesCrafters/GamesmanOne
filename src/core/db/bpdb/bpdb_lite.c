@@ -1,11 +1,11 @@
 #include "core/db/bpdb/bpdb_lite.h"
 
-#include <assert.h>    // assert
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t, uint64_t, int32_t
-#include <stdio.h>     // fprintf, stderr, FILE
-#include <stdlib.h>    // malloc, free, realloc
-#include <string.h>    // strlen
+#include <assert.h>  // assert
+#include <stddef.h>  // NULL
+#include <stdint.h>  // int64_t, uint64_t, int32_t
+#include <stdio.h>   // fprintf, stderr, FILE
+#include <stdlib.h>  // malloc, free, realloc
+#include <string.h>  // strlen
 
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
@@ -246,7 +246,7 @@ static int GetRemotenessFromRecord(uint64_t record) {
 }
 
 static uint64_t CompressRecord(uint64_t record) {
-    PRAGMA_OMP_CRITICAL(CompressRecord) {
+    PRAGMA_OMP_CRITICAL(BpdbCompression) {
         if (compression_dict[record] < 0) {
             compression_dict[record] = num_unique_values;
 
@@ -273,5 +273,7 @@ static int DecompDictExpand(void) {
 }
 
 static uint64_t DecompressRecord(uint64_t compressed) {
-    return decomp_dict[compressed];
+    uint64_t record;
+    PRAGMA_OMP_CRITICAL(BpdbCompression) { record = decomp_dict[compressed]; }
+    return record;
 }
