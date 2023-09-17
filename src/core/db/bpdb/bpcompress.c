@@ -92,7 +92,7 @@ static int32_t Step0BuildCompressionDict(const BpArray *src,
     // Mark all entries that exist in ARRAY.
     PRAGMA_OMP_PARALLEL_FOR
     for (int64_t i = 0; i < src->meta.num_entries; ++i) {
-        compression_dict[BpArrayAt(src, i)] = 1;
+        compression_dict[BpArrayGet(src, i)] = 1;
     }
 
     // Count the number of unique entries.
@@ -122,7 +122,7 @@ static void Step1BuildDecompDict(const int32_t *compression_dict,
 static void Step3_0CompressEntry(BpArray *dest, const BpArray *src,
                                  const int32_t *compression_dict,
                                  int64_t entry_index) {
-    uint64_t entry = BpArrayAt(src, entry_index);
+    uint64_t entry = BpArrayGet(src, entry_index);
     uint64_t mapped = compression_dict[entry];
     BpArraySet(dest, entry_index, mapped);
 }

@@ -208,7 +208,7 @@ int DbManagerTestTier(Tier tier, int64_t size) {
         if (c_value != t_value) {
             printf("Inconsistent value at position %" PRId64 " in tier %" PRId64
                    ". Control group value: %d, experimental group value: %d.\n",
-                   tier, i, c_value, t_value);
+                   i, tier, c_value, t_value);
             error = 1;
             goto _bailout;
         }
@@ -220,7 +220,7 @@ int DbManagerTestTier(Tier tier, int64_t size) {
                    " in tier %" PRId64
                    ". Control group remoteness: %d, experimental group "
                    "remoteness: %d.\n",
-                   tier, i, c_rmt, t_rmt);
+                   i, tier, c_rmt, t_rmt);
             error = 2;
             goto _bailout;
         }

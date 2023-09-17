@@ -67,7 +67,6 @@ const Database kBpdbLite = {
 };
 
 static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
-static const int64_t kNumHashes = kNumValues * kNumRemotenesses;
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -75,17 +74,10 @@ static char *current_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static BpArray records;
-static int32_t *compression_dict;
-static int32_t *decomp_dict;
-static int32_t decomp_dict_size;
-static int32_t num_unique_values;
 
 static uint64_t BuildRecord(Value value, int remoteness);
 static Value GetValueFromRecord(uint64_t record);
 static int GetRemotenessFromRecord(uint64_t record);
-static uint64_t CompressRecord(uint64_t record);
-static int DecompDictExpand(void);
-static uint64_t DecompressRecord(uint64_t compressed);
 
 // -----------------------------------------------------------------------------
 
@@ -106,10 +98,6 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     current_variant = variant;
     current_tier = -1;
     current_tier_size = -1;
-    compression_dict = NULL;
-    decomp_dict = NULL;
-    decomp_dict_size = 0;
-    num_unique_values = 0;
 
     return 0;
 }
@@ -118,11 +106,6 @@ static void BpdbLiteFinalize(void) {
     free(current_path);
     current_path = NULL;
     BpArrayDestroy(&records);
-    free(compression_dict);
-    compression_dict = NULL;
-    free(decomp_dict);
-    decomp_dict = NULL;
-    decomp_dict_size = 0;
 }
 
 static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
@@ -139,24 +122,6 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
         return error;
     }
 
-    compression_dict = (int32_t *)malloc(kNumHashes * sizeof(int32_t));
-    decomp_dict = (int32_t *)malloc(2 * sizeof(int32_t));
-    if (compression_dict == NULL || decomp_dict == NULL) {
-        fprintf(stderr,
-                "BpdbLiteCreateSolvingTier: failed to malloc dictionary\n");
-        BpArrayDestroy(&records);
-        return 1;
-    }
-
-    // Initialize dictionaries; not worth parallelizing.
-    compression_dict[0] = 0;
-    for (int64_t i = 1; i < kNumHashes; ++i) {
-        compression_dict[i] = -1;
-    }
-    decomp_dict[0] = 0;
-    decomp_dict_size = 2;
-    num_unique_values = 1;
-
     return 0;
 }
 
@@ -166,8 +131,7 @@ static int BpdbLiteFlushSolvingTier(void *aux) {
     char *full_path = BpdbFileGetFullPath(current_path, current_tier);
     if (full_path == NULL) return 1;
 
-    int error =
-        BpdbFileFlush(full_path, &records, decomp_dict, num_unique_values);
+    int error = BpdbFileFlush(full_path, &records);
     if (error != 0) fprintf(stderr, "BpdbLiteFlushSolvingTier: code %d", error);
 
     free(full_path);
@@ -176,50 +140,51 @@ static int BpdbLiteFlushSolvingTier(void *aux) {
 
 static int BpdbLiteFreeSolvingTier(void) {
     BpArrayDestroy(&records);
-    free(compression_dict);
-    compression_dict = NULL;
-    free(decomp_dict);
-    decomp_dict = NULL;
-    decomp_dict_size = 0;
-    num_unique_values = 0;
     current_tier = -1;
     current_tier_size = -1;
     return 0;
 }
 
-static int BpdbLiteSetValue(Position position, Value value) {
-    uint64_t record = BpArrayAt(&records, position);
-    record = DecompressRecord(record);
+static uint64_t GetRecord(Position position) {
+    uint64_t record;
+    PRAGMA_OMP_CRITICAL(records) { record = BpArrayGet(&records, position); }
 
+    return record;
+}
+
+static int BpdbLiteSetValue(Position position, Value value) {
+    uint64_t record = GetRecord(position);
     int remoteness = GetRemotenessFromRecord(record);
     record = BuildRecord(value, remoteness);
-    record = CompressRecord(record);
-    BpArraySetTs(&records, position, record);
 
-    return 0;
+    int error;
+    PRAGMA_OMP_CRITICAL(records) {
+        error = BpArraySet(&records, position, record);
+    }
+
+    return error;
 }
 
 static int BpdbLiteSetRemoteness(Position position, int remoteness) {
-    uint64_t record = BpArrayAt(&records, position);
-    record = DecompressRecord(record);
-
+    uint64_t record = GetRecord(position);
     Value value = GetValueFromRecord(record);
     record = BuildRecord(value, remoteness);
-    record = CompressRecord(record);
-    BpArraySetTs(&records, position, record);
 
-    return 0;
+    int error;
+    PRAGMA_OMP_CRITICAL(records) {
+        error = BpArraySet(&records, position, record);
+    }
+
+    return error;
 }
 
 static Value BpdbLiteGetValue(Position position) {
-    uint64_t record = BpArrayAt(&records, position);
-    record = DecompressRecord(record);
+    uint64_t record = GetRecord(position);
     return GetValueFromRecord(record);
 }
 
 static int BpdbLiteGetRemoteness(Position position) {
-    uint64_t record = BpArrayAt(&records, position);
-    record = DecompressRecord(record);
+    uint64_t record = GetRecord(position);
     return GetRemotenessFromRecord(record);
 }
 
@@ -245,35 +210,5 @@ static int GetRemotenessFromRecord(uint64_t record) {
     return record / kNumValues;
 }
 
-static uint64_t CompressRecord(uint64_t record) {
-    PRAGMA_OMP_CRITICAL(BpdbCompression) {
-        if (compression_dict[record] < 0) {
-            compression_dict[record] = num_unique_values;
-
-            if (decomp_dict_size == num_unique_values) {
-                int error = DecompDictExpand();
-                if (error != 0) exit(1);  // TODO: replace this
-            }
-            assert(decomp_dict_size > num_unique_values);
-            decomp_dict[num_unique_values++] = record;
-        }
-    }
-    return compression_dict[record];
-}
-
-static int DecompDictExpand(void) {
-    int32_t new_size = decomp_dict_size * 2;
-    int32_t *new_decomp_dict =
-        (int32_t *)realloc(decomp_dict, new_size * sizeof(int32_t));
-    if (new_decomp_dict == NULL) return 1;
-
-    decomp_dict = new_decomp_dict;
-    decomp_dict_size = new_size;
-    return 0;
-}
-
-static uint64_t DecompressRecord(uint64_t compressed) {
-    uint64_t record;
-    PRAGMA_OMP_CRITICAL(BpdbCompression) { record = decomp_dict[compressed]; }
-    return record;
-}
+#undef PRAGMA
+#undef PRAGMA_OMP_CRITICAL

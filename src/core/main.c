@@ -29,7 +29,14 @@
 #include "core/gamesman_headless.h"
 #include "core/gamesman_interactive.h"
 
-int main(int argc, char **argv) { 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+int main(int argc, char **argv) {
+#ifdef _OPENMP
+    omp_set_max_active_levels(3);
+#endif
     if (argc == 1) {
         return GamesmanInteractiveMain();
     }

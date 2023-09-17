@@ -26,8 +26,7 @@ typedef struct BpdbFileHeader {
 } BpdbFileHeader;
 
 char *BpdbFileGetFullPath(ConstantReadOnlyString current_path, Tier tier);
-int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records,
-                  const int32_t *decomp_dict, int32_t num_unique_values);
+int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
 int BpdbFileGetBlockSize(int bits_per_entry);
 
 #endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
