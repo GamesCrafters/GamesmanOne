@@ -100,6 +100,18 @@ int BpdbFileGetBlockSize(int bits_per_entry) {
     return NextMultiple(kMgzMinBlockSize, bits_per_entry * sizeof(uint64_t));
 }
 
+int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier) {
+    char *filename = BpdbFileGetFullPath(sandbox_path, tier);
+    if (filename == NULL) return kDbTierCheckError;
+
+    FILE *db_file = fopen(filename, "rb");
+    free(filename);
+    if (db_file == NULL) return kDbTierMissing;
+
+    fclose(db_file);
+    return kDbTierSolved;
+}
+
 // -----------------------------------------------------------------------------
 
 static mgz_res_t FlushStep0MgzCompress(BpdbFileHeader *header,

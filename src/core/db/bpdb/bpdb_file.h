@@ -93,4 +93,6 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
  */
 int BpdbFileGetBlockSize(int bits_per_entry);
 
+int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier);
+
 #endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_

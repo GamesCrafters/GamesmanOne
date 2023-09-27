@@ -148,8 +148,9 @@ void TierWorkerInit(const TierSolverApi *api) {
 
 int TierWorkerSolve(Tier tier, bool force) {
     int ret = -1;
-    if (!force) {
-        // TODO: Check if tier has already been solved.
+    if (!force && DbManagerTierStatus(tier) == kDbTierSolved) {
+        ret = 0;  // Success.
+        goto _bailout;
     }
 
     /* Solver main algorithm. */

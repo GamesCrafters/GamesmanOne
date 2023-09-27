@@ -145,8 +145,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverSolve(void *aux) {
-    bool force = false;
-    if (aux != NULL) force = *((bool *)aux);
+    bool force = (aux != NULL) &&  *((bool *)aux);
     return TierManagerSolve(&current_api, force);
 }
 

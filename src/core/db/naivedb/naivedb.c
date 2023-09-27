@@ -57,6 +57,8 @@ static int NaiveDbProbeDestroy(DbProbe *probe);
 static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
+static int NaiveDbTierStatus(Tier tier);
+
 const Database kNaiveDb = {
     .name = "naivedb",
     .formal_name = "Naive DB",
@@ -78,6 +80,7 @@ const Database kNaiveDb = {
     .ProbeDestroy = &NaiveDbProbeDestroy,
     .ProbeValue = &NaiveDbProbeValue,
     .ProbeRemoteness = &NaiveDbProbeRemoteness,
+    .TierStatus = &NaiveDbTierStatus,
 };
 
 // -----------------------------------------------------------------------------
@@ -97,7 +100,7 @@ static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
-static char *current_path;
+static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static NaiveDbEntry *records;
@@ -110,7 +113,7 @@ static NaiveDbEntry *records;
 static char *GetFullPathToFile(Tier tier) {
     // Full path: "<path>/<tier>", +2 for '/' and '\0'.
     char *full_path = (char *)calloc(
-        (strlen(current_path) + kInt64Base10StringLengthMax + 2), sizeof(char));
+        (strlen(sandbox_path) + kInt64Base10StringLengthMax + 2), sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
@@ -119,7 +122,7 @@ static char *GetFullPathToFile(Tier tier) {
     char file_name[kInt64Base10StringLengthMax + 2];
     snprintf(file_name, kInt64Base10StringLengthMax, "/%" PRId64, tier);
 
-    strcat(full_path, current_path);
+    strcat(full_path, sandbox_path);
     strcat(full_path, file_name);
     return full_path;
 }
@@ -162,14 +165,14 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, void *aux) {
     (void)aux;  // Unused.
-    assert(current_path == NULL);
+    assert(sandbox_path == NULL);
 
-    current_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
-    if (current_path == NULL) {
+    sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
+    if (sandbox_path == NULL) {
         fprintf(stderr, "NaiveDbInit: failed to malloc path.\n");
         return 1;
     }
-    strcpy(current_path, path);
+    strcpy(sandbox_path, path);
 
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
@@ -182,8 +185,8 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
 }
 
 static void NaiveDbFinalize(void) {
-    free(current_path);
-    current_path = NULL;
+    free(sandbox_path);
+    sandbox_path = NULL;
     free(records);
     records = NULL;
 }
@@ -314,4 +317,15 @@ static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
     if (!ProbeFillBuffer(probe, tier_position)) return -1;
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.remoteness;
+}
+
+static int NaiveDbTierStatus(Tier tier) {
+    char *full_path = GetFullPathToFile(tier);
+    if (full_path == NULL) return kDbTierCheckError;
+
+    FILE *db_file = fopen(full_path, "rb");
+    free(full_path);
+    if (db_file == NULL) return kDbTierMissing;
+
+    return kDbTierSolved;
 }

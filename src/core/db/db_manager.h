@@ -158,6 +158,8 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
  */
 int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
+int DbManagerTierStatus(Tier tier);
+
 int DbManagerInitControlGroupDb(const Database *control,
                                 ReadOnlyString game_name, int variant,
                                 void *aux);

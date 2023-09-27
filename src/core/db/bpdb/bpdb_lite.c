@@ -74,6 +74,8 @@ static int BpdbLiteGetRemoteness(Position position);
 static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position);
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
+static int BpdbLiteTierStatus(Tier tier);
+
 const Database kBpdbLite = {
     .name = "bpdb_lite",
     .formal_name = "Bit-Perfect Database Lite",
@@ -95,13 +97,14 @@ const Database kBpdbLite = {
     .ProbeDestroy = &BpdbProbeDestroy,  // Generic version
     .ProbeValue = &BpdbLiteProbeValue,
     .ProbeRemoteness = &BpdbLiteProbeRemoteness,
+    .TierStatus = &BpdbLiteTierStatus,
 };
 
 static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
-static char *current_path;
+static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static BpArray records;
@@ -115,14 +118,14 @@ static int GetRemotenessFromRecord(uint64_t record);
 static int BpdbLiteInit(ReadOnlyString game_name, int variant,
                         ReadOnlyString path, void *aux) {
     (void)aux;  // Unused.
-    assert(current_path == NULL);
+    assert(sandbox_path == NULL);
 
-    current_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
-    if (current_path == NULL) {
+    sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
+    if (sandbox_path == NULL) {
         fprintf(stderr, "BpdbLiteInit: failed to malloc path.\n");
         return 1;
     }
-    strcpy(current_path, path);
+    strcpy(sandbox_path, path);
 
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
@@ -134,8 +137,8 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
 }
 
 static void BpdbLiteFinalize(void) {
-    free(current_path);
-    current_path = NULL;
+    free(sandbox_path);
+    sandbox_path = NULL;
     BpArrayDestroy(&records);
 }
 
@@ -159,7 +162,7 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
 static int BpdbLiteFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
-    char *full_path = BpdbFileGetFullPath(current_path, current_tier);
+    char *full_path = BpdbFileGetFullPath(sandbox_path, current_tier);
     if (full_path == NULL) return 1;
 
     int error = BpdbFileFlush(full_path, &records);
@@ -220,13 +223,17 @@ static int BpdbLiteGetRemoteness(Position position) {
 }
 
 static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position) {
-    uint64_t record = BpdbProbeRecord(current_path, probe, tier_position);
+    uint64_t record = BpdbProbeRecord(sandbox_path, probe, tier_position);
     return GetValueFromRecord(record);
 }
 
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    uint64_t record = BpdbProbeRecord(current_path, probe, tier_position);
+    uint64_t record = BpdbProbeRecord(sandbox_path, probe, tier_position);
     return GetRemotenessFromRecord(record);
+}
+
+static int BpdbLiteTierStatus(Tier tier) {
+    return BpdbFileGetTierStatus(sandbox_path, tier);
 }
 
 // -----------------------------------------------------------------------------

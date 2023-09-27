@@ -175,6 +175,10 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
     return current_db->ProbeRemoteness(probe, tier_position);
 }
 
+int DbManagerTierStatus(Tier tier) {
+    return current_db->TierStatus(tier);
+}
+
 int DbManagerInitControlGroupDb(const Database *control,
                                 ReadOnlyString game_name, int variant,
                                 void *aux) {

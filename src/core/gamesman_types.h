@@ -189,6 +189,13 @@ typedef struct DbProbe {
     int64_t size;
 } DbProbe;
 
+typedef enum DatabaseTierStatus {
+    kDbTierSolved,
+    kDbTierCorrupted,
+    kDbTierMissing,
+    kDbTierCheckError,
+} DatabaseTierStatus;
+
 /**
  * @brief Generic Tier Database type.
  *
@@ -332,6 +339,8 @@ typedef struct Database {
      * -1 if TIER_POSITION is not found.
      */
     int (*ProbeRemoteness)(DbProbe *probe, TierPosition tier_position);
+
+    int (*TierStatus)(Tier tier);
 } Database;
 
 /** @brief Solver option for display in GAMESMAN interactive mode. */
