@@ -17,7 +17,7 @@ bin_gamesman_SOURCES += src/core/db/bpdb/bparray.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_file.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_lite.c
 bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_probe.c
-bin_gamesman_SOURCES += src/core/db/bpdb/lookup_dict.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdict.c
 bin_gamesman_SOURCES += src/core/db/naivedb/naivedb.c
 bin_gamesman_SOURCES += src/core/db/db_manager.c
 
