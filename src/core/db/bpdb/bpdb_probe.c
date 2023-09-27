@@ -1,3 +1,33 @@
+/**
+ * @file bpdb_probe.c
+ * @author Dan Garcia: designed the "lookup table" compression algorithm
+ * @author Max Fierro: improved the algorithm for BpArray compression
+ * @author Sameer Nayyar: improved the algorithm for BpArray compression
+ * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
+ * BpDict.
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of the probe for the Bit-Perfect Database.
+ * @version 1.0
+ * @date 2023-09-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/db/bpdb/bpdb_probe.h"
 
 #include <fcntl.h>   // O_RDONLY
@@ -23,7 +53,7 @@ static const int kDefaultBitsPerEntry = 8;
 
 static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry);
 
-static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString current_path,
+static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
                                         DbProbe *probe, Tier tier);
 const BpdbFileHeader *ProbeGetHeader(const DbProbe *probe);
 const int32_t *ProbeGetDecompDict(const DbProbe *probe);
@@ -35,7 +65,7 @@ static bool ExpandProbeBuffer(DbProbe *probe, int target_size);
 
 static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position);
 
-static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString current_path,
+static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
                                       DbProbe *probe, Position position);
 static int64_t GetBitOffset(Position position, int bits_per_entry);
 static int64_t GetByteOffset(Position position, int bits_per_entry);
@@ -69,10 +99,10 @@ int BpdbProbeDestroy(DbProbe *probe) {
     return 0;
 }
 
-uint64_t BpdbProbeRecord(ConstantReadOnlyString current_path, DbProbe *probe,
+uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
                          TierPosition tier_position) {
     if (probe->tier != tier_position.tier) {
-        int error = ProbeRecordStep0ReloadHeader(current_path, probe,
+        int error = ProbeRecordStep0ReloadHeader(sandbox_path, probe,
                                                  tier_position.tier);
         if (error != 0) {
             printf(
@@ -83,7 +113,7 @@ uint64_t BpdbProbeRecord(ConstantReadOnlyString current_path, DbProbe *probe,
         }
     }
     if (ProbeRecordStep1CacheMiss(probe, tier_position.position)) {
-        ProbeRecordStep2LoadBlocks(current_path, probe, tier_position.position);
+        ProbeRecordStep2LoadBlocks(sandbox_path, probe, tier_position.position);
     }
     return ProbeRecordStep3LoadRecord(probe, tier_position.position);
 }
@@ -100,9 +130,9 @@ static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry) {
 }
 
 // Reloads tier bpdb file header and decomp dict into probe's cache.
-static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString current_path,
+static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
                                         DbProbe *probe, Tier tier) {
-    char *full_path = BpdbFileGetFullPath(current_path, tier);
+    char *full_path = BpdbFileGetFullPath(sandbox_path, tier);
     if (full_path == NULL) return 1;
 
     FILE *db_file = GuardedFopen(full_path, "rb");
@@ -199,7 +229,7 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
     return true;
 }
 
-static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString current_path,
+static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
                                       DbProbe *probe, Position position) {
     // Calculate the address of probe's bit stream blocks.
     int32_t decomp_dict_size = ProbeGetDecompDictSize(probe);
@@ -207,7 +237,7 @@ static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString current_path,
     int bits_per_entry = ProbeGetBitsPerEntry(probe);
     void *buffer_blocks = ProbeGetBitStream(probe);
 
-    char *full_path = BpdbFileGetFullPath(current_path, probe->tier);
+    char *full_path = BpdbFileGetFullPath(sandbox_path, probe->tier);
     if (full_path == NULL) return 1;
 
     // Get offset into the compressed bit stream.

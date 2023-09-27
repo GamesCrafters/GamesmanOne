@@ -1,4 +1,35 @@
-#include "core/db/bpdb/lookup_dict.h"
+/**
+ * @file bpdict.c
+ * @author Dan Garcia: designed the "lookup table" compression algorithm
+ * @author Max Fierro: improved the algorithm for BpArray compression
+ * @author Sameer Nayyar: improved the algorithm for BpArray compression
+ * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
+ * BpDict.
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of compression and decompression dictionaries for
+ * Bit-Perfect Array.
+ * @version 1.0
+ * @date 2023-09-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "core/db/bpdb/bpdict.h"
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
@@ -10,12 +41,12 @@
 static const int32_t kCompDictSizeMax = (INT32_MAX - 1) / 2 + 1;
 static const int32_t kDecompDictCapacityMax = (INT32_MAX - 1) / 2 + 1;
 
-static int ExpandCompDict(LookupDict *dict, int32_t key);
-static int ExpandDecompDict(LookupDict *dict);
+static int ExpandCompDict(BpDict *dict, int32_t key);
+static int ExpandDecompDict(BpDict *dict);
 
 // -----------------------------------------------------------------------------
 
-int LookupDictInit(LookupDict *dict) {
+int BpDictInit(BpDict *dict) {
     memset(dict, 0, sizeof(*dict));
 
     int error = ExpandCompDict(dict, 0);
@@ -36,25 +67,23 @@ int LookupDictInit(LookupDict *dict) {
     return 0;
 }
 
-void LookupDictDestroy(LookupDict *dict) {
+void BpDictDestroy(BpDict *dict) {
     free(dict->comp_dict);
     free(dict->decomp_dict);
     memset(dict, 0, sizeof(*dict));
 }
 
 // Assumes KEY is not in DICT.
-int LookupDictSet(LookupDict *dict, int32_t key) {
+int BpDictSet(BpDict *dict, int32_t key) {
     if (dict->comp_dict_size <= key) {
         int error = ExpandCompDict(dict, key);
         if (error == 1) {
-            fprintf(
-                stderr,
-                "LookupDictSet: failed to realloc compression dictionary\n");
+            fprintf(stderr,
+                    "BpDictSet: failed to realloc compression dictionary\n");
             return 1;
         } else if (error == 2) {
-            fprintf(
-                stderr,
-                "LookupDictSet: compression dictionary size exceeds limit\n");
+            fprintf(stderr,
+                    "BpDictSet: compression dictionary size exceeds limit\n");
             return 2;
         }
     }
@@ -62,38 +91,37 @@ int LookupDictSet(LookupDict *dict, int32_t key) {
     if (dict->num_unique + 1 > dict->decomp_dict_capacity) {
         int error = ExpandDecompDict(dict);
         if (error == 1) {
-            fprintf(
-                stderr,
-                "LookupDictSet: failed to realloc decompression dictionary\n");
+            fprintf(stderr,
+                    "BpDictSet: failed to realloc decompression dictionary\n");
             return 1;
         } else if (error == 2) {
             fprintf(stderr,
-                    "LookupDictSet: decompression dictionary capacity exceeds "
+                    "BpDictSet: decompression dictionary capacity exceeds "
                     "limit\n");
             return 2;
         }
     }
 
-    assert (dict->comp_dict[key] < 0);
+    assert(dict->comp_dict[key] < 0);
     dict->comp_dict[key] = dict->num_unique;
     dict->decomp_dict[dict->num_unique++] = key;
 
     return 0;
 }
 
-int32_t LookupDictGet(const LookupDict *dict, int32_t key) {
+int32_t BpDictGet(const BpDict *dict, int32_t key) {
     if (key >= dict->comp_dict_size) return -1;
     return dict->comp_dict[key];
 }
 
-int32_t LookupDictGetKey(const LookupDict *dict, int32_t value) {
+int32_t BpDictGetKey(const BpDict *dict, int32_t value) {
     assert(value < dict->num_unique);
     return dict->decomp_dict[value];
 }
 
 // -----------------------------------------------------------------------------
 
-static int ExpandCompDict(LookupDict *dict, int32_t key) {
+static int ExpandCompDict(BpDict *dict, int32_t key) {
     int32_t new_size = dict->comp_dict_size;
 
     if (dict->comp_dict_size == 0) new_size = 1;
@@ -115,7 +143,7 @@ static int ExpandCompDict(LookupDict *dict, int32_t key) {
     return 0;
 }
 
-static int ExpandDecompDict(LookupDict *dict) {
+static int ExpandDecompDict(BpDict *dict) {
     if (dict->decomp_dict_capacity >= kDecompDictCapacityMax) return 2;
 
     int32_t new_capacity = dict->decomp_dict_capacity * 2;

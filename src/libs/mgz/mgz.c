@@ -1,3 +1,32 @@
+/**
+ * @file mgz.c
+ * @author Cameron Cheung: designed the first algorithm that allows random
+ * access to gzip archives.
+ * @author Robert Shi (robertyishi@berkeley.edu): OpenMP parallelization and
+ * implementation of MGZ.
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of In-Memory Gzip.
+ * @version 1.0
+ * @date 2023-09-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "libs/mgz/mgz.h"
 
 #include <assert.h>

@@ -1,7 +1,36 @@
+/**
+ * @file bparray.c
+ * @author Dan Garcia: designed the "lookup table" compression algorithm
+ * @author Max Fierro: improved the algorithm for BpArray compression
+ * @author Sameer Nayyar: improved the algorithm for BpArray compression
+ * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
+ *         BpArray.
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of the Bit-Perfect array of unsigned integers.
+ * @version 1.0
+ * @date 2023-09-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/db/bpdb/bparray.h"
 
 #include <assert.h>    // assert
-#include <inttypes.h>  // PRIu64
 #include <stdbool.h>   // bool
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int8_t, uint8_t, int32_t, int64_t, uint64_t
@@ -9,7 +38,7 @@
 #include <stdlib.h>    // calloc, free
 #include <string.h>    // memset
 
-#include "core/db/bpdb/lookup_dict.h"
+#include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
@@ -29,7 +58,7 @@ static const int kDefaultBitsPerEntry = 1;
 /**
  * @brief Maximum number of bits per array entry.
  *
- * @details Currently set to 31 because LookupDict uses int32_t arrays for
+ * @details Currently set to 31 because BpDict uses int32_t arrays for
  * compression and decompression.
  *
  * Also note that the algorithm in this module requires kMaxBitsPerEntry <= 32
@@ -50,7 +79,7 @@ static int64_t GetLocalBitOffset(int64_t i, int bits_per_entry);
 static int64_t GetByteOffset(int64_t i, int bits_per_entry);
 static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset);
 
-static uint64_t CompressEntry(LookupDict *lookup, uint64_t entry);
+static uint64_t CompressEntry(BpDict *dict, uint64_t entry);
 static bool ExpansionNeeded(const BpArray *array, uint64_t entry);
 static int BpArrayExpand(BpArray *array);
 static int ExpandHelper(BpArray *array, int new_bits_per_entry);
@@ -69,11 +98,11 @@ int BpArrayInit(BpArray *array, int64_t size) {
 
     array->meta.bits_per_entry = kDefaultBitsPerEntry;
     array->meta.num_entries = size;
-    int error = LookupDictInit(&array->lookup);
+    int error = BpDictInit(&array->dict);
     if (error != 0) {
         fprintf(
             stderr,
-            "BpArrayInit: failed to initialize lookup dictionary, code %d\n",
+            "BpArrayInit: failed to initialize BP dictionary, code %d\n",
             error);
         free(array->stream);
         memset(array, 0, sizeof(*array));
@@ -85,7 +114,7 @@ int BpArrayInit(BpArray *array, int64_t size) {
 
 void BpArrayDestroy(BpArray *array) {
     free(array->stream);
-    LookupDictDestroy(&array->lookup);
+    BpDictDestroy(&array->dict);
     memset(array, 0, sizeof(*array));
 }
 
@@ -97,11 +126,11 @@ uint64_t BpArrayGet(BpArray *array, int64_t i) {
     uint64_t segment = GetSegment(array, i);
     uint64_t value = (segment & mask) >> local_bit_offset;
 
-    return LookupDictGetKey(&array->lookup, value);
+    return BpDictGetKey(&array->dict, value);
 }
 
 int BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
-    uint64_t compressed = CompressEntry(&array->lookup, entry);
+    uint64_t compressed = CompressEntry(&array->dict, entry);
     if (ExpansionNeeded(array, compressed)) {
         int error = BpArrayExpand(array);
         if (error != 0) {
@@ -125,11 +154,11 @@ int BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
 }
 
 int32_t BpArrayGetNumUniqueValues(const BpArray *array) {
-    return array->lookup.num_unique;
+    return array->dict.num_unique;
 }
 
 const int32_t *BpArrayGetDecompDict(const BpArray *array) {
-    return array->lookup.decomp_dict;
+    return array->dict.decomp_dict;
 }
 
 // -----------------------------------------------------------------------------
@@ -170,16 +199,16 @@ static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset) {
     return (((uint64_t)1 << bits_per_entry) - 1) << local_bit_offset;
 }
 
-static uint64_t CompressEntry(LookupDict *lookup, uint64_t entry) {
-    int32_t compressed = LookupDictGet(lookup, entry);
+static uint64_t CompressEntry(BpDict *dict, uint64_t entry) {
+    int32_t compressed = BpDictGet(dict, entry);
     if (compressed < 0) {
-        int error = LookupDictSet(lookup, entry);
+        int error = BpDictSet(dict, entry);
         if (error != 0) {
-            fprintf(stderr, "BpArraySet: failed to set LookupDict, code %d\n",
+            fprintf(stderr, "BpArraySet: failed to set BpDict, code %d\n",
                     error);
             return error;
         }
-        compressed = LookupDictGet(lookup, entry);
+        compressed = BpDictGet(dict, entry);
         assert(compressed >= 0);
     }
     return compressed;

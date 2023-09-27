@@ -1,3 +1,29 @@
+/**
+ * @file bpdb_file.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of Bit-Perfect Database file utilities.
+ * @version 1.0
+ * @date 2023-09-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/db/bpdb/bpdb_file.h"
 
 #include <inttypes.h>  // PRId64
@@ -28,10 +54,10 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
  * responsible for free()ing the pointer returned by this function. Returns
  * NULL on failure.
  */
-char *BpdbFileGetFullPath(ConstantReadOnlyString current_path, Tier tier) {
+char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier) {
     // Full path: "<path>/<tier>.bpdb".
     static ConstantReadOnlyString kBpdbExtension = ".bpdb";
-    int path_length = strlen(current_path) + 1 + kInt64Base10StringLengthMax +
+    int path_length = strlen(sandbox_path) + 1 + kInt64Base10StringLengthMax +
                       strlen(kBpdbExtension) + 1;
     char *full_path = (char *)calloc(path_length, sizeof(char));
     if (full_path == NULL) {
@@ -43,7 +69,7 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString current_path, Tier tier) {
         file_name[1 + kInt64Base10StringLengthMax + strlen(kBpdbExtension) + 1];
     snprintf(file_name, kInt64Base10StringLengthMax, "/%" PRId64 "%s", tier,
              kBpdbExtension);
-    strcat(full_path, current_path);
+    strcat(full_path, sandbox_path);
     strcat(full_path, file_name);
     return full_path;
 }
