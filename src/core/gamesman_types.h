@@ -69,14 +69,13 @@ typedef int64_t Move;
  * @note Always make sure that kUndecided is 0 as other components rely on this
  * assumption.
  */
-typedef enum {
+typedef enum Value {
     kErrorValue = -1,
     kUndecided = 0,
     kLose,
     kDraw,
     kTie,
     kWin,
-    kNumValues,  /**< The number of valid Values. */
 } Value;
 
 /**
@@ -169,6 +168,7 @@ typedef enum GamesmanTypesLimits {
      * this value is not large enough for a game in the future.
      */
     kRemotenessMax = 1023,
+    kNumRemotenesses = 1024,
     kDbNameLengthMax = 31,
     kDbFormalNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
@@ -188,6 +188,13 @@ typedef struct DbProbe {
     int64_t begin;
     int64_t size;
 } DbProbe;
+
+typedef enum DatabaseTierStatus {
+    kDbTierSolved,
+    kDbTierCorrupted,
+    kDbTierMissing,
+    kDbTierCheckError,
+} DatabaseTierStatus;
 
 /**
  * @brief Generic Tier Database type.
@@ -332,6 +339,8 @@ typedef struct Database {
      * -1 if TIER_POSITION is not found.
      */
     int (*ProbeRemoteness)(DbProbe *probe, TierPosition tier_position);
+
+    int (*TierStatus)(Tier tier);
 } Database;
 
 /** @brief Solver option for display in GAMESMAN interactive mode. */
@@ -836,6 +845,10 @@ typedef enum IntBase10StringLengthLimits {
     /** uint64_t: [0, 18446744073709551615] */
     kUint64Base10StringLengthMax = 20,
 } IntBase10StringLengthLimits;
+
+typedef enum CommonConstants {
+    kBitsPerByte = 8,
+} CommonConstants;
 
 // GAMESMAN Types Related Accessor and Mutator Functions.
 

@@ -1,11 +1,11 @@
 /**
- * @file main.c
+ * @file gz64.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Main entry point of GAMESMAN.
+ * @brief Implementation of 64-bit gzip utilities.
  * @version 1.0
- * @date 2023-08-19
+ * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,21 +24,30 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
+#include "libs/mgz/gz64.h"
 
-#include "core/gamesman_headless.h"
-#include "core/gamesman_interactive.h"
+#define GZ_READ_CHUNK_SIZE INT_MAX
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+/* Wrapper function around gzread using 64-bit unsigned integer
+   as read size and 64-bit signed integer as return type to
+   allow the reading of more than INT_MAX bytes. */
+int64_t gz64_read(gzFile file, voidp buf, uint64_t len) {
+    int64_t total = 0;
+    int bytesRead = 0;
 
-int main(int argc, char **argv) {
-#ifdef _OPENMP
-    omp_set_max_active_levels(3);
-#endif
-    if (argc == 1) {
-        return GamesmanInteractiveMain();
+    /* Read INT_MAX bytes at a time. */
+    while (len > (uint64_t)GZ_READ_CHUNK_SIZE) {
+        bytesRead = gzread(file, buf, GZ_READ_CHUNK_SIZE);
+        if (bytesRead != GZ_READ_CHUNK_SIZE) return (int64_t)bytesRead;
+
+        total += bytesRead;
+        len -= bytesRead;
+        buf = (voidp)((uint8_t*)buf + bytesRead);
     }
-    return GamesmanHeadlessMain(argc, argv);
+
+    /* Read the rest. */
+    bytesRead = gzread(file, buf, (unsigned int)len);
+    if (bytesRead != (int)len) return (int64_t)bytesRead;
+
+    return total + bytesRead;
 }

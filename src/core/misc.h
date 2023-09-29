@@ -30,6 +30,8 @@
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
+#include <stdio.h>    // FILE
+#include <zlib.h>     // gzFile
 
 #include "core/gamesman_types.h"
 
@@ -48,6 +50,40 @@ void *SafeMalloc(size_t size);
  * @brief Same behavior as calloc() on success; terminates GAMESMAN on failure.
  */
 void *SafeCalloc(size_t n, size_t size);
+
+char *SafeStrncpy(char *dest, const char *src, size_t n);
+
+void *GenericPointerAdd(const void *p, int64_t offset);
+
+FILE *GuardedFopen(const char *filename, const char *modes);
+
+int GuardedFclose(FILE *stream);
+
+int BailOutFclose(FILE *stream, int error);
+
+int GuardedFseek(FILE *stream, long off, int whence);
+
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream);
+
+int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream);
+
+int GuardedOpen(const char *filename, int flags);
+
+int GuardedClose(int fd);
+
+int BailOutClose(int fd, int error);
+
+int GuardedLseek(int fd, off_t offset, int whence);
+
+gzFile GuardedGzdopen(int fd, const char *mode);
+
+int GuardedGzclose(gzFile file);
+
+int BailOutGzclose(gzFile file, int error);
+
+int GuardedGzseek(gzFile file, off_t off, int whence);
+
+int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
 
 /**
  * @brief Recursively makes all directories along the given path.
@@ -92,6 +128,8 @@ int64_t PrevPrime(int64_t n);
  */
 int64_t NextPrime(int64_t n);
 
+int64_t NextMultiple(int64_t n, int64_t multiple);
+
 /**
  * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.
  */
@@ -113,5 +151,7 @@ int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
  * overflows.
  */
 int64_t NChooseR(int n, int r);
+
+int64_t RoundUpDivide(int64_t n, int64_t d);
 
 #endif  // GAMESMANEXPERIMENT_CORE_MISC_H_

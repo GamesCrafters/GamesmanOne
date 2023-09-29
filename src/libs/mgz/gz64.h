@@ -1,11 +1,11 @@
 /**
- * @file main.c
+ * @file gz64.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Main entry point of GAMESMAN.
+ * @brief 64-bit gzip utilities.
  * @version 1.0
- * @date 2023-08-19
+ * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,21 +24,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
+#ifndef GZ64_H
+#define GZ64_H
+#include <stdint.h>
+#include <zlib.h>
 
-#include "core/gamesman_headless.h"
-#include "core/gamesman_interactive.h"
+int64_t gz64_read(gzFile file, voidp buf, uint64_t len);
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-int main(int argc, char **argv) {
-#ifdef _OPENMP
-    omp_set_max_active_levels(3);
-#endif
-    if (argc == 1) {
-        return GamesmanInteractiveMain();
-    }
-    return GamesmanHeadlessMain(argc, argv);
-}
+#endif  // GZ64_H

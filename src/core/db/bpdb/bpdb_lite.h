@@ -1,11 +1,16 @@
 /**
- * @file main.c
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @file bpdb_lite.h
+ * @author Dan Garcia: designed the "lookup table" compression algorithm
+ * @author Max Fierro: improved the algorithm for BpArray compression
+ * @author Sameer Nayyar: improved the algorithm for BpArray compression
+ * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
+ *         compression algorithms and bpdb.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Main entry point of GAMESMAN.
+ * @brief Bit-Perfect Database Lite.
+ * @details
  * @version 1.0
- * @date 2023-08-19
+ * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,21 +29,15 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
+#ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_LITE_H_
+#define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_LITE_H_
 
-#include "core/gamesman_headless.h"
-#include "core/gamesman_interactive.h"
+#include "core/gamesman_types.h"
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+/**
+ * @brief BPDB "Lite" version which only supports position values and
+ * remotenesses.
+ */
+extern const Database kBpdbLite;
 
-int main(int argc, char **argv) {
-#ifdef _OPENMP
-    omp_set_max_active_levels(3);
-#endif
-    if (argc == 1) {
-        return GamesmanInteractiveMain();
-    }
-    return GamesmanHeadlessMain(argc, argv);
-}
+#endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_LITE_H_
