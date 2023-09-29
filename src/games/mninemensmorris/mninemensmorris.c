@@ -1,8 +1,8 @@
 /**
  * @file mninemensmorris.c
+ * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee: 
+ * developed the first version in GamesmanClassic (m369mm.c).
  * @author Cameron Cheung (cameroncheung@berkeley.edu): Added to system.
- *         GamesCrafters Research Group, UC Berkeley
- *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Nine Men's Morris.
  *
  * @version 1.0
@@ -135,8 +135,8 @@ const Game kMninemensmorris = {
 // Helper Types and Global Variables
 
 #define MOVE_ENCODE(from, to, remove) ((from << 10) | (to << 5) | remove)
-#define THREE_IN_A_ROW(board, slot1, slot2, turn) (board[slot1] == turn && board[slot2] == turn)
-#define NONE 31
+#define MILL(board, slot1, slot2, player) (board[slot1] == player && board[slot2] == player)
+#define NONE 0b11111
 #define X 'X'
 #define O 'O'
 #define BLANK '-'
@@ -145,8 +145,9 @@ const Game kMninemensmorris = {
 int gNumPiecesPerPlayer = 9; // Ranges from 3 to 12
 bool gFlyRule = true; // If false, no flying phase
 int removalRule = 0; // 0: Standard, 1: Lenient, 2: Strict
-int boardType = 1; // 0: 16Board, 1: 24Board, 2: 24BoardExt
+int boardType = 1; // 0: 16Board, 1: 24Board, 2: 24BoardPlus
 bool isMisere = false;
+bool laskerRule = false;
 int boardSize = 24; // Depends on boardType
 
 const struct GameVariantOption optionMisere = {
@@ -161,11 +162,41 @@ const struct GameVariantOption optionFlyRule = {
     .choices = { "No Flying Phase", "Flying Phase" }
 };
 
+const struct GameVariantOption optionLaskerRule = {
+    .name = "Lasker Rule",
+    .num_choices = 2,
+    .choices = { "Not Using Lasker Rule", "Using Lasker Rule" }
+};
+
 const struct GameVariantOption optionRemovalRule = {
     .name = "Removal Rule",
     .num_choices = 3,
     .choices = { "Standard", "Lenient", "Strict" }
 };
+
+/*
+    There are three types of boards supported.
+
+      16-Board                 24-Board                   24-Board-Plus
+
+    0-----1-----2     0 --------- 1 --------- 2     0 --------- 1 --------- 2
+    |     |     |     |           |           |     | \         |         / |
+    |  3--4--5  |     |   3 ----- 4 ----- 5   |     |   3 ----- 4 ----- 5   |
+    |  |     |  |     |   |       |       |   |     |   | \     |     / |   |
+    6--7     8--9     |   |   6 - 7 - 8   |   |     |   |   6 - 7 - 8   |   |
+    |  |     |  |     |   |   |       |   |   |     |   |   |       |   |   |
+    | 10-11-12  |     9 - 10- 11      12- 13- 14    9 - 10- 11      12- 13- 14
+    |     |     |     |   |   |       |   |   |     |   |   |       |   |   |
+    13---14----15     |   |   15- 16- 17  |   |     |   |   15- 16- 17  |   |
+                      |   |       |       |   |     |   | /     |     \ |   |
+                      |   18 ---- 19 ---- 20  |     |   18 ---- 19 ---- 20  |
+                      |           |           |     | /         |         \ |
+                      21 -------- 22 -------- 23    21 -------- 22 -------- 23
+
+    The 16-Board is used for standard 6 Men's Morris. The 24-Board is used
+    for standard 9 Men's Morris. The 24-Board-Plus has added diagonals (along
+    which mills can be created) and is used for standard 12 Men's Morris.
+*/
 
 const struct GameVariantOption optionBoardType = {
     .name = "Board Type",
@@ -187,77 +218,83 @@ const struct GameVariantOption optionNumPiecesPerPlayer = {
 //     optionNumPiecesPerPlayer
 // };
 
-int adjacent16[16][5] = {
-	{1,6,0,0,2},
-	{0,2,4,0,3},
-	{1,9,0,0,2},
-	{4,7,0,0,2},
-	{1,3,5,0,3},
-	{4,8,0,0,2},
-	{0,7,13,0,3},
-	{3,6,10,0,3},
-	{5,9,12,0,3},
-	{2,8,15,0,3},
-	{7,11,0,0,2},
-	{10,12,14,0,3},
-	{8,11,0,0,2},
-	{6,14,0,0,2},
-	{11,13,15,0,3},
-	{9,14,0,0,2}
+// Adjacencies: Each slot has at most 4 adjacent slots. The last number 
+// indicates the number of adjacencies. For example, on the 24-Board, to get the
+// adjacencies for slot 6, we see that at adjacent24[6],
+// the array is {7, 11, -1, -1, 2}. That means that slot 6 has
+// two adjacent interesction slots on the 24Board, 7 and 11.
+
+static const int adjacent16[16][5] = {
+	{  1,  6, -1, -1,  2},
+	{  0,  2,  4, -1,  3},
+	{  1,  9, -1, -1,  2},
+	{  4,  7, -1, -1,  2},
+	{  1,  3,  5, -1,  3},
+	{  4,  8, -1, -1,  2},
+	{  0,  7, 13, -1,  3},
+	{  3,  6, 10, -1,  3},
+	{  5,  9, 12, -1,  3},
+	{  2,  8, 15, -1,  3},
+	{  7, 11, -1, -1,  2},
+	{ 10, 12, 14, -1,  3},
+	{  8, 11, -1, -1,  2},
+	{  6, 14, -1, -1,  2},
+	{ 11, 13, 15, -1,  3},
+	{  9, 14, -1, -1,  2}
 };
 
-int adjacent24[24][5] = {
-	{1,9,0,0,2},
-	{0,2,4,0,3},
-	{1,14,0,0,2},
-	{4,10,0,0,2},
-	{1,3,5,7,4},
-	{4,13,0,0,2},
-	{7,11,0,0,2},
-	{4,6,8,0,3},
-	{7,12,0,0,2},
-	{0,10,21,0,3},
-	{3,9,11,18,4},
-	{6,10,15,0,3},
-	{8,13,17,0,3},
-	{5,12,14,20,4},
-	{2,13,23,0,3},
-	{11,16,0,0,2},
-	{15,17,19,0,3},
-	{12,16,0,0,2},
-	{10,19,0,0,2},
-	{16,18,20,22,4},
-	{13,19,0,0,2},
-	{9,22,0,0,2},
-	{19,21,23,0,3},
-	{14,22,0,0,2}
+static const int adjacent24[24][5] = {
+	{  1,  9, -1, -1,  2},
+	{  0,  2,  4, -1,  3},
+	{  1, 14, -1, -1,  2},
+	{  4, 10, -1, -1,  2},
+	{  1,  3,  5,  7,  4},
+	{  4, 13, -1, -1,  2},
+	{  7, 11, -1, -1,  2},
+	{  4,  6,  8, -1,  3},
+	{  7, 12, -1, -1,  2},
+	{  0, 10, 21, -1,  3},
+	{  3,  9, 11, 18,  4},
+	{  6, 10, 15, -1,  3},
+	{  8, 13, 17, -1,  3},
+	{  5, 12, 14, 20,  4},
+	{  2, 13, 23, -1,  3},
+	{ 11, 16, -1, -1,  2},
+	{ 15, 17, 19, -1,  3},
+	{ 12, 16, -1, -1,  2},
+	{ 10, 19, -1, -1,  2},
+	{ 16, 18, 20, 22,  4},
+	{ 13, 19, -1, -1,  2},
+	{  9, 22, -1, -1,  2},
+	{ 19, 21, 23, -1,  3},
+	{ 14, 22, -1, -1,  2}
 };
 
-int adjacent24Ext[24][5] = {
-	{1,9,0,0,2},
-	{0,2,4,0,3},
-	{1,14,0,0,2},
-	{4,10,0,0,2},
-	{1,3,5,7,4},
-	{4,13,0,0,2},
-	{7,11,0,0,2},
-	{4,6,8,0,3},
-	{7,12,0,0,2},
-	{0,10,21,0,3},
-	{3,9,11,18,4},
-	{6,10,15,0,3},
-	{8,13,17,0,3},
-	{5,12,14,20,4},
-	{2,13,23,0,3},
-	{11,16,0,0,2},
-	{15,17,19,0,3},
-	{12,16,0,0,2},
-	{10,19,0,0,2},
-	{16,18,20,22,4},
-	{13,19,0,0,2},
-	{9,22,0,0,2},
-	{19,21,23,0,3},
-	{14,22,0,0,2}
+static const int adjacent24Plus[24][5] = {
+	{  1,  3,  9, -1,  3},
+	{  0,  2,  4, -1,  3},
+	{  1,  5, 14, -1,  3},
+	{  0,  4,  6, 10,  4},
+	{  1,  3,  5,  7,  4},
+	{  2,  4,  8, 13,  4},
+	{  3,  7, 11, -1,  3},
+	{  4,  6,  8, -1,  3},
+	{  5,  7, 12, -1,  3},
+	{  0, 10, 21, -1,  3},
+	{  3,  9, 11, 18,  4},
+	{  6, 10, 15, -1,  3},
+	{  8, 13, 17, -1,  3},
+	{  5, 12, 14, 20,  4},
+	{  2, 13, 23, -1,  3},
+	{ 11, 16, 18, -1,  3},
+	{ 15, 17, 19, -1,  3},
+	{ 12, 16, 20, -1,  3},
+	{ 10, 15, 19, 21,  4},
+	{ 16, 18, 20, 22,  4},
+	{ 13, 17, 19, 23,  4},
+	{  9, 18, 22, -1,  3},
+	{ 19, 21, 23, -1,  3},
+	{ 14, 20, 22, -1,  3}
 };
 
 int (*adjacent)[5];
@@ -265,8 +302,6 @@ adjacent = adjacent24;
 
 static const int kNumGeometricSymmetriesNormal = 16;
 static const int kNumGeometricSymmetries33 = 32;
-
-// There are three types of boards, the 16Board, 24Board, and 24BoardExt
 
 static const int gSymmetryMatrix16Board[16][24] = {
 	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1},
@@ -306,14 +341,64 @@ static const int gSymmetryMatrix24Board[16][24] = {
 	{8,12,17,5,13,20,2,14,23,7,4,1,22,19,16,0,9,21,3,10,18,6,11,15}
 };
 
+static const int linesArray16[16][7] = {
+    {  1,  2,  6, 13, -1, -1, 2},
+    {  0,  2, -1, -1, -1, -1, 1},
+    {  0,  1,  9, 15, -1, -1, 2},
+    {  4,  5,  7, 10, -1, -1, 2},
+    {  3,  5, -1, -1, -1, -1, 1},
+    {  3,  4,  8, 12, -1, -1, 2},
+    {  0, 13, -1, -1, -1, -1, 1},
+    {  3, 10, -1, -1, -1, -1, 1},
+    {  5, 12, -1, -1, -1, -1, 1},
+    {  2, 15, -1, -1, -1, -1, 1},
+    {  3,  7, 11, 12, -1, -1, 2},
+    { 10, 12, -1, -1, -1, -1, 1},
+    {  5,  8, 10, 11, -1, -1, 2},
+    {  0,  6, 14, 15, -1, -1, 2},
+    { 13, 15, -1, -1, -1, -1, 1},
+    {  2,  9, 13, 14, -1, -1, 2}
+};
+
+static const int linesArray24[16][7] = {
+    {  1,  2,  9, 21,  3,  6, 3},
+    {  0,  2,  4,  7, -1, -1, 2},
+    {  0,  1, 14, 23,  5,  8, 3},
+    {  4,  5, 10, 18,  0,  6, 3},
+    {  1,  7,  3,  5, -1, -1, 2},
+    {  3,  4, 13, 20,  2,  8, 3},
+    {  7,  8, 11, 15,  0,  3, 3},
+    {  1,  4,  6,  8, -1, -1, 2},
+    {  6,  7, 12, 17,  2,  5, 3},
+    {  0, 21, 10, 11, -1, -1, 2},
+    {  3, 18,  9, 11, -1, -1, 2},
+    {  6, 15,  9, 10, -1, -1, 2},
+    {  8, 17, 13, 14, -1, -1, 2},
+    {  5, 20, 12, 14, -1, -1, 2},
+    {  2, 23, 12, 13, -1, -1, 2},
+    {  6, 11, 16, 17, 18, 21, 3},
+    { 15, 17, 19, 22, -1, -1, 2},
+    {  8, 12, 15, 16, 20, 23, 3},
+    {  3, 10, 19, 20, 15, 21, 3},
+    { 16, 22, 18, 20, -1, -1, 2},
+    {  5, 13, 18, 19, 17, 23, 3},
+    {  0,  9, 22, 23, 15, 18, 3},
+    { 16, 19, 21, 23, -1, -1, 2},
+    {  2, 14, 21, 22, 17, 20, 3}
+};
+
 // Helper Functions
 
-static Tier HashTier(int piecesLeft, int numX, int numO);
-static void UnhashTier(Tier tier, int *piecesLeft, int *numX, int *numO);
+static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard);
+static void UnhashTier(Tier tier, int *xToPlace, int *oToPlace, int *xOnBoard, int *oOnBoard);
 static void UnhashMove(Move move, int *from, int *to, int *remove);
 
+static bool IsSlotInMill(char *board, int slot, char player);
+static bool ClosesMill(char *board, char player, int from, int to);
+static bool AllPiecesInMills(char *board, char player);
+static int FindLegalRemoves(char *board, char player, int *legalRemoves);
+
 static bool InitGenericHash(void);
-static char WhoseTurn(ReadOnlyString board);
 static Position DoSymmetry(TierPosition tier_position, int symmetry);
 
 static int MninemensmorrisInit(void *aux) {
@@ -358,13 +443,16 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
     return 0;
 }
 
-static Tier MninemensmorrisGetInitialTier(void) { return HashTier(gNumPiecesPerPlayer, 0, 0); }
+static Tier MninemensmorrisGetInitialTier(void) { 
+    return HashTier(gNumPiecesPerPlayer, gNumPiecesPerPlayer, 0, 0);
+}
 
 // Assumes Generic Hash has been initialized.
 static Position MninemensmorrisGetInitialPosition(void) {
     char board[boardSize];
-    memset(board, '-', boardSize);
-    return GenericHashHashLabel(HashTier(gNumPiecesPerPlayer, 0, 0), board, 1);
+    memset(board, BLANK, boardSize);
+    return GenericHashHashLabel(
+        HashTier(gNumPiecesPerPlayer, gNumPiecesPerPlayer, 0, 0), board, 1);
 }
 
 static int64_t MninemensmorrisGetTierSize(Tier tier) {
@@ -377,50 +465,73 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
 
     char board[boardSize];
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
-    int t = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    char turn = (t == 1) ? X : O;
-	int piecesLeft, numX, numO;
-    UnhashTier(tier_position.tier, &piecesLeft, &numX, &numO);
+    int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    char player = (turn == 1) ? X : O;
+	int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
 
-	int legalRemoves[boardSize];
-	int numLegalRemoves = findLegalRemoves(board, turn, legalRemoves);
-	int *legalTos;
-	int numLegalTos;
-    int i, j, from;
+    int totalX = xToPlace + xOnBoard;
+    int totalO = oToPlace + oOnBoard;
 
-	if ((numX > 2 && numO > 2) || piecesLeft > 0) {
+	if (totalX > 2 && totalO > 2) {
+        int toPlace = (player == X) ? xToPlace : oToPlace;
+        int legalRemoves[boardSize];
+        int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
+        int i, j, from, numLegalTos, *legalTos;
+
         int allBlanks[boardSize];
         int numBlanks = 0;
-        for (i = 0; i < boardSize; i++)
-            if (board[i] == BLANK)
+        for (i = 0; i < boardSize; i++) {
+            if (board[i] == BLANK) {
                 allBlanks[numBlanks++] = i;
+            }
+        }
 
-        if (piecesLeft > 0) {
-            for (i = 0; i < numBlanks; i++)
-                if (closesMill(board, turn, NONE, allBlanks[i]) && numLegalRemoves > 0)
-                    for (j = 0; j < numLegalRemoves; j++)
-                        MoveArrayAppend(&moves, MOVE_ENCODE(NONE, allBlanks[i], legalRemoves[j]));
-                else
-                    MoveArrayAppend(&moves, MOVE_ENCODE(NONE, allBlanks[i], NONE));
-        } else {
+        if (toPlace == 0 || laskerRule) { // Sliding or flying moves
             for (from = 0; from < boardSize; from++) {
-                if (gFlyRule && ((turn == X && numX == 3) || (turn == O && numO == 3))) {
+                if (gFlyRule && ((player == X && totalX == 3) || (player == O && totalO == 3))) {
                     legalTos = allBlanks;
                     numLegalTos = numBlanks;
                 } else {
                     legalTos = adjacent[from];
                     numLegalTos = adjacent[from][4];
                 }
-                if (board[from] == turn) {
+                if (board[from] == player) {
                     for (i = 0; i < numLegalTos; i++) {
                         if (board[legalTos[i]] == BLANK) {
-                            if (closesMill(board, turn, from, legalTos[i]) && numLegalRemoves > 0)
-                                for (j = 0; j < numLegalRemoves; j++)
-                                    MoveArrayAppend(&moves, MOVE_ENCODE(from, legalTos[i], legalRemoves[j]));
-                            else
-                                MoveArrayAppend(&moves, MOVE_ENCODE(from, legalTos[i], NONE));
+                            if (ClosesMill(board, player, from, legalTos[i]) && numLegalRemoves > 0) {
+                                for (j = 0; j < numLegalRemoves; j++) {
+                                    MoveArrayAppend(
+                                        &moves, 
+                                        MOVE_ENCODE(from, legalTos[i], legalRemoves[j])
+                                    );
+                                }
+                            } else {
+                                MoveArrayAppend(
+                                    &moves,
+                                    MOVE_ENCODE(from, legalTos[i], NONE)
+                                );
+                            }
                         }
                     }
+                }
+            }
+        }
+
+        if (toPlace > 0) { // Placing moves
+            for (i = 0; i < numBlanks; i++) {
+                if (ClosesMill(board, player, NONE, allBlanks[i]) && numLegalRemoves > 0) {
+                    for (j = 0; j < numLegalRemoves; j++) {
+                        MoveArrayAppend(
+                            &moves, 
+                            MOVE_ENCODE(NONE, allBlanks[i], legalRemoves[j])
+                        );
+                    }
+                } else {
+                    MoveArrayAppend(
+                        &moves, 
+                        MOVE_ENCODE(NONE, allBlanks[i], NONE)
+                    );
                 }
             }
         }
@@ -440,52 +551,50 @@ static Value MninemensmorrisPrimitive(TierPosition tier_position) {
 static TierPosition MninemensmorrisDoMove(TierPosition tier_position, Move move) {
     char board[boardSize];
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
-    int t = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    char turn;
-    int oppT;
-    if (t == 1) {
-        turn = X;
-        oppT = 2;
+    int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    char player;
+    int oppTurn;
+    if (turn == 1) {
+        player = X;
+        oppTurn = 2;
     } else {
-        turn == O;
-        oppT = 1;
+        player == O;
+        oppTurn = 1;
     }
-	int piecesLeft, numX, numO;
-    UnhashTier(tier_position.tier, &piecesLeft, &numX, &numO);
+	int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
     int from, to, remove;
     UnhashMove(move, &from, &to, &remove);
 
-    board[to] = turn;
-	if (turn == X) {
-		turn = O;
-		if (from != NONE) { // If sliding
+    board[to] = player;
+	if (player == X) {
+		if (from != NONE) { // Moving a piece
 			board[from] = BLANK;
-		} else { // Phase 1
-			piecesLeft--;
-			numX++;
+		} else { // Placing a piece
+			xToPlace--;
+			xOnBoard++;
 		}
 		if (remove != NONE) {
 			board[remove] = BLANK;
-			numO--;
+			oOnBoard--;
 		}
 	} else {
-		turn = X;
-		if (from != NONE) {
+		if (from != NONE) { // Moving a piece
 			board[from] = BLANK;
-		} else {
-			piecesLeft--;
-			numO++;
+		} else { // Placing a piece
+			oToPlace--;
+			oOnBoard++;
 		}
 		if (remove != NONE) {
 			board[remove] = BLANK;
-			numX--;
+			xOnBoard--;
 		}
 	}
 
     TierPosition ret;
-    ret.tier = HashTier(piecesLeft, numX, numO);
-    ret.position = GenericHashHashLabel(ret.tier, board, oppT);
-	return ret; // TODO: ASK QUESTION ABOUT TTTIER ret.position 
+    ret.tier = HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard);
+    ret.position = GenericHashHashLabel(ret.tier, board, oppTurn);
+	return ret;
 }
 
 static bool MninemensmorrisIsLegalPosition(TierPosition tier_position) {
@@ -554,112 +663,206 @@ static PositionArray MtttierGetCanonicalParentPositions(
 static Position MninemensmorrisGetPositionInSymmetricTier(TierPosition tier_position, Tier symmetric) {
     if (tier_position.tier == symmetric) {
         return tier_position.position;
-    } else { // only other situation is colors and turn are flipped
+    } else {
+        /*
+            We reach this case only after all pieces have been placed AND 
+            the players have different numbers of pieces on the board.
+            A position in the m-white-pieces-and-n-black-pieces-on-the-board tier
+            is symmetric to a position whose turn and pieces' colors are flipped
+            which is in the n-white-pieces-and-m-black-pieces-on-the-board tier.
+        */
+        char board[boardSize];
+        GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
+        int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
         
-        return MninemensmorrisTierGetCanonicalPosition(tp);
+        // Swap turn
+        int oppTurn = (turn == 1) ? 2 : 1;
+
+        // Swap colors of pieces
+        for (int i = 0; i < boardSize; i++) {
+            if (board[i] == X) {
+                board[i] = O;
+            } else if (board[i] == O) {
+                board[i] = X;
+            }
+        }
+
+        // This position in the symmetric tier is not necessarily canonical
+        return GenericHashHashLabel(symmetric, board, oppTurn);
     }
 }
 
 static TierArray MninemensmorrisGetChildTiers(Tier tier) {
     TierArray children;
     TierArrayInit(&children);
-    int piecesLeft, numX, numO;
-    UnhashTier(tier, &piecesLeft, &numX, &numO);
-	if (piecesLeft > 0) { // Phase 1
-		if (piecesLeft & 1) { // i.e., it's O's turn
-            TierArrayAppend(
-                &children, HashTier(piecesLeft - 1, numX, numO + 1));
-			if (numO > 1) {
-				TierArrayAppend(
-                    &children, HashTier(piecesLeft - 1, numX - 1, numO + 1));
-			}
-		} else {
-			TierArrayAppend(
-                &children, HashTier(piecesLeft - 1, numX + 1, numO));
-			if (numX > 1) {
-				TierArrayAppend(
-                    &children, HashTier(piecesLeft - 1, numX + 1, numO - 1));
-			}
-		}
-	} else { // Phase 2 or 3. Turn unknown, so we assume both paths as children
-        TierArrayAppend(&children, tier);
-		if (numX > 2 && numO > 2) {
-            TierArrayAppend(&children, HashTier(piecesLeft, numX - 1, numO));
-			TierArrayAppend(&children, HashTier(piecesLeft, numX, numO - 1));
-		}
-	}
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+
+    int totalX = xToPlace + xOnBoard;
+    int totalO = oToPlace + oOnBoard;
+
+    if (totalX > 2 && totalO > 2) {
+        /* Add child tiers reachable through sliding/flying moves.
+        If not using Lasker Rule, oToPlace == 0 means that
+        we are in the sliding phase. */
+        if (laskerRule || oToPlace == 0) {
+            if (xOnBoard >= 3 && oOnBoard > 0) {
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard - 1));
+            }
+            if (oOnBoard >= 3 && xOnBoard > 0) {
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace, oToPlace, xOnBoard - 1, oOnBoard));
+            }
+        }
+
+        /* Add child tiers reachable through placing moves. */
+        if (laskerRule) {
+            if (xToPlace > 0) {
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard)
+                );
+                if (oOnBoard > 1 && xOnBoard >= 2) {
+                    TierArrayAppend(
+                        &children, 
+                        HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1)
+                    );
+                }
+            }
+            if (oToPlace > 0) {
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1)
+                );
+                if (xOnBoard > 1 && oOnBoard >= 2) {
+                    TierArrayAppend(
+                        &children, 
+                        HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1)
+                    );
+                }
+            }
+        } else if (oToPlace > 0) {
+            /* If not using Lasker Rule, oToPlace > 0 means that
+            we are in the sliding phase. */
+            if (xToPlace == oToPlace) { // i.e., it's X's turn to place
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard)
+                );
+                if (oOnBoard > 1 && xOnBoard >= 2) {
+                    TierArrayAppend(
+                        &children, 
+                        HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1)
+                    );
+                }
+            } else { // it's O's turn to place
+                TierArrayAppend(
+                    &children, 
+                    HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1)
+                );
+                if (xOnBoard > 1 && oOnBoard >= 2) {
+                    TierArrayAppend(
+                        &children, 
+                        HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1)
+                    );
+                }
+            }
+        }
+    }
+
     return children;
 }
 
 static TierArray MtttierGetParentTiers(Tier tier) {
     TierArray children;
     TierArrayInit(&children);
-    int piecesLeft, numX, numO;
-    UnhashTier(tier, &piecesLeft, &numX, &numO);
+    // int piecesLeft, numX, numO;
+    // UnhashTier(tier, &piecesLeft, &numX, &numO);
 
-	if (piecesLeft > 0) { // Phase 1
-		if (piecesLeft & 1) { // i.e., it's O's turn
-            TierArrayAppend(
-                &children, HashTier(piecesLeft - 1, numX, numO + 1));
-			if (numO > 1) {
-				TierArrayAppend(
-                    &children, HashTier(piecesLeft - 1, numX - 1, numO + 1));
-			}
-		} else {
-			TierArrayAppend(
-                &children, HashTier(piecesLeft - 1, numX + 1, numO));
-			if (numX > 1) {
-				TierArrayAppend(
-                    &children, HashTier(piecesLeft - 1, numX + 1, numO - 1));
-			}
-		}
-	} else { // Phase 2 or 3. Turn unknown, so we assume both paths as children
-        TierArrayAppend(&children, tier);
-		if (numX > 2 && numO > 2) {
-            TierArrayAppend(&children, HashTier(piecesLeft, numX - 1, numO));
-			TierArrayAppend(&children, HashTier(piecesLeft, numX, numO - 1));
-		}
-	}
+	// if (piecesLeft > 0) { // Phase 1
+	// 	if (piecesLeft & 1) { // i.e., it's O's turn
+    //         TierArrayAppend(
+    //             &children, HashTier(piecesLeft - 1, numX, numO + 1));
+	// 		if (numO > 1) {
+	// 			TierArrayAppend(
+    //                 &children, HashTier(piecesLeft - 1, numX - 1, numO + 1));
+	// 		}
+	// 	} else {
+	// 		TierArrayAppend(
+    //             &children, HashTier(piecesLeft - 1, numX + 1, numO));
+	// 		if (numX > 1) {
+	// 			TierArrayAppend(
+    //                 &children, HashTier(piecesLeft - 1, numX + 1, numO - 1));
+	// 		}
+	// 	}
+	// } else { // Phase 2 or 3. Turn unknown, so we assume both paths as children
+    //     TierArrayAppend(&children, tier);
+	// 	if (numX > 2 && numO > 2) {
+    //         TierArrayAppend(&children, HashTier(piecesLeft, numX - 1, numO));
+	// 		TierArrayAppend(&children, HashTier(piecesLeft, numX, numO - 1));
+	// 	}
+	// }
     
     return children;
 }
 
 static Tier MninemensmorrisGetCanonicalTier(Tier tier) {
-    int piecesLeft, numX, numO;
-    UnhashTier(tier, piecesLeft, numX, numO);
-    if (piecesLeft > 0) {
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+    Tier symmetricTier = HashTier(oToPlace, xToPlace, oOnBoard, xOnBoard);
+
+    /* When Lasker rule not used, all tiers in placing phase 
+    have no symmetric tier */
+    if (!laskerRule && oToPlace > 0) { 
         return tier;
     } else {
-        return HashTier(piecesLeft, numO, numX);
+        return tier < symmetricTier ? tier : symmetricTier;
     }
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
-    // char board[9] = {0};
-    // bool success = GenericHashUnhashLabel(tier_position.tier,
-    //                                       tier_position.position, board);
-    // if (!success) return 1;
+    char board[boardSize];
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return 1;
 
-    // for (int i = 0; i < 9; ++i) {
-    //     board[i] = ConvertBlankToken(board[i]);
-    // }
+    for (int i = 0; i < boardSize; ++i) {
+        if (board[i] == BLANK) {
+            board[i] = '.';
+        }
+    }
 
-    // static ConstantReadOnlyString kFormat =
+    // static ConstantReadOnlyString kFormat16 =
     //     "         ( 1 2 3 )           : %c %c %c\n"
     //     "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
     //     "         ( 7 8 9 )           : %c %c %c";
-    // int actual_length =
-    //     snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
-    //              board[0], board[1], board[2], board[3], board[4], board[5],
-    //              board[6], board[7], board[8]);
-    // if (actual_length >= kGameplayApi.position_string_length_max + 1) {
-    //     fprintf(
-    //         stderr,
-    //         "MtttierTierPositionToString: (BUG) not enough space was allocated "
-    //         "to buffer. Please increase position_string_length_max.\n");
-    //     return 1;
-    // }
-    // return 0;
+
+    static ConstantReadOnlyString kFormat16 = 
+        "          0 ----- 1 ----- 2    %c ----- %c ----- %c    %s's turn (%c)\n"
+        "          |       |       |    |       |       |    \n"
+        "          |   3 - 4 - 5   |    |   %c - %c - %c   |    Phase: %s\n"
+        "          |   |       |   |    |   |       |   |     %s\n"
+        "LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c    %s\n"
+        "          |   |       |   |    |   |       |   |    \n"
+        "          |  10 - 11- 12  |    |   %c - %c - %c   |  \n"
+        "          |       |       |    |       |       |     \n"
+        "          13 ---- 14 ---- 15   %c ----- %c ----- %c    \n\n";
+
+    int actualLength =
+        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat16,
+                 board[0], board[1], board[2], board[3], board[4], board[5],
+                 board[6], board[7], board[8]);
+    if (actualLength >= kGameplayApi.position_string_length_max + 1) {
+        fprintf(
+            stderr,
+            "MninemensmorrisTierPositionToString: (BUG) not enough space was allocated "
+            "to buffer. Please increase position_string_length_max.\n");
+        return 1;
+    }
+    return 0;
 
     // char turn;
 	// int piecesLeft;
@@ -843,14 +1046,16 @@ static Move MninemensmorrisStringToMove(ReadOnlyString moveString) {
 
 // Helper functions implementation
 
-static Tier HashTier(int piecesLeft, int numX, int numO) {
-    return (piecesLeft << 4) | (numX << 2) | numO;
+static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard) {
+    return (xToPlace << 12) | (oToPlace << 8) | (xOnBoard << 4) | oOnBoard;
 }
 
-static void UnhashTier(Tier tier, int *piecesLeft, int *numX, int *numO) {
-    *piecesLeft = tier >> 4;
-    *numX = (tier >> 2) & 0b11;
-    *numO = tier & 0b11;
+static void UnhashTier(
+    Tier tier, int *xToPlace, int *oToPlace, int *xOnBoard, int *oOnBoard) {
+    *xToPlace = (tier >> 12) & 0xF;
+    *oToPlace = (tier >> 8) & 0xF;
+    *xOnBoard = (tier >> 4) & 0xF;
+    *oOnBoard = tier & 0xF;
 }
 
 static void UnhashMove(Move move, int *from, int *to, int *remove) {
@@ -861,64 +1066,169 @@ static void UnhashMove(Move move, int *from, int *to, int *remove) {
 
 static bool InitGenericHash(void) {
     GenericHashReinitialize();
-    int player;  // No turn bit needed as we can infer the turn from board.
-    int pieces_init_array[10] = {'X', 0, 0, 'O', 0, 0, '-', 0, 0, -1};
+    int player = 0;
+    int pieces_init_array[10] = {X, 0, 0, O, 0, 0, BLANK, 0, 0, -1};
     bool success;
     Tier tier;
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
 
-    for (int piecesLeft = 0; piecesLeft < 2 * gNumPiecesPerPlayer + 1; piecesLeft++) {
-		for (int numX = 0; numX < gNumPiecesPerPlayer + 1; numX++) {
-			for (int numO = 0; numO < gNumPiecesPerPlayer + 1; numO++) {
-				tier = HashTier(piecesLeft, numX, numO);
-				pieces_init_array[1] = pieces_init_array[2] = numX;
-				pieces_init_array[4] = pieces_init_array[5] = numO;
-				pieces_init_array[7] = pieces_init_array[8] = boardSize - numX - numO;
-                // Odd piecesLeft means it's P1's turn. Nonzero even piecesLeft means it's P2's turn.
-                player = (piecesLeft == 0) ? 0 : (piecesLeft & 1) ? 2 : 1;
+    if (laskerRule) {
+        for (xToPlace = 0; xToPlace <= gNumPiecesPerPlayer; xToPlace++) {
+            for (oToPlace = 0; oToPlace <= gNumPiecesPerPlayer; oToPlace++) {
+                for (xOnBoard = 0; xOnBoard <= gNumPiecesPerPlayer - xToPlace; xOnBoard++) {
+                    for (oOnBoard = 0; oOnBoard <= gNumPiecesPerPlayer - oToPlace; oOnBoard++) {
+                        tier = HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard);
+                        pieces_init_array[1] = pieces_init_array[2] = xOnBoard;
+                        pieces_init_array[4] = pieces_init_array[5] = oOnBoard;
+                        pieces_init_array[7] = pieces_init_array[8] = boardSize - xOnBoard - oOnBoard;
+                        
+                        success = GenericHashAddContext(player, boardSize, pieces_init_array, NULL, tier);
 
-                success = GenericHashAddContext(player, boardSize, pieces_init_array, NULL, tier);
-
-                if (!success) {
-                    fprintf(stderr,
-                            "MninemensmorrisInit: failed to initialize generic hash context "
-                            "for tier %" PRId64 ". Aborting...\n",
-                            tier);
-                    GenericHashReinitialize();
-                    return false;
+                        if (!success) {
+                            fprintf(stderr,
+                                    "MninemensmorrisInit: failed to initialize generic hash context "
+                                    "for tier %" PRId64 ". Aborting...\n",
+                                    tier);
+                            GenericHashReinitialize();
+                            return false;
+                        }
+                    }
                 }
-			}
-		}
-	}
+            }
+        }
+    } else {
+        for (int piecesLeft = 0; piecesLeft <= 2 * gNumPiecesPerPlayer; piecesLeft++) {
+            oToPlace = piecesLeft / 2;
+            xToPlace = 2 * gNumPiecesPerPlayer - oToPlace;
+            for (xOnBoard = 0; xOnBoard <= gNumPiecesPerPlayer - xToPlace; xOnBoard++) {
+                for (oOnBoard = 0; oOnBoard <= gNumPiecesPerPlayer - oToPlace; oOnBoard++) {
+                    tier = HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard);
+                    pieces_init_array[1] = pieces_init_array[2] = xOnBoard;
+                    pieces_init_array[4] = pieces_init_array[5] = oOnBoard;
+                    pieces_init_array[7] = pieces_init_array[8] = boardSize - xOnBoard - oOnBoard;
+
+                    // Odd piecesLeft means it's P1's turn. 
+                    // Nonzero even piecesLeft means it's P2's turn.
+                    player = (piecesLeft == 0) ? 0 : (piecesLeft & 1) ? 2 : 1;
+
+                    success = GenericHashAddContext(player, boardSize, pieces_init_array, NULL, tier);
+
+                    if (!success) {
+                        fprintf(stderr,
+                                "MninemensmorrisInit: failed to initialize generic hash context "
+                                "for tier %" PRId64 ". Aborting...\n",
+                                tier);
+                        GenericHashReinitialize();
+                        return false;
+                    }
+                }
+            }
+        }
+    }
 
     return true;
 }
 
-/*
-Returns true if mill would be created if current player
-places a piece at toIdx (if fromIdx = 31) or slides a piece from fromIdx to toIdx (otherwise).
-*/
-bool closesMill(char *board, char turn, int from, int to) {
-	char copy[boardSize];
-	memcpy(copy, board, sizeof(copy));
-	if (from != 31) copy[from] = BLANK; // If sliding.
-	return checkMill(copy, to, turn);
+/**
+ * @brief We are given a `board` that has a piece at `slot` belonging to a
+ * given `player`. Return whether the piece at `slot` is part of a mill of
+ * other pieces belonging to that player.
+ * 
+ * @note In the regular 24-Board, each slot is part of 2 lines, so we do 2
+ * mill checks. In the 16-Board, each slot is part of either 1 or 2 lines.
+ * In the 24-Board-Plus each slot is part of either 2 or 3 lines. The
+ * if-statement cases are ordered with consideration for what is more
+ * efficient for solving variants using 24-Board or 24-Board-Plus.
+ * 
+ * @note MILL() assumes that `slot` already contains the piece
+ * indicated by `turn`.
+ */
+static bool IsSlotInMill(char *board, int slot, char player) {
+    int *lines = linesArray24[slot];
+    bool firstLineIsMill = MILL(board, lines[0], lines[1], player);
+    if (boardType == 2 || lines[7] == 2) {
+        return firstLineIsMill || MILL(board, lines[2], lines[3], player);
+    } else if (lines[7] == 3) {
+        return firstLineIsMill || MILL(board, lines[2], lines[3], player) 
+        || MILL(board, lines[4], lines[5], player);
+    } else if (lines[7] == 1) {
+        return firstLineIsMill;
+    }
 }
 
-int findLegalRemoves(char *board, char turn, int *legalRemoves) {
+/**
+ * @brief Suppose the `player` whose turn it is either (1) moves a piece from
+ * the slot indicated by `from` to the slot indicated by `to` or (2) 
+ * places a piece at the slot indicated by `to`. Return whether
+ * doing so creates a mill of `player`'s pieces.
+ * 
+ * @note `board` is the board before `player` makes their move. Assume
+ * that the move indicated by `from` and `to` is legal.
+ * 
+ * @note We only need to make a change to the `from` slot but
+ * not to the `to` slot before passing the board into IsSlotInMill() because
+ * IsSlotInMill does not check the input slot; it just checks the other 
+ * slot in the lines that the input slot belongs to.
+ */
+static bool ClosesMill(char *board, char player, int from, int to) {
+    char pieceAtFrom = board[from];
+    if (from != NONE) { // If move is sliding move
+        board[from] = BLANK;
+    }
+	bool ret = IsSlotInMill(board, to, player);
+    board[from] = pieceAtFrom; // Undo change
+    return ret;
+}
+
+/**
+ * @brief Return whether each piece on the `board` belonging 
+ * to `player` is part of a mill.
+ */
+static bool AllPiecesInMills(char *board, char player) {
+	for (int slot = 0; slot < boardSize; slot++) {
+		if (board[slot] == player) {
+			if (!IsSlotInMill(board, slot, player)) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+/**
+ * @brief Given a `board`, store the slots of all of the `player`'s 
+ * opponent's pieces that are removable according to the removalRule in
+ * `legalRemoves` and return how many of the opponent's pieces are removable.
+*/
+static int FindLegalRemoves(char *board, char player, int *legalRemoves) {
 	int numLegalRemoves = 0;
-	char oppTurn = turn == X ? O : X;
-	if (removalRule == 0) { /* Standard. Removable if piece is not in a mill or all of opponent's pieces are in mills. */
-		for (int i = 0; i < boardSize; i++)
-			if (board[i] == oppTurn && (!checkMill(board, i, oppTurn) || all_mills(board, i, oppTurn)))
-				legalRemoves[numLegalRemoves++] = i;
-	} else if (removalRule == 1) { /* Any of opponent's pieces are removable. */
-		for (int i = 0; i < boardSize; i++)
-			if (board[i] == oppTurn)
-				legalRemoves[numLegalRemoves++] = i;
-	} else { /* Removable only if piece is not in mill. */
-		for (int i = 0; i < boardSize; i++)
-			if (board[i] == oppTurn && !checkMill(board, i, oppTurn))
-				legalRemoves[numLegalRemoves++] = i;
+	char opponent = player == X ? O : X;
+    int slot;
+	if (removalRule == 0) {
+        /* Standard. An opponent's piece is removable if either all of the
+        opponent's pieces are in mills or if the piece is not in a mill. */
+		for (slot = 0; slot < boardSize; slot++) {
+			if (board[slot] == opponent && (!IsSlotInMill(board, slot, opponent)
+             || AllPiecesInMills(board, opponent))) {
+				legalRemoves[numLegalRemoves++] = slot;
+            }
+        }
+	} else if (removalRule == 1) {
+        /* An opponent's piece can be removed regardless of whether it
+        is in a mill or not. */
+		for (slot = 0; slot < boardSize; slot++) {
+			if (board[slot] == opponent) {
+				legalRemoves[numLegalRemoves++] = slot;
+            }
+        }
+	} else {
+        /* An opponent's piece can only be removed if it is not in a mill. */
+		for (slot = 0; slot < boardSize; slot++) {
+			if (board[slot] == opponent && 
+            !IsSlotInMill(board, slot, opponent)) {
+				legalRemoves[numLegalRemoves++] = slot;
+            }
+        }
 	}
 	return numLegalRemoves;
 }
