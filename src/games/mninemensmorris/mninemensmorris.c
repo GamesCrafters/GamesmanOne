@@ -381,8 +381,8 @@ static const GameVariantOption optionLaskerRule = {
 
 static ConstantReadOnlyString choicesRemovalRule[2] = {
     "Standard", "Lenient", "Strict" };
-const struct GameVariantOption optionBoardType = {
-    .name = "Board Type",
+const struct GameVariantOption optionRemovalRule = {
+    .name = "Removal Rule",
     .num_choices = 3,
     .choices = choicesRemovalRule
 };
@@ -390,7 +390,7 @@ const struct GameVariantOption optionBoardType = {
 static ConstantReadOnlyString choicesBoardType[2] = {
     "16-Board", "24-Board", "24-Board-Plus"};
 static const GameVariantOption optionBoardType = {
-    .name = "Removal Rule",
+    .name = "Board Type",
     .num_choices = 3,
     .choices = choicesBoardType
 };
@@ -402,6 +402,8 @@ const struct GameVariantOption optionNumPiecesPerPlayer = {
     .num_choices = 10,
     .choices = choicesNumPiecesPerPlayer
 };
+
+static GameVariantOption options[6];
 
 /* Variant-Related Global Variables (can be set in SetVariantOption) */
 bool isMisere = false;
@@ -455,22 +457,29 @@ static const int gSymmetryMatrix24Board[16][24] = {
 	{8,12,17,5,13,20,2,14,23,7,4,1,22,19,16,0,9,21,3,10,18,6,11,15}
 };
 
-// Helper Functions
-
+/* Helper Functions */
 static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard);
 static void UnhashTier(Tier tier, int *xToPlace, int *oToPlace, int *xOnBoard, int *oOnBoard);
 static void UnhashMove(Move move, int *from, int *to, int *remove);
-
 static bool IsSlotInMill(char *board, int slot, char player);
 static bool ClosesMill(char *board, char player, int from, int to);
 static bool AllPiecesInMills(char *board, char player);
 static int FindLegalRemoves(char *board, char player, int *legalRemoves);
-
 static bool InitGenericHash(void);
 static Position DoSymmetry(TierPosition tier_position, int symmetry);
 
+/* Game, Solver, and Gameplay API Functions Implementation */
+
 static int MninemensmorrisInit(void *aux) {
     (void)aux;  // Unused.
+
+    options[0] = optionMisere;
+    options[1] = optionFlyRule;
+    options[2] = optionLaskerRule;
+    options[3] = optionRemovalRule;
+    options[4] = optionBoardType;
+    options[5] = optionNumPiecesPerPlayer;
+
     return !InitGenericHash();
 }
 
@@ -482,18 +491,18 @@ static const GameVariant *MninemensmorrisGetCurrentVariant(void) {
 
 static int MninemensmorrisSetVariantOption(int option, int selection) {
     switch (option) {
-        case 0:
+        case 0: // Misere
             isMisere = selection == 1;
             break;
-        case 1:
+        case 1: // Flying Rule
             gFlyRule = selection == 1;
             break;
-        case 3:
+        case 3: // Lasker Rule
             laskerRule = selection == 1;
-        case 4:
+        case 4: // Removal Rule
             removalRule = selection;
             break;
-        case 5:
+        case 5: // BoardType
             boardType = selection;
             if (selection == 0) {
                 boardSize = 16;
@@ -509,7 +518,7 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
                 linesArray = linesArray24;
             }
             break;
-        case 6:
+        case 6: // NumPiecesPerPlayer
             gNumPiecesPerPlayer = selection - 3;
             break;
         default:
@@ -957,38 +966,80 @@ static Tier MninemensmorrisGetCanonicalTier(Tier tier) {
     }
 }
 
-static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
+static int MninemensmorrisTierPositionToString(TierPosition tier_position, char *buffer) {
     char board[boardSize];
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);
     if (!success) return 1;
 
+    int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    char player = (turn == 1) ? X : O;
+
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+
+    /* Replace all blanks with '.' */
     for (int i = 0; i < boardSize; ++i) {
         if (board[i] == BLANK) {
             board[i] = '.';
         }
     }
 
-    // static ConstantReadOnlyString kFormat16 =
-    //     "         ( 1 2 3 )           : %c %c %c\n"
-    //     "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
-    //     "         ( 7 8 9 )           : %c %c %c";
-
     static ConstantReadOnlyString kFormat16 = 
-        "          0 ----- 1 ----- 2    %c ----- %c ----- %c    %s's turn (%c)\n"
+        "\n"
+        "          0 ----- 1 ----- 2    %c ----- %c ----- %c     It is %s's turn.\n"
         "          |       |       |    |       |       |    \n"
-        "          |   3 - 4 - 5   |    |   %c - %c - %c   |    Phase: %s\n"
-        "          |   |       |   |    |   |       |   |     %s\n"
-        "LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c    %s\n"
-        "          |   |       |   |    |   |       |   |    \n"
-        "          |  10 - 11- 12  |    |   %c - %c - %c   |  \n"
+        "          |   3 - 4 - 5   |    |   %c - %c - %c   |     X has %d pieces left to place.\n"
+        "          |   |       |   |    |   |       |   |     X has %d pieces on the board.\n"
+        "LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c\n"
+        "          |   |       |   |    |   |       |   |     O has %d left to place.\n"
+        "          |  10 - 11- 12  |    |   %c - %c - %c   |    O has %d pieces on the board.\n"
         "          |       |       |    |       |       |     \n"
         "          13 ---- 14 ---- 15   %c ----- %c ----- %c    \n\n";
 
-    int actualLength =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat16,
-                 board[0], board[1], board[2], board[3], board[4], board[5],
-                 board[6], board[7], board[8]);
+    static ConstantReadOnlyString kFormat24 = 
+        "\n"
+        "        0 --------- 1 --------- 2       %c --------- %c --------- %c     It is %s's turn.\n"
+        "        |           |           |       | %c         |         %c |\n"
+        "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |"
+        "        |   |       |       |   |       |   |       |       |   |     X has %d pieces left to place.\n"
+        "        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |     X has %d pieces on the board.\n"
+        "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+        "LEGEND: 9 - 10- 11      12- 13- 14      %c - %c - %c       %c - %c - %c\n"
+        "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+        "        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   |     O has %d left to place.\n"
+        "        |   |       |       |   |       |   |       |       |   |     O has %d pieces on the board.\n"
+        "        |   18 ---- 19 ---- 20  |       |   %c ----- %c ----- %c   |\n"
+        "        |           |           |       | %c         |         %c |\n"
+        "        21 -------- 22 -------- 23      %c --------- %c --------- %c \n\n";
+
+    int actualLength = 0;
+    if (boardSize == 16) {
+        actualLength = snprintf(buffer, 
+            kGameplayApi.position_string_length_max + 1, kFormat16, board[0],
+            board[1], board[2], player, board[3], board[4], board[5],
+            xToPlace, xOnBoard, board[6], board[7], board[8], board[9],
+            oToPlace, board[10], board[11], board[12], oOnBoard,
+            board[13], board[14], board[15]);
+    } else {
+        /* If using 24BoardPlus, set characters to indicate diagonals. */
+        char diag = ' ';
+        char antiDiag = ' ';
+        if (boardType == 2) {
+            diag = '/';
+            antiDiag = '\\';
+        }
+        actualLength = snprintf(buffer, 
+            kGameplayApi.position_string_length_max + 1, kFormat24, board[0], 
+            board[1], board[2], player, antiDiag, diag, board[3], board[4], 
+            board[5], xToPlace, board[6], board[7], board[8], xOnBoard, 
+            board[9], board[10], board[11], board[12], board[13], board[14],
+            board[15], board[16], board[17], oToPlace, oOnBoard, board[18], 
+            board[19], board[20], diag, antiDiag, board[21], board[22], 
+            board[23] 
+        );
+    }
+
     if (actualLength >= kGameplayApi.position_string_length_max + 1) {
         fprintf(
             stderr,
@@ -996,77 +1047,6 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
             "to buffer. Please increase position_string_length_max.\n");
         return 1;
     }
-    return 0;
-
-    // char turn;
-	// int piecesLeft;
-	// int numx, numo;
-
-	// char* board = unhash(position, &turn, &piecesLeft, &numx, &numo);
-
-	// if (gameType==6) {
-
-	// 	printf("\n");
-	// 	printf("          0 ----- 1 ----- 2    %c ----- %c ----- %c    %s's turn (%c)\n", board[0], board[1], board[2], playersName, turn);
-	// 	printf("          |       |       |    |       |       |    \n");
-	// 	printf("          |   3 - 4 - 5   |    |   %c - %c - %c   |    Phase: ", board[3], board[4], board[5]);
-	// 	if (piecesLeft != 0)
-	// 		printf("1 : PLACING\n");
-	// 	else {
-	// 		if  (!gFlying || ((turn == X) && (numx > 3)) || ((turn == O) && (numo > 3)))
-	// 			printf("2 : SLIDING\n");
-	// 		else
-	// 			printf("3 : FLYING\n");
-	// 	}
-	// 	printf("          |   |       |   |    |   |       |   |    ");
-	// 	if (piecesLeft != 0)
-	// 		printf("X has %d left to place\n",piecesLeft/2);
-	// 	else
-	// 		printf("X has %d on the board\n", numx);
-	// 	printf("LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c    ", board[6], board[7], board[8], board[9]);
-	// 	if (piecesLeft != 0)
-	// 		printf("O has %d left to place\n",piecesLeft/2 + piecesLeft%2);
-	// 	else
-	// 		printf("O has %d on the board\n", numo);
-	// 	printf("          |   |       |   |    |   |       |   |    \n");
-	// 	printf("          |  10 - 11- 12  |    |   %c - %c - %c   |  \n", board[10], board[11], board[12] );
-	// 	printf("          |       |       |    |       |       |     \n");
-	// 	printf("          13 ---- 14 ---- 15   %c ----- %c ----- %c    %s\n\n", board[13], board[14], board[15],
-	// 	       GetPrediction(position,playersName,usersTurn));
-
-	// } else {
-	// 	printf("\n");
-	// 	printf("        0 --------- 1 --------- 2       %c --------- %c --------- %c    %s's turn (%c)\n", board[0], board[1], board[2], playersName, turn );
-	// 	printf("        |           |           |       |           |           |\n");
-	// 	printf("        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |    Phase: ", board[3], board[4], board[5]);
-	// 	if (piecesLeft != 0)
-	// 		printf("1 : PLACING\n");
-	// 	else {
-	// 		if  (!gFlying || ((turn == X) && (numx > 3)) || ((turn == O) && (numo > 3)))
-	// 			printf("2 : SLIDING\n");
-	// 		else
-	// 			printf("3 : FLYING\n");
-	// 	}
-	// 	printf("        |   |       |       |   |       |   |       |       |   |    ");
-	// 	if (piecesLeft != 0)
-	// 		printf("X has %d left to place\n",piecesLeft/2);
-	// 	else
-	// 		printf("X has %d on the board\n", numx);
-	// 	printf("        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |    ", board[6], board[7], board[8] );
-	// 	if (piecesLeft != 0)
-	// 		printf("O has %d left to place\n",piecesLeft/2 + piecesLeft%2);
-	// 	else
-	// 		printf("O has %d on the board\n", numo);
-	// 	printf("        |   |   |       |   |   |       |   |   |       |   |   |\n");
-	// 	printf("LEGEND: 9 - 10- 11      12- 13- 14      %c - %c - %c       %c - %c - %c\n", board[9], board[10], board[11], board[12], board[13], board[14]);
-	// 	printf("        |   |   |       |   |   |       |   |   |       |   |   |\n");
-	// 	printf("        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   |\n", board[15], board[16], board[17] );
-	// 	printf("        |   |       |       |   |       |   |       |       |   |\n");
-	// 	printf("        |   18 ---- 19 ---- 20  |       |   %c ----- %c ----- %c   |\n", board[18], board[19], board[20] );
-	// 	printf("        |           |           |       |           |           |\n");
-	// 	printf("        21 -------- 22 -------- 23      %c --------- %c --------- %c    %s\n\n", board[21], board[22], board[23], GetPrediction(position, playersName, usersTurn));
-
-	// }
     return 0;
 }
 
@@ -1273,6 +1253,7 @@ static bool InitGenericHash(void) {
  * In the 24-Board-Plus each slot is part of either 2 or 3 lines. The
  * if-statement cases are ordered with consideration for what is more
  * efficient for solving variants using 24-Board or 24-Board-Plus.
+ * See the linesArray explanation above for more information.
  * 
  * @note MILL() assumes that `slot` already contains the piece
  * indicated by `turn`.
