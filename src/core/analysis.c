@@ -24,8 +24,7 @@ void AnalysisDestroy(Analysis *analysis) {
 }
 
 double AnalysisGetHashEfficiency(const Analysis *analysis) {
-    return (double)analysis->total_legal_positions /
-           (double)analysis->total_positions;
+    return (double)analysis->tier_size / (double)analysis->num_reachable_positions;
 }
 
 static int WidthOf(int64_t n) {
@@ -83,7 +82,7 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
     } else if (last_line) {
         printf(format, "Totals", analysis->win_count, analysis->lose_count,
                analysis->tie_count, analysis->draw_count,
-               analysis->total_legal_positions);
+               analysis->tier_size);
     } else {
         int64_t win_count = analysis->win_summary.size > remoteness
                                 ? analysis->win_summary.array[remoteness]
@@ -103,7 +102,7 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
 }
 
 void AnalysisPrintSummary(const Analysis *analysis) {
-    int column_width = WidthOf(analysis->total_legal_positions) + 1;
+    int column_width = WidthOf(analysis->tier_size) + 1;
     if (column_width < kInt32Base10StringLengthMax + 1) {
         column_width = kInt32Base10StringLengthMax + 1;
     }
@@ -117,5 +116,5 @@ void AnalysisPrintSummary(const Analysis *analysis) {
     PrintDashedLine(column_width, num_headers);
     PrintSummaryLine(analysis, -2, column_width);
     printf("\n\tTotal positions visited: %" PRId64 "\n",
-           analysis->total_legal_positions);
+           analysis->tier_size);
 }

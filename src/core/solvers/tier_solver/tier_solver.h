@@ -121,16 +121,16 @@ typedef struct TierSolverApi {
 
     /**
      * @brief Returns false if TIER_POSITION is definitely illegal. Returns true
-     * if TIER_POSITION is legal or if its legality cannot be easily determined
-     * by simple observation.
+     * if TIER_POSITION is considered legal by all other API functions.
      *
-     * @details A tier position is legal if and only if it is reachable from the
-     * initial tier position. Note that this function is for speed optimization
-     * only. It is not intended for statistical purposes. Even if this function
-     * reports that TIER_POSITION is legal, that position might in fact be
-     * unreachable from the initial tier position. However, if this function
-     * reports that TIER_POSITION is illegal, then TIER_POSITION is definitely
-     * not reachable from the inital tier position.
+     * @details This function is for speed optimization only. It is not intended
+     * for statistical purposes. Even if this function reports that
+     * TIER_POSITION is legal, that position might in fact be unreachable from
+     * the initial tier position. However, if this function reports that
+     * TIER_POSITION is illegal, then TIER_POSITION is definitely not reachable
+     * from the inital tier position. Furthermore, it is guaranteed that calling
+     * all other API functions such as GenerateMoves() and DoMove() on a legal
+     * TIER_POSITION results in well-defined behavior.
      *
      * @note Assumes TIER_POSITION.position is between 0 and
      * GetTierSize(TIER_POSITION.tier) - 1. Passing an out-of-bounds position

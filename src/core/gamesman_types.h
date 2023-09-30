@@ -464,14 +464,14 @@ typedef struct GameVariantOption {
  * responsible for providing the possible choices for each one of the variant
  * options as strings (see GameVariantOption::choices). The user of GAMESMAN
  * interactive can then set the variant by selecting a value for each option
- * using the game-specific SetVariantOption().
+ * using the game-specific SetVariantOption method.
  *
  * @example A Tic-Tac-Toe game can be generalized and played on a M by N board
  * with a goal of connecting K pieces in a row. Then, we can have three game
  * variant options "dimension M", "dimension N", and "number of pieces to
  * connect (K)." A board too small can make the game less interesting, whereas a
  * board too large can render the game unsolvable. Therefore, the game developer
- * decides to allow M, N, and K to all be in the range [2, 5], and sets the
+ * decides to allow M, N, and K to be all within the range [2, 5], and sets the
  * corresponding choices to {"2", "3", "4", "5"}, for each one of the three
  * GameVariantOptions.
  */
