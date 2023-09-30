@@ -1,7 +1,7 @@
 /**
  * @file mninemensmorris.c
- * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee: 
- * developed the first version in GamesmanClassic (m369mm.c).
+ * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee, 
+ * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
  * @author Cameron Cheung (cameroncheung@berkeley.edu): Added to system.
  * @brief Implementation of Nine Men's Morris.
  *
@@ -39,7 +39,7 @@
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 
-// Game, Solver, and Gameplay API Functions
+/* Game, Solver, and Gameplay API Functions */
 
 static int MninemensmorrisInit(void *aux);
 static int MninemensmorrisFinalize(void);
@@ -74,7 +74,7 @@ static int MninemensmorrisMoveToString(Move move, char *buffer);
 static bool MninemensmorrisIsValidMoveString(ReadOnlyString move_string);
 static Move MninemensmorrisStringToMove(ReadOnlyString move_string);
 
-// Solver API Setup
+/* Solver API Setup */
 static const TierSolverApi kSolverApi = {
     .GetInitialTier = &MninemensmorrisGetInitialTier,
     .GetInitialPosition = &MninemensmorrisGetInitialPosition,
@@ -94,7 +94,7 @@ static const TierSolverApi kSolverApi = {
     .GetCanonicalTier = &MninemensmorrisGetCanonicalTier,
 };
 
-// Gameplay API Setup
+/* Gameplay API Setup */
 static const GameplayApi kGameplayApi = {
     .GetInitialTier = &MninemensmorrisGetInitialTier,
     .GetInitialPosition = &MninemensmorrisGetInitialPosition,
@@ -132,8 +132,7 @@ const Game kMninemensmorris = {
     .SetVariantOption = &MninemensmorrisSetVariantOption,
 };
 
-// Helper Types and Global Variables
-
+/* Defines */
 #define MOVE_ENCODE(from, to, remove) ((from << 10) | (to << 5) | remove)
 #define MILL(board, slot1, slot2, player) (board[slot1] == player && board[slot2] == player)
 #define NONE 0b11111
@@ -141,88 +140,13 @@ const Game kMninemensmorris = {
 #define O 'O'
 #define BLANK '-'
 
-// Variant-Related Global Variables
-int gNumPiecesPerPlayer = 9; // Ranges from 3 to 12
-bool gFlyRule = true; // If false, no flying phase
-int removalRule = 0; // 0: Standard, 1: Lenient, 2: Strict
-int boardType = 1; // 0: 16Board, 1: 24Board, 2: 24BoardPlus
-bool isMisere = false;
-bool laskerRule = false;
-int boardSize = 24; // Depends on boardType
-
-const struct GameVariantOption optionMisere = {
-    .name = "Misere",
-    .num_choices = 2,
-    .choices = { "Regular", "Misere" }
-};
-
-const struct GameVariantOption optionFlyRule = {
-    .name = "Fly Rule",
-    .num_choices = 2,
-    .choices = { "No Flying Phase", "Flying Phase" }
-};
-
-const struct GameVariantOption optionLaskerRule = {
-    .name = "Lasker Rule",
-    .num_choices = 2,
-    .choices = { "Not Using Lasker Rule", "Using Lasker Rule" }
-};
-
-const struct GameVariantOption optionRemovalRule = {
-    .name = "Removal Rule",
-    .num_choices = 3,
-    .choices = { "Standard", "Lenient", "Strict" }
-};
-
-/*
-    There are three types of boards supported.
-
-      16-Board                 24-Board                   24-Board-Plus
-
-    0-----1-----2     0 --------- 1 --------- 2     0 --------- 1 --------- 2
-    |     |     |     |           |           |     | \         |         / |
-    |  3--4--5  |     |   3 ----- 4 ----- 5   |     |   3 ----- 4 ----- 5   |
-    |  |     |  |     |   |       |       |   |     |   | \     |     / |   |
-    6--7     8--9     |   |   6 - 7 - 8   |   |     |   |   6 - 7 - 8   |   |
-    |  |     |  |     |   |   |       |   |   |     |   |   |       |   |   |
-    | 10-11-12  |     9 - 10- 11      12- 13- 14    9 - 10- 11      12- 13- 14
-    |     |     |     |   |   |       |   |   |     |   |   |       |   |   |
-    13---14----15     |   |   15- 16- 17  |   |     |   |   15- 16- 17  |   |
-                      |   |       |       |   |     |   | /     |     \ |   |
-                      |   18 ---- 19 ---- 20  |     |   18 ---- 19 ---- 20  |
-                      |           |           |     | /         |         \ |
-                      21 -------- 22 -------- 23    21 -------- 22 -------- 23
-
-    The 16-Board is used for standard 6 Men's Morris. The 24-Board is used
-    for standard 9 Men's Morris. The 24-Board-Plus has added diagonals (along
-    which mills can be created) and is used for standard 12 Men's Morris.
-*/
-
-const struct GameVariantOption optionBoardType = {
-    .name = "Board Type",
-    .num_choices = 3,
-    .choices = { "16-Board", "24-Board", "24-Board with Added Diags" }
-};
-
-const struct GameVariantOption optionNumPiecesPerPlayer = {
-    .name = "Number of Pieces Per Player",
-    .num_choices = 10,
-    .choices = { "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" }
-};
-
-// const struct GameVariantOption options[5] = {
-//     optionMisere,
-//     optionFlyRule,
-//     optionRemovalRule,
-//     optionBoardType,
-//     optionNumPiecesPerPlayer
-// };
-
-// Adjacencies: Each slot has at most 4 adjacent slots. The last number 
-// indicates the number of adjacencies. For example, on the 24-Board, to get the
-// adjacencies for slot 6, we see that at adjacent24[6],
-// the array is {7, 11, -1, -1, 2}. That means that slot 6 has
-// two adjacent interesction slots on the 24Board, 7 and 11.
+/**************************** ADJACENCY ARRAYS ********************************
+ * Adjacencies: Each slot has at most 4 adjacent slots. The last number 
+ * indicates the number of adjacencies. For example, on the 24-Board, to get 
+ * the adjacencies for slot 6, we see that at adjacent24[6],
+ * the array is {7, 11, -1, -1, 2}. That means that slot 6 has
+ * two adjacent interesction slots on the 24Board, 7 and 11.
+ *****************************************************************************/
 
 static const int adjacent16[16][5] = {
 	{  1,  6, -1, -1,  2},
@@ -297,49 +221,18 @@ static const int adjacent24Plus[24][5] = {
 	{ 14, 20, 22, -1,  3}
 };
 
-int (*adjacent)[5];
-adjacent = adjacent24;
-
-static const int kNumGeometricSymmetriesNormal = 16;
-static const int kNumGeometricSymmetries33 = 32;
-
-static const int gSymmetryMatrix16Board[16][24] = {
-	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1},
-	{13,6,0,10,7,3,14,11,4,1,12,8,5,15,9,2,-1,-1,-1,-1,-1,-1,-1,-1},
-	{15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,-1,-1,-1,-1,-1,-1,-1,-1},
-	{2,9,15,5,8,12,1,4,11,14,3,7,10,0,6,13,-1,-1,-1,-1,-1,-1,-1,-1},
-	{3,4,5,0,1,2,7,6,9,8,13,14,15,10,11,12,-1,-1,-1,-1,-1,-1,-1,-1},
-	{10,7,3,13,6,0,11,14,1,4,15,9,2,12,8,5,-1,-1,-1,-1,-1,-1,-1,-1},
-	{12,11,10,15,14,13,8,9,6,7,2,1,0,5,4,3,-1,-1,-1,-1,-1,-1,-1,-1},
-	{5,8,12,2,9,15,4,1,14,11,0,6,13,3,7,10,-1,-1,-1,-1,-1,-1,-1,-1},
-	{2,1,0,5,4,3,9,8,7,6,12,11,10,15,14,13,-1,-1,-1,-1,-1,-1,-1,-1},
-	{0,6,13,3,7,10,1,4,11,14,5,8,12,2,9,15,-1,-1,-1,-1,-1,-1,-1,-1},
-	{13,14,15,10,11,12,6,7,8,9,3,4,5,0,1,2,-1,-1,-1,-1,-1,-1,-1,-1},
-	{15,9,2,12,8,5,14,11,4,1,10,7,3,13,6,0,-1,-1,-1,-1,-1,-1,-1,-1},
-	{5,4,3,2,1,0,8,9,6,7,15,14,13,12,11,10,-1,-1,-1,-1,-1,-1,-1,-1},
-	{3,7,10,0,6,13,4,1,14,11,2,9,15,5,8,12,-1,-1,-1,-1,-1,-1,-1,-1},
-	{10,11,12,13,14,15,7,6,9,8,0,1,2,3,4,5,-1,-1,-1,-1,-1,-1,-1,-1},
-	{12,8,5,15,9,2,11,14,1,4,13,6,0,10,7,3,-1,-1,-1,-1,-1,-1,-1,-1}
-};
-
-static const int gSymmetryMatrix24Board[16][24] = { 
-	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23},
-	{6,7,8,3,4,5,0,1,2,11,10,9,14,13,12,21,22,23,18,19,20,15,16,17},
-	{2,1,0,5,4,3,8,7,6,14,13,12,11,10,9,17,16,15,20,19,18,23,22,21},
-	{8,7,6,5,4,3,2,1,0,12,13,14,9,10,11,23,22,21,20,19,18,17,16,15},
-	{21,22,23,18,19,20,15,16,17,9,10,11,12,13,14,6,7,8,3,4,5,0,1,2},
-	{15,16,17,18,19,20,21,22,23,11,10,9,14,13,12,0,1,2,3,4,5,6,7,8},
-	{23,14,2,20,13,5,17,12,8,22,19,16,7,4,1,15,11,6,18,10,3,21,9,0},
-	{17,12,8,20,13,5,23,14,2,16,19,22,1,4,7,21,9,0,18,10,3,15,11,6},
-	{0,9,21,3,10,18,6,11,15,1,4,7,16,19,22,8,12,17,5,13,20,2,14,23},
-	{6,11,15,3,10,18,0,9,21,7,4,1,22,19,16,2,14,23,5,13,20,8,12,17},
-	{21,9,0,18,10,3,15,11,6,22,19,16,7,4,1,17,12,8,20,13,5,23,14,2},
-	{15,11,6,18,10,3,21,9,0,16,19,22,1,4,7,23,14,2,20,13,5,17,12,8},
-	{23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0},
-	{17,16,15,20,19,18,23,22,21,12,13,14,9,10,11,2,1,0,5,4,3,8,7,6},
-	{2,14,23,5,13,20,8,12,17,1,4,7,16,19,22,6,11,15,3,10,18,0,9,21},
-	{8,12,17,5,13,20,2,14,23,7,4,1,22,19,16,0,9,21,3,10,18,6,11,15}
-};
+/****************************** LINES ARRAYS **********************************
+ * Lines are three-in-a-rows of board slots that we check to see if there is
+ * a mill along them. The lines are indexed by slot. 
+ * Suppose we are interested in the lines that slot 5 is a part of on the
+ * 16-Board. Let arr = linesArray16[5] = {  3,  4,  8, 12, -1, -1, 2}.
+ * The last element of the array is the number of lines that slot 5 is a part
+ * of. Slot 5 is a part of a line also containing 3 and 4 and a line also
+ * containing 8 and 12. 
+ * linesArray24 is for 24-Board and 24-Board-Plus, but has the lineCounts of
+ * 24-Board-Plus. The lines for linesArray24 are listed in the order: two non-
+ * diagonal lines first, then, if the slot is part of one, the diagonal line.
+ *****************************************************************************/
 
 static const int linesArray16[16][7] = {
     {  1,  2,  6, 13, -1, -1, 2},
@@ -387,6 +280,181 @@ static const int linesArray24[16][7] = {
     {  2, 14, 21, 22, 17, 20, 3}
 };
 
+/************************** VARIANTS EXPLANATION ******************************
+ * 
+ * OPTION: Misere
+ * 
+ * If playing Misere, the objective is to be left with no legal
+ * moves or to have your own piece count reduced to 2.
+ * 
+ * ----------------------------------------------------------------------------
+ * 
+ * OPTION: FlyRule
+ * 
+ * If Fly Rule is True, then a player when left with three pieces (the total 
+ * pieces they have on the board and yet to place is 3), can move one of 
+ * their pieces on the board to ANY slot, rather than just to adjacent slots.
+ * 
+ * ----------------------------------------------------------------------------
+ * 
+ * OPTION: LaskerRule
+ * 
+ * If using the Lasker Rule, then if you can choose to slide/fly a piece that 
+ * you have on the board even if you have not placed all of your 
+ * pieces on the board.
+ * 
+ * ----------------------------------------------------------------------------
+ * 
+ * OPTION: RemovalRule
+ * 
+ * Defines which of your opponent's pieces you can remove if you form a mill.
+ * 
+ * 0) If using STANDARD rules, a piece can be removed as long as it is in a 
+ * mill, unless all of the opponent's pieces are in a mill, in which case 
+ * any piece can be removed (note that there is always at least one piece 
+ * that can be removed). 
+ * 
+ * 1) If using LENIENT rules, then a piece can be removed regardless 
+ * of whether it is in a mill or not.
+ * 
+ * 2) If using STRICT rules, then a piece can only be removed if it is in a 
+ * mill and it does not matter if all the pieces are in a mill. If a player 
+ * creates a mill and all the opponent's pieces are in mills, 
+ * then no piece is removed.
+ * 
+ * ----------------------------------------------------------------------------
+ * 
+ * OPTION: BoardType
+ * 
+ * There are three types of boards supported.
+ *
+ *    16-Board                 24-Board                   24-Board-Plus
+ *
+ *  0-----1-----2     0 --------- 1 --------- 2     0 --------- 1 --------- 2
+ *  |     |     |     |           |           |     | \         |         / |
+ *  |  3--4--5  |     |   3 ----- 4 ----- 5   |     |   3 ----- 4 ----- 5   |
+ *  |  |     |  |     |   |       |       |   |     |   | \     |     / |   |
+ *  6--7     8--9     |   |   6 - 7 - 8   |   |     |   |   6 - 7 - 8   |   |
+ *  |  |     |  |     |   |   |       |   |   |     |   |   |       |   |   |
+ *  | 10-11-12  |     9 - 10- 11      12- 13- 14    9 - 10- 11      12- 13- 14
+ *  |     |     |     |   |   |       |   |   |     |   |   |       |   |   |
+ *  13---14----15     |   |   15- 16- 17  |   |     |   |   15- 16- 17  |   |
+ *                    |   |       |       |   |     |   | /     |     \ |   |
+ *                    |   18 ---- 19 ---- 20  |     |   18 ---- 19 ---- 20  |
+ *                    |           |           |     | /         |         \ |
+ *                    21 -------- 22 -------- 23    21 -------- 22 -------- 23
+ *
+ * The 16-Board is used for standard 6 Men's Morris. The 24-Board is used
+ * for standard 9 Men's Morris. The 24-Board-Plus has added diagonals (along
+ * which mills can be created) and is used for standard 12 Men's Morris.
+ * 
+ * ----------------------------------------------------------------------------
+ * 
+ * OPTION: NumPiecesPerPlayer
+ * 
+ * Defines how many pieces total each player can place on the board over the
+ * course of the game. This ranges from 3 to 12 pieces; however, if playing
+ * on the 16-Board, then each player may have no more than 8 pieces each.
+ * 
+ *****************************************************************************/
+
+static ConstantReadOnlyString choicesMisere[2] = {"False", "True"};
+static const GameVariantOption optionMisere = {
+    .name = "Misere",
+    .num_choices = 2,
+    .choices = choicesMisere
+};
+
+static ConstantReadOnlyString choicesFlyRule[2] = {"False", "True"};
+static const GameVariantOption optionFlyRule = {
+    .name = "Fly When Left With Three Pieces",
+    .num_choices = 2,
+    .choices = choicesFlyRule
+};
+
+static ConstantReadOnlyString choicesLaskerRule[2] = {"False", "True"};
+static const GameVariantOption optionLaskerRule = {
+    .name = "Lasker Rule Enabled",
+    .num_choices = 2,
+    .choices = choicesLaskerRule
+};
+
+static ConstantReadOnlyString choicesRemovalRule[2] = {
+    "Standard", "Lenient", "Strict" };
+const struct GameVariantOption optionBoardType = {
+    .name = "Board Type",
+    .num_choices = 3,
+    .choices = choicesRemovalRule
+};
+
+static ConstantReadOnlyString choicesBoardType[2] = {
+    "16-Board", "24-Board", "24-Board-Plus"};
+static const GameVariantOption optionBoardType = {
+    .name = "Removal Rule",
+    .num_choices = 3,
+    .choices = choicesBoardType
+};
+
+static ConstantReadOnlyString choicesNumPiecesPerPlayer[2] = {
+    "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
+const struct GameVariantOption optionNumPiecesPerPlayer = {
+    .name = "Number of Pieces Per Player",
+    .num_choices = 10,
+    .choices = choicesNumPiecesPerPlayer
+};
+
+/* Variant-Related Global Variables (can be set in SetVariantOption) */
+bool isMisere = false;
+bool gFlyRule = true;
+bool laskerRule = false;
+int removalRule = 0;
+int boardType = 1;
+int gNumPiecesPerPlayer = 9;
+int boardSize = 24; // Tied to boardType
+int (*adjacent)[5] = adjacent24; // Tied to boardType
+int (*linesArray)[7] = linesArray24; // Tied to boardType
+
+static const int kNumGeometricSymmetriesNormal = 16;
+static const int kNumGeometricSymmetries33 = 32;
+
+static const int gSymmetryMatrix16Board[16][24] = {
+	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1},
+	{13,6,0,10,7,3,14,11,4,1,12,8,5,15,9,2,-1,-1,-1,-1,-1,-1,-1,-1},
+	{15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,-1,-1,-1,-1,-1,-1,-1,-1},
+	{2,9,15,5,8,12,1,4,11,14,3,7,10,0,6,13,-1,-1,-1,-1,-1,-1,-1,-1},
+	{3,4,5,0,1,2,7,6,9,8,13,14,15,10,11,12,-1,-1,-1,-1,-1,-1,-1,-1},
+	{10,7,3,13,6,0,11,14,1,4,15,9,2,12,8,5,-1,-1,-1,-1,-1,-1,-1,-1},
+	{12,11,10,15,14,13,8,9,6,7,2,1,0,5,4,3,-1,-1,-1,-1,-1,-1,-1,-1},
+	{5,8,12,2,9,15,4,1,14,11,0,6,13,3,7,10,-1,-1,-1,-1,-1,-1,-1,-1},
+	{2,1,0,5,4,3,9,8,7,6,12,11,10,15,14,13,-1,-1,-1,-1,-1,-1,-1,-1},
+	{0,6,13,3,7,10,1,4,11,14,5,8,12,2,9,15,-1,-1,-1,-1,-1,-1,-1,-1},
+	{13,14,15,10,11,12,6,7,8,9,3,4,5,0,1,2,-1,-1,-1,-1,-1,-1,-1,-1},
+	{15,9,2,12,8,5,14,11,4,1,10,7,3,13,6,0,-1,-1,-1,-1,-1,-1,-1,-1},
+	{5,4,3,2,1,0,8,9,6,7,15,14,13,12,11,10,-1,-1,-1,-1,-1,-1,-1,-1},
+	{3,7,10,0,6,13,4,1,14,11,2,9,15,5,8,12,-1,-1,-1,-1,-1,-1,-1,-1},
+	{10,11,12,13,14,15,7,6,9,8,0,1,2,3,4,5,-1,-1,-1,-1,-1,-1,-1,-1},
+	{12,8,5,15,9,2,11,14,1,4,13,6,0,10,7,3,-1,-1,-1,-1,-1,-1,-1,-1}
+};
+
+static const int gSymmetryMatrix24Board[16][24] = { 
+	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23},
+	{6,7,8,3,4,5,0,1,2,11,10,9,14,13,12,21,22,23,18,19,20,15,16,17},
+	{2,1,0,5,4,3,8,7,6,14,13,12,11,10,9,17,16,15,20,19,18,23,22,21},
+	{8,7,6,5,4,3,2,1,0,12,13,14,9,10,11,23,22,21,20,19,18,17,16,15},
+	{21,22,23,18,19,20,15,16,17,9,10,11,12,13,14,6,7,8,3,4,5,0,1,2},
+	{15,16,17,18,19,20,21,22,23,11,10,9,14,13,12,0,1,2,3,4,5,6,7,8},
+	{23,14,2,20,13,5,17,12,8,22,19,16,7,4,1,15,11,6,18,10,3,21,9,0},
+	{17,12,8,20,13,5,23,14,2,16,19,22,1,4,7,21,9,0,18,10,3,15,11,6},
+	{0,9,21,3,10,18,6,11,15,1,4,7,16,19,22,8,12,17,5,13,20,2,14,23},
+	{6,11,15,3,10,18,0,9,21,7,4,1,22,19,16,2,14,23,5,13,20,8,12,17},
+	{21,9,0,18,10,3,15,11,6,22,19,16,7,4,1,17,12,8,20,13,5,23,14,2},
+	{15,11,6,18,10,3,21,9,0,16,19,22,1,4,7,23,14,2,20,13,5,17,12,8},
+	{23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0},
+	{17,16,15,20,19,18,23,22,21,12,13,14,9,10,11,2,1,0,5,4,3,8,7,6},
+	{2,14,23,5,13,20,8,12,17,1,4,7,16,19,22,6,11,15,3,10,18,0,9,21},
+	{8,12,17,5,13,20,2,14,23,7,4,1,22,19,16,0,9,21,3,10,18,6,11,15}
+};
+
 // Helper Functions
 
 static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard);
@@ -410,7 +478,6 @@ static int MninemensmorrisFinalize(void) { return 0; }
 
 static const GameVariant *MninemensmorrisGetCurrentVariant(void) {
     return NULL;
-    //return (gNumPiecesPerPlayer << 6) | (boardType << 4) | (removalRule << 2) | (gFlyRule << 1) | isMisere;  // Not implemented.
 }
 
 static int MninemensmorrisSetVariantOption(int option, int selection) {
@@ -421,20 +488,28 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
         case 1:
             gFlyRule = selection == 1;
             break;
-        case 2:
+        case 3:
+            laskerRule = selection == 1;
+        case 4:
             removalRule = selection;
             break;
-        case 3:
+        case 5:
             boardType = selection;
             if (selection == 0) {
                 boardSize = 16;
+                adjacent = adjacent16;
+                linesArray = linesArray16;
             } else if (selection == 1) {
                 boardSize = 24;
+                adjacent = adjacent24;
+                linesArray = linesArray24;
             } else {
                 boardSize = 24;
+                adjacent = adjacent24Plus;
+                linesArray = linesArray24;
             }
             break;
-        case 4:
+        case 6:
             gNumPiecesPerPlayer = selection - 3;
             break;
         default:
@@ -447,7 +522,7 @@ static Tier MninemensmorrisGetInitialTier(void) {
     return HashTier(gNumPiecesPerPlayer, gNumPiecesPerPlayer, 0, 0);
 }
 
-// Assumes Generic Hash has been initialized.
+/* Assumes Generic Hash has been initialized. */
 static Position MninemensmorrisGetInitialPosition(void) {
     char board[boardSize];
     memset(board, BLANK, boardSize);
@@ -660,20 +735,35 @@ static PositionArray MtttierGetCanonicalParentPositions(
     return parents;
 }
 
-static Position MninemensmorrisGetPositionInSymmetricTier(TierPosition tier_position, Tier symmetric) {
+/**
+ * @brief Given `tier_position` = (T, P) where P is a position within T, and a
+ * `symmetric` tier of the T, return a position in `symmetric_tier` 
+ * (not necessarily canonical within `symmetric_tier`) that is symmetric to P.
+ * 
+ * @note A position P belonging to a tier T is symmetric to a position P'
+ * that results from flipping the piece colors and turn of P.
+ * P' belongs to a tier T' that is T with (1) xToPlace and oToPlace
+ * swapped and (2) xOnBoard and oOnBoard swapped. Most tiers have one 
+ * non-identity symmetric tier. One exception is in non-Lasker-Rule games, 
+ * placing-phase tiers have no reachable non-identity symmetric tier.
+ */
+static Position MninemensmorrisGetPositionInSymmetricTier(
+    TierPosition tier_position, Tier symmetric) {
     if (tier_position.tier == symmetric) {
         return tier_position.position;
     } else {
         /*
-            We reach this case only after all pieces have been placed AND 
-            the players have different numbers of pieces on the board.
-            A position in the m-white-pieces-and-n-black-pieces-on-the-board tier
-            is symmetric to a position whose turn and pieces' colors are flipped
+            We reach this case only after all pieces have been placed AND the 
+            players have different numbers of pieces on the board. A position
+            in the m-white-pieces-and-n-black-pieces-on-the-board tier is 
+            symmetric to a position whose turn and pieces' colors are flipped
             which is in the n-white-pieces-and-m-black-pieces-on-the-board tier.
         */
         char board[boardSize];
-        GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
-        int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+        GenericHashUnhashLabel(
+            tier_position.tier, tier_position.position, board);
+        int turn = GenericHashGetTurnLabel(
+            tier_position.tier, tier_position.position);
         
         // Swap turn
         int oppTurn = (turn == 1) ? 2 : 1;
@@ -692,6 +782,7 @@ static Position MninemensmorrisGetPositionInSymmetricTier(TierPosition tier_posi
     }
 }
 
+
 static TierArray MninemensmorrisGetChildTiers(Tier tier) {
     TierArray children;
     TierArrayInit(&children);
@@ -702,15 +793,20 @@ static TierArray MninemensmorrisGetChildTiers(Tier tier) {
     int totalO = oToPlace + oOnBoard;
 
     if (totalX > 2 && totalO > 2) {
-        /* Add child tiers reachable through sliding/flying moves.
-        If not using Lasker Rule, oToPlace == 0 means that
-        we are in the sliding phase. */
+        /* Child tiers reachable through sliding/flying moves. If not using 
+        Lasker Rule, oToPlace == 0 means we are in the sliding phase. */
         if (laskerRule || oToPlace == 0) {
+
+            /* Tier resulting from X sliding/flying a piece, forming a
+            mill, then removing one of O's pieces */
             if (xOnBoard >= 3 && oOnBoard > 0) {
                 TierArrayAppend(
                     &children, 
                     HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard - 1));
             }
+
+            /* Tier resulting from O sliding/flying a piece, forming a
+            mill, then removing one of X's pieces */
             if (oOnBoard >= 3 && xOnBoard > 0) {
                 TierArrayAppend(
                     &children, 
@@ -718,57 +814,45 @@ static TierArray MninemensmorrisGetChildTiers(Tier tier) {
             }
         }
 
-        /* Add child tiers reachable through placing moves. */
-        if (laskerRule) {
-            if (xToPlace > 0) {
+        /* Child tiers resulting from X-placing moves. Note: in non-Lasker-Rule
+        games, in the placing phase, xToPlace == oToPlace means X to place */
+        if ((laskerRule || xToPlace == oToPlace) && xToPlace > 0) {
+
+            /* Tier resulting from X sliding/flying a piece, without removal */
+            TierArrayAppend(
+                &children, 
+                HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard)
+            );
+
+            /* Tier resulting from X sliding/flying a piece, forming a 
+            mill, then removing one of O's pieces */
+            if (oOnBoard > 1 && xOnBoard >= 2) {
                 TierArrayAppend(
                     &children, 
-                    HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard)
+                    HashTier(
+                        xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1)
                 );
-                if (oOnBoard > 1 && xOnBoard >= 2) {
-                    TierArrayAppend(
-                        &children, 
-                        HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1)
-                    );
-                }
             }
-            if (oToPlace > 0) {
+        }
+
+        /* Child tiers resulting from O-placing moves. Note: in non-Lasker-Rule
+        games, in the placing phase, xToPlace > oToPlace means O to place */
+        if ((laskerRule || xToPlace > oToPlace) && oToPlace > 0) {
+
+            /* Tier resulting from O sliding/flying a piece, without removal */
+            TierArrayAppend(
+                &children, 
+                HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1)
+            );
+
+            /* Tier resulting from O sliding/flying a piece, forming a 
+            mill, then removing one of X's pieces */
+            if (xOnBoard > 1 && oOnBoard >= 2) {
                 TierArrayAppend(
                     &children, 
-                    HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1)
+                    HashTier(
+                        xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1)
                 );
-                if (xOnBoard > 1 && oOnBoard >= 2) {
-                    TierArrayAppend(
-                        &children, 
-                        HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1)
-                    );
-                }
-            }
-        } else if (oToPlace > 0) {
-            /* If not using Lasker Rule, oToPlace > 0 means that
-            we are in the sliding phase. */
-            if (xToPlace == oToPlace) { // i.e., it's X's turn to place
-                TierArrayAppend(
-                    &children, 
-                    HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard)
-                );
-                if (oOnBoard > 1 && xOnBoard >= 2) {
-                    TierArrayAppend(
-                        &children, 
-                        HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1)
-                    );
-                }
-            } else { // it's O's turn to place
-                TierArrayAppend(
-                    &children, 
-                    HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1)
-                );
-                if (xOnBoard > 1 && oOnBoard >= 2) {
-                    TierArrayAppend(
-                        &children, 
-                        HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1)
-                    );
-                }
             }
         }
     }
@@ -776,37 +860,82 @@ static TierArray MninemensmorrisGetChildTiers(Tier tier) {
     return children;
 }
 
-static TierArray MtttierGetParentTiers(Tier tier) {
-    TierArray children;
-    TierArrayInit(&children);
-    // int piecesLeft, numX, numO;
-    // UnhashTier(tier, &piecesLeft, &numX, &numO);
-
-	// if (piecesLeft > 0) { // Phase 1
-	// 	if (piecesLeft & 1) { // i.e., it's O's turn
-    //         TierArrayAppend(
-    //             &children, HashTier(piecesLeft - 1, numX, numO + 1));
-	// 		if (numO > 1) {
-	// 			TierArrayAppend(
-    //                 &children, HashTier(piecesLeft - 1, numX - 1, numO + 1));
-	// 		}
-	// 	} else {
-	// 		TierArrayAppend(
-    //             &children, HashTier(piecesLeft - 1, numX + 1, numO));
-	// 		if (numX > 1) {
-	// 			TierArrayAppend(
-    //                 &children, HashTier(piecesLeft - 1, numX + 1, numO - 1));
-	// 		}
-	// 	}
-	// } else { // Phase 2 or 3. Turn unknown, so we assume both paths as children
-    //     TierArrayAppend(&children, tier);
-	// 	if (numX > 2 && numO > 2) {
-    //         TierArrayAppend(&children, HashTier(piecesLeft, numX - 1, numO));
-	// 		TierArrayAppend(&children, HashTier(piecesLeft, numX, numO - 1));
-	// 	}
-	// }
+static TierArray MninemensmorrisGetParentTiers(Tier tier) {
+    TierArray parents;
+    TierArrayInit(&parents);
     
-    return children;
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+
+    int totalX = xToPlace + xOnBoard;
+    int totalO = oToPlace + oOnBoard;
+
+    /* Add parent tiers of `tier` from which `tier` is reachable via 
+    sliding/flying moves. If not using Lasker Rule, oToPlace == 0 
+    means that we are in the sliding phase. */
+    if (laskerRule || oToPlace == 0) {
+
+        /* Tier from which X could've slid/flown a piece, formed a 
+        mill, then removed one of O's pieces */
+        if (xOnBoard >= 3 && totalO < gNumPiecesPerPlayer) {
+            TierArrayAppend(
+                &parents, 
+                HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard + 1));
+        }
+
+        /* Tier from which O could've slid/flown a piece, formed a
+        mill, then removed one of X's pieces */
+        if (oOnBoard >= 3 && totalX < gNumPiecesPerPlayer) {
+            TierArrayAppend(
+                &parents, 
+                HashTier(xToPlace, oToPlace, xOnBoard + 1, oOnBoard));
+        }
+    }
+
+    /* Add parent tiers from which current tier could've resulted from an 
+    X-placing move. Note: in non-Lasker-Rule games, in the placing phase, 
+    xToPlace > oToPlace means it is O's turn. */
+    if ((laskerRule || xToPlace > oToPlace) && xOnBoard > 0) {
+
+        /* Tier from which X could've placed a piece without removal */
+        TierArrayAppend(
+            &parents, 
+            HashTier(xToPlace + 1, oToPlace, xOnBoard - 1, oOnBoard)
+        );
+
+        /* Tier from which X could've placed a piece, formed a
+        mill, then removed one of O's pieces */
+        if (xOnBoard >= 3 && totalO < gNumPiecesPerPlayer) {
+            TierArrayAppend(
+                &parents, 
+                HashTier(xToPlace + 1, oToPlace, xOnBoard - 1, oOnBoard + 1)
+            );
+        }
+    }
+
+    /* Add parent tiers from which current tier could've resulted from an
+    O-placing move. Note: in non-Lasker-Rule games, in the placing phase,
+    xToPlace == oToPlace means it is X's turn. Also, when not using the 
+    Lasker rule, any Phase 2 tier will go through here. */
+    if ((laskerRule || xToPlace == oToPlace) && oOnBoard > 0) {
+
+        /* Tier from which O could've placed a piece without removal */
+        TierArrayAppend(
+            &parents, 
+            HashTier(xToPlace, oToPlace + 1, xOnBoard, oOnBoard - 1)
+        );
+
+        /* Tier from which O could've placed a piece, formed a
+        mill, then removed one of X's pieces */
+        if (oOnBoard >= 3 && totalX < gNumPiecesPerPlayer) {
+            TierArrayAppend(
+                &parents, 
+                HashTier(xToPlace, oToPlace + 1, xOnBoard + 1, oOnBoard - 1)
+            );
+        }
+    }
+    
+    return parents;
 }
 
 static Tier MninemensmorrisGetCanonicalTier(Tier tier) {
@@ -814,8 +943,13 @@ static Tier MninemensmorrisGetCanonicalTier(Tier tier) {
     UnhashTier(tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
     Tier symmetricTier = HashTier(oToPlace, xToPlace, oOnBoard, xOnBoard);
 
-    /* When Lasker rule not used, all tiers in placing phase 
-    have no symmetric tier */
+    /* A position P belonging to a tier T is symmetric to a position P'
+    that results from flipping the piece colors and turn of P.
+    P' belongs to a tier T' that is T with the xToPlace and oToPlace
+    swapped and the xOnBoard and oOnBoard swapped.
+    
+    One exception: For non-Lasker rule games, placing-phase tiers
+    have no reachable non-identity symmetric tier. */
     if (!laskerRule && oToPlace > 0) { 
         return tier;
     } else {
@@ -1044,7 +1178,7 @@ static Move MninemensmorrisStringToMove(ReadOnlyString moveString) {
 	return MOVE_ENCODE(from, to, remove); //HASHES THE MOVE
 }
 
-// Helper functions implementation
+/* Implementation of Helper Functions */
 
 static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard) {
     return (xToPlace << 12) | (oToPlace << 8) | (xOnBoard << 4) | oOnBoard;
@@ -1144,7 +1278,7 @@ static bool InitGenericHash(void) {
  * indicated by `turn`.
  */
 static bool IsSlotInMill(char *board, int slot, char player) {
-    int *lines = linesArray24[slot];
+    int *lines = linesArray[slot];
     bool firstLineIsMill = MILL(board, lines[0], lines[1], player);
     if (boardType == 2 || lines[7] == 2) {
         return firstLineIsMill || MILL(board, lines[2], lines[3], player);
