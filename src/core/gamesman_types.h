@@ -909,6 +909,7 @@ void TierPositionArrayDestroy(TierPositionArray *array);
 bool TierPositionArrayAppend(TierPositionArray *array,
                              TierPosition tier_position);
 TierPosition TierPositionArrayBack(const TierPositionArray *array);
+bool TierPositionArrayResize(TierPositionArray *array, int64_t size);
 
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 void TierPositionHashSetDestroy(TierPositionHashSet *set);

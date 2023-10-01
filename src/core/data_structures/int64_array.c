@@ -27,10 +27,11 @@
 #include "core/data_structures/int64_array.h"
 
 #include <assert.h>   // assert
-#include <stdlib.h>   // free, realloc
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
+#include <stdlib.h>   // free, realloc
+#include <string.h>   // memset
 
 void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;
@@ -84,4 +85,26 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
         if (array->array[i] == item) return true;
     }
     return false;
+}
+
+bool Int64ArrayResize(Int64Array *array, int64_t size) {
+    if (size < 0) size = 0;
+
+    // Expand if necessary.
+    if (array->capacity < size) {
+        int64_t *new_array =
+            (int64_t *)realloc(array->array, size * sizeof(int64_t));
+        if (new_array == NULL) return false;
+
+        array->array = new_array;
+        array->capacity = size;
+    }
+
+    int64_t pad_length = size - array->size;
+    if (pad_length > 0) {
+        memset(&array->array[array->size], 0, pad_length * sizeof(int64_t));
+    }
+
+    array->size = size;
+    return true;
 }
