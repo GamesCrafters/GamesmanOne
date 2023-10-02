@@ -57,6 +57,8 @@ static TierPosition MninemensmorrisDoMove(TierPosition tier_position,
                                           Move move);
 static bool MninemensmorrisIsLegalPosition(TierPosition tier_position);
 static Position MninemensmorrisGetCanonicalPosition(TierPosition tier_position);
+static int MninemensmorrisGetNumberOfCanonicalChildPositions(
+    TierPosition tier_position);
 static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
     TierPosition tier_position);
 static PositionArray MninemensmorrisGetCanonicalParentPositions(
@@ -85,6 +87,8 @@ static const TierSolverApi kSolverApi = {
 
     .IsLegalPosition = &MninemensmorrisIsLegalPosition,
     .GetCanonicalPosition = &MninemensmorrisGetCanonicalPosition,
+    .GetNumberOfCanonicalChildPositions =
+        &MninemensmorrisGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = &MninemensmorrisGetCanonicalChildPositions,
     .GetCanonicalParentPositions = &MninemensmorrisGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = &MninemensmorrisGetPositionInSymmetricTier,
@@ -326,17 +330,14 @@ const struct GameVariantOption optionNumPiecesPerPlayer = {
 
 static int numOptions = 6;
 static GameVariantOption variantOptions[7];  // 6 options and 1 zero-terminator
-static int currentSelections[7];
+static int currentSelections[7] = {0, 1, 0, 0, 1, 6, 0};
+static GameVariant currentVariant;
 
 /***************************** SYMMETRY ARRAYS ********************************
- * Here are the permutations of the slots of the boards that make for symmetric
- * positions. Note that the arrays here only address rotation, reflection,
- * and inner-outer flip.
+ * Here are permutations of the slots of the boards that make for symmetric
+ * positions that are a result of rotation, reflection, and inner-outer flip.
  * Color symmetries are handled in GetCanonicalPosition.
- * There is an additional symmetry for the
- * (xToPlace=0, oToPlace=0, xOnBoard=3, oOnBoard=3) tier for the 24-Boards
- * where any permutation of the 3 rings is symmetric. We do not implement
- * this because it does relatively little to compress the database.
+ * See the comment above MninemensmorrisGetCanonicalPosition for more details.
  *****************************************************************************/
 
 static const int numBoardSymmetries16 = 16;
@@ -417,11 +418,11 @@ bool laskerRule = false;
 int removalRule = 0;
 int boardType = 1;
 int gNumPiecesPerPlayer = 9;
-int boardSize = 24;                    // Tied to boardType
-int (*adjacent)[5] = adjacent24;       // Tied to boardType
-int (*linesArray)[7] = linesArray24;   // Tied to boardType
-int (*symmetries)[24] = symmetries24;  // Tied to boardType
-int totalNumBoardSymmetries = numBoardSymmetries24;
+int boardSize = 24;                                  // Tied to boardType
+int (*adjacent)[5] = adjacent24;                     // Tied to boardType
+int (*linesArray)[7] = linesArray24;                 // Tied to boardType
+int (*symmetries)[24] = symmetries24;                // Tied to boardType
+int totalNumBoardSymmetries = numBoardSymmetries24;  // Tied to boardType
 
 /* Helper Functions */
 static Tier HashTier(int xToPlace, int oToPlace, int xOnBoard, int oOnBoard);
@@ -433,6 +434,9 @@ static bool ClosesMill(char *board, char player, int from, int to);
 static bool AllPiecesInMills(char *board, char player);
 static int FindLegalRemoves(char *board, char player, int *legalRemoves);
 static bool InitGenericHash(void);
+static void AddCanonChildToTPArray(TierPosition child, char *board, int oppTurn,
+                                   PositionHashSet *deduplication_set,
+                                   TierPositionArray *canonicalChildren);
 
 /* Game, Solver, and Gameplay API Functions Implementation */
 
@@ -447,7 +451,8 @@ static int MninemensmorrisInit(void *aux) {
     variantOptions[4] = optionBoardType;
     variantOptions[5] = optionNumPiecesPerPlayer;
 
-    memset(&currentSelections, 0, sizeof(currentSelections));
+    currentVariant.options = variantOptions;
+    currentVariant.selections = currentSelections;
 
     return !InitGenericHash();
 }
@@ -455,7 +460,7 @@ static int MninemensmorrisInit(void *aux) {
 static int MninemensmorrisFinalize(void) { return 0; }
 
 static const GameVariant *MninemensmorrisGetCurrentVariant(void) {
-    return NULL;
+    return &currentVariant;
 }
 
 static int MninemensmorrisSetVariantOption(int option, int selection) {
@@ -466,7 +471,7 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
                 "Aborting...\n");
         return 1;
     }
-    if (selection < 0 || selection > 1) {
+    if (selection < 0 || selection >= variantOptions[option].num_choices) {
         fprintf(stderr,
                 "MninemensmorrisSetVariantOption: (BUG) selection index out of "
                 "bounds. "
@@ -486,8 +491,16 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
             removalRule = selection;
             break;
         case 5:  // BoardType
-            boardType = selection;
             if (selection == 0) {
+                if (currentSelections[6] + 3 > 8) {
+                    fprintf(stderr,
+                            "MninemensmorrisSetVariantOption: Cannot use the "
+                            "16-Board if each player has more than 8 pieces. "
+                            "Please decrease the number of pieces per player "
+                            "before switching to the 16-Board."
+                            "Aborting...\n");
+                    return 1;
+                }
                 boardSize = 16;
                 adjacent = adjacent16;
                 linesArray = linesArray16;
@@ -506,9 +519,19 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
                 totalNumBoardSymmetries = numBoardSymmetries24;
                 symmetries = symmetries24;
             }
+            boardType = selection;
             break;
         case 6:  // NumPiecesPerPlayer
-            gNumPiecesPerPlayer = selection - 3;
+            if (currentSelections[5] == 0 && selection + 3 > 8) {
+                fprintf(stderr,
+                        "MninemensmorrisSetVariantOption: Cannot have more "
+                        "than 8 pieces per player if using the 16-Board. "
+                        "Please change the board type before increasing "
+                        "the number of pieces per player. "
+                        "Aborting...\n");
+                return 1;
+            }
+            gNumPiecesPerPlayer = selection + 3;
             break;
         default:
             return 1;
@@ -537,19 +560,28 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
     MoveArray moves;
     MoveArrayInit(&moves);
 
-    char board[boardSize];
-    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
-    int turn =
-        GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    char player = (turn == 1) ? X : O;
     int xToPlace, oToPlace, xOnBoard, oOnBoard;
     UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
-
     int totalX = xToPlace + xOnBoard;
     int totalO = oToPlace + oOnBoard;
 
     if (totalX > 2 && totalO > 2) {
-        int toPlace = (player == X) ? xToPlace : oToPlace;
+        char board[boardSize];
+        GenericHashUnhashLabel(tier_position.tier, tier_position.position,
+                               board);
+
+        int turn =
+            GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+        char player;
+        int toPlace;
+        if (turn == 1) {
+            player = X;
+            toPlace = xToPlace;
+        } else {
+            player = O;
+            toPlace = oToPlace;
+        }
+
         int legalRemoves[boardSize];
         int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
         int i, j, from, numLegalTos, *legalTos;
@@ -574,7 +606,8 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
                 }
                 if (board[from] == player) {
                     for (i = 0; i < numLegalTos; i++) {
-                        if (board[legalTos[i]] == BLANK) {
+                        if (board[legalTos[i]] ==
+                            BLANK) {  // Slide/fly with remove
                             if (ClosesMill(board, player, from, legalTos[i]) &&
                                 numLegalRemoves > 0) {
                                 for (j = 0; j < numLegalRemoves; j++) {
@@ -582,7 +615,7 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
                                         &moves, MOVE_ENCODE(from, legalTos[i],
                                                             legalRemoves[j]));
                                 }
-                            } else {
+                            } else {  // Slide/fly without remove
                                 MoveArrayAppend(
                                     &moves,
                                     MOVE_ENCODE(from, legalTos[i], NONE));
@@ -596,12 +629,12 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
         if (toPlace > 0) {  // Placing moves
             for (i = 0; i < numBlanks; i++) {
                 if (ClosesMill(board, player, NONE, allBlanks[i]) &&
-                    numLegalRemoves > 0) {
+                    numLegalRemoves > 0) {  // Place with remove
                     for (j = 0; j < numLegalRemoves; j++) {
                         MoveArrayAppend(&moves, MOVE_ENCODE(NONE, allBlanks[i],
                                                             legalRemoves[j]));
                     }
-                } else {
+                } else {  // Place without remove
                     MoveArrayAppend(&moves,
                                     MOVE_ENCODE(NONE, allBlanks[i], NONE));
                 }
@@ -614,7 +647,9 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
 
 static Value MninemensmorrisPrimitive(TierPosition tier_position) {
     MoveArray moves = MninemensmorrisGenerateMoves(tier_position);
-    if (moves.size == 0) {
+    int size = moves.size;
+    MoveArrayDestroy(&moves);
+    if (size == 0) {
         return isMisere ? kWin : kLose;
     }
     return kUndecided;
@@ -676,7 +711,31 @@ static bool MninemensmorrisIsLegalPosition(TierPosition tier_position) {
     return true;
 }
 
-static Position MtttierGetCanonicalPosition(TierPosition tier_position) {
+/**
+ * @brief Given a tier_position = (T, P) where P is a position within tier
+ * T, return the canonical position of P within T.
+ * We do rotation/reflection/and outer-inner ring swap symmetries.
+ * In this function, we handle color-turn swap symmetry for tiers such
+ * that (1) their positions are not exclusively one player's turn and
+ * (2) applying color-turn swap symmetry to any position within the tier
+ * results in a position within the same tier.
+ *
+ * @note A reachable position P may be symmetric to another position P'
+ * through color-turn swap symmetry but that does NOT mean P' itself is
+ * reachable. For example, using the Lasker rule, after the first move
+ * of placing an X is made, the resulting position has a color-turn swap
+ * symmetric position (where there's a single O on the board), but that
+ * position is not reachable. However, this only matters for analysis,
+ * not for solving, so nothing we do in this function addresses this caveat.
+ *
+ * @note There is an additional symmetry for the
+ * (xToPlace=0, oToPlace=0, xOnBoard=3, oOnBoard=3) tier for the 24-Boards
+ * where any permutation of the 3 rings is symmetric. We do not implement
+ * this because it does relatively little to compress the database.
+ * However, we do need to account for this symmetry later in analysis.
+ */
+static Position MninemensmorrisGetCanonicalPosition(
+    TierPosition tier_position) {
     char board[boardSize];
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     int turn =
@@ -685,38 +744,322 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position) {
     int xToPlace, oToPlace, xOnBoard, oOnBoard;
     UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
 
-    char canonicalBoard[24];
-    int bestSymmetryNum = 0;
-    char pieceInSymmetry, pieceInCurrentCanonical;
-    int i;
+    /* We can think of the board array as a ternary number. When we compare a
+    board array to a symmetric board array, we can iterate through the arrays
+    from left-to-right and when there is a trit mismatch, we can determine
+    which one is the larger ternary number. We define canonical as follows:
+    for all boards in an orbit, the one that is the smallest ternary number
+    is the canonical one. If we can use color-turn swap symmetry and
+    there are two different positions that have the same board in the orbit,
+    then the one where it's Player 1's turn is the canonical one. */
 
-    for (int symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
-         symmetryNum++) {
-        for (i = 0; i < boardSize; i++) {
-            pieceInSymmetry = board[symmetries[symmetryNum][i]];
-            pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
-            if (pieceInSymmetry != pieceInCurrentCanonical) {
-                if (pieceInSymmetry > pieceInCurrentCanonical) {
-                    bestSymmetryNum = symmetryNum;
+    char pieceInSymmetry, pieceInCurrentCanonical;
+    int i, symmetryNum;
+
+    if (xOnBoard == oOnBoard && ((!laskerRule && oToPlace == 0) ||
+                                 (laskerRule && xToPlace == oToPlace))) {
+        /* We reach here if a color-turn swap transformation results in a
+        position within the same tier. */
+
+        /* Figure out which symmetry transformation on the input board
+        leads to the smallest-ternary-number board in the input board's orbit
+        (where the transformations are just rotation/reflection/
+        inner-outer flip). */
+        int bestNonSwappedSymmetryNum = 0;
+        for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+             symmetryNum++) {
+            for (i = 0; i < boardSize; i++) {
+                pieceInSymmetry = board[symmetries[symmetryNum][i]];
+                pieceInCurrentCanonical =
+                    board[symmetries[bestNonSwappedSymmetryNum][i]];
+                if (pieceInSymmetry != pieceInCurrentCanonical) {
+                    if (pieceInSymmetry < pieceInCurrentCanonical) {
+                        bestNonSwappedSymmetryNum = symmetryNum;
+                    }
+                    break;
                 }
-                break;
             }
         }
+
+        /* Create a board array that is the input board with piece colors
+        swapped. */
+        char swappedBoard[boardSize];
+        for (i = 0; i < boardSize; i++) {
+            if (board[i] == X) {
+                swappedBoard[i] = O;
+            } else if (board[i] == O) {
+                swappedBoard[i] = X;
+            } else {
+                swappedBoard[i] = BLANK;
+            }
+        }
+
+        /* Figure out which symmetry transformation on the swapped board
+        leads to the smallest-ternary-number board in the swapped board's
+        orbit (where the transformations are just rotation/reflection/
+        inner-outer flip). */
+        int bestSwappedSymmetryNum = 0;
+        for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+             symmetryNum++) {
+            for (i = 0; i < boardSize; i++) {
+                pieceInSymmetry = swappedBoard[symmetries[symmetryNum][i]];
+                pieceInCurrentCanonical =
+                    swappedBoard[symmetries[bestSwappedSymmetryNum][i]];
+                if (pieceInSymmetry != pieceInCurrentCanonical) {
+                    if (pieceInSymmetry < pieceInCurrentCanonical) {
+                        bestSwappedSymmetryNum = symmetryNum;
+                    }
+                    break;
+                }
+            }
+        }
+
+        char *canonicalNonSwappedBoard = board;
+        char *canonicalSwappedBoard = swappedBoard;
+
+        if (bestNonSwappedSymmetryNum != 0) {
+            char cnsb[boardSize];
+            for (i = 0; i < boardSize; i++) {
+                cnsb[i] = board[symmetries[bestNonSwappedSymmetryNum][i]];
+            }
+            canonicalNonSwappedBoard = cnsb;
+        }
+
+        if (bestSwappedSymmetryNum != 0) {
+            char csb[boardSize];
+            for (i = 0; i < boardSize; i++) {
+                csb[i] = swappedBoard[symmetries[bestSwappedSymmetryNum][i]];
+            }
+            canonicalSwappedBoard = csb;
+        }
+
+        /* At this point, canonicalNonSwappedBoard should be the board array of
+        the "smallest" board in the input (non-swapped) board's orbit and
+        canonicalSwappedBoard should be the board array of the "smallest"
+        board in the swapped board's orbit. Now we will compare the
+        two and return the position whose board is the smaller of the two. */
+
+        char pieceInNonSwappedCanonical, pieceInSwappedCanonical;
+        for (i = 0; i < boardSize; i++) {
+            pieceInNonSwappedCanonical = canonicalNonSwappedBoard[i];
+            pieceInSwappedCanonical = canonicalSwappedBoard[i];
+            if (pieceInNonSwappedCanonical < pieceInSwappedCanonical) {
+                return tier_position.position;
+            } else if (pieceInSwappedCanonical < pieceInNonSwappedCanonical) {
+                return GenericHashHashLabel(tier_position.tier,
+                                            canonicalSwappedBoard,
+                                            (turn == 1) ? 2 : 1);
+            }
+        }
+
+        /* We only reach here if canonicalBoard and canonicalSwappedBoard
+        are the same, in which case we return the position with this board
+        where it's the first player's turn. */
+        if (turn == 1) {
+            return tier_position.position;
+        } else {
+            return GenericHashHashLabel(tier_position.tier,
+                                        canonicalSwappedBoard, 1);
+        }
+    } else {
+        /* We reach here if a color-turn swap transformation does NOT result
+        in a position within the same tier. */
+
+        /* Figure out which symmetry transformation on the input board
+        leads to the smallest-ternary-number board in the input board's orbit
+        (where the transformations are just rotation/reflection/
+        inner-outer flip). */
+        int bestSymmetryNum = 0;
+        for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+             symmetryNum++) {
+            for (i = 0; i < boardSize; i++) {
+                pieceInSymmetry = board[symmetries[symmetryNum][i]];
+                pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
+                if (pieceInSymmetry != pieceInCurrentCanonical) {
+                    if (pieceInSymmetry < pieceInCurrentCanonical) {
+                        bestSymmetryNum = symmetryNum;
+                    }
+                    break;
+                }
+            }
+        }
+
+        /* Return the input position if the identity transformation results
+        in the canonical position, i.e., the input position is canonical. */
+        if (bestSymmetryNum == 0) {
+            return tier_position.position;
+        } else {
+            char canonicalBoard[boardSize];
+            for (i = 0; i < boardSize; i++) {
+                canonicalBoard[i] = board[symmetries[bestSymmetryNum][i]];
+            }
+            return GenericHashHashLabel(tier_position.tier, canonicalBoard,
+                                        turn);
+        }
+    }
+}
+
+static int MninemensmorrisGetNumberOfCanonicalChildPositions(
+    TierPosition tier_position) {
+    TierPositionArray canonicalChildren =
+        MninemensmorrisGetCanonicalChildPositions(tier_position);
+    int ret = canonicalChildren.size;
+    TierPositionArrayDestroy(&canonicalChildren);
+    return ret;
+}
+
+static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
+    TierPosition tier_position) {
+    TierPositionArray canonicalChildren;
+    TierPositionArrayInit(&canonicalChildren);
+
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+    int totalX = xToPlace + xOnBoard;
+    int totalO = oToPlace + oOnBoard;
+
+    if (totalX > 2 && totalO > 2) {
+        char board[boardSize];
+        GenericHashUnhashLabel(tier_position.tier, tier_position.position,
+                               board);
+
+        int turn =
+            GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+        Tier tierAfterSlideFlyRemove, tierAfterPlace, tierAfterPlaceRemove;
+        char player, opponent;
+        int oppTurn, toPlace;
+        if (turn == 1) {
+            player = X;
+            opponent = O;
+            oppTurn = 2;
+            tierAfterSlideFlyRemove =
+                HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard - 1);
+            tierAfterPlace =
+                HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard);
+            tierAfterPlaceRemove =
+                HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1);
+        } else {
+            player = O;
+            opponent = X;
+            oppTurn = 1;
+            tierAfterSlideFlyRemove =
+                HashTier(xToPlace, oToPlace, xOnBoard - 1, oOnBoard);
+            tierAfterPlace =
+                HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1);
+            tierAfterPlaceRemove =
+                HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1);
+        }
+
+        TierPosition child;
+        PositionHashSet deduplication_set;
+        PositionHashSetInit(&deduplication_set, 0.5);
+
+        int legalRemoves[boardSize];
+        int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
+        int i, j, from, numLegalTos, *legalTos;
+
+        int allBlanks[boardSize];
+        int numBlanks = 0;
+        for (i = 0; i < boardSize; i++) {
+            if (board[i] == BLANK) {
+                allBlanks[numBlanks++] = i;
+            }
+        }
+
+        if (toPlace == 0 || laskerRule) {  // Sliding or flying moves
+            for (from = 0; from < boardSize; from++) {
+                if (gFlyRule && ((player == X && totalX == 3) ||
+                                 (player == O && totalO == 3))) {
+                    legalTos = allBlanks;
+                    numLegalTos = numBlanks;
+                } else {
+                    legalTos = adjacent[from];
+                    numLegalTos = adjacent[from][4];
+                }
+                if (board[from] == player) {
+                    for (i = 0; i < numLegalTos; i++) {
+                        if (board[legalTos[i]] == BLANK) {
+                            if (ClosesMill(board, player, from, legalTos[i]) &&
+                                numLegalRemoves > 0) {  // Slide/fly with remove
+                                for (j = 0; j < numLegalRemoves; j++) {
+                                    // Create child board
+                                    board[from] = BLANK;
+                                    board[legalTos[i]] = player;
+                                    board[legalRemoves[j]] = BLANK;
+
+                                    child.tier = tierAfterSlideFlyRemove;
+                                    AddCanonChildToTPArray(
+                                        child, board, oppTurn,
+                                        &deduplication_set, &canonicalChildren);
+
+                                    // Undo create child board
+                                    board[from] = player;
+                                    board[board[legalTos[i]]] = BLANK;
+                                    board[legalRemoves[j]] = opponent;
+                                }
+                            } else {  // Slide/fly without remove
+
+                                // Create child board
+                                board[from] = BLANK;
+                                board[legalTos[i]] = player;
+
+                                // Child position is in same tier
+                                child.tier = tier_position.tier;
+                                AddCanonChildToTPArray(child, board, oppTurn,
+                                                       &deduplication_set,
+                                                       &canonicalChildren);
+
+                                // Undo create child board
+                                board[from] = player;
+                                board[legalTos[i]] = BLANK;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (toPlace > 0) {  // Placing moves
+            for (i = 0; i < numBlanks; i++) {
+                if (ClosesMill(board, player, NONE, allBlanks[i]) &&
+                    numLegalRemoves > 0) {  // Place with remove
+                    for (j = 0; j < numLegalRemoves; j++) {
+                        // Create child board
+                        board[allBlanks[i]] = player;
+                        board[legalRemoves[j]] = BLANK;
+
+                        child.tier = tierAfterPlaceRemove;
+                        AddCanonChildToTPArray(child, board, oppTurn,
+                                               &deduplication_set,
+                                               &canonicalChildren);
+
+                        // Undo create child board
+                        board[allBlanks[i]] = BLANK;
+                        board[legalRemoves[j]] = opponent;
+                    }
+                } else {  // Place without remove
+                    // Create child board
+                    board[allBlanks[i]] = player;
+
+                    child.tier = tierAfterPlace;
+                    AddCanonChildToTPArray(child, board, oppTurn,
+                                           &deduplication_set,
+                                           &canonicalChildren);
+
+                    // Undo create child board
+                    board[allBlanks[i]] = BLANK;
+                }
+            }
+        }
+
+        PositionHashSetDestroy(&deduplication_set);
     }
 
-    if (bestSymmetryNum == 0) {
-        return tier_position.position;
-    } else {
-        for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
-            canonicalBoard[i] = board[symmetries[bestSymmetryNum][i]];
-        }
-        return GenericHashHashLabel(tier_position.tier, canonicalBoard, turn);
-    }
+    return canonicalChildren;
 }
 
 static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier) {
-    //
     Tier tier = tier_position.tier;
     Position position = tier_position.position;
     PositionArray parents;
@@ -1361,4 +1704,16 @@ static int FindLegalRemoves(char *board, char player, int *legalRemoves) {
         }
     }
     return numLegalRemoves;
+}
+
+/* Helper function for MninemensmorrisGetCanonicalChildPositions */
+static void AddCanonChildToTPArray(TierPosition child, char *board, int oppTurn,
+                                   PositionHashSet *deduplication_set,
+                                   TierPositionArray *canonicalChildren) {
+    child.position = GenericHashHashLabel(child.tier, board, oppTurn);
+    child.position = MninemensmorrisGetCanonicalPosition(child);
+    if (!PositionHashSetContains(deduplication_set, child.position)) {
+        PositionHashSetAdd(deduplication_set, child.position);
+        TierPositionArrayAppend(canonicalChildren, child);
+    }
 }
