@@ -65,6 +65,7 @@ void GenericHashReinitialize(void) {
         Int64HashMapDestroy(&manager.labels);
     }
     memset(&manager, 0, sizeof(manager));
+    Int64HashMapInit(&manager.labels, 0);
     multi_context_warning_shown = false;
 }
 
