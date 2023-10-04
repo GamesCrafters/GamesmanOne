@@ -491,6 +491,7 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
             break;
         case 3:  // Lasker Rule
             laskerRule = selection == 1;
+            break;
         case 4:  // Removal Rule
             removalRule = selection;
             break;
@@ -599,7 +600,7 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
 
         int legalRemoves[boardSize];
         int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
-        int i, j, from, numLegalTos, *legalTos;
+        int i, j, from, numLegalTos = 0, *legalTos = NULL;
 
         int allBlanks[boardSize];
         int numBlanks = 0;
@@ -972,7 +973,7 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
 
         int legalRemoves[boardSize];
         int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
-        int i, j, from, numLegalTos, *legalTos;
+        int i, j, from, numLegalTos = 0, *legalTos = NULL;
 
         int allBlanks[boardSize];
         int numBlanks = 0;
@@ -1777,7 +1778,7 @@ static bool InitGenericHash(void) {
                         printf(
                             "Calling GenericHashAddContext with player: %d, board_size: %d, pieces_init_array: "
                             "{'X', %d, %d, 'O', %d, %d, '-', %d, %d, -1}; "
-                            "vcfg: NULL; tier: %llu\n",
+                            "vcfg: NULL; tier: %" PRId64 "\n",
                             player, boardSize, pieces_init_array[1],
                             pieces_init_array[2], pieces_init_array[4],
                             pieces_init_array[5], pieces_init_array[7],
