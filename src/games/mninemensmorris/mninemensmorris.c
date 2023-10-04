@@ -38,6 +38,7 @@
 #include "core/gamesman_types.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#define DEBUG 1
 
 /* Game, Solver, and Gameplay API Functions */
 
@@ -152,7 +153,7 @@ const Game kMninemensmorris = {
  * two adjacent interesction slots on the 24Board, 7 and 11.
  *****************************************************************************/
 
-static const int adjacent16[16][5] = {
+static int adjacent16[16][5] = {
     {1, 6, -1, -1, 2},  {0, 2, 4, -1, 3},   {1, 9, -1, -1, 2},
     {4, 7, -1, -1, 2},  {1, 3, 5, -1, 3},   {4, 8, -1, -1, 2},
     {0, 7, 13, -1, 3},  {3, 6, 10, -1, 3},  {5, 9, 12, -1, 3},
@@ -160,7 +161,7 @@ static const int adjacent16[16][5] = {
     {8, 11, -1, -1, 2}, {6, 14, -1, -1, 2}, {11, 13, 15, -1, 3},
     {9, 14, -1, -1, 2}};
 
-static const int adjacent24[24][5] = {
+static int adjacent24[24][5] = {
     {1, 9, -1, -1, 2},   {0, 2, 4, -1, 3},    {1, 14, -1, -1, 2},
     {4, 10, -1, -1, 2},  {1, 3, 5, 7, 4},     {4, 13, -1, -1, 2},
     {7, 11, -1, -1, 2},  {4, 6, 8, -1, 3},    {7, 12, -1, -1, 2},
@@ -170,7 +171,7 @@ static const int adjacent24[24][5] = {
     {10, 19, -1, -1, 2}, {16, 18, 20, 22, 4}, {13, 19, -1, -1, 2},
     {9, 22, -1, -1, 2},  {19, 21, 23, -1, 3}, {14, 22, -1, -1, 2}};
 
-static const int adjacent24Plus[24][5] = {
+static int adjacent24Plus[24][5] = {
     {1, 3, 9, -1, 3},    {0, 2, 4, -1, 3},    {1, 5, 14, -1, 3},
     {0, 4, 6, 10, 4},    {1, 3, 5, 7, 4},     {2, 4, 8, 13, 4},
     {3, 7, 11, -1, 3},   {4, 6, 8, -1, 3},    {5, 7, 12, -1, 3},
@@ -193,7 +194,7 @@ static const int adjacent24Plus[24][5] = {
  * diagonal lines first, then, if the slot is part of one, the diagonal line.
  *****************************************************************************/
 
-static const int linesArray16[16][7] = {
+static int linesArray16[16][7] = {
     {1, 2, 6, 13, -1, -1, 2},    {0, 2, -1, -1, -1, -1, 1},
     {0, 1, 9, 15, -1, -1, 2},    {4, 5, 7, 10, -1, -1, 2},
     {3, 5, -1, -1, -1, -1, 1},   {3, 4, 8, 12, -1, -1, 2},
@@ -203,7 +204,7 @@ static const int linesArray16[16][7] = {
     {5, 8, 10, 11, -1, -1, 2},   {0, 6, 14, 15, -1, -1, 2},
     {13, 15, -1, -1, -1, -1, 1}, {2, 9, 13, 14, -1, -1, 2}};
 
-static const int linesArray24[16][7] = {
+static int linesArray24[24][7] = {
     {1, 2, 9, 21, 3, 6, 3},      {0, 2, 4, 7, -1, -1, 2},
     {0, 1, 14, 23, 5, 8, 3},     {4, 5, 10, 18, 0, 6, 3},
     {1, 7, 3, 5, -1, -1, 2},     {3, 4, 13, 20, 2, 8, 3},
@@ -308,17 +309,17 @@ static const GameVariantOption optionFlyRule = {
 static const GameVariantOption optionLaskerRule = {
     .name = "Lasker Rule Enabled", .num_choices = 2, .choices = choicesBoolean};
 
-static ConstantReadOnlyString choicesRemovalRule[2] = {"Standard", "Lenient",
+static ConstantReadOnlyString choicesRemovalRule[3] = {"Standard", "Lenient",
                                                        "Strict"};
 const struct GameVariantOption optionRemovalRule = {
     .name = "Removal Rule", .num_choices = 3, .choices = choicesRemovalRule};
 
-static ConstantReadOnlyString choicesBoardType[2] = {"16-Board", "24-Board",
+static ConstantReadOnlyString choicesBoardType[3] = {"16-Board", "24-Board",
                                                      "24-Board-Plus"};
 static const GameVariantOption optionBoardType = {
     .name = "Board Type", .num_choices = 3, .choices = choicesBoardType};
 
-static ConstantReadOnlyString choicesNumPiecesPerPlayer[2] = {
+static ConstantReadOnlyString choicesNumPiecesPerPlayer[10] = {
     "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
 const struct GameVariantOption optionNumPiecesPerPlayer = {
     .name = "Number of Pieces Per Player",
@@ -340,7 +341,7 @@ static GameVariant currentVariant;
 static const int numBoardSymmetries16 = 16;
 static const int numBoardSymmetries24 = 16;
 
-static const int symmetries16[16][24] = {
+static int symmetries16[16][24] = {
     {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
      12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1},
     {13, 6,  0, 10, 7,  3,  14, 11, 4,  1,  12, 8,
@@ -374,7 +375,7 @@ static const int symmetries16[16][24] = {
     {12, 8,  5, 15, 9,  2,  11, 14, 1,  4,  13, 6,
      0,  10, 7, 3,  -1, -1, -1, -1, -1, -1, -1, -1}};
 
-static const int symmetries24[16][24] = {
+static int symmetries24[16][24] = {
     {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23},
     {6,  7,  8,  3,  4,  5,  0,  1,  2,  11, 10, 9,
@@ -446,13 +447,13 @@ static void AddCanonParentToPArray(TierPosition parent, char *board,
 static int MninemensmorrisInit(void *aux) {
     (void)aux;  // Unused.
 
-    memset(&variantOptions, 0, sizeof(variantOptions));
     variantOptions[0] = optionMisere;
     variantOptions[1] = optionFlyRule;
     variantOptions[2] = optionLaskerRule;
     variantOptions[3] = optionRemovalRule;
     variantOptions[4] = optionBoardType;
     variantOptions[5] = optionNumPiecesPerPlayer;
+    variantOptions[6] = (GameVariantOption){0};  // Must null-terminate
 
     currentVariant.options = variantOptions;
     currentVariant.selections = currentSelections;
@@ -550,7 +551,9 @@ static Tier MninemensmorrisGetInitialTier(void) {
 /* Assumes Generic Hash has been initialized. */
 static Position MninemensmorrisGetInitialPosition(void) {
     char board[boardSize];
-    memset(board, BLANK, boardSize);
+    for (int i = 0; i < boardSize; i++) {
+        board[i] = BLANK;
+    }
     return GenericHashHashLabel(
         HashTier(gNumPiecesPerPlayer, gNumPiecesPerPlayer, 0, 0), board, 1);
 }
@@ -572,6 +575,13 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
         char board[boardSize];
         GenericHashUnhashLabel(tier_position.tier, tier_position.position,
                                board);
+
+        if (DEBUG) {
+            printf("GENERATEMOVES\n");
+            for (int k = 0; k < boardSize; k++) {
+                printf("%c", board[k]);
+            }
+        }
 
         int turn =
             GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
@@ -668,7 +678,7 @@ static TierPosition MninemensmorrisDoMove(TierPosition tier_position,
         player = X;
         oppTurn = 2;
     } else {
-        player == O;
+        player = O;
         oppTurn = 1;
     }
     int xToPlace, oToPlace, xOnBoard, oOnBoard;
@@ -709,6 +719,7 @@ static TierPosition MninemensmorrisDoMove(TierPosition tier_position,
 
 static bool MninemensmorrisIsLegalPosition(TierPosition tier_position) {
     // Currently we do not have a filter for unreachable positions
+    (void)tier_position;
     return true;
 }
 
@@ -999,7 +1010,7 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
 
                                     // Undo create child board
                                     board[from] = player;
-                                    board[board[legalTos[i]]] = BLANK;
+                                    board[legalTos[i]] = BLANK;
                                     board[legalRemoves[j]] = opponent;
                                 }
                             } else {  // Slide/fly w/o remove
@@ -1089,8 +1100,7 @@ static PositionArray MninemensmorrisGetCanonicalParentPositions(
     int turn =
         GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
 
-    int par_toPlace;  // #pieces currentplayer had left to place in parent tier
-    int par_onBoard;  // #pieces currentplayer had on board in parent tier
+    int par_onBoard;      // #pieces currentplayer had on board in parent tier
     int par_opp_toPlace;  // #pieces opponent had left to place in parent tier
     int par_opp_onBoard;  // #pieces opponent had on the board in parent tier
     int onBoard;          // #pieces currentplayer has on board in current tier
@@ -1103,7 +1113,6 @@ static PositionArray MninemensmorrisGetCanonicalParentPositions(
         oppTurn = 2;
         player = X;
         opponent = O;
-        par_toPlace = par_xToPlace;
         par_onBoard = par_xOnBoard;
         par_opp_toPlace = par_oToPlace;
         par_opp_onBoard = par_oOnBoard;
@@ -1114,7 +1123,6 @@ static PositionArray MninemensmorrisGetCanonicalParentPositions(
         oppTurn = 1;
         player = O;
         opponent = X;
-        par_toPlace = par_oToPlace;
         par_onBoard = par_oOnBoard;
         par_opp_toPlace = par_xToPlace;
         par_opp_onBoard = par_xOnBoard;
@@ -1503,7 +1511,7 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
 
     static ConstantReadOnlyString kFormat16 =
         "\n"
-        "          0 ----- 1 ----- 2    %c ----- %c ----- %c     It is %s's "
+        "          0 ----- 1 ----- 2    %c ----- %c ----- %c     It is %c's "
         "turn.\n"
         "          |       |       |    |       |       |    \n"
         "          |   3 - 4 - 5   |    |   %c - %c - %c   |     X has %d "
@@ -1521,9 +1529,9 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
     static ConstantReadOnlyString kFormat24 =
         "\n"
         "        0 --------- 1 --------- 2       %c --------- %c --------- %c  "
-        "   It is %s's turn.\n"
+        "   It is %c's turn.\n"
         "        |           |           |       | %c         |         %c |\n"
-        "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |"
+        "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
         "        |   |       |       |   |       |   |       |       |   |     "
         "X has %d pieces left to place.\n"
         "        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |  "
@@ -1580,7 +1588,7 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
 static int MninemensmorrisMoveToString(Move move, char *buffer) {
     int actualLength;
     int from, to, remove;
-    unhashMove(move, &from, &to, &remove);
+    UnhashMove(move, &from, &to, &remove);
     int maxStrLen = kGameplayApi.move_string_length_max + 1;
 
     if (from != NONE && to != NONE && remove != NONE) {
@@ -1749,8 +1757,8 @@ static bool InitGenericHash(void) {
     } else {
         for (int piecesLeft = 0; piecesLeft <= 2 * gNumPiecesPerPlayer;
              piecesLeft++) {
-            oToPlace = piecesLeft / 2;
-            xToPlace = 2 * gNumPiecesPerPlayer - oToPlace;
+            xToPlace = piecesLeft / 2;
+            oToPlace = piecesLeft - xToPlace;
             for (xOnBoard = 0; xOnBoard <= gNumPiecesPerPlayer - xToPlace;
                  xOnBoard++) {
                 for (oOnBoard = 0; oOnBoard <= gNumPiecesPerPlayer - oToPlace;
@@ -1765,6 +1773,17 @@ static bool InitGenericHash(void) {
                     // Nonzero even piecesLeft means it's P2's turn.
                     player = (piecesLeft == 0) ? 0 : (piecesLeft & 1) ? 2 : 1;
 
+                    if (DEBUG) {
+                        printf(
+                            "player: %d, board_size: %d, pieces_init_array: "
+                            "{'X', %d, %d, 'O', %d, %d, '-', %d, %d, -1}; "
+                            "vcfg: NULL; tier: %llu\n",
+                            player, boardSize, pieces_init_array[1],
+                            pieces_init_array[2], pieces_init_array[4],
+                            pieces_init_array[5], pieces_init_array[7],
+                            pieces_init_array[8], tier);
+                    }
+                    
                     success = GenericHashAddContext(
                         player, boardSize, pieces_init_array, NULL, tier);
 
@@ -1808,7 +1827,8 @@ static bool IsSlotInMill(char *board, int slot, char player) {
     } else if (lines[7] == 3) {
         return firstLineIsMill || MILL(board, lines[2], lines[3], player) ||
                MILL(board, lines[4], lines[5], player);
-    } else if (lines[7] == 1) {
+    } else {
+        // Only should reach here if lines[7] == 1
         return firstLineIsMill;
     }
 }

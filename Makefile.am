@@ -67,3 +67,4 @@ bin_gamesman_SOURCES += src/libs/mgz/mgz.c
 # All Games
 bin_gamesman_SOURCES += src/games/mttt/mttt.c
 bin_gamesman_SOURCES += src/games/mtttier/mtttier.c
+bin_gamesman_SOURCES += src/games/mninemensmorris/mninemensmorris.c

@@ -33,11 +33,12 @@
 
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
+#include "games/mninemensmorris/mninemensmorris.h"
 
 // 2. Then add the new game object to the end of the list.
 
 static const Game *const kAllGames[] = {
-    &kMtttier, &kMttt, NULL
+    &kMninemensmorris, &kMttt, &kMtttier, NULL
 };
 
 const Game *const *GameManagerGetAllGames(void) {

@@ -25,6 +25,7 @@
  */
 
 #include "libs/mgz/gz64.h"
+#include <limits.h>
 
 #define GZ_READ_CHUNK_SIZE INT_MAX
 
