@@ -62,7 +62,7 @@ static int MninemensmorrisGetNumberOfCanonicalChildPositions(
 static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
     TierPosition tier_position);
 static PositionArray MninemensmorrisGetCanonicalParentPositions(
-    TierPosition tier_position);
+    TierPosition tier_position, Tier parent_tier);
 static TierArray MninemensmorrisGetChildTiers(Tier tier);
 static TierArray MninemensmorrisGetParentTiers(Tier tier);
 static Tier MninemensmorrisGetCanonicalTier(Tier tier);
@@ -295,21 +295,18 @@ static const int linesArray24[16][7] = {
  *
  *****************************************************************************/
 
-static ConstantReadOnlyString choicesMisere[2] = {"False", "True"};
-static const GameVariantOption optionMisere = {
-    .name = "Misere", .num_choices = 2, .choices = choicesMisere};
+static ConstantReadOnlyString choicesBoolean[2] = {"False", "True"};
 
-static ConstantReadOnlyString choicesFlyRule[2] = {"False", "True"};
+static const GameVariantOption optionMisere = {
+    .name = "Misere", .num_choices = 2, .choices = choicesBoolean};
+
 static const GameVariantOption optionFlyRule = {
     .name = "Fly When Left With Three Pieces",
     .num_choices = 2,
-    .choices = choicesFlyRule};
+    .choices = choicesBoolean};
 
-static ConstantReadOnlyString choicesLaskerRule[2] = {"False", "True"};
 static const GameVariantOption optionLaskerRule = {
-    .name = "Lasker Rule Enabled",
-    .num_choices = 2,
-    .choices = choicesLaskerRule};
+    .name = "Lasker Rule Enabled", .num_choices = 2, .choices = choicesBoolean};
 
 static ConstantReadOnlyString choicesRemovalRule[2] = {"Standard", "Lenient",
                                                        "Strict"};
@@ -432,11 +429,17 @@ static void UnhashMove(Move move, int *from, int *to, int *remove);
 static bool IsSlotInMill(char *board, int slot, char player);
 static bool ClosesMill(char *board, char player, int from, int to);
 static bool AllPiecesInMills(char *board, char player);
+static bool AllPriorPiecesInMills(char *board, int priorSlot, char player);
 static int FindLegalRemoves(char *board, char player, int *legalRemoves);
+static int FindPriorLegalRemoves(char *board, char player, int *legalRemoves);
 static bool InitGenericHash(void);
 static void AddCanonChildToTPArray(TierPosition child, char *board, int oppTurn,
                                    PositionHashSet *deduplication_set,
                                    TierPositionArray *canonicalChildren);
+static void AddCanonParentToPArray(TierPosition parent, char *board,
+                                   int oppTurn,
+                                   PositionHashSet *deduplication_set,
+                                   PositionArray *canonicalParents);
 
 /* Game, Solver, and Gameplay API Functions Implementation */
 
@@ -573,13 +576,15 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
         int turn =
             GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
         char player;
-        int toPlace;
+        int toPlace, total;
         if (turn == 1) {
             player = X;
             toPlace = xToPlace;
+            total = totalX;
         } else {
             player = O;
             toPlace = oToPlace;
+            total = totalO;
         }
 
         int legalRemoves[boardSize];
@@ -596,11 +601,7 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
 
         if (toPlace == 0 || laskerRule) {  // Sliding or flying moves
             for (from = 0; from < boardSize; from++) {
-                if (gFlyRule && ((player == X && totalX == 3) ||
-                                 (player == O && totalO == 3))) {
-                    legalTos = allBlanks;
-                    numLegalTos = numBlanks;
-                } else {
+                if (total > 3 || !gFlyRule) {
                     legalTos = adjacent[from];
                     numLegalTos = adjacent[from][4];
                 }
@@ -919,40 +920,44 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
     int totalO = oToPlace + oOnBoard;
 
     if (totalX > 2 && totalO > 2) {
+        TierPosition child;
         char board[boardSize];
         GenericHashUnhashLabel(tier_position.tier, tier_position.position,
                                board);
 
         int turn =
             GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-        Tier tierAfterSlideFlyRemove, tierAfterPlace, tierAfterPlaceRemove;
+        Tier afterSlideFlyRemove, afterPlace, afterPlaceRemove;
         char player, opponent;
-        int oppTurn, toPlace;
+        int oppTurn, toPlace, total;
         if (turn == 1) {
             player = X;
             opponent = O;
             oppTurn = 2;
-            tierAfterSlideFlyRemove =
+            toPlace = xToPlace;
+            total = totalX;
+            afterSlideFlyRemove =
                 HashTier(xToPlace, oToPlace, xOnBoard, oOnBoard - 1);
-            tierAfterPlace =
+            afterPlace =
                 HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard);
-            tierAfterPlaceRemove =
+            afterPlaceRemove =
                 HashTier(xToPlace - 1, oToPlace, xOnBoard + 1, oOnBoard - 1);
         } else {
             player = O;
             opponent = X;
             oppTurn = 1;
-            tierAfterSlideFlyRemove =
+            toPlace = oToPlace;
+            total = totalO;
+            afterSlideFlyRemove =
                 HashTier(xToPlace, oToPlace, xOnBoard - 1, oOnBoard);
-            tierAfterPlace =
+            afterPlace =
                 HashTier(xToPlace, oToPlace - 1, xOnBoard, oOnBoard + 1);
-            tierAfterPlaceRemove =
+            afterPlaceRemove =
                 HashTier(xToPlace, oToPlace - 1, xOnBoard - 1, oOnBoard + 1);
         }
 
-        TierPosition child;
-        PositionHashSet deduplication_set;
-        PositionHashSetInit(&deduplication_set, 0.5);
+        // We'll need different deduplication sets for different child tiers
+        PositionHashSet dedupA, dedupB;
 
         int legalRemoves[boardSize];
         int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
@@ -965,14 +970,14 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                 allBlanks[numBlanks++] = i;
             }
         }
+        legalTos = allBlanks;
+        numLegalTos = numBlanks;
 
         if (toPlace == 0 || laskerRule) {  // Sliding or flying moves
+            PositionHashSetInit(&dedupA, 0.5);
+            PositionHashSetInit(&dedupB, 0.5);
             for (from = 0; from < boardSize; from++) {
-                if (gFlyRule && ((player == X && totalX == 3) ||
-                                 (player == O && totalO == 3))) {
-                    legalTos = allBlanks;
-                    numLegalTos = numBlanks;
-                } else {
+                if (total > 3 || !gFlyRule) {
                     legalTos = adjacent[from];
                     numLegalTos = adjacent[from][4];
                 }
@@ -980,24 +985,24 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                     for (i = 0; i < numLegalTos; i++) {
                         if (board[legalTos[i]] == BLANK) {
                             if (ClosesMill(board, player, from, legalTos[i]) &&
-                                numLegalRemoves > 0) {  // Slide/fly with remove
+                                numLegalRemoves > 0) {  // Slide/fly w/ remove
                                 for (j = 0; j < numLegalRemoves; j++) {
                                     // Create child board
                                     board[from] = BLANK;
                                     board[legalTos[i]] = player;
                                     board[legalRemoves[j]] = BLANK;
 
-                                    child.tier = tierAfterSlideFlyRemove;
-                                    AddCanonChildToTPArray(
-                                        child, board, oppTurn,
-                                        &deduplication_set, &canonicalChildren);
+                                    child.tier = afterSlideFlyRemove;
+                                    AddCanonChildToTPArray(child, board,
+                                                           oppTurn, &dedupA,
+                                                           &canonicalChildren);
 
                                     // Undo create child board
                                     board[from] = player;
                                     board[board[legalTos[i]]] = BLANK;
                                     board[legalRemoves[j]] = opponent;
                                 }
-                            } else {  // Slide/fly without remove
+                            } else {  // Slide/fly w/o remove
 
                                 // Create child board
                                 board[from] = BLANK;
@@ -1006,7 +1011,7 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                                 // Child position is in same tier
                                 child.tier = tier_position.tier;
                                 AddCanonChildToTPArray(child, board, oppTurn,
-                                                       &deduplication_set,
+                                                       &dedupB,
                                                        &canonicalChildren);
 
                                 // Undo create child board
@@ -1017,9 +1022,13 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                     }
                 }
             }
+            PositionHashSetDestroy(&dedupA);
+            PositionHashSetDestroy(&dedupB);
         }
 
         if (toPlace > 0) {  // Placing moves
+            PositionHashSetInit(&dedupA, 0.5);
+            PositionHashSetInit(&dedupB, 0.5);
             for (i = 0; i < numBlanks; i++) {
                 if (ClosesMill(board, player, NONE, allBlanks[i]) &&
                     numLegalRemoves > 0) {  // Place with remove
@@ -1028,9 +1037,8 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                         board[allBlanks[i]] = player;
                         board[legalRemoves[j]] = BLANK;
 
-                        child.tier = tierAfterPlaceRemove;
-                        AddCanonChildToTPArray(child, board, oppTurn,
-                                               &deduplication_set,
+                        child.tier = afterPlace;
+                        AddCanonChildToTPArray(child, board, oppTurn, &dedupA,
                                                &canonicalChildren);
 
                         // Undo create child board
@@ -1041,62 +1049,240 @@ static TierPositionArray MninemensmorrisGetCanonicalChildPositions(
                     // Create child board
                     board[allBlanks[i]] = player;
 
-                    child.tier = tierAfterPlace;
-                    AddCanonChildToTPArray(child, board, oppTurn,
-                                           &deduplication_set,
+                    child.tier = afterPlaceRemove;
+                    AddCanonChildToTPArray(child, board, oppTurn, &dedupB,
                                            &canonicalChildren);
 
                     // Undo create child board
                     board[allBlanks[i]] = BLANK;
                 }
             }
+            PositionHashSetDestroy(&dedupA);
+            PositionHashSetDestroy(&dedupB);
         }
-
-        PositionHashSetDestroy(&deduplication_set);
     }
 
     return canonicalChildren;
 }
 
-static PositionArray MtttierGetCanonicalParentPositions(
+/*
+    This function is never called with a parent_tier that is not
+    actually a parent tier of tier_positon's tier.
+*/
+static PositionArray MninemensmorrisGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier) {
-    Tier tier = tier_position.tier;
-    Position position = tier_position.position;
-    PositionArray parents;
-    PositionArrayInit(&parents);
-    if (parent_tier != tier - 1) return parents;
+    int xToPlace, oToPlace, xOnBoard, oOnBoard;
+    UnhashTier(tier_position.tier, &xToPlace, &oToPlace, &xOnBoard, &oOnBoard);
+
+    int par_xToPlace, par_oToPlace, par_xOnBoard, par_oOnBoard;
+    UnhashTier(parent_tier, &par_xToPlace, &par_oToPlace, &par_xOnBoard,
+               &par_oOnBoard);
+
+    PositionArray canonicalParents;
+    PositionArrayInit(&canonicalParents);
 
     PositionHashSet deduplication_set;
     PositionHashSetInit(&deduplication_set, 0.5);
 
-    char board[9] = {0};
-    GenericHashUnhashLabel(tier, position, board);
+    char board[boardSize];
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
+    int turn =
+        GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
 
-    char prev_turn = WhoseTurn(board) == 'X' ? 'O' : 'X';
-    for (int i = 0; i < 9; ++i) {
-        if (board[i] == prev_turn) {
-            // Take piece off the board.
-            board[i] = '-';
-            TierPosition parent = {
-                .tier = tier - 1,
-                .position = GenericHashHashLabel(tier - 1, board, 1),
-            };
-            // Add piece back to the board.
-            board[i] = prev_turn;
-            if (!MtttierIsLegalPosition(parent)) {
-                continue;  // Illegal.
-            }
-            parent.position = MtttierGetCanonicalPosition(parent);
-            if (PositionHashSetContains(&deduplication_set, parent.position)) {
-                continue;  // Already included.
-            }
-            PositionHashSetAdd(&deduplication_set, parent.position);
-            PositionArrayAppend(&parents, parent.position);
+    int par_toPlace;  // #pieces currentplayer had left to place in parent tier
+    int par_onBoard;  // #pieces currentplayer had on board in parent tier
+    int par_opp_toPlace;  // #pieces opponent had left to place in parent tier
+    int par_opp_onBoard;  // #pieces opponent had on the board in parent tier
+    int onBoard;          // #pieces currentplayer has on board in current tier
+    int opp_toPlace;      // #pieces opponent has left to place in current tier
+    int opp_onBoard;      // #pieces opponent has on board in current tier;
+    char player, opponent;
+    int oppTurn;
+
+    if (turn == 1) {
+        oppTurn = 2;
+        player = X;
+        opponent = O;
+        par_toPlace = par_xToPlace;
+        par_onBoard = par_xOnBoard;
+        par_opp_toPlace = par_oToPlace;
+        par_opp_onBoard = par_oOnBoard;
+        onBoard = xOnBoard;
+        opp_toPlace = oToPlace;
+        opp_onBoard = oOnBoard;
+    } else {
+        oppTurn = 1;
+        player = O;
+        opponent = X;
+        par_toPlace = par_oToPlace;
+        par_onBoard = par_oOnBoard;
+        par_opp_toPlace = par_xToPlace;
+        par_opp_onBoard = par_xOnBoard;
+        onBoard = oOnBoard;
+        opp_toPlace = xToPlace;
+        opp_onBoard = xOnBoard;
+    }
+    int opp_total = opp_toPlace + opp_onBoard;
+
+    int priorTo, i, j;
+
+    int allBlanks[boardSize];
+    int numBlanks = 0;
+    for (i = 0; i < boardSize; i++) {
+        if (board[i] == BLANK) {
+            allBlanks[numBlanks++] = i;
         }
     }
-    PositionHashSetDestroy(&deduplication_set);
 
-    return parents;
+    int *priorLegalFroms, numPriorLegalFroms;
+    priorLegalFroms = allBlanks;
+    numPriorLegalFroms = numBlanks;
+
+    int priorLegalRemoves[boardSize];
+    int numPriorLegalRemoves =
+        FindPriorLegalRemoves(board, turn, priorLegalRemoves);
+
+    bool strictRRAndAllPiecesInMills =
+        removalRule == 2 && AllPiecesInMills(board, player);
+    TierPosition parent;
+    parent.tier = parent_tier;
+
+    if (tier_position.tier == parent_tier) {
+        /* Find all parent positions from which the current position was
+        reached as a result of the opponent sliding/flying without removal. For
+        each of the opponent's pieces on the board currently, first check
+        whether the opponent moving the piece to its current slot would have
+        forced the opponent to remove one of the player's pieces. If so, the
+        opponent did not move that piece during their previous turn. If not,
+        the opponent during their previous turn could have moved the piece to
+        that slot from either an empty adjacent slot if opponent has more than
+        3 total pieces left, or from any empty slot if the opponent only has
+        only 3 total pieces left. */
+        for (priorTo = 0; priorTo < boardSize; priorTo++) {
+            if (opp_total > 3 || !gFlyRule) {
+                priorLegalFroms = adjacent[priorTo];
+                numPriorLegalFroms = adjacent[priorTo][4];
+            }
+            if (board[priorTo] == opponent &&
+                (!IsSlotInMill(board, opponent, priorTo) ||
+                 strictRRAndAllPiecesInMills)) {
+                for (i = 0; i < numPriorLegalFroms; i++) {
+                    if (board[priorLegalFroms[i]] == BLANK) {
+                        // Create parent board
+                        board[priorLegalFroms[i]] = opponent;
+                        board[priorTo] = BLANK;
+
+                        AddCanonParentToPArray(parent, board, oppTurn,
+                                               &deduplication_set,
+                                               &canonicalParents);
+
+                        // Undo create parent board
+                        board[priorLegalFroms[i]] = BLANK;
+                        board[priorTo] = opponent;
+                    }
+                }
+            }
+        }
+    } else if (par_opp_toPlace - 1 == opp_toPlace) {
+        if (par_onBoard == onBoard) {
+            /* Find all parent positions from which the current position was
+            reached as a result of the opponent placing a piece without
+            removal. For each of the opponent's pieces on the board currently,
+            first check whether the opponent placing the piece at its current
+            slot would have forced the opponent to remove one of the player's
+            pieces. If so, the opponent did not place that piece during their
+            previous turn. If not, the opponent could have placed the piece
+            there during their previous turn. */
+            for (priorTo = 0; priorTo < boardSize; priorTo++) {
+                if (board[priorTo] == opponent &&
+                    (!IsSlotInMill(board, opponent, priorTo) ||
+                     strictRRAndAllPiecesInMills)) {
+                    // Create parent board
+                    board[priorTo] = BLANK;
+
+                    AddCanonParentToPArray(parent, board, oppTurn,
+                                           &deduplication_set,
+                                           &canonicalParents);
+
+                    // Undo create parent board
+                    board[priorTo] = opponent;
+                }
+            }
+        } else if (par_onBoard - 1 == onBoard) {
+            /* Find all parent positions from which the current position was
+            reached as a result of the opponent placing a piece WITH removal.
+            For each of the opponent's pieces on the board currently, first
+            check whether the opponent placing the piece at its current slot
+            would have forced the opponent to remove one of the player's
+            pieces. If not, the opponent did not place that piece during their
+            previous turn. And if so, the opponent could have placed the piece
+            there and removed a piece that could have been originally in any
+            slot listed in priorLegalRemoves during their previous turn. */
+            for (priorTo = 0; priorTo < boardSize; priorTo++) {
+                if (board[priorTo] == opponent &&
+                    IsSlotInMill(board, opponent, priorTo)) {
+                    for (j = 0; j < numPriorLegalRemoves; j++) {
+                        // Create parent board
+                        board[priorTo] = BLANK;
+                        board[priorLegalRemoves[j]] = player;
+
+                        AddCanonParentToPArray(parent, board, oppTurn,
+                                               &deduplication_set,
+                                               &canonicalParents);
+
+                        // Undo create parent board
+                        board[priorTo] = opponent;
+                        board[priorLegalRemoves[j]] = BLANK;
+                    }
+                }
+            }
+        }
+    } else if (par_opp_onBoard - 1 == opp_onBoard) {
+        /* Find all parent positions from which the current position was
+        reached as a result of the opponent sliding/flying WITH removal.
+        For each of the opponent's pieces on the board currently, first check
+        whether the opponent moving the piece to its current slot would have
+        forced the opponent to remove one of the player's pieces. If not, the
+        opponent did not move that piece during their previous turn. If so, the
+        opponent during their previous turn could have moved the piece to that
+        slot from either an empty adjacent slot if opponent has more than 3
+        total pieces left, or from any empty slot if the opponent only has only
+        3 total pieces left, and removed a piece that could have been
+        originally in any slot listed in priorLegalRemoves. */
+        for (priorTo = 0; priorTo < boardSize; priorTo++) {
+            if (opp_total > 3 || !gFlyRule) {
+                priorLegalFroms = adjacent[priorTo];
+                numPriorLegalFroms = adjacent[priorTo][4];
+            }
+            if (board[priorTo] == opponent &&
+                IsSlotInMill(board, opponent, priorTo)) {
+                for (i = 0; i < numPriorLegalFroms; i++) {
+                    if (board[priorLegalFroms[i]] == BLANK) {
+                        for (j = 0; j < numPriorLegalRemoves; j++) {
+                            if (priorLegalFroms[i] != priorLegalRemoves[j]) {
+                                // Create parent board
+                                board[priorLegalFroms[i]] = opponent;
+                                board[priorTo] = BLANK;
+                                board[priorLegalRemoves[j]] = player;
+
+                                AddCanonParentToPArray(parent, board, oppTurn,
+                                                       &deduplication_set,
+                                                       &canonicalParents);
+
+                                // Undo create parent board
+                                board[priorLegalFroms[i]] = BLANK;
+                                board[priorTo] = opponent;
+                                board[priorLegalRemoves[j]] = BLANK;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    PositionHashSetDestroy(&deduplication_set);
+    return canonicalParents;
 }
 
 /**
@@ -1325,8 +1511,8 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
         "          |   |       |   |    |   |       |   |     X has %d pieces "
         "on the board.\n"
         "LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c\n"
-        "          |   |       |   |    |   |       |   |     O has %d left to "
-        "place.\n"
+        "          |   |       |   |    |   |       |   |     O has %d left "
+        "to place.\n"
         "          |  10 - 11- 12  |    |   %c - %c - %c   |    O has %d "
         "pieces on the board.\n"
         "          |       |       |    |       |       |     \n"
@@ -1346,10 +1532,10 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
         "LEGEND: 9 - 10- 11      12- 13- 14      %c - %c - %c       %c - %c - "
         "%c\n"
         "        |   |   |       |   |   |       |   |   |       |   |   |\n"
-        "        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   |  "
-        "   O has %d left to place.\n"
-        "        |   |       |       |   |       |   |       |       |   |     "
-        "O has %d pieces on the board.\n"
+        "        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   | "
+        "    O has %d left to place.\n"
+        "        |   |       |       |   |       |   |       |       |   |    "
+        " O has %d pieces on the board.\n"
         "        |   18 ---- 19 ---- 20  |       |   %c ----- %c ----- %c   |\n"
         "        |           |           |       | %c         |         %c |\n"
         "        21 -------- 22 -------- 23      %c --------- %c --------- %c "
@@ -1392,7 +1578,6 @@ static int MninemensmorrisTierPositionToString(TierPosition tier_position,
 }
 
 static int MninemensmorrisMoveToString(Move move, char *buffer) {
-    // TODO: What's up with PRIDnt
     int actualLength;
     int from, to, remove;
     unhashMove(move, &from, &to, &remove);
@@ -1412,8 +1597,8 @@ static int MninemensmorrisMoveToString(Move move, char *buffer) {
     if (actualLength >= maxStrLen) {
         fprintf(
             stderr,
-            "MninemensmorrisMoveToString: (BUG) not enough space was allocated "
-            "to buffer. Please increase move_string_length_max.\n");
+            "MninemensmorrisMoveToString: (BUG) not enough space was "
+            "allocated to buffer. Please increase move_string_length_max.\n");
         return 1;
     }
     return 0;
@@ -1550,8 +1735,8 @@ static bool InitGenericHash(void) {
 
                         if (!success) {
                             fprintf(stderr,
-                                    "MninemensmorrisInit: failed to initialize "
-                                    "generic hash context "
+                                    "MninemensmorrisInit: failed to "
+                                    "initialize generic hash context "
                                     "for tier %" PRId64 ". Aborting...\n",
                                     tier);
                             GenericHashReinitialize();
@@ -1668,6 +1853,26 @@ static bool AllPiecesInMills(char *board, char player) {
 }
 
 /**
+ * @brief `player` just had a piece removed, and that piece may have been
+ * on `priorSlot`. Return whether all of the `player`'s pieces prior to
+ * the piece removal were all in mills, if their piece was on `priorSlot`.
+ */
+static bool AllPriorPiecesInMills(char *board, int priorSlot, char player) {
+    board[priorSlot] = player;
+
+    for (int slot = 0; slot < boardSize; slot++) {
+        if (board[slot] == player) {
+            if (!IsSlotInMill(board, slot, player)) {
+                board[priorSlot] = BLANK;
+                return false;
+            }
+        }
+    }
+    board[priorSlot] = BLANK;
+    return true;
+}
+
+/**
  * @brief Given a `board`, store the slots of all of the `player`'s
  * opponent's pieces that are removable according to the removalRule in
  * `legalRemoves` and return how many of the opponent's pieces are removable.
@@ -1706,6 +1911,44 @@ static int FindLegalRemoves(char *board, char player, int *legalRemoves) {
     return numLegalRemoves;
 }
 
+/**
+ * @brief Assuming that the `player`'s opponent had just removed one of
+ * `player`'s pieces to reach the current `board`, store all blank slots
+ * where `player`'s piece could have been prior to removal in `legalRemoves`
+ * and return how many such blank slots there are.
+ */
+static int FindPriorLegalRemoves(char *board, char player, int *legalRemoves) {
+    int numPriorLegalRemoves = 0;
+    int slot;
+    if (removalRule == 0) {
+        /* Standard. Player's piece could be removed if either all of their
+         * pieces were in mills or if the piece was not in a mill. */
+        for (slot = 0; slot < boardSize; slot++) {
+            if (board[slot] == BLANK &&
+                (!IsSlotInMill(board, slot, player) ||
+                 AllPriorPiecesInMills(board, slot, player))) {
+                legalRemoves[numPriorLegalRemoves++] = slot;
+            }
+        }
+    } else if (removalRule == 1) {
+        /* Player's piece could be removed regardless of whether it
+        was in a mill or not. */
+        for (slot = 0; slot < boardSize; slot++) {
+            if (board[slot] == BLANK) {
+                legalRemoves[numPriorLegalRemoves++] = slot;
+            }
+        }
+    } else {
+        /* Player's piece could only be removed if it was not in a mill. */
+        for (slot = 0; slot < boardSize; slot++) {
+            if (board[slot] == BLANK && !IsSlotInMill(board, slot, player)) {
+                legalRemoves[numPriorLegalRemoves++] = slot;
+            }
+        }
+    }
+    return numPriorLegalRemoves;
+}
+
 /* Helper function for MninemensmorrisGetCanonicalChildPositions */
 static void AddCanonChildToTPArray(TierPosition child, char *board, int oppTurn,
                                    PositionHashSet *deduplication_set,
@@ -1715,5 +1958,18 @@ static void AddCanonChildToTPArray(TierPosition child, char *board, int oppTurn,
     if (!PositionHashSetContains(deduplication_set, child.position)) {
         PositionHashSetAdd(deduplication_set, child.position);
         TierPositionArrayAppend(canonicalChildren, child);
+    }
+}
+
+/* Helper function for MninemensmorrisGetCanonicalParentPositions */
+static void AddCanonParentToPArray(TierPosition parent, char *board,
+                                   int oppTurn,
+                                   PositionHashSet *deduplication_set,
+                                   PositionArray *canonicalParents) {
+    parent.position = GenericHashHashLabel(parent.tier, board, oppTurn);
+    parent.position = MninemensmorrisGetCanonicalPosition(parent);
+    if (!PositionHashSetContains(deduplication_set, parent.position)) {
+        PositionHashSetAdd(deduplication_set, parent.position);
+        PositionArrayAppend(canonicalParents, parent.position);
     }
 }
