@@ -1,9 +1,11 @@
 /**
- * @file game_manager.c
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @file mallqueenschess.h
+ * @author Andrew Esteban: wrote the original version (mallqueenschess.c in
+ * GamesmanClassic.)
+ * @author Cameron Cheung (cameroncheung@berkeley.edu): adapted to the new system.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the Game Manager Module.
+ * @brief All Queens Chess
  *
  * @version 1.0
  * @date 2023-08-19
@@ -25,33 +27,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_manager.h"
+#ifndef GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_
+#define GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_
 
-#include <stddef.h>   // NULL
+#include "core/gamesman_types.h"
 
-// 1. To add a new game, include the game header here.
+extern const Game kMallqueenschess;
 
-#include "games/mallqueenschess/mallqueenschess.h"
-#include "games/mninemensmorris/mninemensmorris.h"
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-
-// 2. Then add the new game object to the end of the list.
-
-static const Game *const kAllGames[] = {
-    &kMallqueenschess, &kMninemensmorris, &kMttt, &kMtttier, NULL
-};
-
-const Game *const *GameManagerGetAllGames(void) {
-    return kAllGames;
-}
-
-int GameManagerNumGames(void) {
-    static int count = -1;
-    if (count >= 0) return count;
-    int i = 0;
-    while (kAllGames[i] != NULL) {
-        ++i;
-    }
-    return count = i;
-}
+#endif  // GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_

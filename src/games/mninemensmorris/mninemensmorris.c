@@ -1775,7 +1775,7 @@ static bool InitGenericHash(void) {
 
                     if (DEBUG) {
                         printf(
-                            "player: %d, board_size: %d, pieces_init_array: "
+                            "Calling GenericHashAddContext with player: %d, board_size: %d, pieces_init_array: "
                             "{'X', %d, %d, 'O', %d, %d, '-', %d, %d, -1}; "
                             "vcfg: NULL; tier: %llu\n",
                             player, boardSize, pieces_init_array[1],
@@ -1783,7 +1783,7 @@ static bool InitGenericHash(void) {
                             pieces_init_array[5], pieces_init_array[7],
                             pieces_init_array[8], tier);
                     }
-                    
+
                     success = GenericHashAddContext(
                         player, boardSize, pieces_init_array, NULL, tier);
 
