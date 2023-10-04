@@ -1,10 +1,10 @@
-#ifndef GAMESMANEXPERIMENT_CORE_ANALYSIS_H_
-#define GAMESMANEXPERIMENT_CORE_ANALYSIS_H_
+#ifndef GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_
+#define GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
+#include <stdio.h>    // FILE
 
-#include "core/data_structures/int64_array.h"
 #include "core/gamesman_types.h"
 
 typedef struct Analysis {
@@ -25,32 +25,32 @@ typedef struct Analysis {
     int64_t canonical_draw_count;
 
     /** Number of winning positions of each remoteness as an array. */
-    Int64Array win_summary;
+    int64_t win_summary[kRemotenessMax];
     /** Number of losing positions of each remoteness as an array. */
-    Int64Array lose_summary;
+    int64_t lose_summary[kRemotenessMax];
     /** Number of tying positions of each remoteness as an array. */
-    Int64Array tie_summary;
+    int64_t tie_summary[kRemotenessMax];
     /** Example winning positions of each remoteness as an array. */
-    TierPositionArray win_examples;
+    TierPosition win_examples[kRemotenessMax];
     /** Example losing positions of each remoteness as an array. */
-    TierPositionArray lose_examples;
+    TierPosition lose_examples[kRemotenessMax];
     /** Example tying positions of each remoteness as an array. */
-    TierPositionArray tie_examples;
+    TierPosition tie_examples[kRemotenessMax];
     /** An example drawing position. */
     TierPosition draw_example;
 
     /** Number of canonical winning positions of each remoteness as an array. */
-    Int64Array canonical_win_summary;
+    int64_t canonical_win_summary[kRemotenessMax];
     /** Number of canonical losing positions of each remoteness as an array. */
-    Int64Array canonical_lose_summary;
+    int64_t canonical_lose_summary[kRemotenessMax];
     /** Number of canonical tying positions of each remoteness as an array. */
-    Int64Array canonical_tie_summary;
+    int64_t canonical_tie_summary[kRemotenessMax];
     /** Example canonical winning positions of each remoteness as an array. */
-    TierPositionArray canonical_win_examples;
+    TierPosition canonical_win_examples[kRemotenessMax];
     /** Example canonical losing positions of each remoteness as an array. */
-    TierPositionArray canonical_lose_examples;
+    TierPosition canonical_lose_examples[kRemotenessMax];
     /** Example canonical tying positions of each remoteness as an array. */
-    TierPositionArray canonical_tie_examples;
+    TierPosition canonical_tie_examples[kRemotenessMax];
     /** An example canonical drawing position. */
     TierPosition canonical_draw_example;
 
@@ -69,8 +69,11 @@ typedef struct Analysis {
     int largest_tie_remoteness;  /**< Largest tying remoteness. */
 } Analysis;
 
-int AnalysisInit(Analysis *analysis);
+void AnalysisInit(Analysis *analysis);
 void AnalysisDestroy(Analysis *analysis);
+
+int AnalysisWrite(const Analysis *analysis, int fd);
+int AnalysisRead(Analysis *analysis, int fd);
 
 // Discovering
 
@@ -85,6 +88,7 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
 
 // Aggregating
 
+void AnalysisConvertToNoncanonical(Analysis *analysis);
 void AnalysisAggregate(Analysis *dest, const Analysis *src);
 
 // Post-Analysis
@@ -111,7 +115,8 @@ double AnalysisGetCanonicalLoseRatio(const Analysis *analysis);
 double AnalysisGetCanonicalTieRatio(const Analysis *analysis);
 double AnalysisGetCanonicalDrawRatio(const Analysis *analysis);
 
-void AnalysisPrintSummary(const Analysis *analysis);
-void AnalysisPrintCanonicalSummary(const Analysis *analysis);
+void AnalysisPrintSummary(FILE *stream, const Analysis *analysis);
+void AnalysisPrintCanonicalSummary(FILE *stream, const Analysis *analysis);
+void AnalysisPrintEverything(FILE *stream, const Analysis *analysis);
 
-#endif  // GAMESMANEXPERIMENT_CORE_ANALYSIS_H_
+#endif  // GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_

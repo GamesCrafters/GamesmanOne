@@ -37,6 +37,7 @@
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
+#include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
 #include <stdio.h>     // fprintf, stderr
@@ -73,6 +74,8 @@
 //   "success &= condition" or "success = condition". The former creates a race
 //   condition whereas the latter may overwrite an already failing result.
 
+// Copy of the API functions from tier_manager. Cannot use a reference here
+// because we need to create/modify some of the functions.
 static TierSolverApi current_api;
 
 // A frontier array will be created for each possible remoteness.

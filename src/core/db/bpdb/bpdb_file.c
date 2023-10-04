@@ -108,7 +108,9 @@ int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier) {
     free(filename);
     if (db_file == NULL) return kDbTierMissing;
 
-    fclose(db_file);
+    int error = GuardedFclose(db_file);
+    if (error != 0) return kDbTierCheckError;
+    
     return kDbTierSolved;
 }
 

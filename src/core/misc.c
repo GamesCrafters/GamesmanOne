@@ -29,18 +29,20 @@
 #include <assert.h>    // assert
 #include <errno.h>     // errno
 #include <fcntl.h>     // open
+#include <inttypes.h>  // PRId64, PRIu64
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // size_t
-#include <stdint.h>    // int64_t, INT64_MAX, uint8_t
+#include <stdint.h>    // int64_t, uint64_t, INT64_MAX, uint8_t
 #include <stdio.h>     // fprintf, stderr, FILE
 #include <stdlib.h>    // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
 #include <string.h>    // strlen, strncpy
 #include <sys/stat.h>  // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <unistd.h>     // close
-#include <zlib.h>       // gzFile, gzdopen, Z_NULL, Z_OK
+#include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 
 #include "core/gamesman_types.h"
+#include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
@@ -174,6 +176,13 @@ int GuardedLseek(int fd, off_t offset, int whence) {
     return 0;
 }
 
+gzFile GuardedGzopen(const char *path, const char *mode) {
+    gzFile file = gzopen(path, mode);
+    if (file == Z_NULL) perror("gzopen");
+    
+    return file;
+}
+
 gzFile GuardedGzdopen(int fd, const char *mode) {
     gzFile file = gzdopen(fd, mode);
     if (file == Z_NULL) perror("gzdopen");
@@ -224,6 +233,37 @@ int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
     }
     NotReached("GuardedGzread: unknown error occurred during gzread()");
     return 4;
+}
+
+int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok) {
+    int64_t bytes_read = gz64_read(file, buf, length);
+    if ((uint64_t)bytes_read == length) return 0;
+
+    int error;
+    if (gzeof(file)) {
+        if (eof_ok) return 0;
+        fprintf(stderr,
+                "GuardedGz64Read: end-of-file reached before reading %" PRIu64
+                " bytes, only %" PRId64 " bytes were actually read\n",
+                length, bytes_read);
+        return 2;
+    } else if (gzerror(file, &error)) {
+        fprintf(stderr, "GuardedGz64Read: gzread() error code %d\n", error);
+        return 3;
+    }
+    NotReached("GuardedGz64Read: unknown error occurred during gzread()");
+    return 4;
+}
+
+int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
+    int bytes_written = gzwrite(file, buf, len);
+    if ((unsigned int)bytes_written < len) {
+        int error;
+        gzerror(file, &error);
+        fprintf(stderr, "GuardedGzwrite: failed with code %d\n", error);
+        return error;
+    }
+    return 0;
 }
 
 /**

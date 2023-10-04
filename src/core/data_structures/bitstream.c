@@ -42,11 +42,11 @@ static int SetTo(BitStream *stream, int64_t i, uint8_t value) {
 }
 
 int BitStreamSet(BitStream *stream, int64_t i) {
-    return SetTo(stream->stream, i, 1);
+    return SetTo(stream, i, 1);
 }
 
 int BitStreamClear(BitStream *stream, int64_t i) {
-    return SetTo(stream->stream, i, 0);
+    return SetTo(stream, i, 0);
 }
 
 int BitStreamGet(const BitStream *stream, int64_t i) {

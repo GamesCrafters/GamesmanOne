@@ -35,6 +35,7 @@
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
 
+#include "core/analysis/stat_manager.h"
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
@@ -47,6 +48,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api);
 static int TierSolverFinalize(void);
 static int TierSolverSolve(void *aux);
+static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
 static const SolverConfiguration *TierSolverGetCurrentConfiguration(void);
 static int TierSolverSetOption(int option, int selection);
@@ -61,6 +63,7 @@ const Solver kTierSolver = {
     .Finalize = &TierSolverFinalize,
 
     .Solve = &TierSolverSolve,
+    .Analyze = &TierSolverAnalyze,
     .GetStatus = &TierSolverGetStatus,
 
     .GetCurrentConfiguration = &TierSolverGetCurrentConfiguration,
@@ -131,10 +134,16 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) return -1;
     DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
-    return DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    int error = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    if (error != 0) return error;
+    
+    error = StatManagerInit(game_name, variant);
+    if (error != 0) DbManagerFinalizeDb();
+    return error;
 }
 
 static int TierSolverFinalize(void) {
+    DbManagerFinalizeDb();
     memset(&default_api, 0, sizeof(default_api));
     memset(&current_api, 0, sizeof(current_api));
     memset(&current_config, 0, sizeof(current_config));
@@ -145,8 +154,13 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverSolve(void *aux) {
-    bool force = (aux != NULL) &&  *((bool *)aux);
+    bool force = (aux != NULL) && *((bool *)aux);
     return TierManagerSolve(&current_api, force);
+}
+
+static int TierSolverAnalyze(void *aux) {
+    bool force = (aux != NULL) && *((bool *)aux);
+    return TierManagerAnalyze(&current_api, force);
 }
 
 static int TierSolverGetStatus(void) {

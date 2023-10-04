@@ -75,6 +75,8 @@ int BailOutClose(int fd, int error);
 
 int GuardedLseek(int fd, off_t offset, int whence);
 
+gzFile GuardedGzopen(const char *path, const char *mode);
+
 gzFile GuardedGzdopen(int fd, const char *mode);
 
 int GuardedGzclose(gzFile file);
@@ -84,6 +86,10 @@ int BailOutGzclose(gzFile file, int error);
 int GuardedGzseek(gzFile file, off_t off, int whence);
 
 int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
+
+int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok);
+
+int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len);
 
 /**
  * @brief Recursively makes all directories along the given path.

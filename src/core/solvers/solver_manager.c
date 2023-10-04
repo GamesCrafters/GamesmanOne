@@ -48,6 +48,9 @@ int SolverManagerInitSolver(const Game *game) {
     const GameVariant *variant = game->GetCurrentVariant();
     int variant_index = GameVariantToIndex(variant);
 
+    if (current_solver != NULL) {
+        current_solver->Finalize();
+    }
     current_solver = game->solver;
     return current_solver->Init(game->name, variant_index, game->solver_api);
 }
@@ -58,3 +61,5 @@ int SolverManagerGetSolverStatus(void) {
 }
 
 int SolverManagerSolve(void *aux) { return current_solver->Solve(aux); }
+
+int SolverManagerAnalyze(void *aux) { return current_solver->Analyze(aux); }

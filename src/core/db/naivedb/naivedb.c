@@ -136,7 +136,6 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
 
     if (file == NULL) {
         perror("fopen");
-        fclose(file);
         return 2;
     }
 
@@ -327,5 +326,8 @@ static int NaiveDbTierStatus(Tier tier) {
     free(full_path);
     if (db_file == NULL) return kDbTierMissing;
 
+    int error = GuardedFclose(db_file);
+    if (error != 0) return kDbTierCheckError;
+    
     return kDbTierSolved;
 }

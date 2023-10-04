@@ -42,9 +42,17 @@
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // fprintf, stderr
 
+#include "core/analysis/analysis.h"
 #include "core/gamesman_types.h"
+#include "core/misc.h"
+#include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+
+enum TierManagementType {
+    kTierSolving,
+    kTierDiscovering,
+};
 
 typedef enum TierGraphNodeStatus {
     kStatusNotVisited,
@@ -53,51 +61,62 @@ typedef enum TierGraphNodeStatus {
     kNumStatus
 } TierGraphNodeStatus;
 
-static const TierSolverApi *current_api;
-
-// This object maps each tier to its value. The value of a tier contains
-// information about its number of undecided children and discovery status.
-// The discovery status is used to detect loops in the tier graph during
-// the topological sort process.
-static TierHashMap tier_to_value;
-static TierQueue solvable_tiers;
-static int64_t solved_tiers = 0;
-static int64_t skipped_tiers = 0;
-static int64_t failed_tiers = 0;
-
-static bool InitGlobalVariables(void);
-static void DestroyGlobalVariables(void);
-static bool CreateTierTree(void);
-enum CreateTierTreeProcessChildrenErrors {
+enum TierTreeErrorTypes {
     kNoError,
     kOutOfMemory,
-    kLoopDetected
+    kLoopDetected,
 };
-static int CreateTierTreeProcessChildren(Tier parent, TierStack *fringe);
-static void EnqueuePrimitiveTiers(void);
 
-static int64_t NumUnsolvedChildTiersAndStatusToValue(
-    int num_unsolved_child_tiers, int status);
+static const TierSolverApi *current_api;
+
+// The tier tree that maps each tier to its value. The value of a tier contains
+// information about its number of undecided children (or undiscovered parents
+// if the tree is reversed) and discovery status. The discovery status is used
+// to detect loops in the tier graph during topological sort.
+static TierHashMap tier_tree;
+static TierQueue pending_tiers;
+static int64_t processed_tiers = 0;
+static int64_t skipped_tiers = 0;
+static int64_t failed_tiers = 0;
+static Analysis game_analysis;
+
+static int InitGlobalVariables(int type);
+static void DestroyGlobalVariables(void);
+
+static int BuildTierTree(int type);
+static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
+                                        int type);
+static int EnqueuePrimitiveTiers(void);
+static void CreateTierTreePrintError(int error);
+
+static int64_t NumTiersAndStatusToValue(int num_tiers, int status);
 static int ValueToStatus(int64_t value);
-static int ValueToNumUnsolvedChildTiers(int64_t value);
+static int ValueToNumTiers(int64_t value);
 
 static int64_t GetValue(Tier tier);
 static int GetStatus(Tier tier);
-static int GetNumUnsolvedChildTiers(Tier tier);
+static int GetNumTiers(Tier tier);
 
-static bool SetStatus(Tier tier, int status);
-static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers);
+static bool TierTreeSetInitial(Tier tier);
+static bool TierTreeSetStatus(Tier tier, int status);
+static bool TierTreeSetNumTiers(Tier tier, int num_tiers);
+static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
 static int SolveTierTree(bool force);
-static void UpdateTierTree(Tier solved_tier);
+static void SolveUpdateTierTree(Tier solved_tier);
 static void PrintSolverResult(void);
 
+static int DiscoverTierTree(bool force);
+static void AnalyzeUpdateTierTree(Tier analyzed_tier);
+static void PrintAnalyzerResult(void);
+
 // -----------------------------------------------------------------------------
+
 int TierManagerSolve(const TierSolverApi *api, bool force) {
     current_api = api;
-    if (!InitGlobalVariables()) {
+    if (InitGlobalVariables(kTierSolving) != 0) {
         fprintf(stderr, "TierManagerSolve: initialization failed.\n");
         return 1;
     }
@@ -105,87 +124,134 @@ int TierManagerSolve(const TierSolverApi *api, bool force) {
     DestroyGlobalVariables();
     return ret;
 }
+
+int TierManagerAnalyze(const TierSolverApi *api, bool force) {
+    current_api = api;
+    if (InitGlobalVariables(kTierDiscovering) != 0) {
+        fprintf(stderr, "TierManagerAnalyze: initialization failed.\n");
+        return 1;
+    }
+    int ret = DiscoverTierTree(force);
+    DestroyGlobalVariables();
+    return ret;
+}
+
 // -----------------------------------------------------------------------------
 
-static bool InitGlobalVariables(void) {
-    solved_tiers = 0;
+static int InitGlobalVariables(int type) {
+    processed_tiers = 0;
     skipped_tiers = 0;
     failed_tiers = 0;
-    TierQueueInit(&solvable_tiers);
-    TierHashMapInit(&tier_to_value, 0.5);
-    return CreateTierTree();
+    TierQueueInit(&pending_tiers);
+    TierHashMapInit(&tier_tree, 0.5);
+    if (type == kTierDiscovering) AnalysisInit(&game_analysis);
+
+    return BuildTierTree(type);
 }
 
 static void DestroyGlobalVariables(void) {
-    TierHashMapDestroy(&tier_to_value);
-    TierQueueDestroy(&solvable_tiers);
+    TierHashMapDestroy(&tier_tree);
+    TierQueueDestroy(&pending_tiers);
+    AnalysisDestroy(&game_analysis);
 }
 
 /**
- * Iterative topological sort using DFS and node coloring (status marking).
- * Algorithm by Ctrl, stackoverflow.com.
- * https://stackoverflow.com/a/73210346
+ * @brief DFS from initial tier with loop detection.
+ *
+ * @details Iterative topological sort using DFS and node coloring (status
+ * marking). Algorithm by Ctrl, stackoverflow.com.
+ * @link https://stackoverflow.com/a/73210346
  */
-static bool CreateTierTree(void) {
-    // DFS from initial tier with loop detection.
+static int BuildTierTree(int type) {
+    int ret = 0;
     TierStack fringe;
     TierStackInit(&fringe);
 
     Tier initial_tier = current_api->GetInitialTier();
-    TierStackPush(&fringe, initial_tier);
-    TierHashMapSet(&tier_to_value, initial_tier,
-                   NumUnsolvedChildTiersAndStatusToValue(0, kStatusNotVisited));
+    if (!TierStackPush(&fringe, initial_tier)) {
+        ret = 1;
+        goto _bailout;
+    }
+
+    if (!TierTreeSetInitial(initial_tier)) {
+        ret = 1;
+        goto _bailout;
+    }
+
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);
         int status = GetStatus(parent);
         if (status == kStatusInProgress) {
-            SetStatus(parent, kStatusClosed);
+            if (!TierTreeSetStatus(parent, kStatusClosed)) {
+                ret = 1;
+                goto _bailout;
+            }
             TierStackPop(&fringe);
             continue;
         } else if (status == kStatusClosed) {
             TierStackPop(&fringe);
             continue;
         }
-        SetStatus(parent, kStatusInProgress);
-        int error = CreateTierTreeProcessChildren(parent, &fringe);
+        TierTreeSetStatus(parent, kStatusInProgress);
+        int error = BuildTierTreeProcessChildren(parent, &fringe, type);
         switch (error) {
             case kNoError:
                 continue;
                 break;
 
             case kOutOfMemory:
-                fprintf(stderr, "CreateTierTree: out of memory.\n");
+                ret = 1;
+                goto _bailout;
                 break;
 
             case kLoopDetected:
-                fprintf(
-                    stderr,
-                    "CreateTierTree: a loop is detected in the tier graph.\n");
+                ret = 2;
+                goto _bailout;
                 break;
         }
-        TierHashMapDestroy(&tier_to_value);
-        TierStackDestroy(&fringe);
-        return false;
     }
+
+_bailout:
     TierStackDestroy(&fringe);
-    EnqueuePrimitiveTiers();
-    return true;
+    if (ret != 0) {
+        TierHashMapDestroy(&tier_tree);
+        CreateTierTreePrintError(ret);
+    } else if (type == kTierSolving) {
+        EnqueuePrimitiveTiers();
+    } else {
+        TierQueuePush(&pending_tiers, initial_tier);
+    }
+    return ret;
 }
 
-static int CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
+static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
+                                        int type) {
     TierArray tier_children = current_api->GetChildTiers(parent);
-    if (!SetNumUnsolvedChildTiers(parent, (int)tier_children.size)) {
-        TierArrayDestroy(&tier_children);
-        return (int)kOutOfMemory;
+    if (type == kTierSolving) {
+        if (!TierTreeSetNumTiers(parent, (int)tier_children.size)) {
+            TierArrayDestroy(&tier_children);
+            return (int)kOutOfMemory;
+        }
+    } else {
+        for (int64_t i = 0; i < tier_children.size; ++i) {
+            Tier child = tier_children.array[i];
+            if (!IncrementNumParentTiers(child)) {
+                TierArrayDestroy(&tier_children);
+                return 1;
+            }
+        }
     }
+
     for (int64_t i = 0; i < tier_children.size; ++i) {
         Tier child = tier_children.array[i];
-        if (!TierHashMapContains(&tier_to_value, child)) {
-            TierHashMapSet(
-                &tier_to_value, child,
-                NumUnsolvedChildTiersAndStatusToValue(0, kStatusNotVisited));
-            TierStackPush(fringe, child);
-            continue;
+        if (!TierHashMapContains(&tier_tree, child)) {
+            if (!TierTreeSetInitial(child)) {
+                fprintf(stderr,
+                        "BuildTierTreeProcessChildren: failed to set new child "
+                        "in tier tree.\n");
+                TierArrayDestroy(&tier_children);
+                return (int)kOutOfMemory;
+            }
         }
         int status = GetStatus(child);
         if (status == kStatusNotVisited) {
@@ -195,35 +261,57 @@ static int CreateTierTreeProcessChildren(Tier parent, TierStack *fringe) {
             return (int)kLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
+
     TierArrayDestroy(&tier_children);
     return (int)kNoError;
 }
 
-static void EnqueuePrimitiveTiers(void) {
-    TierHashMapIterator it = TierHashMapBegin(&tier_to_value);
+static int EnqueuePrimitiveTiers(void) {
+    TierHashMapIterator it = TierHashMapBegin(&tier_tree);
     Tier tier;
     int64_t value;
     while (TierHashMapIteratorNext(&it, &tier, &value)) {
-        if (ValueToNumUnsolvedChildTiers(value) == 0) {
-            TierQueuePush(&solvable_tiers, tier);
+        if (ValueToNumTiers(value) == 0) {
+            if (!TierQueuePush(&pending_tiers, tier)) return 1;
         }
     }
-    // A well-formed directed acyclic tier graph should have at least one
-    // primitive tier.
-    assert(!TierQueueIsEmpty(&solvable_tiers));
+
+    if (TierQueueIsEmpty(&pending_tiers)) {
+        fprintf(stderr,
+                "EnqueuePrimitiveTiers: (BUG) The tier graph contains no "
+                "primitive tiers.\n");
+        return 2;
+    }
+    return 0;
+}
+
+static void CreateTierTreePrintError(int error) {
+    switch (error) {
+        case kNoError:
+            break;
+
+        case kOutOfMemory:
+            fprintf(stderr, "BuildTierTree: out of memory.\n");
+            break;
+
+        case kLoopDetected:
+            fprintf(stderr,
+                    "BuildTierTree: a loop is detected in the tier graph.\n");
+            break;
+    }
 }
 
 static int SolveTierTree(bool force) {
     TierWorkerInit(current_api);
-    while (!TierQueueIsEmpty(&solvable_tiers)) {
-        Tier tier = TierQueuePop(&solvable_tiers);
+    while (!TierQueueIsEmpty(&pending_tiers)) {
+        Tier tier = TierQueuePop(&pending_tiers);
         if (IsCanonicalTier(tier)) {
             // Only solve canonical tiers.
             int error = TierWorkerSolve(tier, force);
             if (error == 0) {
                 // Solve succeeded.
-                UpdateTierTree(tier);
-                ++solved_tiers;
+                SolveUpdateTierTree(tier);
+                ++processed_tiers;
             } else {
                 // There might be more error types in the future.
                 printf("Failed to solve tier %" PRId64 ": not enough memory\n",
@@ -238,7 +326,7 @@ static int SolveTierTree(bool force) {
     return 0;
 }
 
-static void UpdateTierTree(Tier solved_tier) {
+static void SolveUpdateTierTree(Tier solved_tier) {
     TierArray parent_tiers = current_api->GetParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
@@ -252,56 +340,65 @@ static void UpdateTierTree(Tier solved_tier) {
             continue;
         }
         TierHashSetAdd(&canonical_parents, canonical);
-        int num_unsolved_child_tiers = GetNumUnsolvedChildTiers(canonical);
+        int num_unsolved_child_tiers = GetNumTiers(canonical);
         assert(num_unsolved_child_tiers > 0);
         bool success =
-            SetNumUnsolvedChildTiers(canonical, num_unsolved_child_tiers - 1);
+            TierTreeSetNumTiers(canonical, num_unsolved_child_tiers - 1);
         assert(success);
         (void)success;
         if (num_unsolved_child_tiers == 1)
-            TierQueuePush(&solvable_tiers, canonical);
+            TierQueuePush(&pending_tiers, canonical);
     }
     TierHashSetDestroy(&canonical_parents);
     TierArrayDestroy(&parent_tiers);
 }
 
-static int64_t NumUnsolvedChildTiersAndStatusToValue(
-    int num_unsolved_child_tiers, int status) {
-    return num_unsolved_child_tiers * kNumStatus + status;
+static int64_t NumTiersAndStatusToValue(int num_tiers, int status) {
+    return num_tiers * kNumStatus + status;
 }
 
 static int ValueToStatus(int64_t value) { return value % kNumStatus; }
 
-static int ValueToNumUnsolvedChildTiers(int64_t value) {
-    return value / kNumStatus;
-}
+static int ValueToNumTiers(int64_t value) { return value / kNumStatus; }
 
 static int64_t GetValue(Tier tier) {
-    TierHashMapIterator it = TierHashMapGet(&tier_to_value, tier);
-    assert(TierHashMapIteratorIsValid(&it));
+    TierHashMapIterator it = TierHashMapGet(&tier_tree, tier);
+    if (!TierHashMapIteratorIsValid(&it)) return -1;
     return TierHashMapIteratorValue(&it);
 }
 
 static int GetStatus(Tier tier) { return ValueToStatus(GetValue(tier)); }
 
-static int GetNumUnsolvedChildTiers(Tier tier) {
-    return ValueToNumUnsolvedChildTiers(GetValue(tier));
+static int GetNumTiers(Tier tier) { return ValueToNumTiers(GetValue(tier)); }
+
+static bool TierTreeSetInitial(Tier tier) {
+    assert(!TierHashMapContains(&tier_tree, tier));
+    int64_t value = NumTiersAndStatusToValue(0, kStatusNotVisited);
+    return TierHashMapSet(&tier_tree, tier, value);
 }
 
-static bool SetStatus(Tier tier, int status) {
+static bool TierTreeSetStatus(Tier tier, int status) {
     int64_t value = GetValue(tier);
-    int num_unsolved_child_tiers = ValueToNumUnsolvedChildTiers(value);
-    value =
-        NumUnsolvedChildTiersAndStatusToValue(num_unsolved_child_tiers, status);
-    return TierHashMapSet(&tier_to_value, tier, value);
+    int num_tiers = ValueToNumTiers(value);
+    value = NumTiersAndStatusToValue(num_tiers, status);
+    return TierHashMapSet(&tier_tree, tier, value);
 }
 
-static bool SetNumUnsolvedChildTiers(Tier tier, int num_unsolved_child_tiers) {
+static bool TierTreeSetNumTiers(Tier tier, int num_tiers) {
     int64_t value = GetValue(tier);
     int status = ValueToStatus(value);
-    value =
-        NumUnsolvedChildTiersAndStatusToValue(num_unsolved_child_tiers, status);
-    return TierHashMapSet(&tier_to_value, tier, value);
+    value = NumTiersAndStatusToValue(num_tiers, status);
+    return TierHashMapSet(&tier_tree, tier, value);
+}
+
+static bool IncrementNumParentTiers(Tier tier) {
+    int64_t value = GetValue(tier);
+    if (value < 0) value = NumTiersAndStatusToValue(0, kStatusNotVisited);
+
+    int status = ValueToStatus(value);
+    int num_tiers = ValueToNumTiers(value) + 1;
+    value = NumTiersAndStatusToValue(num_tiers, status);
+    return TierHashMapSet(&tier_tree, tier, value);
 }
 
 static bool IsCanonicalTier(Tier tier) {
@@ -312,13 +409,72 @@ static void PrintSolverResult(void) {
     printf(
         "Finished solving all tiers.\n"
         "Number of canonical tiers solved: %" PRId64
-        "\n"
-        "Number of non-canonical tiers skipped: %" PRId64
-        "\n"
-        "Number of tiers failed due to OOM: %" PRId64
-        "\n"
-        "Total tiers scanned: %" PRId64 "\n",
-        solved_tiers, skipped_tiers, failed_tiers,
-        solved_tiers + skipped_tiers + failed_tiers);
+        "\nNumber of non-canonical tiers skipped: %" PRId64
+        "\nNumber of tiers failed due to OOM: %" PRId64
+        "\nTotal tiers scanned: %" PRId64 "\n",
+        processed_tiers, skipped_tiers, failed_tiers,
+        processed_tiers + skipped_tiers + failed_tiers);
+    printf("\n");
+}
+
+static int DiscoverTierTree(bool force) {
+    TierAnalyzerInit(current_api);
+    while (!TierQueueIsEmpty(&pending_tiers)) {
+        Tier tier = TierQueuePop(&pending_tiers);
+        Tier canonical = current_api->GetCanonicalTier(tier);
+
+        // Analyze the canonical tier instead.
+        Analysis tier_analysis;
+        int error = TierAnalyzerDiscover(&tier_analysis, canonical, force);
+        if (error == 0) {
+            // Analyzer succeeded.
+            AnalyzeUpdateTierTree(tier);
+            ++processed_tiers;
+        } else {
+            // There might be more error types in the future.
+            printf("Failed to analyze tier %" PRId64 ": not enough memory\n",
+                   tier);
+            ++failed_tiers;
+        }
+
+        if (tier != canonical) {
+            // If tier is not canonical, all of its positions are non-canonical.
+            AnalysisConvertToNoncanonical(&tier_analysis);
+        }
+
+        AnalysisAggregate(&game_analysis, &tier_analysis);
+        AnalysisDestroy(&tier_analysis);
+    }
+
+    PrintAnalyzerResult();
+    AnalysisPrintEverything(stdout, &game_analysis);
+    return 0;
+}
+
+static void AnalyzeUpdateTierTree(Tier analyzed_tier) {
+    TierArray child_tiers = current_api->GetChildTiers(analyzed_tier);
+    for (int64_t i = 0; i < child_tiers.size; ++i) {
+        Tier child = child_tiers.array[i];
+        int num_undiscovered_parent_tiers = GetNumTiers(child);
+        assert(num_undiscovered_parent_tiers > 0);
+        if (!TierTreeSetNumTiers(child, num_undiscovered_parent_tiers - 1)) {
+            NotReached(
+                "AnalyzeUpdateTierTree: unexpected error while resetting an "
+                "existing entry in tier hash map");
+        }
+        if (num_undiscovered_parent_tiers == 1) {
+            TierQueuePush(&pending_tiers, child);
+        }
+    }
+    TierArrayDestroy(&child_tiers);
+}
+
+static void PrintAnalyzerResult(void) {
+    printf(
+        "Finished analyzing all tiers.\n"
+        "Number of canonical tiers analyzed: %" PRId64
+        "\nNumber of tiers failed due to OOM: %" PRId64
+        "\nTotal tiers scanned: %" PRId64 "\n",
+        processed_tiers, failed_tiers, processed_tiers + failed_tiers);
     printf("\n");
 }

@@ -196,6 +196,12 @@ typedef enum DatabaseTierStatus {
     kDbTierCheckError,
 } DatabaseTierStatus;
 
+typedef enum AnalysisTierStatus {
+    kAnalysisTierAnalyzed,
+    kAnalysisTierUnanalyzed,
+    kAnalysisTierCheckError,
+} AnalysisTierStatus;
+
 /**
  * @brief Generic Tier Database type.
  *
@@ -374,8 +380,7 @@ typedef struct SolverConfiguration {
 /**
  * @brief Generic Solver type.
  * @note To implement a new Solver module, correctly set the name of the new
- * Solver and set each member function pointer to a function specific to the
- * module.
+ * Solver and set each member function pointer to a module-specific function.
  *
  * @note A Solver can either be a regular solver or a tier solver. The actual
  * behavior and requirements of the solver is decided by the Solver and
@@ -414,12 +419,19 @@ typedef struct Solver {
     int (*Finalize)(void);
 
     /**
-     * @brief Runs the solver to solve the current game. Also stores the result
-     * if a Database is set for the current Solver.
+     * @brief Solves the current game and stores the result if a Database is set
+     * for the current Solver.
      *
      * @param aux Auxiliary parameter.
      */
     int (*Solve)(void *aux);
+
+    /**
+     * @brief Analyzes the current game.
+     *
+     * @param aux Auxiliary parameter.
+     */
+    int (*Analyze)(void *aux);
 
     /**
      * @brief Returns the solving status of the current game.

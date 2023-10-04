@@ -1,29 +1,27 @@
-#include "core/analysis.h"
+#include "core/analysis/analysis.h"
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
 #include <stdbool.h>   // bool, true, false
 #include <stdint.h>    // int64_t
-#include <stdio.h>     // printf, sprintf, fprintf, stderr
+#include <stdio.h>     // FILE, sprintf, fprintf, stderr
+#include <stdlib.h>    // malloc, free
 #include <string.h>    // memset
 
-#include "core/data_structures/int64_array.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 
 static const TierPosition kIllegalTierPosition = {.tier = -1, .position = -1};
-
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
 
-static bool Int64ArrayInitSize(Int64Array *array, int64_t size);
-static bool TierPositionArrayInitSize(TierPositionArray *array, int64_t size);
-
+static void PrintSummary(FILE *stream, const Analysis *analysis,
+                         bool canonical);
 static int WidthOf(int64_t n);
-static void PrintDashedLine(int column_width, int num_headers);
-static int PrintSummaryHeader(int column_width);
-static void PrintSummaryLine(const Analysis *analysis, int remoteness,
-                             int column_width, bool canonical);
+static void PrintDashedLine(FILE *stream, int column_width, int num_headers);
+static int PrintSummaryHeader(FILE *stream, int column_width);
+static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
+                             int remoteness, int column_width, bool canonical);
 
 static void CountWin(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical);
@@ -32,7 +30,7 @@ static void CountLose(Analysis *analysis, TierPosition tier_position,
 static void CountTie(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical);
 static void CountDraw(Analysis *analysis, TierPosition tier_position,
-                      int remoteness, bool is_canonical);
+                      bool is_canonical);
 
 static void AggregatePositions(Analysis *dest, const Analysis *src,
                                int remoteness);
@@ -41,32 +39,19 @@ static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
 
 // -----------------------------------------------------------------------------
 
-int AnalysisInit(Analysis *analysis) {
+void AnalysisInit(Analysis *analysis) {
+    static const TierPosition kIllegalTierPosition = {.tier = -1, .position = -1};
     memset(analysis, 0, sizeof(*analysis));
-
     analysis->hash_size = -1;  // Unset.
 
-    static const int64_t size = kNumRemotenesses;
-    bool success = true;
-    success &= Int64ArrayInitSize(&analysis->win_summary, size);
-    success &= Int64ArrayInitSize(&analysis->lose_summary, size);
-    success &= Int64ArrayInitSize(&analysis->tie_summary, size);
-    success &= TierPositionArrayInitSize(&analysis->win_examples, size);
-    success &= TierPositionArrayInitSize(&analysis->lose_examples, size);
-    success &= TierPositionArrayInitSize(&analysis->tie_examples, size);
+    for (int i = 0; i < kNumRemotenesses; ++i) {
+        analysis->win_examples[i] = kIllegalTierPosition;
+        analysis->lose_examples[i] = kIllegalTierPosition;
+        analysis->tie_examples[i] = kIllegalTierPosition;
 
-    success &= Int64ArrayInitSize(&analysis->canonical_win_summary, size);
-    success &= Int64ArrayInitSize(&analysis->canonical_lose_summary, size);
-    success &= Int64ArrayInitSize(&analysis->canonical_tie_summary, size);
-    success &=
-        TierPositionArrayInitSize(&analysis->canonical_win_examples, size);
-    success &=
-        TierPositionArrayInitSize(&analysis->canonical_lose_examples, size);
-    success &=
-        TierPositionArrayInitSize(&analysis->canonical_tie_examples, size);
-    if (!success) {
-        AnalysisDestroy(analysis);
-        return 1;
+        analysis->canonical_win_examples[i] = kIllegalTierPosition;
+        analysis->canonical_lose_examples[i] = kIllegalTierPosition;
+        analysis->canonical_tie_examples[i] = kIllegalTierPosition;
     }
 
     analysis->draw_example = kIllegalTierPosition;
@@ -81,26 +66,24 @@ int AnalysisInit(Analysis *analysis) {
     analysis->largest_win_remoteness = -1;
     analysis->largest_lose_remoteness = -1;
     analysis->largest_tie_remoteness = -1;
-
-    return 0;
 }
 
 void AnalysisDestroy(Analysis *analysis) {
-    Int64ArrayDestroy(&analysis->win_summary);
-    Int64ArrayDestroy(&analysis->lose_summary);
-    Int64ArrayDestroy(&analysis->tie_summary);
-    TierPositionArrayDestroy(&analysis->win_examples);
-    TierPositionArrayDestroy(&analysis->lose_examples);
-    TierPositionArrayDestroy(&analysis->tie_examples);
-
-    Int64ArrayDestroy(&analysis->canonical_win_summary);
-    Int64ArrayDestroy(&analysis->canonical_lose_summary);
-    Int64ArrayDestroy(&analysis->canonical_tie_summary);
-    TierPositionArrayDestroy(&analysis->canonical_win_examples);
-    TierPositionArrayDestroy(&analysis->canonical_lose_examples);
-    TierPositionArrayDestroy(&analysis->canonical_tie_examples);
-
     memset(analysis, 0, sizeof(*analysis));
+}
+
+int AnalysisWrite(const Analysis *analysis, int fd) {
+    gzFile file = GuardedGzdopen(fd, "wb");
+    int error = GuardedGzwrite(file, analysis, sizeof(*analysis));
+    // No need to close the file as it will be closed as fd by the caller.
+    return error;
+}
+
+int AnalysisRead(Analysis *analysis, int fd) {
+    gzFile file = GuardedGzdopen(fd, "rb");
+    int error = GuardedGzread(file, analysis, sizeof(*analysis), false);
+    // No need to close the file as it will be closed as fd by the caller.
+    return error;
 }
 
 // Discovering
@@ -136,7 +119,7 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
             break;
 
         case kDraw:
-            CountDraw(analysis, tier_position, remoteness, is_canonical);
+            CountDraw(analysis, tier_position, is_canonical);
             break;
 
         default:
@@ -147,6 +130,22 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
 }
 
 // Aggregating
+
+void AnalysisConvertToNoncanonical(Analysis *analysis) {
+    analysis->canonical_win_count = 0;
+    analysis->canonical_lose_count = 0;
+    analysis->canonical_tie_count = 0;
+    analysis->canonical_draw_count = 0;
+    for (int64_t i = 0; i < kNumRemotenesses; ++i) {
+        analysis->canonical_win_summary[i] = 0;
+        analysis->canonical_lose_summary[i] = 0;
+        analysis->canonical_tie_summary[i] = 0;
+        analysis->canonical_win_examples[i] = kIllegalTierPosition;
+        analysis->canonical_lose_examples[i] = kIllegalTierPosition;
+        analysis->canonical_tie_examples[i] = kIllegalTierPosition;
+    }
+    analysis->canonical_draw_example = kIllegalTierPosition;
+}
 
 void AnalysisAggregate(Analysis *dest, const Analysis *src) {
     dest->hash_size += src->hash_size;
@@ -190,13 +189,13 @@ TierPosition AnalysisGetExamplePosition(const Analysis *analysis, Value value,
                                         int remoteness) {
     switch (value) {
         case kWin:
-            return analysis->win_examples.array[remoteness];
+            return analysis->win_examples[remoteness];
 
         case kLose:
-            return analysis->lose_examples.array[remoteness];
+            return analysis->lose_examples[remoteness];
 
         case kTie:
-            return analysis->tie_examples.array[remoteness];
+            return analysis->tie_examples[remoteness];
 
         case kDraw:
             return analysis->draw_example;
@@ -212,13 +211,13 @@ TierPosition AnalysisGetExampleCanonicalPosition(const Analysis *analysis,
                                                  Value value, int remoteness) {
     switch (value) {
         case kWin:
-            return analysis->canonical_win_examples.array[remoteness];
+            return analysis->canonical_win_examples[remoteness];
 
         case kLose:
-            return analysis->canonical_lose_examples.array[remoteness];
+            return analysis->canonical_lose_examples[remoteness];
 
         case kTie:
-            return analysis->canonical_tie_examples.array[remoteness];
+            return analysis->canonical_tie_examples[remoteness];
 
         case kDraw:
             return analysis->canonical_draw_example;
@@ -315,43 +314,77 @@ double AnalysisGetCanonicalDrawRatio(const Analysis *analysis) {
     return (double)analysis->canonical_draw_count / (double)num_canonical;
 }
 
-static void PrintSummary(const Analysis *analysis, bool canonical) {
-    int column_width = WidthOf(analysis->hash_size) + 1;
-    if (column_width < kInt32Base10StringLengthMax + 1) {
-        column_width = kInt32Base10StringLengthMax + 1;
-    }
-    int num_headers = PrintSummaryHeader(column_width);
-    PrintDashedLine(column_width, num_headers);
-    PrintSummaryLine(analysis, kFirstLineReservedRemotness, column_width,
-                     canonical);
-    for (int remoteness = AnalysisGetLargestRemoteness(analysis);
-         remoteness >= 0; --remoteness) {
-        PrintSummaryLine(analysis, remoteness, column_width, canonical);
-    }
-    PrintDashedLine(column_width, num_headers);
-    PrintSummaryLine(analysis, kLastLineReservedRemotness, column_width,
-                     canonical);
-    printf("\n\tTotal positions visited: %" PRId64 "\n", analysis->hash_size);
+void AnalysisPrintSummary(FILE *stream, const Analysis *analysis) {
+    static const bool kPrintCanonical = false;
+    PrintSummary(stream, analysis, kPrintCanonical);
 }
 
-void AnalysisPrintSummary(const Analysis *analysis) {
-    PrintSummary(analysis, false);
+void AnalysisPrintCanonicalSummary(FILE *stream, const Analysis *analysis) {
+    static const bool kPrintCanonical = true;
+    PrintSummary(stream, analysis, kPrintCanonical);
 }
 
-void AnalysisPrintCanonicalSummary(const Analysis *analysis) {
-    PrintSummary(analysis, true);
+void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
+    fprintf(stream, "Hash size: %" PRId64 "\n", analysis->hash_size);
+    fprintf(stream, "Winning positions: %" PRId64 " (%" PRId64 " canonical)\n",
+            analysis->win_count, analysis->canonical_win_count);
+    fprintf(stream, "Losing positions: %" PRId64 " (%" PRId64 " canonical)\n",
+            analysis->lose_count, analysis->canonical_lose_count);
+    fprintf(stream, "Tying positions: %" PRId64 " (%" PRId64 " canonical)\n",
+            analysis->tie_count, analysis->canonical_tie_count);
+    fprintf(stream, "Drawing positions: %" PRId64 " (%" PRId64 " canonical)\n",
+            analysis->draw_count, analysis->canonical_draw_count);
+    fprintf(stream, "Total moves: %" PRId64 "\n\n", analysis->move_count);
+    AnalysisPrintSummary(stream, analysis);
+    fprintf(stream, "\n");
+    AnalysisPrintCanonicalSummary(stream, analysis);
+    fprintf(stream, "\n");
+    fprintf(stream,
+            "Position %" PRId64 " in tier %" PRId64
+            " has the most number of available moves: %d\n",
+            analysis->position_with_most_moves.position,
+            analysis->position_with_most_moves.tier, analysis->max_num_moves);
+    fprintf(stream,
+            "Longest win starts from position %" PRId64 " in tier %" PRId64
+            ", which is of remoteness %d\n",
+            analysis->longest_win_position.position,
+            analysis->longest_win_position.tier,
+            analysis->largest_win_remoteness);
+    fprintf(stream,
+            "Longest lose starts from position %" PRId64 " in tier %" PRId64
+            ", which is of remoteness %d\n",
+            analysis->longest_lose_position.position,
+            analysis->longest_lose_position.tier,
+            analysis->largest_lose_remoteness);
+    fprintf(stream,
+            "Longest tie starts from position %" PRId64 " in tier %" PRId64
+            ", which is of remoteness %d\n",
+            analysis->longest_tie_position.position,
+            analysis->longest_tie_position.tier,
+            analysis->largest_tie_remoteness);
 }
 
 // -----------------------------------------------------------------------------
 
-static bool Int64ArrayInitSize(Int64Array *array, int64_t size) {
-    Int64ArrayInit(array);
-    return Int64ArrayResize(array, size);
-}
-
-static bool TierPositionArrayInitSize(TierPositionArray *array, int64_t size) {
-    TierPositionArrayInit(array);
-    return TierPositionArrayResize(array, size);
+static void PrintSummary(FILE *stream, const Analysis *analysis,
+                         bool canonical) {
+    int column_width = WidthOf(analysis->hash_size) + 1;
+    if (column_width < kInt32Base10StringLengthMax + 1) {
+        column_width = kInt32Base10StringLengthMax + 1;
+    }
+    int num_headers = PrintSummaryHeader(stream, column_width);
+    PrintDashedLine(stream, column_width, num_headers);
+    PrintSummaryLine(stream, analysis, kFirstLineReservedRemotness,
+                     column_width, canonical);
+    for (int remoteness = AnalysisGetLargestRemoteness(analysis);
+         remoteness >= 0; --remoteness) {
+        PrintSummaryLine(stream, analysis, remoteness, column_width, canonical);
+    }
+    PrintDashedLine(stream, column_width, num_headers);
+    PrintSummaryLine(stream, analysis, kLastLineReservedRemotness, column_width,
+                     canonical);
+    fprintf(stream, "\n\tTotal positions visited: %" PRId64 "\n",
+            analysis->hash_size);
 }
 
 static int WidthOf(int64_t n) {
@@ -364,36 +397,36 @@ static int WidthOf(int64_t n) {
     return width;
 }
 
-static void PrintDashedLine(int column_width, int num_headers) {
-    printf("\t");
+static void PrintDashedLine(FILE *stream, int column_width, int num_headers) {
+    fprintf(stream, "\t");
     for (int i = 0; i < num_headers; ++i) {
         for (int j = 0; j < column_width; ++j) {
-            printf("-");
+            fprintf(stream, "-");
         }
     }
-    printf("---\n");
+    fprintf(stream, "---\n");
 }
 
-static int PrintSummaryHeader(int column_width) {
+static int PrintSummaryHeader(FILE *stream, int column_width) {
     static ReadOnlyString headers[] = {
         "Remoteness", "Win", "Lose", "Tie", "Draw", "Total",
     };
     const int num_headers = sizeof(headers) / sizeof(headers[0]);
 
-    printf("\t");
+    fprintf(stream, "\t");
     for (int i = 0; i < num_headers; ++i) {
         int spaces = column_width - strlen(headers[i]);
         for (int j = 0; j < spaces; ++j) {
-            printf(" ");
+            fprintf(stream, " ");
         }
-        printf("%s", headers[i]);
+        fprintf(stream, "%s", headers[i]);
     }
-    printf("\n");
+    fprintf(stream, "\n");
     return num_headers;
 }
 
-static void PrintSummaryLine(const Analysis *analysis, int remoteness,
-                             int column_width, bool canonical) {
+static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
+                             int remoteness, int column_width, bool canonical) {
     bool first_line = (remoteness == kFirstLineReservedRemotness);
     bool last_line = (remoteness == kLastLineReservedRemotness);
     char format[128];
@@ -406,35 +439,36 @@ static void PrintSummaryLine(const Analysis *analysis, int remoteness,
     if (first_line) {
         int64_t draw_count =
             canonical ? analysis->canonical_draw_count : analysis->draw_count;
-        printf(format, "Inf", 0, 0, 0, draw_count, draw_count);
+        fprintf(stream, format, "Inf", 0, 0, 0, draw_count, draw_count);
     } else if (last_line) {
         if (canonical) {
-            printf(format, "Totals", analysis->canonical_win_count,
-                   analysis->canonical_lose_count,
-                   analysis->canonical_tie_count,
-                   analysis->canonical_draw_count,
-                   AnalysisGetNumCanonicalPositions(analysis));
+            fprintf(stream, format, "Totals", analysis->canonical_win_count,
+                    analysis->canonical_lose_count,
+                    analysis->canonical_tie_count,
+                    analysis->canonical_draw_count,
+                    AnalysisGetNumCanonicalPositions(analysis));
         } else {
-            printf(format, "Totals", analysis->win_count, analysis->lose_count,
-                   analysis->tie_count, analysis->draw_count,
-                   AnalysisGetNumReachablePositions(analysis));
+            fprintf(stream, format, "Totals", analysis->win_count,
+                    analysis->lose_count, analysis->tie_count,
+                    analysis->draw_count,
+                    AnalysisGetNumReachablePositions(analysis));
         }
     } else {
         int64_t win_count, lose_count, tie_count;
         if (canonical) {
-            win_count = analysis->canonical_win_summary.array[remoteness];
-            lose_count = analysis->canonical_lose_summary.array[remoteness];
-            tie_count = analysis->canonical_tie_summary.array[remoteness];
+            win_count = analysis->canonical_win_summary[remoteness];
+            lose_count = analysis->canonical_lose_summary[remoteness];
+            tie_count = analysis->canonical_tie_summary[remoteness];
         } else {
-            win_count = analysis->win_summary.array[remoteness];
-            lose_count = analysis->lose_summary.array[remoteness];
-            tie_count = analysis->tie_summary.array[remoteness];
+            win_count = analysis->win_summary[remoteness];
+            lose_count = analysis->lose_summary[remoteness];
+            tie_count = analysis->tie_summary[remoteness];
         }
         int64_t total = win_count + lose_count + tie_count;
         char remoteness_string[kInt32Base10StringLengthMax + 1];
         sprintf(remoteness_string, "%d", remoteness);
-        printf(format, remoteness_string, win_count, lose_count, tie_count, 0,
-               total);
+        fprintf(stream, format, remoteness_string, win_count, lose_count,
+                tie_count, 0, total);
     }
 }
 
@@ -442,15 +476,15 @@ static void CountWin(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical) {
     ++analysis->win_count;
     analysis->canonical_win_count += is_canonical;
-    ++analysis->win_summary.array[remoteness];
-    analysis->canonical_win_summary.array[remoteness] += is_canonical;
-    if (analysis->win_examples.array[remoteness].tier == -1) {
-        analysis->win_examples.array[remoteness] = tier_position;
+    ++analysis->win_summary[remoteness];
+    analysis->canonical_win_summary[remoteness] += is_canonical;
+    if (analysis->win_examples[remoteness].tier == -1) {
+        analysis->win_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_win_examples.array[remoteness].tier == -1 &&
+    if (analysis->canonical_win_examples[remoteness].tier == -1 &&
         is_canonical) {
         //
-        analysis->canonical_win_examples.array[remoteness] = tier_position;
+        analysis->canonical_win_examples[remoteness] = tier_position;
     }
     if (remoteness > analysis->largest_win_remoteness) {
         analysis->largest_win_remoteness = remoteness;
@@ -462,15 +496,15 @@ static void CountLose(Analysis *analysis, TierPosition tier_position,
                       int remoteness, bool is_canonical) {
     ++analysis->lose_count;
     analysis->canonical_lose_count += is_canonical;
-    ++analysis->lose_summary.array[remoteness];
-    analysis->canonical_lose_summary.array[remoteness] += is_canonical;
-    if (analysis->lose_examples.array[remoteness].tier == -1) {
-        analysis->lose_examples.array[remoteness] = tier_position;
+    ++analysis->lose_summary[remoteness];
+    analysis->canonical_lose_summary[remoteness] += is_canonical;
+    if (analysis->lose_examples[remoteness].tier == -1) {
+        analysis->lose_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_lose_examples.array[remoteness].tier == -1 &&
+    if (analysis->canonical_lose_examples[remoteness].tier == -1 &&
         is_canonical) {
         //
-        analysis->canonical_lose_examples.array[remoteness] = tier_position;
+        analysis->canonical_lose_examples[remoteness] = tier_position;
     }
     if (remoteness > analysis->largest_lose_remoteness) {
         analysis->largest_lose_remoteness = remoteness;
@@ -482,15 +516,15 @@ static void CountTie(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical) {
     ++analysis->tie_count;
     analysis->canonical_tie_count += is_canonical;
-    ++analysis->tie_summary.array[remoteness];
-    analysis->canonical_tie_summary.array[remoteness] += is_canonical;
-    if (analysis->tie_examples.array[remoteness].tier == -1) {
-        analysis->tie_examples.array[remoteness] = tier_position;
+    ++analysis->tie_summary[remoteness];
+    analysis->canonical_tie_summary[remoteness] += is_canonical;
+    if (analysis->tie_examples[remoteness].tier == -1) {
+        analysis->tie_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_tie_examples.array[remoteness].tier == -1 &&
+    if (analysis->canonical_tie_examples[remoteness].tier == -1 &&
         is_canonical) {
         //
-        analysis->canonical_tie_examples.array[remoteness] = tier_position;
+        analysis->canonical_tie_examples[remoteness] = tier_position;
     }
     if (remoteness > analysis->largest_tie_remoteness) {
         analysis->largest_tie_remoteness = remoteness;
@@ -499,7 +533,7 @@ static void CountTie(Analysis *analysis, TierPosition tier_position,
 }
 
 static void CountDraw(Analysis *analysis, TierPosition tier_position,
-                      int remoteness, bool is_canonical) {
+                      bool is_canonical) {
     ++analysis->draw_count;
     analysis->canonical_draw_count += is_canonical;
     if (analysis->draw_example.tier == -1) {
@@ -512,21 +546,21 @@ static void CountDraw(Analysis *analysis, TierPosition tier_position,
 
 static void AggregatePositions(Analysis *dest, const Analysis *src,
                                int remoteness) {
-    dest->win_summary.array[remoteness] += src->win_summary.array[remoteness];
-    dest->lose_summary.array[remoteness] += src->lose_summary.array[remoteness];
-    dest->tie_summary.array[remoteness] += src->tie_summary.array[remoteness];
+    dest->win_summary[remoteness] += src->win_summary[remoteness];
+    dest->lose_summary[remoteness] += src->lose_summary[remoteness];
+    dest->tie_summary[remoteness] += src->tie_summary[remoteness];
 
-    if (dest->win_examples.array[remoteness].tier == -1) {
-        dest->win_examples.array[remoteness] =
-            src->win_examples.array[remoteness];
+    if (dest->win_examples[remoteness].tier == -1) {
+        dest->win_examples[remoteness] =
+            src->win_examples[remoteness];
     }
-    if (dest->lose_examples.array[remoteness].tier == -1) {
-        dest->lose_examples.array[remoteness] =
-            src->lose_examples.array[remoteness];
+    if (dest->lose_examples[remoteness].tier == -1) {
+        dest->lose_examples[remoteness] =
+            src->lose_examples[remoteness];
     }
-    if (dest->tie_examples.array[remoteness].tier == -1) {
-        dest->tie_examples.array[remoteness] =
-            src->tie_examples.array[remoteness];
+    if (dest->tie_examples[remoteness].tier == -1) {
+        dest->tie_examples[remoteness] =
+            src->tie_examples[remoteness];
     }
     if (dest->draw_example.tier == -1) {
         dest->draw_example = src->draw_example;
@@ -535,24 +569,24 @@ static void AggregatePositions(Analysis *dest, const Analysis *src,
 
 static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
                                         int remoteness) {
-    dest->canonical_win_summary.array[remoteness] +=
-        src->canonical_win_summary.array[remoteness];
-    dest->canonical_lose_summary.array[remoteness] +=
-        src->canonical_lose_summary.array[remoteness];
-    dest->canonical_tie_summary.array[remoteness] +=
-        src->canonical_tie_summary.array[remoteness];
+    dest->canonical_win_summary[remoteness] +=
+        src->canonical_win_summary[remoteness];
+    dest->canonical_lose_summary[remoteness] +=
+        src->canonical_lose_summary[remoteness];
+    dest->canonical_tie_summary[remoteness] +=
+        src->canonical_tie_summary[remoteness];
 
-    if (dest->canonical_win_examples.array[remoteness].tier == -1) {
-        dest->canonical_win_examples.array[remoteness] =
-            src->canonical_win_examples.array[remoteness];
+    if (dest->canonical_win_examples[remoteness].tier == -1) {
+        dest->canonical_win_examples[remoteness] =
+            src->canonical_win_examples[remoteness];
     }
-    if (dest->canonical_lose_examples.array[remoteness].tier == -1) {
-        dest->canonical_lose_examples.array[remoteness] =
-            src->canonical_lose_examples.array[remoteness];
+    if (dest->canonical_lose_examples[remoteness].tier == -1) {
+        dest->canonical_lose_examples[remoteness] =
+            src->canonical_lose_examples[remoteness];
     }
-    if (dest->canonical_tie_examples.array[remoteness].tier == -1) {
-        dest->canonical_tie_examples.array[remoteness] =
-            src->canonical_tie_examples.array[remoteness];
+    if (dest->canonical_tie_examples[remoteness].tier == -1) {
+        dest->canonical_tie_examples[remoteness] =
+            src->canonical_tie_examples[remoteness];
     }
     if (dest->canonical_draw_example.tier == -1) {
         dest->canonical_draw_example = src->canonical_draw_example;

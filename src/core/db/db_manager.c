@@ -90,9 +90,8 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
                                  game_name, variant, db->name);
     if (actual_length >= path_length) {
         fprintf(stderr,
-                "SetupDbPath: (BUG) not enough space was allocated for "
-                "path. Please check the implementation of this "
-                "function.\n");
+                "SetupDbPath: (BUG) not enough space was allocated for path. "
+                "Please check the implementation of this function.\n");
         free(path);
         return NULL;
     }
@@ -175,9 +174,7 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
     return current_db->ProbeRemoteness(probe, tier_position);
 }
 
-int DbManagerTierStatus(Tier tier) {
-    return current_db->TierStatus(tier);
-}
+int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
 
 int DbManagerInitControlGroupDb(const Database *control,
                                 ReadOnlyString game_name, int variant,

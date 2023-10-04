@@ -52,4 +52,6 @@
  */
 int TierManagerSolve(const TierSolverApi *api, bool force);
 
+int TierManagerAnalyze(const TierSolverApi *api, bool force);
+
 #endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

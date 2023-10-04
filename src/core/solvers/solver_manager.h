@@ -66,4 +66,6 @@ int SolverManagerGetSolverStatus(void);
  */
 int SolverManagerSolve(void *aux);
 
+int SolverManagerAnalyze(void *aux);
+
 #endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_SOLVER_MANAGER_H_
