@@ -121,6 +121,8 @@ static bool SetCurrentApi(const TierSolverApi *api);
 // Default API functions
 
 static Tier DefaultGetCanonicalTier(Tier tier);
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric);
 static Position DefaultGetCanonicalPosition(TierPosition tier_position);
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
@@ -136,7 +138,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
     DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
     int error = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
     if (error != 0) return error;
-    
+
     error = StatManagerInit(game_name, variant);
     if (error != 0) DbManagerFinalizeDb();
     return error;
@@ -246,7 +248,8 @@ static void ToggleTierSymmetryRemoval(bool on) {
             default_api.GetPositionInSymmetricTier;
     } else {
         current_api.GetCanonicalTier = &DefaultGetCanonicalTier;
-        current_api.GetPositionInSymmetricTier = NULL;
+        current_api.GetPositionInSymmetricTier =
+            &DefaultGetPositionInSymmetricTier;
     }
 }
 
@@ -311,6 +314,12 @@ static bool SetCurrentApi(const TierSolverApi *api) {
 // Default API functions
 
 static Tier DefaultGetCanonicalTier(Tier tier) { return tier; }
+
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric) {
+    (void)symmetric;  // Unused.
+    return tier_position.position;
+}
 
 static Position DefaultGetCanonicalPosition(TierPosition tier_position) {
     return tier_position.position;

@@ -16,10 +16,9 @@
 
 static const TierSolverApi *current_api;
 
-static Tier this_tier;                // The canonical tier being analyzed.
-static int64_t this_tier_size;        // Size of the tier being analyzed.
-static bool this_tier_was_canonical;  // If the tier passed in was canonical.
-static TierArray child_tiers;         // Array of canonical child tiers.
+static Tier this_tier;          // The tier being analyzed.
+static int64_t this_tier_size;  // Size of the tier being analyzed.
+static TierArray child_tiers;   // Array of canonical child tiers.
 
 // Child tier to its index in the child_tiers array.
 static TierHashMap child_tier_to_index;
@@ -32,7 +31,7 @@ static PositionArray discovered;  // Newly discovered positions.
 
 static int AnalysisStatus(Tier tier);
 
-static bool Step0Initialize(Tier tier);
+static bool Step0Initialize(Analysis *dest, Tier tier);
 static TierArray GetCanonicalChildTiers(Tier tier);
 
 static bool Step1LoadDiscoveryMaps(void);
@@ -50,7 +49,6 @@ static bool DiscoverHelperProcessChildTier(TierPosition child);
 static bool Step4SaveChildMaps(void);
 
 static bool Step5Analyze(Analysis *dest);
-static bool IsCanonicalPosition(TierPosition tier_position);
 
 static bool Step6SaveAnalysis(const Analysis *dest);
 
@@ -77,7 +75,7 @@ int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force) {
         }
     }
 
-    if (!Step0Initialize(tier)) goto _bailout;
+    if (!Step0Initialize(dest, tier)) goto _bailout;
     if (!Step1LoadDiscoveryMaps()) goto _bailout;
     if (!Step2LoadFringe()) goto _bailout;
     if (!Step3Discover(dest)) goto _bailout;
@@ -100,12 +98,9 @@ void TierAnalyzerFinalize(void) { current_api = NULL; }
 
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }
 
-static bool Step0Initialize(Tier tier) {
-    // Convert to canonical tier.
-    this_tier = current_api->GetCanonicalTier(tier);
-
+static bool Step0Initialize(Analysis *dest, Tier tier) {
+    this_tier = tier;
     this_tier_size = current_api->GetTierSize(this_tier);
-    this_tier_was_canonical = (this_tier == tier);
     child_tiers = GetCanonicalChildTiers(this_tier);
     if (child_tiers.size < 0) return false;
 
@@ -122,6 +117,7 @@ static bool Step0Initialize(Tier tier) {
     memset(&this_tier_map, 0, sizeof(this_tier_map));
     child_tier_maps = NULL;
 
+    AnalysisSetHashSize(dest, this_tier_size);
     return true;
 }
 
@@ -162,20 +158,23 @@ static bool Step1LoadDiscoveryMaps(void) {
 // Loads discovery map of TIER, or returns an empty BitStream if not found
 // on disk. IF TIER IS THE INITIAL TIER, ALSO SETS THE INITIAL POSITION BIT.
 static BitStream LoadDiscoveryMap(Tier tier) {
-    if (tier != current_api->GetInitialTier()) {
-        return StatManagerLoadDiscoveryMap(tier);
-    }
+    // Try to load from disk first.
+    BitStream ret = StatManagerLoadDiscoveryMap(tier);
+    if (ret.stream != NULL) return ret;
 
-    // Create a discovery map for the initial tier.
-    BitStream stream;
-    int error = BitStreamInit(&stream, this_tier_size);
+    // Create a discovery map for the tier.
+    int64_t tier_size = current_api->GetTierSize(tier);
+    int error = BitStreamInit(&ret, tier_size);
     if (error != 0) {
         fprintf(stderr, "LoadDiscoveryMap: failed to initialize stream\n");
-        return stream;
+        return ret;
     }
 
-    BitStreamSet(&stream, current_api->GetInitialPosition());
-    return stream;
+    if (tier == current_api->GetInitialTier()) {
+        BitStreamSet(&ret, current_api->GetInitialPosition());
+    }
+
+    return ret;
 }
 
 static bool Step2LoadFringe(void) {
@@ -306,11 +305,15 @@ static bool Step5Analyze(Analysis *dest) {
     // parallel, for, move probe inside parallel
     for (int64_t i = 0; success && i < this_tier_size; ++i) {
         TierPosition tier_position = {.tier = this_tier, .position = i};
+        TierPosition canonical = {
+            .tier = this_tier,
+            .position = current_api->GetCanonicalPosition(tier_position),
+        };
         if (!BitStreamGet(&this_tier_map, i)) continue;
 
-        Value value = DbManagerProbeValue(&probe, tier_position);
-        int remoteness = DbManagerProbeRemoteness(&probe, tier_position);
-        bool is_canonical = IsCanonicalPosition(tier_position);
+        Value value = DbManagerProbeValue(&probe, canonical);
+        int remoteness = DbManagerProbeRemoteness(&probe, canonical);
+        bool is_canonical = (tier_position.position == canonical.position);
         int error =
             AnalysisCount(dest, tier_position, value, remoteness, is_canonical);
         if (error != 0) success = false;
@@ -318,11 +321,6 @@ static bool Step5Analyze(Analysis *dest) {
     DbManagerProbeDestroy(&probe);
     BitStreamDestroy(&this_tier_map);
     return success;
-}
-
-static bool IsCanonicalPosition(TierPosition tier_position) {
-    return current_api->GetCanonicalPosition(tier_position) ==
-           tier_position.position;
 }
 
 static bool Step6SaveAnalysis(const Analysis *dest) {

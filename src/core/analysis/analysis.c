@@ -40,7 +40,8 @@ static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
 // -----------------------------------------------------------------------------
 
 void AnalysisInit(Analysis *analysis) {
-    static const TierPosition kIllegalTierPosition = {.tier = -1, .position = -1};
+    static const TierPosition kIllegalTierPosition = {.tier = -1,
+                                                      .position = -1};
     memset(analysis, 0, sizeof(*analysis));
     analysis->hash_size = -1;  // Unset.
 
@@ -73,9 +74,11 @@ void AnalysisDestroy(Analysis *analysis) {
 }
 
 int AnalysisWrite(const Analysis *analysis, int fd) {
-    gzFile file = GuardedGzdopen(fd, "wb");
+    int gzfd = dup(fd);
+    gzFile file = GuardedGzdopen(gzfd, "wb");
     int error = GuardedGzwrite(file, analysis, sizeof(*analysis));
-    // No need to close the file as it will be closed as fd by the caller.
+    GuardedGzclose(file);
+    // No need to close the original fd as it will be closed by the caller.
     return error;
 }
 
@@ -344,24 +347,39 @@ void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
             " has the most number of available moves: %d\n",
             analysis->position_with_most_moves.position,
             analysis->position_with_most_moves.tier, analysis->max_num_moves);
-    fprintf(stream,
-            "Longest win starts from position %" PRId64 " in tier %" PRId64
-            ", which is of remoteness %d\n",
-            analysis->longest_win_position.position,
-            analysis->longest_win_position.tier,
-            analysis->largest_win_remoteness);
-    fprintf(stream,
-            "Longest lose starts from position %" PRId64 " in tier %" PRId64
-            ", which is of remoteness %d\n",
-            analysis->longest_lose_position.position,
-            analysis->longest_lose_position.tier,
-            analysis->largest_lose_remoteness);
-    fprintf(stream,
-            "Longest tie starts from position %" PRId64 " in tier %" PRId64
-            ", which is of remoteness %d\n",
-            analysis->longest_tie_position.position,
-            analysis->longest_tie_position.tier,
-            analysis->largest_tie_remoteness);
+
+    static ConstantReadOnlyString longest_position_format =
+        "Longest %s starts from position %" PRId64 " in tier %" PRId64
+        ", which is of remoteness %d\n";
+    static ConstantReadOnlyString not_available_format =
+        "No %s positions were found\n";
+    if (analysis->largest_win_remoteness >= 0) {
+        fprintf(stream, longest_position_format, "win",
+                analysis->longest_win_position.position,
+                analysis->longest_win_position.tier,
+                analysis->largest_win_remoteness);
+    } else {
+        fprintf(stream, not_available_format, "winning");
+    }
+
+    if (analysis->largest_lose_remoteness >= 0) {
+        fprintf(stream, longest_position_format, "lose",
+                analysis->longest_lose_position.position,
+                analysis->longest_lose_position.tier,
+                analysis->largest_lose_remoteness);
+    } else {
+        fprintf(stream, not_available_format, "losing");
+    }
+
+    if (analysis->largest_tie_remoteness >= 0) {
+        fprintf(stream, longest_position_format, "tie",
+                analysis->longest_tie_position.position,
+                analysis->longest_tie_position.tier,
+                analysis->largest_tie_remoteness);
+    } else {
+        fprintf(stream, not_available_format, "tying");
+    }
+    fprintf(stream, "\n\n\n");
 }
 
 // -----------------------------------------------------------------------------
@@ -383,8 +401,10 @@ static void PrintSummary(FILE *stream, const Analysis *analysis,
     PrintDashedLine(stream, column_width, num_headers);
     PrintSummaryLine(stream, analysis, kLastLineReservedRemotness, column_width,
                      canonical);
-    fprintf(stream, "\n\tTotal positions visited: %" PRId64 "\n",
-            analysis->hash_size);
+    if (!canonical) {
+        fprintf(stream, "\n\tHash space: %" PRId64 " | Hash efficiency: %f\n",
+                analysis->hash_size, AnalysisGetHashEfficiency(analysis));
+    }
 }
 
 static int WidthOf(int64_t n) {
@@ -551,16 +571,13 @@ static void AggregatePositions(Analysis *dest, const Analysis *src,
     dest->tie_summary[remoteness] += src->tie_summary[remoteness];
 
     if (dest->win_examples[remoteness].tier == -1) {
-        dest->win_examples[remoteness] =
-            src->win_examples[remoteness];
+        dest->win_examples[remoteness] = src->win_examples[remoteness];
     }
     if (dest->lose_examples[remoteness].tier == -1) {
-        dest->lose_examples[remoteness] =
-            src->lose_examples[remoteness];
+        dest->lose_examples[remoteness] = src->lose_examples[remoteness];
     }
     if (dest->tie_examples[remoteness].tier == -1) {
-        dest->tie_examples[remoteness] =
-            src->tie_examples[remoteness];
+        dest->tie_examples[remoteness] = src->tie_examples[remoteness];
     }
     if (dest->draw_example.tier == -1) {
         dest->draw_example = src->draw_example;

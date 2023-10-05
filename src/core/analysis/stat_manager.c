@@ -1,12 +1,13 @@
 #include "core/analysis/stat_manager.h"
 
 #include <assert.h>    // assert
-#include <fcntl.h>     // O_RDONLY, O_WRONLY
+#include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
 #include <inttypes.h>  // PRId64
 #include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr, SEEK_SET
+#include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
 #include <stdlib.h>    // calloc, free
 #include <string.h>    // strlen
+#include <sys/stat.h>  // S_IRWXU, S_IRWXG, S_IRWXO
 #include <zlib.h>      // gzread, gzFile, Z_NULL
 
 #include "core/analysis/analysis.h"
@@ -63,8 +64,8 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
 
     char *filename = GetPathToTierAnalysis(tier);
     if (filename == NULL) return 1;
-
-    int stat_fd = GuardedOpen(filename, O_WRONLY);
+    mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;  // This sets permissions to 0777
+    int stat_fd = open(filename, O_CREAT | O_WRONLY, mode);
     free(filename);
     if (stat_fd < 0) return 2;
 
@@ -102,7 +103,7 @@ BitStream StatManagerLoadDiscoveryMap(Tier tier) {
     char *filename = GetPathToTierDiscoveryMap(tier);
     if (filename == NULL) return kInvalidStream;
 
-    FILE *file = GuardedFopen(filename, "rb");
+    FILE *file = fopen(filename, "rb");
     if (file == NULL) {
         free(filename);
         return kInvalidStream;
@@ -133,6 +134,7 @@ BitStream StatManagerLoadDiscoveryMap(Tier tier) {
     error = GuardedGz64Read(gzfile, ret.stream, ret.num_bytes, false);
     if (error != 0) {
         BitStreamDestroy(&ret);
+        GuardedGzclose(gzfile);
         return kInvalidStream;
     }
 

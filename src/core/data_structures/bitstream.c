@@ -23,7 +23,7 @@ void BitStreamDestroy(BitStream *stream) {
     memset(stream, 0, sizeof(*stream));
 }
 
-static int GetByteOffset(int64_t i) { return i % 8; }
+static int GetByteOffset(int64_t i) { return i / 8; }
 
 static int GetLocalBitOffset(int64_t i) { return i % 8; }
 

@@ -144,8 +144,10 @@ static int InitGlobalVariables(int type) {
     failed_tiers = 0;
     TierQueueInit(&pending_tiers);
     TierHashMapInit(&tier_tree, 0.5);
-    if (type == kTierDiscovering) AnalysisInit(&game_analysis);
-
+    if (type == kTierDiscovering) {
+        AnalysisInit(&game_analysis);
+        AnalysisSetHashSize(&game_analysis, 0);
+    }
     return BuildTierTree(type);
 }
 
@@ -313,9 +315,8 @@ static int SolveTierTree(bool force) {
                 SolveUpdateTierTree(tier);
                 ++processed_tiers;
             } else {
-                // There might be more error types in the future.
-                printf("Failed to solve tier %" PRId64 ": not enough memory\n",
-                       tier);
+                printf("Failed to solve tier %" PRId64 ", code %d\n", tier,
+                       error);
                 ++failed_tiers;
             }
         } else {
@@ -425,20 +426,20 @@ static int DiscoverTierTree(bool force) {
 
         // Analyze the canonical tier instead.
         Analysis tier_analysis;
+        AnalysisInit(&tier_analysis);
         int error = TierAnalyzerDiscover(&tier_analysis, canonical, force);
         if (error == 0) {
             // Analyzer succeeded.
             AnalyzeUpdateTierTree(tier);
             ++processed_tiers;
         } else {
-            // There might be more error types in the future.
-            printf("Failed to analyze tier %" PRId64 ": not enough memory\n",
-                   tier);
+            printf("Failed to analyze tier %" PRId64 ", code %d\n", tier,
+                   error);
             ++failed_tiers;
         }
 
         if (tier != canonical) {
-            // If tier is not canonical, all of its positions are non-canonical.
+            // TODO: Change Aggregate instead of using this conversion!
             AnalysisConvertToNoncanonical(&tier_analysis);
         }
 
