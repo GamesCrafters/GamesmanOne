@@ -459,6 +459,27 @@ static int MninemensmorrisInit(void *aux) {
     currentVariant.selections = currentSelections;
 
     return !InitGenericHash();
+
+    
+
+    // bool ret = !InitGenericHash();
+
+    // char board[24] = "O-O---OOO--------X-OOXX-";
+    // Tier tt = HashTier(0, 0, 3, 7);
+    // Position p = GenericHashHashLabel(tt, board, 1);
+    // TierPosition tp = {
+    //     .tier = tt,
+    //     .position = p
+    // };
+    // MoveArray moves = MninemensmorrisGenerateMoves(tp);
+    // char buffer[10];
+    // for (int64_t i = 0; i < moves.size; i++) {
+    //     MninemensmorrisMoveToString(moves.array[i], buffer);
+    //     printf("%s, ", buffer);
+    // }
+    // printf("\n");
+    // printf("%d\n", MninemensmorrisPrimitive(tp));
+    // return ret;
 }
 
 static int MninemensmorrisFinalize(void) { return 0; }
@@ -577,13 +598,6 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
         GenericHashUnhashLabel(tier_position.tier, tier_position.position,
                                board);
 
-        if (DEBUG) {
-            printf("GENERATEMOVES\n");
-            for (int k = 0; k < boardSize; k++) {
-                printf("%c", board[k]);
-            }
-        }
-
         int turn =
             GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
         char player;
@@ -600,7 +614,7 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
 
         int legalRemoves[boardSize];
         int numLegalRemoves = FindLegalRemoves(board, player, legalRemoves);
-        int i, j, from, numLegalTos = 0, *legalTos = NULL;
+        int i, j, from;
 
         int allBlanks[boardSize];
         int numBlanks = 0;
@@ -609,6 +623,8 @@ static MoveArray MninemensmorrisGenerateMoves(TierPosition tier_position) {
                 allBlanks[numBlanks++] = i;
             }
         }
+        int numLegalTos = numBlanks;
+        int *legalTos = allBlanks;
 
         if (toPlace == 0 || laskerRule) {  // Sliding or flying moves
             for (from = 0; from < boardSize; from++) {
@@ -1823,7 +1839,7 @@ static bool InitGenericHash(void) {
 static bool IsSlotInMill(char *board, int slot, char player) {
     int *lines = linesArray[slot];
     bool firstLineIsMill = MILL(board, lines[0], lines[1], player);
-    if (boardType == 2 || lines[7] == 2) {
+    if (boardType == 1 || lines[7] == 2) {
         return firstLineIsMill || MILL(board, lines[2], lines[3], player);
     } else if (lines[7] == 3) {
         return firstLineIsMill || MILL(board, lines[2], lines[3], player) ||
@@ -1905,10 +1921,9 @@ static int FindLegalRemoves(char *board, char player, int *legalRemoves) {
     if (removalRule == 0) {
         /* Standard. An opponent's piece is removable if either all of the
         opponent's pieces are in mills or if the piece is not in a mill. */
+        bool allPiecesInMills = AllPiecesInMills(board, opponent);
         for (slot = 0; slot < boardSize; slot++) {
-            if (board[slot] == opponent &&
-                (!IsSlotInMill(board, slot, opponent) ||
-                 AllPiecesInMills(board, opponent))) {
+            if (board[slot] == opponent && (!IsSlotInMill(board, slot, opponent) || allPiecesInMills)) {
                 legalRemoves[numLegalRemoves++] = slot;
             }
         }

@@ -84,9 +84,8 @@ static const RegularSolverApi kSolverApi = {
     .DoMove = &MallqueenschessDoMove,
     .IsLegalPosition = &MallqueenschessIsLegalPosition,
     .GetCanonicalPosition = &MallqueenschessGetCanonicalPosition,
-    .GetNumberOfCanonicalChildPositions =
-        &MallqueenschessGetNumberOfCanonicalChildPositions,
-    .GetCanonicalChildPositions = &MallqueenschessGetCanonicalChildPositions,
+    .GetNumberOfCanonicalChildPositions = NULL, //&MallqueenschessGetNumberOfCanonicalChildPositions,
+    .GetCanonicalChildPositions = NULL, //&MallqueenschessGetCanonicalChildPositions,
     .GetCanonicalParentPositions = &MallqueenschessGetCanonicalParentPositions,
 };
 
@@ -842,6 +841,7 @@ static PositionArray MallqueenschessGetCanonicalParentPositions(
             }
         }
     }
+    PositionHashSetDestroy(&deduplication_set);
     MoveArrayDestroy(&moves);
     return canonicalParents;
 }
