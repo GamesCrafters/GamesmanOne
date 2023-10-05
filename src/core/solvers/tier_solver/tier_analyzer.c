@@ -62,6 +62,8 @@ void TierAnalyzerInit(const TierSolverApi *api) { current_api = api; }
 
 int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force) {
     int ret = -1;
+    
+    this_tier = tier;
     if (current_api == NULL) goto _bailout;
     if (!force) {
         Tier canonical = current_api->GetCanonicalTier(tier);
@@ -99,7 +101,6 @@ void TierAnalyzerFinalize(void) { current_api = NULL; }
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }
 
 static bool Step0Initialize(Analysis *dest, Tier tier) {
-    this_tier = tier;
     this_tier_size = current_api->GetTierSize(this_tier);
     child_tiers = GetCanonicalChildTiers(this_tier);
     if (child_tiers.size < 0) return false;
