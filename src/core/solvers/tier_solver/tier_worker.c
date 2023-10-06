@@ -161,7 +161,7 @@ int TierWorkerSolve(Tier tier, bool force) {
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();
     Step6SaveValues();
-    DbManagerTestTier(tier, current_api.GetTierSize(tier));
+    // DbManagerTestTier(tier, current_api.GetTierSize(tier));
     ret = 0;  // Success.
 
 _bailout:

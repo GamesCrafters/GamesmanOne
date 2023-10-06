@@ -150,8 +150,8 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api) {
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) return -1;
-    DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
-    return DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    // DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
+    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
 }
 
 static int RegularSolverFinalize(void) {

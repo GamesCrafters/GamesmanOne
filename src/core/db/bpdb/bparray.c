@@ -41,18 +41,6 @@
 #include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
 
-// Include and use OpenMP if the _OPENMP flag is set.
-#ifdef _OPENMP
-#include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-
-// Otherwise, the following macros do nothing.
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR
-#endif
-
 static const int kDefaultBitsPerEntry = 1;
 
 /**
@@ -263,7 +251,7 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
 
     static const int kEntriesPerChunk = 8;
     int64_t num_chunks = size / kEntriesPerChunk;
-    PRAGMA_OMP_PARALLEL_FOR
+    
     for (int64_t chunk = 0; chunk < num_chunks; ++chunk) {
         for (int i = 0; i < kEntriesPerChunk; ++i) {
             CopyEntry(new_stream, array, chunk * kEntriesPerChunk + i);
@@ -280,6 +268,3 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
     array->meta.stream_length = new_stream_length;
     return 0;
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_PARALLEL_FOR
