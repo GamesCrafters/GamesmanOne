@@ -82,6 +82,10 @@ bool MoveArrayContains(const MoveArray *array, Move move) {
     return Int64ArrayContains(array, move);
 }
 
+void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *)) {
+    Int64ArraySort(array, comp);
+}
+
 void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
 
 void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
