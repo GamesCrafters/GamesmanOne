@@ -224,9 +224,9 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
     int64_t buffer_bit_end =
         buffer_bit_begin + kBlocksPerBuffer * block_size * kBitsPerByte;
 
-    if (entry_bit_begin < buffer_bit_begin) return false;
-    if (entry_bit_end > buffer_bit_end) return false;
-    return true;
+    if (entry_bit_begin < buffer_bit_begin) return true;
+    if (entry_bit_end > buffer_bit_end) return true;
+    return false;
 }
 
 static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
