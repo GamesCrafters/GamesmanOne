@@ -172,6 +172,7 @@ typedef enum GamesmanTypesLimits {
     kDbNameLengthMax = 31,
     kDbFormalNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
+    kSolverOptionChoiceNameLengthMax = 127,
     kSolverNameLengthMax = 63,
     kGameVariantOptionNameMax = 63,
     kGameNameLengthMax = 31,

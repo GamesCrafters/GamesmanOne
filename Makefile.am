@@ -27,6 +27,7 @@ bin_gamesman_SOURCES += src/core/generic_hash/generic_hash.c
 
 # src/core/interactive
 bin_gamesman_SOURCES += src/core/interactive/credits/credits.c
+bin_gamesman_SOURCES += src/core/interactive/games/presolve/options/choices/choices.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/options/options.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/analyze/analyze.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/configure/configure.c

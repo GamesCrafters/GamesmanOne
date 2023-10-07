@@ -10,16 +10,19 @@
 #include "core/interactive/games/presolve/postsolve/help/game_help.h"
 #include "core/interactive/games/presolve/postsolve/play/play.h"
 
+// Hard-coded size based on the title definition in UpdateVariantId.
+static char title[44 + kGameFormalNameLengthMax + kInt32Base10StringLengthMax];
+
+static void UpdateVariantId(void) {
+    const Game *current_game = InteractiveMatchGetCurrentGame();
+    int variant_index = InteractiveMatchGetVariantIndex();
+    sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
+            current_game->formal_name, variant_index);
+}
+
 void InteractivePostSolve(ReadOnlyString key) {
     (void)key;  // Unused.
 
-    const Game *current_game = InteractiveMatchGetCurrentGame();
-    int variant_index = InteractiveMatchGetCurrentVariant();
-
-    // Hard-coded size based on the title definition below.
-    char title[44 + kGameFormalNameLengthMax + kInt32Base10StringLengthMax];
-    sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
-            current_game->formal_name, variant_index);
     static ConstantReadOnlyString items[] = {
         "Play new game",
         "Configure play options",
@@ -33,5 +36,6 @@ void InteractivePostSolve(ReadOnlyString key) {
         &InteractiveAnalyze,
         &InteractiveGameHelp,
     };
-    AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    int num_items = sizeof(items) / sizeof(items[0]);
+    AutoMenu(title, num_items, items, keys, hooks, &UpdateVariantId);
 }

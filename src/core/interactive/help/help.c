@@ -113,5 +113,6 @@ void InteractiveHelp(ReadOnlyString key) {
         &PrintGamesmanHelp,
         &PrintGamesmanHelp,
     };
-    AutoMenu(kTitle, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    int num_items = sizeof(items) / sizeof(items[0]);
+    AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
 }
