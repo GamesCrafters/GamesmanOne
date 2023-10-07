@@ -64,9 +64,6 @@ static Value MallqueenschessPrimitive(Position position);
 static Position MallqueenschessDoMove(Position position, Move move);
 static bool MallqueenschessIsLegalPosition(Position position);
 static Position MallqueenschessGetCanonicalPosition(Position position);
-static int MallqueenschessGetNumberOfCanonicalChildPositions(Position position);
-static PositionArray MallqueenschessGetCanonicalChildPositions(
-    Position position);
 static PositionArray MallqueenschessGetCanonicalParentPositions(
     Position position);
 
@@ -84,8 +81,8 @@ static const RegularSolverApi kSolverApi = {
     .DoMove = &MallqueenschessDoMove,
     .IsLegalPosition = &MallqueenschessIsLegalPosition,
     .GetCanonicalPosition = &MallqueenschessGetCanonicalPosition,
-    .GetNumberOfCanonicalChildPositions = NULL, //&MallqueenschessGetNumberOfCanonicalChildPositions,
-    .GetCanonicalChildPositions = NULL, //&MallqueenschessGetCanonicalChildPositions,
+    .GetNumberOfCanonicalChildPositions = NULL,
+    .GetCanonicalChildPositions = NULL,
     .GetCanonicalParentPositions = &MallqueenschessGetCanonicalParentPositions,
 };
 
@@ -146,6 +143,49 @@ static const int symmetries[8][25] = {
 
 static void UnhashMove(Move move, int *from, int *to);
 
+// bool BigCanonicalTest(Position p) {
+//     char board[boardSize];
+//     char symmetricBoard[boardSize];
+//     GenericHashUnhash(p, board);
+//     int turn = GenericHashGetTurn(p);
+//     int oppTurn = (turn == 1) ? 2 : 1; 
+//     Position canonicalPosition = MallqueenschessGetCanonicalPosition(p);
+//     Position symP;
+//     Position canonsymP;
+//     for (int i = 0; i < 8; i++) {
+//         for (int j = 0; j < boardSize; j++) {
+//             symmetricBoard[j] = board[symmetries[i][j]];
+//         }
+//         symP = GenericHashHash(symmetricBoard, turn);
+//         canonsymP = MallqueenschessGetCanonicalPosition(symP);
+//         if (canonsymP != canonicalPosition) {
+//             printf("ERROR1 %d: %" PRId64 " : %" PRId64 " while %" PRId64 " : %" PRId64 "!\n", i, p, canonicalPosition, symP, canonsymP);
+//             return false;
+//         }
+//     }
+
+//     for (int i = 0; i < boardSize; i++) {
+//         if (board[i] == W) {
+//             board[i] = B;
+//         } else if (board[i] == B) {
+//             board[i] = W;
+//         }
+//     }
+
+//     for (int i = 0; i < 8; i++) {
+//         for (int j = 0; j < boardSize; j++) {
+//             symmetricBoard[j] = board[symmetries[i][j]];
+//         }
+//         symP = GenericHashHash(symmetricBoard, oppTurn);
+//         canonsymP = MallqueenschessGetCanonicalPosition(symP);
+//         if (canonsymP != canonicalPosition) {
+//             printf("ERROR2 %d: %" PRId64 " : %" PRId64 " while %" PRId64 " : %" PRId64 "!\n", i, p, canonicalPosition, symP, canonsymP);
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+
 static int MallqueenschessInit(void *aux) {
     (void)aux;  // Unused.
 
@@ -160,6 +200,26 @@ static int MallqueenschessInit(void *aux) {
         GenericHashReinitialize();
         return false;
     }
+    // char board[26];
+    // GenericHashUnhash(6090972958, board);
+    // board[25] = '\0';
+    // printf("HELLO: %s", board);
+    // PositionArray pa = MallqueenschessGetCanonicalParentPositions(6090972958);
+    // for (int64_t i = 0; i < pa.size; i++) {
+    //     printf("%" PRId64 " ", pa.array[i]);
+    // }
+    // printf("\n");
+    // Position hd = MallqueenschessGetCanonicalPosition(GenericHashHash("WBWBW-----B---W-----BWBWB", 1));
+    // printf("PARENT: %" PRId64 "\n", hd);
+    // #pragma omp parallel for
+    // for (Position p = 0; p < MallqueenschessGetNumPositions(); p++) {
+    //     if ((p & 0xFFFFF) == 0) {
+    //         printf("%" PRId64 "\n", p);
+    //     }
+    //     if (!BigCanonicalTest(p)) {
+    //         printf("ERROR");
+    //     }
+    // }
     return true;
 }
 
@@ -429,380 +489,42 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     char board[boardSize];
     GenericHashUnhash(position, board);
 
-    char turn = GenericHashGetTurn(position) == 1 ? W : B;
-
     char pieceInSymmetry, pieceInCurrentCanonical;
     int i, symmetryNum;
+
+    if (GenericHashGetTurn(position) == 2) {
+        for (i = 0; i < boardSize; i++) {
+            if (board[i] == W) {
+                board[i] = B;
+            } else if (board[i] == B) {
+                board[i] = W;
+            }
+        }
+    }
 
     /* Figure out which symmetry transformation on the input board
     leads to the smallest-ternary-number board in the input board's orbit
     (where the transformations are just rotation/reflection/
     inner-outer flip). */
-    int bestNonSwappedSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
-         symmetryNum++) {
+    int bestSymmetryNum = 0;
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
         for (i = 0; i < boardSize; i++) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
-            pieceInCurrentCanonical =
-                board[symmetries[bestNonSwappedSymmetryNum][i]];
+            pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
             if (pieceInSymmetry != pieceInCurrentCanonical) {
                 if (pieceInSymmetry < pieceInCurrentCanonical) {
-                    bestNonSwappedSymmetryNum = symmetryNum;
+                    bestSymmetryNum = symmetryNum;
                 }
                 break;
             }
         }
     }
-
-    /* Create a board array that is the input board with piece colors
-    swapped. */
-    char swappedBoard[boardSize];
-    for (i = 0; i < boardSize; i++) {
-        if (board[i] == W) {
-            swappedBoard[i] = B;
-        } else if (board[i] == B) {
-            swappedBoard[i] = W;
-        } else {
-            swappedBoard[i] = BLANK;
-        }
+    
+    char canonBoard[boardSize];
+    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+        canonBoard[i] = board[symmetries[bestSymmetryNum][i]];
     }
-
-    /* Figure out which symmetry transformation on the swapped board
-    leads to the smallest-ternary-number board in the swapped board's
-    orbit (where the transformations are just rotation/reflection/
-    inner-outer flip). */
-    int bestSwappedSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
-         symmetryNum++) {
-        for (i = 0; i < boardSize; i++) {
-            pieceInSymmetry = swappedBoard[symmetries[symmetryNum][i]];
-            pieceInCurrentCanonical =
-                swappedBoard[symmetries[bestSwappedSymmetryNum][i]];
-            if (pieceInSymmetry != pieceInCurrentCanonical) {
-                if (pieceInSymmetry < pieceInCurrentCanonical) {
-                    bestSwappedSymmetryNum = symmetryNum;
-                }
-                break;
-            }
-        }
-    }
-
-    char *canonicalNonSwappedBoard = board;
-    char *canonicalSwappedBoard = swappedBoard;
-
-    if (bestNonSwappedSymmetryNum != 0) {
-        char cnsb[boardSize];
-        for (i = 0; i < boardSize; i++) {
-            cnsb[i] = board[symmetries[bestNonSwappedSymmetryNum][i]];
-        }
-        canonicalNonSwappedBoard = cnsb;
-    }
-
-    if (bestSwappedSymmetryNum != 0) {
-        char csb[boardSize];
-        for (i = 0; i < boardSize; i++) {
-            csb[i] = swappedBoard[symmetries[bestSwappedSymmetryNum][i]];
-        }
-        canonicalSwappedBoard = csb;
-    }
-
-    /* At this point, canonicalNonSwappedBoard should be the board array of
-    the "smallest" board in the input (non-swapped) board's orbit and
-    canonicalSwappedBoard should be the board array of the "smallest"
-    board in the swapped board's orbit. Now we will compare the
-    two and return the position whose board is the smaller of the two. */
-
-    char pieceInNonSwappedCanonical, pieceInSwappedCanonical;
-    for (i = 0; i < boardSize; i++) {
-        pieceInNonSwappedCanonical = canonicalNonSwappedBoard[i];
-        pieceInSwappedCanonical = canonicalSwappedBoard[i];
-        if (pieceInNonSwappedCanonical < pieceInSwappedCanonical) {
-            return position;
-        } else if (pieceInSwappedCanonical < pieceInNonSwappedCanonical) {
-            return GenericHashHash(canonicalSwappedBoard, (turn == 1) ? 2 : 1);
-        }
-    }
-
-    /* We only reach here if canonicalBoard and canonicalSwappedBoard
-    are the same, in which case we return the position with this board
-    where it's the first player's turn. */
-    if (turn == 1) {
-        return position;
-    } else {
-        return GenericHashHash(canonicalSwappedBoard, 1);
-    }
-}
-
-static int MallqueenschessGetNumberOfCanonicalChildPositions(
-    Position position) {
-    PositionArray canonicalChildren =
-        MallqueenschessGetCanonicalChildPositions(position);
-    int ret = canonicalChildren.size;
-    PositionArrayDestroy(&canonicalChildren);
-    return ret;
-}
-
-static PositionArray MallqueenschessGetCanonicalChildPositions(
-    Position position) {
-    PositionArray canonicalChildren;
-    PositionArrayInit(&canonicalChildren);
-
-    PositionHashSet deduplication_set;
-    PositionHashSetInit(&deduplication_set, 0.5);
-
-    char board[boardSize];
-    GenericHashUnhash(position, board);
-
-    int t = GenericHashGetTurn(position);
-    char turn = t == 1 ? W : B;
-    Position child;
-
-    for (int i = 0; i < boardSize; i++) {
-        if ((turn == W && board[i] == W) || (turn == B && board[i] == B)) {
-            int originRow = i / sideLength;
-            int originCol = i % sideLength;
-            int origin = i;
-
-            // Left
-            for (int col = originCol - 1; col >= 0; col--) {
-                if (board[originRow * sideLength + col] == BLANK) {
-                    int targetRow = originRow;
-                    int targetCol = col;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    // Create child position
-                    board[origin] = BLANK;
-                    board[target] = turn;
-
-                    child = MallqueenschessGetCanonicalPosition(
-                        GenericHashHash(board, t));
-                    if (!PositionHashSetContains(&deduplication_set, child)) {
-                        PositionHashSetAdd(&deduplication_set, child);
-                        PositionArrayAppend(&canonicalChildren, child);
-                    }
-
-                    // Undo create child position
-                    board[origin] = turn;
-                    board[target] = BLANK;
-                } else {
-                    break;
-                }
-            }
-
-            // Right
-            for (int col = originCol + 1; col < sideLength; col++) {
-                if (board[originRow * sideLength + col] == BLANK) {
-                    int targetRow = originRow;
-                    int targetCol = col;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    // Create child position
-                    board[origin] = BLANK;
-                    board[target] = turn;
-
-                    child = MallqueenschessGetCanonicalPosition(
-                        GenericHashHash(board, t));
-                    if (!PositionHashSetContains(&deduplication_set, child)) {
-                        PositionHashSetAdd(&deduplication_set, child);
-                        PositionArrayAppend(&canonicalChildren, child);
-                    }
-
-                    // Undo create child position
-                    board[origin] = turn;
-                    board[target] = BLANK;
-                } else {
-                    break;
-                }
-            }
-
-            // Up
-            for (int row = originRow - 1; row >= 0; row--) {
-                if (board[row * sideLength + originCol] == BLANK) {
-                    int targetRow = row;
-                    int targetCol = originCol;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    // Create child position
-                    board[origin] = BLANK;
-                    board[target] = turn;
-
-                    child = MallqueenschessGetCanonicalPosition(
-                        GenericHashHash(board, t));
-                    if (!PositionHashSetContains(&deduplication_set, child)) {
-                        PositionHashSetAdd(&deduplication_set, child);
-                        PositionArrayAppend(&canonicalChildren, child);
-                    }
-
-                    // Undo create child position
-                    board[origin] = turn;
-                    board[target] = BLANK;
-                } else {
-                    break;
-                }
-            }
-
-            // Down
-            for (int row = originRow + 1; row < sideLength; row++) {
-                if (board[row * sideLength + originCol] == BLANK) {
-                    int targetRow = row;
-                    int targetCol = originCol;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    // Create child position
-                    board[origin] = BLANK;
-                    board[target] = turn;
-
-                    child = MallqueenschessGetCanonicalPosition(
-                        GenericHashHash(board, t));
-                    if (!PositionHashSetContains(&deduplication_set, child)) {
-                        PositionHashSetAdd(&deduplication_set, child);
-                        PositionArrayAppend(&canonicalChildren, child);
-                    }
-
-                    // Undo create child position
-                    board[origin] = turn;
-                    board[target] = BLANK;
-                } else {
-                    break;
-                }
-            }
-
-            // Left-Up
-            if (originRow > 0 && originCol > 0) {
-                int row = originRow - 1;
-                int col = originCol - 1;
-
-                while (row >= 0 && col >= 0) {
-                    if (board[row * sideLength + col] == BLANK) {
-                        int target = row * sideLength + col;
-                        // Create child position
-                        board[origin] = BLANK;
-                        board[target] = turn;
-
-                        child = MallqueenschessGetCanonicalPosition(
-                            GenericHashHash(board, t));
-                        if (!PositionHashSetContains(&deduplication_set,
-                                                     child)) {
-                            PositionHashSetAdd(&deduplication_set, child);
-                            PositionArrayAppend(&canonicalChildren, child);
-                        }
-
-                        // Undo create child position
-                        board[origin] = turn;
-                        board[target] = BLANK;
-
-                        row--;
-                        col--;
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            // Left-Down
-            if (originRow < sideLength - 1 && originCol > 0) {
-                int row = originRow + 1;
-                int col = originCol - 1;
-
-                while (row < sideLength && col >= 0) {
-                    if (board[row * sideLength + col] == BLANK) {
-                        int target = row * sideLength + col;
-                        // Create child position
-                        board[origin] = BLANK;
-                        board[target] = turn;
-
-                        child = MallqueenschessGetCanonicalPosition(
-                            GenericHashHash(board, t));
-                        if (!PositionHashSetContains(&deduplication_set,
-                                                     child)) {
-                            PositionHashSetAdd(&deduplication_set, child);
-                            PositionArrayAppend(&canonicalChildren, child);
-                        }
-
-                        // Undo create child position
-                        board[origin] = turn;
-                        board[target] = BLANK;
-
-                        row++;
-                        col--;
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            // Right-Up
-            if (originRow > 0 && originCol < sideLength) {
-                int row = originRow - 1;
-                int col = originCol + 1;
-
-                while (row >= 0 && col < sideLength) {
-                    if (board[row * sideLength + col] == BLANK) {
-                        int target = row * sideLength + col;
-                        // Create child position
-                        board[origin] = BLANK;
-                        board[target] = turn;
-
-                        child = MallqueenschessGetCanonicalPosition(
-                            GenericHashHash(board, t));
-                        if (!PositionHashSetContains(&deduplication_set,
-                                                     child)) {
-                            PositionHashSetAdd(&deduplication_set, child);
-                            PositionArrayAppend(&canonicalChildren, child);
-                        }
-
-                        // Undo create child position
-                        board[origin] = turn;
-                        board[target] = BLANK;
-
-                        row--;
-                        col++;
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            // Right-Down
-            if (originRow < sideLength && originCol < sideLength) {
-                int row = originRow + 1;
-                int col = originCol + 1;
-
-                while (row < sideLength && col < sideLength) {
-                    if (board[row * sideLength + col] == BLANK) {
-                        int target = row * sideLength + col;
-                        // Create child position
-                        board[origin] = BLANK;
-                        board[target] = turn;
-
-                        child = MallqueenschessGetCanonicalPosition(
-                            GenericHashHash(board, t));
-                        if (!PositionHashSetContains(&deduplication_set,
-                                                     child)) {
-                            PositionHashSetAdd(&deduplication_set, child);
-                            PositionArrayAppend(&canonicalChildren, child);
-                        }
-
-                        // Undo create child position
-                        board[origin] = turn;
-                        board[target] = BLANK;
-
-                        row++;
-                        col++;
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    PositionHashSetDestroy(&deduplication_set);
-    return canonicalChildren;
+    return GenericHashHash(canonBoard, 1);
 }
 
 static PositionArray MallqueenschessGetCanonicalParentPositions(

@@ -38,7 +38,7 @@
 #include "core/gamesman_types.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#define DEBUG 1
+#define DEBUG 0
 
 /* Game, Solver, and Gameplay API Functions */
 
@@ -510,15 +510,15 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
         case 1:  // Flying Rule
             gFlyRule = selection == 1;
             break;
-        case 3:  // Lasker Rule
+        case 2:  // Lasker Rule
             laskerRule = selection == 1;
             break;
-        case 4:  // Removal Rule
+        case 3:  // Removal Rule
             removalRule = selection;
             break;
-        case 5:  // BoardType
+        case 4:  // BoardType
             if (selection == 0) {
-                if (currentSelections[6] + 3 > 8) {
+                if (currentSelections[5] + 3 > 8) {
                     fprintf(stderr,
                             "MninemensmorrisSetVariantOption: Cannot use the "
                             "16-Board if each player has more than 8 pieces. "
@@ -547,8 +547,8 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
             }
             boardType = selection;
             break;
-        case 6:  // NumPiecesPerPlayer
-            if (currentSelections[5] == 0 && selection + 3 > 8) {
+        case 5:  // NumPiecesPerPlayer
+            if (currentSelections[4] == 0 && selection + 3 > 8) {
                 fprintf(stderr,
                         "MninemensmorrisSetVariantOption: Cannot have more "
                         "than 8 pieces per player if using the 16-Board. "
@@ -563,6 +563,7 @@ static int MninemensmorrisSetVariantOption(int option, int selection) {
             return 1;
     }
     currentSelections[option] = selection;
+    MninemensmorrisInit(NULL);
     return 0;
 }
 
