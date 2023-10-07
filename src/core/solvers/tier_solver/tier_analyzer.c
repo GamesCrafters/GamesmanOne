@@ -31,7 +31,7 @@ static PositionArray discovered;  // Newly discovered positions.
 
 static int AnalysisStatus(Tier tier);
 
-static bool Step0Initialize(Analysis *dest, Tier tier);
+static bool Step0Initialize(Analysis *dest);
 static TierArray GetCanonicalChildTiers(Tier tier);
 
 static bool Step1LoadDiscoveryMaps(void);
@@ -77,7 +77,7 @@ int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force) {
         }
     }
 
-    if (!Step0Initialize(dest, tier)) goto _bailout;
+    if (!Step0Initialize(dest)) goto _bailout;
     if (!Step1LoadDiscoveryMaps()) goto _bailout;
     if (!Step2LoadFringe()) goto _bailout;
     if (!Step3Discover(dest)) goto _bailout;
@@ -100,7 +100,7 @@ void TierAnalyzerFinalize(void) { current_api = NULL; }
 
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }
 
-static bool Step0Initialize(Analysis *dest, Tier tier) {
+static bool Step0Initialize(Analysis *dest) {
     this_tier_size = current_api->GetTierSize(this_tier);
     child_tiers = GetCanonicalChildTiers(this_tier);
     if (child_tiers.size < 0) return false;
@@ -118,6 +118,7 @@ static bool Step0Initialize(Analysis *dest, Tier tier) {
     memset(&this_tier_map, 0, sizeof(this_tier_map));
     child_tier_maps = NULL;
 
+    AnalysisInit(dest);
     AnalysisSetHashSize(dest, this_tier_size);
     return true;
 }

@@ -426,7 +426,6 @@ static int DiscoverTierTree(bool force) {
 
         // Analyze the canonical tier instead.
         Analysis tier_analysis;
-        AnalysisInit(&tier_analysis);
         int error = TierAnalyzerDiscover(&tier_analysis, canonical, force);
         if (error == 0) {
             // Analyzer succeeded.

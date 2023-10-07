@@ -15,14 +15,6 @@ static const TierPosition kIllegalTierPosition = {.tier = -1, .position = -1};
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
 
-static void PrintSummary(FILE *stream, const Analysis *analysis,
-                         bool canonical);
-static int WidthOf(int64_t n);
-static void PrintDashedLine(FILE *stream, int column_width, int num_headers);
-static int PrintSummaryHeader(FILE *stream, int column_width);
-static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
-                             int remoteness, int column_width, bool canonical);
-
 static void CountWin(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical);
 static void CountLose(Analysis *analysis, TierPosition tier_position,
@@ -36,6 +28,21 @@ static void AggregatePositions(Analysis *dest, const Analysis *src,
                                int remoteness);
 static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
                                         int remoteness);
+
+static void PrintSummary(FILE *stream, const Analysis *analysis,
+                         bool canonical);
+static int WidthOf(int64_t n);
+static void PrintDashedLine(FILE *stream, int column_width, int num_headers);
+static int PrintSummaryHeader(FILE *stream, int column_width);
+static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
+                             int remoteness, int column_width, bool canonical);
+static void PrintFirstSummaryLine(FILE *stream, ReadOnlyString format,
+                                  const Analysis *analysis, bool canonical);
+static void PrintLastSummaryLine(FILE *stream, ReadOnlyString format,
+                                 const Analysis *analysis, bool canonical);
+static void PrintSummaryLineHelper(FILE *stream, ReadOnlyString format,
+                                   const Analysis *analysis, int remoteness,
+                                   bool canonical);
 
 // -----------------------------------------------------------------------------
 
@@ -319,16 +326,21 @@ double AnalysisGetCanonicalDrawRatio(const Analysis *analysis) {
 
 void AnalysisPrintSummary(FILE *stream, const Analysis *analysis) {
     static const bool kPrintCanonical = false;
+    fprintf(stream, "Summary of all positions:\n");
     PrintSummary(stream, analysis, kPrintCanonical);
 }
 
 void AnalysisPrintCanonicalSummary(FILE *stream, const Analysis *analysis) {
     static const bool kPrintCanonical = true;
+    fprintf(stream, "\nSummary of canonical positions:\n");
     PrintSummary(stream, analysis, kPrintCanonical);
 }
 
-void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
+void AnalysisPrintStatistics(FILE *stream, const Analysis *analysis) {
+    // Hash size.
     fprintf(stream, "Hash size: %" PRId64 "\n", analysis->hash_size);
+
+    // Position counts.
     fprintf(stream, "Winning positions: %" PRId64 " (%" PRId64 " canonical)\n",
             analysis->win_count, analysis->canonical_win_count);
     fprintf(stream, "Losing positions: %" PRId64 " (%" PRId64 " canonical)\n",
@@ -337,22 +349,31 @@ void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
             analysis->tie_count, analysis->canonical_tie_count);
     fprintf(stream, "Drawing positions: %" PRId64 " (%" PRId64 " canonical)\n",
             analysis->draw_count, analysis->canonical_draw_count);
-    fprintf(stream, "Total moves: %" PRId64 "\n\n", analysis->move_count);
-    AnalysisPrintSummary(stream, analysis);
-    fprintf(stream, "\n");
-    AnalysisPrintCanonicalSummary(stream, analysis);
-    fprintf(stream, "\n");
+
+    // Move count.
+    fprintf(stream, "Total moves: %" PRId64 "\n", analysis->move_count);
+
+    // Average branching factor.
+    double branching_factor = AnalysisGetAverageBranchingFactor(analysis);
+    fprintf(stream, "Average branching factor: %f\n", branching_factor);
+}
+
+void AnalysisPrintPositionWithMostMoves(FILE *stream,
+                                        const Analysis *analysis) {
     fprintf(stream,
             "Position %" PRId64 " in tier %" PRId64
             " has the most number of available moves: %d\n",
             analysis->position_with_most_moves.position,
             analysis->position_with_most_moves.tier, analysis->max_num_moves);
+}
 
+void AnalysisPrintLargestRemotenesses(FILE *stream, const Analysis *analysis) {
     static ConstantReadOnlyString longest_position_format =
-        "Longest %s starts from position %" PRId64 " in tier %" PRId64
-        ", which is of remoteness %d\n";
+        "One longest %s starts from position %" PRId64 " in tier %" PRId64
+        ", which has remoteness %d\n";
     static ConstantReadOnlyString not_available_format =
         "No %s positions were found\n";
+
     if (analysis->largest_win_remoteness >= 0) {
         fprintf(stream, longest_position_format, "win",
                 analysis->longest_win_position.position,
@@ -379,118 +400,20 @@ void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
     } else {
         fprintf(stream, not_available_format, "tying");
     }
+}
+
+void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
+    AnalysisPrintStatistics(stream, analysis);
+    AnalysisPrintSummary(stream, analysis);
+    fprintf(stream, "\n");
+    AnalysisPrintCanonicalSummary(stream, analysis);
+    fprintf(stream, "\n");
+    AnalysisPrintPositionWithMostMoves(stream, analysis);
+    AnalysisPrintLargestRemotenesses(stream, analysis);
     fprintf(stream, "\n\n\n");
 }
 
 // -----------------------------------------------------------------------------
-
-static void PrintSummary(FILE *stream, const Analysis *analysis,
-                         bool canonical) {
-    int column_width = WidthOf(analysis->hash_size) + 1;
-    if (column_width < kInt32Base10StringLengthMax + 1) {
-        column_width = kInt32Base10StringLengthMax + 1;
-    }
-    int num_headers = PrintSummaryHeader(stream, column_width);
-    PrintDashedLine(stream, column_width, num_headers);
-    PrintSummaryLine(stream, analysis, kFirstLineReservedRemotness,
-                     column_width, canonical);
-    for (int remoteness = AnalysisGetLargestRemoteness(analysis);
-         remoteness >= 0; --remoteness) {
-        PrintSummaryLine(stream, analysis, remoteness, column_width, canonical);
-    }
-    PrintDashedLine(stream, column_width, num_headers);
-    PrintSummaryLine(stream, analysis, kLastLineReservedRemotness, column_width,
-                     canonical);
-    if (!canonical) {
-        fprintf(stream, "\n\tHash space: %" PRId64 " | Hash efficiency: %f\n",
-                analysis->hash_size, AnalysisGetHashEfficiency(analysis));
-    }
-}
-
-static int WidthOf(int64_t n) {
-    assert(n >= 0);
-    int width = 0;
-    do {
-        ++width;
-        n /= 10;
-    } while (n != 0);
-    return width;
-}
-
-static void PrintDashedLine(FILE *stream, int column_width, int num_headers) {
-    fprintf(stream, "\t");
-    for (int i = 0; i < num_headers; ++i) {
-        for (int j = 0; j < column_width; ++j) {
-            fprintf(stream, "-");
-        }
-    }
-    fprintf(stream, "---\n");
-}
-
-static int PrintSummaryHeader(FILE *stream, int column_width) {
-    static ReadOnlyString headers[] = {
-        "Remoteness", "Win", "Lose", "Tie", "Draw", "Total",
-    };
-    const int num_headers = sizeof(headers) / sizeof(headers[0]);
-
-    fprintf(stream, "\t");
-    for (int i = 0; i < num_headers; ++i) {
-        int spaces = column_width - strlen(headers[i]);
-        for (int j = 0; j < spaces; ++j) {
-            fprintf(stream, " ");
-        }
-        fprintf(stream, "%s", headers[i]);
-    }
-    fprintf(stream, "\n");
-    return num_headers;
-}
-
-static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
-                             int remoteness, int column_width, bool canonical) {
-    bool first_line = (remoteness == kFirstLineReservedRemotness);
-    bool last_line = (remoteness == kLastLineReservedRemotness);
-    char format[128];
-    sprintf(format,
-            "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
-            "%%%d" PRId64 "\n",
-            (last_line ? "-" : ""), column_width, column_width, column_width,
-            column_width, column_width, column_width);
-
-    if (first_line) {
-        int64_t draw_count =
-            canonical ? analysis->canonical_draw_count : analysis->draw_count;
-        fprintf(stream, format, "Inf", 0, 0, 0, draw_count, draw_count);
-    } else if (last_line) {
-        if (canonical) {
-            fprintf(stream, format, "Totals", analysis->canonical_win_count,
-                    analysis->canonical_lose_count,
-                    analysis->canonical_tie_count,
-                    analysis->canonical_draw_count,
-                    AnalysisGetNumCanonicalPositions(analysis));
-        } else {
-            fprintf(stream, format, "Totals", analysis->win_count,
-                    analysis->lose_count, analysis->tie_count,
-                    analysis->draw_count,
-                    AnalysisGetNumReachablePositions(analysis));
-        }
-    } else {
-        int64_t win_count, lose_count, tie_count;
-        if (canonical) {
-            win_count = analysis->canonical_win_summary[remoteness];
-            lose_count = analysis->canonical_lose_summary[remoteness];
-            tie_count = analysis->canonical_tie_summary[remoteness];
-        } else {
-            win_count = analysis->win_summary[remoteness];
-            lose_count = analysis->lose_summary[remoteness];
-            tie_count = analysis->tie_summary[remoteness];
-        }
-        int64_t total = win_count + lose_count + tie_count;
-        char remoteness_string[kInt32Base10StringLengthMax + 1];
-        sprintf(remoteness_string, "%d", remoteness);
-        fprintf(stream, format, remoteness_string, win_count, lose_count,
-                tie_count, 0, total);
-    }
-}
 
 static void CountWin(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical) {
@@ -608,4 +531,131 @@ static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
     if (dest->canonical_draw_example.tier == -1) {
         dest->canonical_draw_example = src->canonical_draw_example;
     }
+}
+
+static void PrintSummary(FILE *stream, const Analysis *analysis,
+                         bool canonical) {
+    int column_width = WidthOf(analysis->hash_size) + 1;
+    if (column_width < kInt32Base10StringLengthMax + 1) {
+        column_width = kInt32Base10StringLengthMax + 1;
+    }
+    int num_headers = PrintSummaryHeader(stream, column_width);
+    PrintDashedLine(stream, column_width, num_headers);
+    PrintSummaryLine(stream, analysis, kFirstLineReservedRemotness,
+                     column_width, canonical);
+    for (int remoteness = AnalysisGetLargestRemoteness(analysis);
+         remoteness >= 0; --remoteness) {
+        PrintSummaryLine(stream, analysis, remoteness, column_width, canonical);
+    }
+    PrintDashedLine(stream, column_width, num_headers);
+    PrintSummaryLine(stream, analysis, kLastLineReservedRemotness, column_width,
+                     canonical);
+    if (!canonical) {
+        fprintf(stream, "\n\tHash space: %" PRId64 " | Hash efficiency: %f\n",
+                analysis->hash_size, AnalysisGetHashEfficiency(analysis));
+    }
+}
+
+static int WidthOf(int64_t n) {
+    assert(n >= 0);
+    int width = 0;
+    do {
+        ++width;
+        n /= 10;
+    } while (n != 0);
+    return width;
+}
+
+static void PrintDashedLine(FILE *stream, int column_width, int num_headers) {
+    fprintf(stream, "\t");
+    for (int i = 0; i < num_headers; ++i) {
+        for (int j = 0; j < column_width; ++j) {
+            fprintf(stream, "-");
+        }
+    }
+    fprintf(stream, "---\n");
+}
+
+static int PrintSummaryHeader(FILE *stream, int column_width) {
+    static ReadOnlyString headers[] = {
+        "Remoteness", "Win", "Lose", "Tie", "Draw", "Total",
+    };
+    const int num_headers = sizeof(headers) / sizeof(headers[0]);
+
+    fprintf(stream, "\t");
+    for (int i = 0; i < num_headers; ++i) {
+        int spaces = column_width - strlen(headers[i]);
+        for (int j = 0; j < spaces; ++j) {
+            fprintf(stream, " ");
+        }
+        fprintf(stream, "%s", headers[i]);
+    }
+    fprintf(stream, "\n");
+    return num_headers;
+}
+
+static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
+                             int remoteness, int column_width, bool canonical) {
+    bool first_line = (remoteness == kFirstLineReservedRemotness);
+    bool last_line = (remoteness == kLastLineReservedRemotness);
+    char format[128];
+    sprintf(format,
+            "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
+            "%%%d" PRId64 "\n",
+            (last_line ? "-" : ""), column_width, column_width, column_width,
+            column_width, column_width, column_width);
+
+    if (first_line) {
+        PrintFirstSummaryLine(stream, format, analysis, canonical);
+    } else if (last_line) {
+        PrintLastSummaryLine(stream, format, analysis, canonical);
+    } else {
+        PrintSummaryLineHelper(stream, format, analysis, remoteness, canonical);
+    }
+}
+
+static void PrintFirstSummaryLine(FILE *stream, ReadOnlyString format,
+                                  const Analysis *analysis, bool canonical) {
+    int64_t draw_count;
+    if (canonical) {
+        draw_count = analysis->canonical_draw_count;
+    } else {
+        draw_count = analysis->draw_count;
+    }
+    fprintf(stream, format, "Inf", 0, 0, 0, draw_count, draw_count);
+}
+
+static void PrintLastSummaryLine(FILE *stream, ReadOnlyString format,
+                                 const Analysis *analysis, bool canonical) {
+    if (canonical) {
+        fprintf(stream, format, "Totals", analysis->canonical_win_count,
+                analysis->canonical_lose_count, analysis->canonical_tie_count,
+                analysis->canonical_draw_count,
+                AnalysisGetNumCanonicalPositions(analysis));
+    } else {
+        fprintf(stream, format, "Totals", analysis->win_count,
+                analysis->lose_count, analysis->tie_count, analysis->draw_count,
+                AnalysisGetNumReachablePositions(analysis));
+    }
+}
+
+static void PrintSummaryLineHelper(FILE *stream, ReadOnlyString format,
+                                   const Analysis *analysis, int remoteness,
+                                   bool canonical) {
+    int64_t win_count, lose_count, tie_count;
+    if (canonical) {
+        win_count = analysis->canonical_win_summary[remoteness];
+        lose_count = analysis->canonical_lose_summary[remoteness];
+        tie_count = analysis->canonical_tie_summary[remoteness];
+    } else {
+        win_count = analysis->win_summary[remoteness];
+        lose_count = analysis->lose_summary[remoteness];
+        tie_count = analysis->tie_summary[remoteness];
+    }
+
+    int64_t total = win_count + lose_count + tie_count;
+    char remoteness_string[kInt32Base10StringLengthMax + 1];
+    sprintf(remoteness_string, "%d", remoteness);
+    fprintf(stream, format, remoteness_string, win_count, lose_count, tie_count,
+            0, total);
 }

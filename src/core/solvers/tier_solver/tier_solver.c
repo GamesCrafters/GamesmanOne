@@ -133,15 +133,28 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api) {
+    int ret = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
-    if (!success) return -1;
-    DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
-    int error = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
-    if (error != 0) return error;
+    if (!success) goto _bailout;
 
-    error = StatManagerInit(game_name, variant);
-    if (error != 0) DbManagerFinalizeDb();
-    return error;
+    DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
+
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    if (ret != 0) goto _bailout;
+
+    ret = StatManagerInit(game_name, variant);
+    if (ret != 0) goto _bailout;
+
+    // Success.
+    ret = 0;
+
+_bailout:
+    if (ret != 0) {
+        DbManagerFinalizeDb();
+        StatManagerFinalize();
+        TierSolverFinalize();
+    }
+    return ret;
 }
 
 static int TierSolverFinalize(void) {
