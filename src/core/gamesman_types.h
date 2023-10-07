@@ -566,6 +566,9 @@ typedef struct GameplayApi {
      *
      * @note Required for ALL games. The gameplay system will reject the game if
      * this function is not implemented.
+     *
+     * @note Keep in mind that one must avoid letting a move string be one 
+     * of the following strings: "b", "q", "u", "v", as these are reserved.
      */
     int move_string_length_max;
 
@@ -577,6 +580,9 @@ typedef struct GameplayApi {
      *
      * @note Required for ALL games. The gameplay system will reject the game if
      * this function is not implemented.
+     * 
+     * @note Please avoid letting a move string be one of the following
+     * strings: "b", "q", "u", "v", as these are reserved.
      */
     int (*MoveToString)(Move move, char *buffer);
 
@@ -867,6 +873,7 @@ void MoveArrayDestroy(MoveArray *array);
 bool MoveArrayAppend(MoveArray *array, Move move);
 bool MoveArrayPopBack(MoveArray *array);
 bool MoveArrayContains(const MoveArray *array, Move move);
+void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *));
 
 void TierArrayInit(TierArray *array);
 void TierArrayDestroy(TierArray *array);

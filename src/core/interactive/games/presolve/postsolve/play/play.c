@@ -15,6 +15,9 @@
 
 static DbProbe probe;
 static bool solved;
+static int minRemotenessOfLoseChildren;
+static int minRemotenessOfTieChildren;
+static int maxRemotenessOfWinChildren;
 
 static Value ProbeValue(TierPosition tier_position) {
     TierPosition canonical =
@@ -85,6 +88,144 @@ static void PrintCurrentPosition(const Game *game) {
     printf("\n");
 }
 
+/**
+ * @brief This function relies on the extreme remoteness global
+ * variables being set and assumes a current-legal-moves-available
+ * context. Given the move's child positon's value and remoteness,
+ * output a number that serves to help rank this move among all
+ * currently available legal moves. The higher the number, the worse
+ * the move is. This is different from deltaRemoteness in that
+ * deltaRemoteness only provides a ranking among all moves of the
+ * same value, whereas this provides a ranking among all moves.
+*/
+int GetMoveRank(Value childValue, int remoteness) {
+    if (childValue == kLose) {
+        return remoteness - minRemotenessOfLoseChildren;
+    } else if (childValue == kTie) {
+        return remoteness - minRemotenessOfTieChildren + kRemotenessMax;
+    } else if (childValue == kDraw) {
+        return kRemotenessMax * 2;
+    } else if (childValue == kWin) {
+        return maxRemotenessOfWinChildren - remoteness + kRemotenessMax * 3;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * @brief Move Comparison helper function for PrintSortedMoveValues.
+ * Assuming m1 and m2 have the same value, return positive
+ * if m1 is better remoteness-wise, negative if m2 is better
+ * remoteness-wise, and 0 otherwise.
+ *
+ * @note If m1 and m2 have different values, this function
+ * will say that they're equal.
+ */
+int MoveCompare(const void * move1, const void * move2) {
+    Move m1 = *((Move*)move1);
+    Move m2 = *((Move*)move2);
+
+    TierPosition current = InteractiveMatchGetCurrentPosition();
+    TierPosition child1 = InteractiveMatchDoMove(current, m1);
+    TierPosition child2 = InteractiveMatchDoMove(current, m2);
+    Value value1 = ProbeValue(child1);
+    Value value2 = ProbeValue(child2);
+    int remoteness1 = ProbeRemoteness(child1);
+    int remoteness2 = ProbeRemoteness(child2);
+
+    return GetMoveRank(value1, remoteness1) - GetMoveRank(value2, remoteness2);
+}
+
+
+/**
+ * @brief Helper function for PrintSortedMoveValues.
+ */
+static void PrintMovesOfValue(const Game *game, MoveArray *moves,
+    TierPosition current, char *move_string, Value childValue) {
+    for (int64_t i = 0; i < moves->size; i++) {
+        TierPosition child = InteractiveMatchDoMove(current, moves->array[i]);
+        if (childValue == ProbeValue(child)) {
+            game->gameplay_api->MoveToString(moves->array[i], move_string);
+            if (childValue == kDraw) {
+                printf("\t\t\t\t%s\tDraw\n", move_string);
+            } else {
+                int remoteness = ProbeRemoteness(child);
+                printf("\t\t\t\t%s\t%d\n", move_string, remoteness);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Set the extreme child remoteness global variables by finding
+ * the extreme remotenesses of all child positions resulting from the
+ * moves to the passed in move array.
+ */
+void SetExtremeChildRemotenesses(TierPosition current, MoveArray *moves) {
+    // Initialize extreme remotenesses
+    minRemotenessOfLoseChildren = kRemotenessMax;
+    minRemotenessOfTieChildren = kRemotenessMax;
+    maxRemotenessOfWinChildren = 0;
+
+    for (int64_t i = 0; i < moves->size; i++) {
+        TierPosition child = InteractiveMatchDoMove(current, moves->array[i]);
+        int remoteness = ProbeRemoteness(child);
+        switch (ProbeValue(child)) {
+            case kWin:
+                if (remoteness > maxRemotenessOfWinChildren) {
+                    maxRemotenessOfWinChildren = remoteness;
+                }
+                break;
+            case kTie:
+                if (remoteness < minRemotenessOfTieChildren) {
+                    minRemotenessOfTieChildren = remoteness;
+                }
+                break;
+            case kLose:
+                if (remoteness < minRemotenessOfLoseChildren) {
+                    minRemotenessOfLoseChildren = remoteness;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+/**
+ * @brief Print moves in order sorted from best to worst. Value/remoteness
+ * sorted from best to worst is as follows: low-remoteness win,
+ * high-remoteness win, low-remoteness tie, high-remoteness tie, draw,
+ * high-remoteness lose, low-remoteness lose. Credit to @Jiong for original
+ * GamemsanClassic SortedMoveValues printout design.
+ */
+static bool PrintSortedMoveValues(const Game *game) {
+    int move_string_size = game->gameplay_api->move_string_length_max + 1;
+    char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
+
+    TierPosition current = InteractiveMatchGetCurrentPosition();
+    MoveArray moves = InteractiveMatchGenerateMoves();
+    SetExtremeChildRemotenesses(current, &moves);
+    MoveArraySort(&moves, MoveCompare);
+
+    printf("\n\t==========================================================\n");
+	printf("\n\t\tHere are the values of all possible moves:\n\n");
+	printf("\t\t\t\tMove \tRemoteness\n");
+	printf("\t\tWinning Moves:\n");
+    PrintMovesOfValue(game, &moves, current, move_string, kLose);
+	printf("\t\tTying Moves:\n");
+    PrintMovesOfValue(game, &moves, current, move_string, kTie);
+    PrintMovesOfValue(game, &moves, current, move_string, kDraw);
+	printf("\t\tLosing Moves:\n");
+    PrintMovesOfValue(game, &moves, current, move_string, kWin);
+    printf("\n\t==========================================================\n");
+    printf("\n");
+
+    free(move_string);
+    MoveArrayDestroy(&moves);
+    return true;
+}
+
 static bool IsBestChild(Value parent_value, int parent_remoteness,
                         Value child_value, int child_remoteness) {
     switch (parent_value) {
@@ -145,11 +286,19 @@ static bool PromptForAndProcessUserMove(const Game *game) {
 
     // Prompt for input.
     if (fgets(move_string, move_string_size + 1, stdin) == NULL) {
-        fprintf(stderr, "PlayTierGame: unexpcted fgets error. Aborting...\n");
+        fprintf(stderr, "PlayTierGame: unexpected fgets error. Aborting...\n");
         exit(EXIT_FAILURE);
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
+    if (strncmp(move_string, "v", 1) == 0) { // Print values for all moves.
+        if (solved) {
+            PrintSortedMoveValues(game);
+        } else {
+            printf("Game is not solved, so move values cannot be shown.\n");
+        }
+        return true;
+    }
     if (strncmp(move_string, "q", 1) == 0) GamesmanExit();  // Exit GAMESMAN.
     if (strncmp(move_string, "b", 1) == 0) return true;     // Exit game.
     if (strncmp(move_string, "u", 1) == 0) {
