@@ -37,7 +37,6 @@
 #include "core/misc.h"
 
 static const Database *current_db;
-static const Database *control_group_db;
 
 static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
@@ -128,10 +127,6 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
 void DbManagerFinalizeDb(void) {
     current_db->Finalize();
     current_db = NULL;
-    if (control_group_db != NULL) {
-        control_group_db->Finalize();
-        control_group_db = NULL;
-    }
 }
 
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
@@ -175,61 +170,3 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 }
 
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
-
-int DbManagerInitControlGroupDb(const Database *control,
-                                ReadOnlyString game_name, int variant,
-                                void *aux) {
-    if (control_group_db != NULL) control_group_db->Finalize();
-    control_group_db = NULL;
-
-    if (!BasicDbApiImplemented(control)) {
-        fprintf(stderr,
-                "DbManagerInitControlGroupDb: The %s does not have all the "
-                "required "
-                "functions implemented and cannot be used.\n",
-                control->formal_name);
-        return -1;
-    }
-    control_group_db = control;
-
-    char *path = SetupDbPath(control_group_db, game_name, variant);
-    return control_group_db->Init(game_name, variant, path, aux);
-}
-
-int DbManagerTestTier(Tier tier, int64_t size) {
-    DbProbe c_probe, t_probe;
-    control_group_db->ProbeInit(&c_probe);
-    current_db->ProbeInit(&t_probe);
-    int error = 0;
-
-    for (int64_t i = 0; i < size; ++i) {
-        TierPosition tier_position = {.tier = tier, .position = i};
-        Value c_value = control_group_db->ProbeValue(&c_probe, tier_position);
-        Value t_value = current_db->ProbeValue(&t_probe, tier_position);
-        if (c_value != t_value) {
-            printf("Inconsistent value at position %" PRId64 " in tier %" PRId64
-                   ". Control group value: %d, experimental group value: %d.\n",
-                   i, tier, c_value, t_value);
-            error = 1;
-            goto _bailout;
-        }
-
-        int c_rmt = control_group_db->ProbeRemoteness(&c_probe, tier_position);
-        int t_rmt = current_db->ProbeRemoteness(&t_probe, tier_position);
-        if (c_rmt != t_rmt) {
-            printf("Inconsistent remoteness at position %" PRId64
-                   " in tier %" PRId64
-                   ". Control group remoteness: %d, experimental group "
-                   "remoteness: %d.\n",
-                   i, tier, c_rmt, t_rmt);
-            error = 2;
-            goto _bailout;
-        }
-    }
-
-_bailout:
-    control_group_db->ProbeDestroy(&c_probe);
-    current_db->ProbeDestroy(&t_probe);
-    if (error == 0) printf("DbManagerTestTier: test passed\n");
-    return error;
-}

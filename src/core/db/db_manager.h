@@ -164,6 +164,4 @@ int DbManagerInitControlGroupDb(const Database *control,
                                 ReadOnlyString game_name, int variant,
                                 void *aux);
 
-int DbManagerTestTier(Tier tier, int64_t size);
-
 #endif  // GAMESMANEXPERIMENT_CORE_DB_DB_MANAGER_H_

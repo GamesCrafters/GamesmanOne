@@ -156,8 +156,6 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    DbManagerInitControlGroupDb(&kNaiveDb, game_name, variant, NULL);
-
     ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
     if (ret != 0) goto _bailout;
     
