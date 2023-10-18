@@ -65,6 +65,7 @@ void GenericHashReinitialize(void) {
         Int64HashMapDestroy(&manager.labels);
     }
     memset(&manager, 0, sizeof(manager));
+    Int64HashMapInit(&manager.labels, 0);
     multi_context_warning_shown = false;
 }
 
@@ -126,6 +127,11 @@ bool GenericHashUnhash(Position hash, char *board) {
     return GenericHashContextUnhash(&manager.contexts[0], hash, board);
 }
 
+int GenericHashGetTurn(Position hash) {
+    if (!ManagerCheckUniqueContext()) return -1;
+    return GenericHashContextGetTurn(&manager.contexts[0], hash);
+}
+
 // Multi-context hashing and unhashing functions.
 
 static int64_t ManagerGetContextIndex(int64_t context_label) {
@@ -153,4 +159,10 @@ bool GenericHashUnhashLabel(int64_t context_label, Position hash, char *board) {
     if (context_index < 0) return false;
     return GenericHashContextUnhash(&manager.contexts[context_index], hash,
                                     board);
+}
+
+int GenericHashGetTurnLabel(int64_t context_label, Position hash) {
+    int64_t context_index = ManagerGetContextIndex(context_label);
+    if (context_index < 0) return -1;
+    return GenericHashContextGetTurn(&manager.contexts[context_index], hash);
 }

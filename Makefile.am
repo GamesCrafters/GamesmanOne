@@ -7,12 +7,22 @@ noinst_PROGRAMS = bin/gamesman
 # Source file containing the main() function. 
 bin_gamesman_SOURCES = src/core/main.c
 
+# src/core/analysis
+bin_gamesman_SOURCES += src/core/analysis/analysis.c
+bin_gamesman_SOURCES += src/core/analysis/stat_manager.c
+
 # src/core/data_structures
+bin_gamesman_SOURCES += src/core/data_structures/bitstream.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_array.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_hash_map.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_queue.c
 
 # src/core/db
+bin_gamesman_SOURCES += src/core/db/bpdb/bparray.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_file.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_lite.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdb_probe.c
+bin_gamesman_SOURCES += src/core/db/bpdb/bpdict.c
 bin_gamesman_SOURCES += src/core/db/naivedb/naivedb.c
 bin_gamesman_SOURCES += src/core/db/db_manager.c
 
@@ -40,13 +50,13 @@ bin_gamesman_SOURCES += src/core/interactive/main_menu.c
 bin_gamesman_SOURCES += src/core/solvers/regular_solver/regular_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/frontier.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/reverse_graph.c
+bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_analyzer.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_manager.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_worker.c
 bin_gamesman_SOURCES += src/core/solvers/solver_manager.c
 
 # src/core
-bin_gamesman_SOURCES += src/core/analysis.c
 bin_gamesman_SOURCES += src/core/gamesman_headless.c
 bin_gamesman_SOURCES += src/core/gamesman_interactive.c
 bin_gamesman_SOURCES += src/core/gamesman_types.c
@@ -54,6 +64,10 @@ bin_gamesman_SOURCES += src/core/misc.c
 
 # src/games
 bin_gamesman_SOURCES += src/games/game_manager.c
+
+# src/libs
+bin_gamesman_SOURCES += src/libs/mgz/gz64.c
+bin_gamesman_SOURCES += src/libs/mgz/mgz.c
 
 # All Games
 bin_gamesman_SOURCES += src/games/mttt/mttt.c

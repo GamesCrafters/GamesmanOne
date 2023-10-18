@@ -215,7 +215,7 @@ bool GenericHashContextUnhash(GenericHashContext *context, Position hash,
  * value using the given Generic Hash CONTEXT.
  *
  * @return 1 if it's player 1's turn, 2 if it's player 2's turn. Returns the
- * predefined turn value if CONTEXT was initialized with a single-player.
+ * predefined turn value if CONTEXT was initialized with a single player.
  */
 int GenericHashContextGetTurn(GenericHashContext *context, Position hash);
 

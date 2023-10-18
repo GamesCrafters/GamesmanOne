@@ -1,5 +1,5 @@
 /**
- * @file regular_solver.h
+ * @file regular_solver.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
@@ -7,8 +7,8 @@
  * @details The Regular Solver is in fact the Tier Solver on a single tier in
  * disguise, and therefore, the Tier Solver Worker Module is used in this file.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,9 +36,12 @@
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // memset
 
+#include "core/analysis/stat_manager.h"
+#include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
+#include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 
@@ -48,6 +51,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api);
 static int RegularSolverFinalize(void);
 static int RegularSolverSolve(void *aux);
+static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
 static const SolverConfiguration *RegularSolverGetCurrentConfiguration(void);
 static int RegularSolverSetOption(int option, int selection);
@@ -62,6 +66,7 @@ const Solver kRegularSolver = {
     .Finalize = &RegularSolverFinalize,
 
     .Solve = &RegularSolverSolve,
+    .Analyze = &RegularSolverAnalyze,
     .GetStatus = &RegularSolverGetStatus,
 
     .GetCurrentConfiguration = &RegularSolverGetCurrentConfiguration,
@@ -147,9 +152,26 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api) {
+    int ret = -1;
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
-    if (!success) return -1;
-    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
+    if (!success) goto _bailout;
+
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    if (ret != 0) goto _bailout;
+    
+    ret = StatManagerInit(game_name, variant);
+    if (ret != 0) goto _bailout;
+
+    // Success.
+    ret = 0;
+
+_bailout:
+    if (ret != 0) {
+        DbManagerFinalizeDb();
+        StatManagerFinalize();
+        RegularSolverFinalize();
+    }
+    return ret;
 }
 
 static int RegularSolverFinalize(void) {
@@ -169,6 +191,19 @@ static int RegularSolverSolve(void *aux) {
 
     TierWorkerInit(&current_api);
     return TierWorkerSolve(kDefaultTier, force);
+}
+
+static int RegularSolverAnalyze(void *aux) {
+    bool force = (aux != NULL) && *((bool *)aux);
+    Analysis analysis;
+    TierAnalyzerInit(&current_api);
+    int error = TierAnalyzerDiscover(&analysis, kDefaultTier, force);
+    TierAnalyzerFinalize();
+    if (error != 0) {
+        fprintf(stderr, "RegularSolverAnalyze: failed with code %d\n", error);
+        return error;
+    }
+    return 0;
 }
 
 static int RegularSolverGetStatus(void) {

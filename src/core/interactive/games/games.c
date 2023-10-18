@@ -2,7 +2,6 @@
 
 #include <stdio.h>   // sprintf
 #include <stdlib.h>  // free
-#include <string.h>  // strncpy
 
 #include "core/gamesman_types.h"  // Game
 #include "core/interactive/automenu.h"
@@ -13,7 +12,7 @@
 static char **ListOfGamesAllocateItems(int num_items) {
     char **items = (char **)SafeMalloc(num_items * sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
-        items[i] = (char *)SafeMalloc(kGameFormalNameLengthMax);
+        items[i] = (char *)SafeMalloc(kGameFormalNameLengthMax + 1);
     }
     return items;
 }
@@ -52,7 +51,8 @@ void InteractiveGames(ReadOnlyString key) {
     char **keys = ListOfGamesAllocateKeys(num_items);
     HookFunctionPointer *hooks = ListOfGamesAllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        strncpy(items[i], all_games[i]->formal_name, kGameFormalNameLengthMax);
+        SafeStrncpy(items[i], all_games[i]->formal_name, kGameFormalNameLengthMax + 1);
+        items[i][kGameFormalNameLengthMax] = '\0';
         snprintf(keys[i], kKeyLengthMax, "%d", i);
         hooks[i] = &InteractivePresolve;
     }

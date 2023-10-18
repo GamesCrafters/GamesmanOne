@@ -188,6 +188,8 @@ static MoveArray MtttierGenerateMoves(TierPosition tier_position) {
     MoveArray moves;
     MoveArrayInit(&moves);
 
+    if (MtttierPrimitive(tier_position) != kUndecided) return moves;
+
     char board[9] = {0};
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     for (Move i = 0; i < 9; ++i) {

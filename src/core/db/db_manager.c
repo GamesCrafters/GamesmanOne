@@ -26,17 +26,17 @@
 
 #include "core/db/db_manager.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // strlen
+#include <inttypes.h>  // PRId64
+#include <stdbool.h>   // bool, true, false
+#include <stddef.h>    // NULL
+#include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // exit, EXIT_FAILURE
+#include <string.h>    // strlen
 
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 
 static const Database *current_db;
-static char *current_path;
 
 static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
@@ -70,62 +70,64 @@ static bool BasicDbApiImplemented(const Database *db) {
 }
 
 // Assumes current_db has been set.
-static bool SetupCurrentPath(ReadOnlyString game_name, int variant) {
+static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
+                         int variant) {
     // path = "data/<game_name>/<variant>/<db_name>/"
     static ConstantReadOnlyString kDataPath = "data";
+    char *path = NULL;
 
     int path_length = strlen(kDataPath) + 1;  // +1 for '/'.
     path_length += strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
-    path_length += strlen(current_db->name) + 1;
-    current_path = (char *)calloc((path_length + 1), sizeof(char));
-    if (current_path == NULL) {
-        fprintf(stderr, "SetupCurrentPath: failed to calloc current_path.\n");
-        return false;
+    path_length += strlen(db->name) + 1;
+    path = (char *)calloc((path_length + 1), sizeof(char));
+    if (path == NULL) {
+        fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
+        return NULL;
     }
-    int actual_length =
-        snprintf(current_path, path_length, "%s/%s/%d/%s/", kDataPath,
-                 game_name, variant, current_db->name);
+    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", kDataPath,
+                                 game_name, variant, db->name);
     if (actual_length >= path_length) {
         fprintf(stderr,
-                "SetupCurrentPath: (BUG) not enough space was allocated for "
-                "current_path. Please check the implementation of this "
-                "function.\n");
-        free(current_path);
-        current_path = NULL;
-        return false;
+                "SetupDbPath: (BUG) not enough space was allocated for path. "
+                "Please check the implementation of this function.\n");
+        free(path);
+        return NULL;
     }
-    if (MkdirRecursive(current_path) != 0) {
-        fprintf(
-            stderr,
-            "SetupCurrentPath: failed to create path in the file system.\n");
-        free(current_path);
-        current_path = NULL;
-        return false;
+    if (MkdirRecursive(path) != 0) {
+        fprintf(stderr,
+                "SetupDbPath: failed to create path in the file system.\n");
+        free(path);
+        return NULL;
     }
-    return true;
+    return path;
 }
 
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                     void *aux) {
     if (current_db != NULL) current_db->Finalize();
     current_db = NULL;
-    free(current_path);
 
     if (!BasicDbApiImplemented(db)) {
         fprintf(stderr,
                 "DbManagerInitDb: The %s does not have all the required "
                 "functions implemented and cannot be used.\n",
-                current_db->formal_name);
+                db->formal_name);
         return -1;
     }
     current_db = db;
 
-    SetupCurrentPath(game_name, variant);
-    return current_db->Init(game_name, variant, current_path, aux);
+    char *path = SetupDbPath(current_db, game_name, variant);
+    int error = current_db->Init(game_name, variant, path, aux);
+    free(path);
+
+    return error;
 }
 
-void DbManagerFinalizeDb(void) { current_db->Finalize(); }
+void DbManagerFinalizeDb(void) {
+    current_db->Finalize();
+    current_db = NULL;
+}
 
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
     return current_db->CreateSolvingTier(tier, size);
@@ -166,3 +168,5 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position) {
 int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
     return current_db->ProbeRemoteness(probe, tier_position);
 }
+
+int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }

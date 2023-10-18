@@ -210,6 +210,27 @@ TierPosition TierPositionArrayBack(const TierPositionArray *array) {
     return array->array[array->size - 1];
 }
 
+bool TierPositionArrayResize(TierPositionArray *array, int64_t size) {
+    if (size < 0) size = 0;
+
+    // Expand if necessary.
+    if (array->capacity < size) {
+        TierPosition *new_array =
+            (TierPosition *)realloc(array->array, size * sizeof(TierPosition));
+        if (new_array == NULL) return false;
+
+        array->array = new_array;
+        array->capacity = size;
+    }
+
+    for (int64_t i = array->size; i < size; ++i) {
+        array->array[i] = (TierPosition){.tier = -1, .position = -1};
+    }
+
+    array->size = size;
+    return true;
+}
+
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
     set->entries = NULL;
     set->capacity = 0;

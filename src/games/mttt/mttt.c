@@ -189,6 +189,7 @@ static Position MtttGetInitialPosition(void) { return 0; }
 static MoveArray MtttGenerateMoves(Position position) {
     MoveArray moves;
     MoveArrayInit(&moves);
+    if (MtttPrimitive(position) != kUndecided) return moves;
 
     BlankOX board[9] = {0};
     Unhash(position, board);

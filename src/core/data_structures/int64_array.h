@@ -106,4 +106,6 @@ bool Int64ArrayEmpty(const Int64Array *array);
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
+bool Int64ArrayResize(Int64Array *array, int64_t size);
+
 #endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_

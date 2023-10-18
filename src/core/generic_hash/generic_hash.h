@@ -12,8 +12,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash system for finite board games with fixed sets of pieces.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.01
+ * @date 2023-09-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -54,7 +54,7 @@ void GenericHashReinitialize(void);
  * context will be initialized and a turn bit will be added to the final hash
  * value to distinguish between 1st player's turn vs. 2nd player's turn; If set
  * to 1: initialize in 1st player only mode; If set to 2: initialize in 2nd
- * player only mode. E.g., this value should be set to 2 for the game of chess.
+ * player only mode. E.g., this value should be set to 0 for the game of chess.
  * @param board_size Size of the board. E.g., this value should be set to 9 for
  * the game to Tic-Tac-Toe.
  * @param pieces_init_array An integer array of the following format:
@@ -133,7 +133,19 @@ Position GenericHashHash(ReadOnlyString board, int turn);
  */
 bool GenericHashUnhash(Position hash, char *board);
 
-// -------------- Multi-context hashing and unhashing functions. --------------
+/**
+ * @brief Returns whose turn it is at the Position represented by the given HASH
+ * value using the only Generic Hash Context defined.
+ *
+ * @param hash Hash of the position.
+ * @return 1 if the HASHed position is player 1's turn, 2 if player 2's turn, or
+ * -1 if zero or more than one Generic Hash Context exists. Note that if the
+ * only context was initialized with a single player, this function will always
+ * return the predefined turn value passed into GenericHashAddContext().
+ */
+int GenericHashGetTurn(Position hash);
+
+// ------------------------- Multi-context functions. -------------------------
 
 /**
  * @brief Returns the number of positions in the Generic Hash Context with label
@@ -174,5 +186,18 @@ Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
  * Position range of the Generic Hash Context selected.
  */
 bool GenericHashUnhashLabel(int64_t context_label, Position hash, char *board);
+
+/**
+ * @brief Returns whose turn it is at the Position represented by the given HASH
+ * value using the Generic Hash Context with label CONTEXT_LABEL.
+ *
+ * @param context_label Label of the Generic Hash Context to use.
+ * @param hash Hash of the position.
+ * @return 1 if the HASHed position is player 1's turn, 2 if player 2's turn, or
+ * -1 if CONTEXT_LABEL is invalid. Note that if the Generic Hash Context was
+ * initialized with a single player, this function will always return the
+ * predefined turn value passed into GenericHashAddContext().
+ */
+int GenericHashGetTurnLabel(int64_t context_label, Position hash);
 
 #endif  // GAMESMANEXPERIMENT_CORE_GENERIC_HASH_GENERIC_HASH_H_

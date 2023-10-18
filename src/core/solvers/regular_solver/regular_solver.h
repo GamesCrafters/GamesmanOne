@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declaration of the Regular Solver API.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

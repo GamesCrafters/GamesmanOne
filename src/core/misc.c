@@ -26,18 +26,23 @@
 
 #include "core/misc.h"
 
-#include <assert.h>     // assert
-#include <errno.h>      // errno
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, INT64_MAX
-#include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
-#include <string.h>     // strlen, strncpy
-#include <sys/stat.h>   // mkdir, struct stat
+#include <assert.h>    // assert
+#include <errno.h>     // errno
+#include <fcntl.h>     // open
+#include <inttypes.h>  // PRId64, PRIu64
+#include <stdbool.h>   // bool, true, false
+#include <stddef.h>    // size_t
+#include <stdint.h>    // int64_t, uint64_t, INT64_MAX, uint8_t
+#include <stdio.h>     // fprintf, stderr, FILE
+#include <stdlib.h>    // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
+#include <string.h>    // strlen, strncpy
+#include <sys/stat.h>  // mkdir, struct stat
 #include <sys/types.h>  // mode_t
+#include <unistd.h>     // close
+#include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 
 #include "core/gamesman_types.h"
+#include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
@@ -75,6 +80,190 @@ void *SafeCalloc(size_t n, size_t size) {
         exit(EXIT_FAILURE);
     }
     return ret;
+}
+
+char *SafeStrncpy(char *dest, const char *src, size_t n) {
+    char *ret = strncpy(dest, src, n);
+    dest[n - 1] = '\0';
+    return ret;
+}
+
+void *GenericPointerAdd(const void *p, int64_t offset) {
+    return (void *)((uint8_t *)p + offset);
+}
+
+FILE *GuardedFopen(const char *filename, const char *modes) {
+    FILE *f = fopen(filename, modes);
+    if (f == NULL) perror("fopen");
+    return f;
+}
+
+int GuardedFclose(FILE *stream) {
+    int error = fclose(stream);
+    if (error != 0) perror("fclose");
+
+    return error;
+}
+
+int BailOutFclose(FILE *stream, int error) {
+    int fclose_error = fclose(stream);
+    if (fclose_error != 0) perror("fclose");
+
+    return error;
+}
+
+int GuardedFseek(FILE *stream, long off, int whence) {
+    int error = fseek(stream, off, whence);
+    if (error != 0) perror("fseek");
+
+    return error;
+}
+
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream) {
+    size_t items_read = fread(ptr, size, n, stream);
+    if (items_read == n) return 0;
+    if (feof(stream)) {
+        fprintf(
+            stderr,
+            "GuardedFread: end-of-file reached before reading %zd items, only "
+            "%zd items were actually read\n",
+            n, items_read);
+        return 2;
+    } else if (ferror(stream)) {
+        fprintf(stderr, "GuardedFread: fread() error\n");
+        return 3;
+    }
+    NotReached("GuardedFread: unknown error occurred during fread()");
+    return 4;
+}
+
+int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream) {
+    if (fwrite(ptr, size, n, stream) != n) {
+        perror("fwrite");
+        return errno;
+    }
+    return 0;
+}
+
+int GuardedOpen(const char *filename, int flags) {
+    int fd = open(filename, flags);
+    if (fd == -1) perror("open");
+
+    return fd;
+}
+
+int GuardedClose(int fd) {
+    int error = close(fd);
+    if (error == -1) perror("close");
+
+    return error;
+}
+
+int BailOutClose(int fd, int error) {
+    int new_error = close(fd);
+    if (new_error == -1) perror("close");
+
+    return error;
+}
+
+int GuardedLseek(int fd, off_t offset, int whence) {
+    off_t sought = lseek(fd, offset, whence);
+    if (sought != offset) {
+        perror("lseek");
+        return -1;
+    }
+
+    return 0;
+}
+
+gzFile GuardedGzopen(const char *path, const char *mode) {
+    gzFile file = gzopen(path, mode);
+    if (file == Z_NULL) perror("gzopen");
+    
+    return file;
+}
+
+gzFile GuardedGzdopen(int fd, const char *mode) {
+    gzFile file = gzdopen(fd, mode);
+    if (file == Z_NULL) perror("gzdopen");
+
+    return file;
+}
+
+int GuardedGzclose(gzFile file) {
+    int error = gzclose(file);
+    if (error != Z_OK) perror("gzclose");
+
+    return error;
+}
+
+int BailOutGzclose(gzFile file, int error) {
+    int new_error = gzclose(file);
+    if (new_error != Z_OK) perror("gzclose");
+
+    return error;
+}
+
+int GuardedGzseek(gzFile file, off_t off, int whence) {
+    off_t sought = gzseek(file, off, whence);
+    if (sought != off) {
+        perror("gzseek");
+        return -1;
+    }
+
+    return 0;
+}
+
+int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
+    int bytes_read = gzread(file, buf, length);
+    if ((unsigned int)bytes_read == length) return 0;
+
+    int error;
+    if (gzeof(file)) {
+        if (eof_ok) return 0;
+        fprintf(
+            stderr,
+            "GuardedGzread: end-of-file reached before reading %d bytes, only "
+            "%d bytes were actually read\n",
+            (int)length, bytes_read);
+        return 2;
+    } else if (gzerror(file, &error)) {
+        fprintf(stderr, "GuardedGzread: gzread() error code %d\n", error);
+        return 3;
+    }
+    NotReached("GuardedGzread: unknown error occurred during gzread()");
+    return 4;
+}
+
+int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok) {
+    int64_t bytes_read = gz64_read(file, buf, length);
+    if ((uint64_t)bytes_read == length) return 0;
+
+    int error;
+    if (gzeof(file)) {
+        if (eof_ok) return 0;
+        fprintf(stderr,
+                "GuardedGz64Read: end-of-file reached before reading %" PRIu64
+                " bytes, only %" PRId64 " bytes were actually read\n",
+                length, bytes_read);
+        return 2;
+    } else if (gzerror(file, &error)) {
+        fprintf(stderr, "GuardedGz64Read: gzread() error code %d\n", error);
+        return 3;
+    }
+    NotReached("GuardedGz64Read: unknown error occurred during gzread()");
+    return 4;
+}
+
+int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
+    int bytes_written = gzwrite(file, buf, len);
+    if ((unsigned int)bytes_written < len) {
+        int error;
+        gzerror(file, &error);
+        fprintf(stderr, "GuardedGzwrite: failed with code %d\n", error);
+        return error;
+    }
+    return 0;
 }
 
 /**
@@ -128,7 +317,7 @@ int MkdirRecursive(ReadOnlyString path) {
         errno = ENOMEM;
         goto _bailout;
     }
-    strncpy(path_copy, path, path_length + 1);
+    SafeStrncpy(path_copy, path, path_length + 1);
 
     for (size_t i = 0; i < path_length; ++i) {
         if (path_copy[i] == '/') {
@@ -170,6 +359,12 @@ int64_t NextPrime(int64_t n) {
         ++n;
     }
     return n;
+}
+
+int64_t NextMultiple(int64_t n, int64_t multiple) {
+    int64_t remainder = n % multiple;
+    if (remainder == 0) return n;
+    return n + multiple - remainder;
 }
 
 int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
@@ -228,3 +423,5 @@ int64_t NChooseR(int n, int r) {
 }
 #undef CACHE_ROWS
 #undef CACHE_COLS
+
+int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }

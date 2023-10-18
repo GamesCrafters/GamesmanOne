@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Tier Solver.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,6 +35,8 @@
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
 
+#include "core/analysis/stat_manager.h"
+#include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_types.h"
@@ -46,6 +48,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api);
 static int TierSolverFinalize(void);
 static int TierSolverSolve(void *aux);
+static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
 static const SolverConfiguration *TierSolverGetCurrentConfiguration(void);
 static int TierSolverSetOption(int option, int selection);
@@ -60,6 +63,7 @@ const Solver kTierSolver = {
     .Finalize = &TierSolverFinalize,
 
     .Solve = &TierSolverSolve,
+    .Analyze = &TierSolverAnalyze,
     .GetStatus = &TierSolverGetStatus,
 
     .GetCurrentConfiguration = &TierSolverGetCurrentConfiguration,
@@ -117,6 +121,8 @@ static bool SetCurrentApi(const TierSolverApi *api);
 // Default API functions
 
 static Tier DefaultGetCanonicalTier(Tier tier);
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric);
 static Position DefaultGetCanonicalPosition(TierPosition tier_position);
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
@@ -127,12 +133,30 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api) {
+    int ret = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
-    if (!success) return -1;
-    return DbManagerInitDb(&kNaiveDb, game_name, variant, NULL);
+    if (!success) goto _bailout;
+
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    if (ret != 0) goto _bailout;
+
+    ret = StatManagerInit(game_name, variant);
+    if (ret != 0) goto _bailout;
+
+    // Success.
+    ret = 0;
+
+_bailout:
+    if (ret != 0) {
+        DbManagerFinalizeDb();
+        StatManagerFinalize();
+        TierSolverFinalize();
+    }
+    return ret;
 }
 
 static int TierSolverFinalize(void) {
+    DbManagerFinalizeDb();
     memset(&default_api, 0, sizeof(default_api));
     memset(&current_api, 0, sizeof(current_api));
     memset(&current_config, 0, sizeof(current_config));
@@ -143,9 +167,13 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverSolve(void *aux) {
-    bool force = false;
-    if (aux != NULL) force = *((bool *)aux);
+    bool force = (aux != NULL) && *((bool *)aux);
     return TierManagerSolve(&current_api, force);
+}
+
+static int TierSolverAnalyze(void *aux) {
+    bool force = (aux != NULL) && *((bool *)aux);
+    return TierManagerAnalyze(&current_api, force);
 }
 
 static int TierSolverGetStatus(void) {
@@ -231,7 +259,8 @@ static void ToggleTierSymmetryRemoval(bool on) {
             default_api.GetPositionInSymmetricTier;
     } else {
         current_api.GetCanonicalTier = &DefaultGetCanonicalTier;
-        current_api.GetPositionInSymmetricTier = NULL;
+        current_api.GetPositionInSymmetricTier =
+            &DefaultGetPositionInSymmetricTier;
     }
 }
 
@@ -296,6 +325,12 @@ static bool SetCurrentApi(const TierSolverApi *api) {
 // Default API functions
 
 static Tier DefaultGetCanonicalTier(Tier tier) { return tier; }
+
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric) {
+    (void)symmetric;  // Unused.
+    return tier_position.position;
+}
 
 static Position DefaultGetCanonicalPosition(TierPosition tier_position) {
     return tier_position.position;

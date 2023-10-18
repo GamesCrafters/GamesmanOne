@@ -69,14 +69,13 @@ typedef int64_t Move;
  * @note Always make sure that kUndecided is 0 as other components rely on this
  * assumption.
  */
-typedef enum {
+typedef enum Value {
     kErrorValue = -1,
     kUndecided = 0,
     kLose,
     kDraw,
     kTie,
     kWin,
-    kNumValues,  /**< The number of valid Values. */
 } Value;
 
 /**
@@ -169,6 +168,7 @@ typedef enum GamesmanTypesLimits {
      * this value is not large enough for a game in the future.
      */
     kRemotenessMax = 1023,
+    kNumRemotenesses = 1024,
     kDbNameLengthMax = 31,
     kDbFormalNameLengthMax = 63,
     kSolverOptionNameLengthMax = 63,
@@ -188,6 +188,19 @@ typedef struct DbProbe {
     int64_t begin;
     int64_t size;
 } DbProbe;
+
+typedef enum DatabaseTierStatus {
+    kDbTierSolved,
+    kDbTierCorrupted,
+    kDbTierMissing,
+    kDbTierCheckError,
+} DatabaseTierStatus;
+
+typedef enum AnalysisTierStatus {
+    kAnalysisTierAnalyzed,
+    kAnalysisTierUnanalyzed,
+    kAnalysisTierCheckError,
+} AnalysisTierStatus;
 
 /**
  * @brief Generic Tier Database type.
@@ -332,6 +345,8 @@ typedef struct Database {
      * -1 if TIER_POSITION is not found.
      */
     int (*ProbeRemoteness)(DbProbe *probe, TierPosition tier_position);
+
+    int (*TierStatus)(Tier tier);
 } Database;
 
 /** @brief Solver option for display in GAMESMAN interactive mode. */
@@ -365,8 +380,7 @@ typedef struct SolverConfiguration {
 /**
  * @brief Generic Solver type.
  * @note To implement a new Solver module, correctly set the name of the new
- * Solver and set each member function pointer to a function specific to the
- * module.
+ * Solver and set each member function pointer to a module-specific function.
  *
  * @note A Solver can either be a regular solver or a tier solver. The actual
  * behavior and requirements of the solver is decided by the Solver and
@@ -405,12 +419,19 @@ typedef struct Solver {
     int (*Finalize)(void);
 
     /**
-     * @brief Runs the solver to solve the current game. Also stores the result
-     * if a Database is set for the current Solver.
+     * @brief Solves the current game and stores the result if a Database is set
+     * for the current Solver.
      *
      * @param aux Auxiliary parameter.
      */
     int (*Solve)(void *aux);
+
+    /**
+     * @brief Analyzes the current game.
+     *
+     * @param aux Auxiliary parameter.
+     */
+    int (*Analyze)(void *aux);
 
     /**
      * @brief Returns the solving status of the current game.
@@ -455,14 +476,14 @@ typedef struct GameVariantOption {
  * responsible for providing the possible choices for each one of the variant
  * options as strings (see GameVariantOption::choices). The user of GAMESMAN
  * interactive can then set the variant by selecting a value for each option
- * using the game-specific SetVariantOption().
+ * using the game-specific SetVariantOption method.
  *
  * @example A Tic-Tac-Toe game can be generalized and played on a M by N board
  * with a goal of connecting K pieces in a row. Then, we can have three game
  * variant options "dimension M", "dimension N", and "number of pieces to
  * connect (K)." A board too small can make the game less interesting, whereas a
  * board too large can render the game unsolvable. Therefore, the game developer
- * decides to allow M, N, and K to all be in the range [2, 5], and sets the
+ * decides to allow M, N, and K to be all within the range [2, 5], and sets the
  * corresponding choices to {"2", "3", "4", "5"}, for each one of the three
  * GameVariantOptions.
  */
@@ -837,6 +858,10 @@ typedef enum IntBase10StringLengthLimits {
     kUint64Base10StringLengthMax = 20,
 } IntBase10StringLengthLimits;
 
+typedef enum CommonConstants {
+    kBitsPerByte = 8,
+} CommonConstants;
+
 // GAMESMAN Types Related Accessor and Mutator Functions.
 
 void PositionArrayInit(PositionArray *array);
@@ -896,6 +921,7 @@ void TierPositionArrayDestroy(TierPositionArray *array);
 bool TierPositionArrayAppend(TierPositionArray *array,
                              TierPosition tier_position);
 TierPosition TierPositionArrayBack(const TierPositionArray *array);
+bool TierPositionArrayResize(TierPositionArray *array, int64_t size);
 
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 void TierPositionHashSetDestroy(TierPositionHashSet *set);

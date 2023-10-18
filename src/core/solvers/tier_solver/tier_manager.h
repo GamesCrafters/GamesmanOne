@@ -14,8 +14,8 @@
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -42,7 +42,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 
 /**
- * @brief Creates and solves the entire tier tree.
+ * @brief Creates and solves the tier tree.
  *
  * @param api Tier solver API functions implemented by the current Game.
  * @param force If set to true, the solver will solve each tier regardless of
@@ -51,5 +51,17 @@
  * @return 0 on success, non-zero error code otherwise.
  */
 int TierManagerSolve(const TierSolverApi *api, bool force);
+
+/**
+ * @brief Creates and analyzes the tier tree.
+ *
+ * @param api Tier solver API functions implemented by the current Game.
+ * @param force If set to true, the analyzer will analyze each tier regardless
+ * of the current analysis status. Otherwise, the analyzing stage is skipped if
+ * Tier Manager believes that the given tier has been correctly analyzed
+ * already.
+ * @return 0 on success, non-zero error code otherwise.
+ */
+int TierManagerAnalyze(const TierSolverApi *api, bool force);
 
 #endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
