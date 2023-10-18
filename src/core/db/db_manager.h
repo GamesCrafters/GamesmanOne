@@ -35,13 +35,14 @@
  * @brief Initializes the database system and load the chosen DB module.
  *
  * @note This function must be called before any of the other DbManager
- * functions are used. Otherwise, it results in undefined behavior.
+ * functions are used. Otherwise, calling those functions will result in
+ * undefined behavior.
  *
  * @param db DB to use.
  * @param game_name Internal name of the game.
- * @param variant Index of the game variant as an int.
+ * @param variant Index of the game variant as an integer.
  * @param aux Auxiliary parameter.
- * @return int 0 on success, non-zero otherwise.
+ * @return 0 on success, non-zero otherwise.
  */
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                     void *aux);
