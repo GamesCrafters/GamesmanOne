@@ -29,6 +29,10 @@
 #include <stdint.h>
 #include <zlib.h>
 
+/**
+ * @brief Same behavior as gzread, except accepting a 64-bit unsigned integer
+ * value as length.
+ */
 int64_t gz64_read(gzFile file, voidp buf, uint64_t len);
 
 #endif  // GZ64_H

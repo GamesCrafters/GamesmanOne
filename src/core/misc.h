@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declaration of miscellaneous utility functions.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,7 +29,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <stdint.h>   // int64_t, uint64_t
 #include <stdio.h>    // FILE
 #include <zlib.h>     // gzFile
 
@@ -51,44 +51,193 @@ void *SafeMalloc(size_t size);
  */
 void *SafeCalloc(size_t n, size_t size);
 
+/**
+ * @brief Same behavior as strncpy if the end of SRC is found before N
+ * characters are copied. Otherwise, copies N-1 characters from SRC to DEST and
+ * terminates DEST with a null-terminator. Therefore, DEST will always be a null
+ * terminated C string.
+ *
+ * @param dest Destination buffer, which is assumed to be of size at least N.
+ * @param src Source buffer.
+ * @param n Number of characters to copy into DEST.
+ * @return DEST.
+ */
 char *SafeStrncpy(char *dest, const char *src, size_t n);
 
+/**
+ * @brief Adds the given byte OFFSET to the given generic pointer P. Return
+ * value is equivalent to (void *)((uint8_t *)P + offset)).
+ *
+ * @param p Generic pointer.
+ * @param offset Byte offset.
+ * @return Shifted pointer (void *)((uint8_t *)P + offset)).
+ */
 void *GenericPointerAdd(const void *p, int64_t offset);
 
+/**
+ * @brief Same behavior as fopen on success; calls perror and returns NULL
+ * otherwise.
+ */
 FILE *GuardedFopen(const char *filename, const char *modes);
 
+/**
+ * @brief Same behavior as fclose on success; calls perror and returns a
+ * non-zero error code otherwise.
+ */
 int GuardedFclose(FILE *stream);
 
+/**
+ * @brief Calls fclose on STREAM and returns error.
+ * @details This function is typically called when an error occurred in the
+ * middle of a function call and the function needs to close the given STREAM
+ * before returning. This function will close the STREAM, and return the ERROR
+ * code so that the caller of this function can save one line of code by
+ * writting "return BailOutFclose(stream, error);" as the return statement,
+ * instead of "fclose(stream); return error;".
+ *
+ * @param stream FILE to close.
+ * @param error Error code to be returned by this function.
+ * @return ERROR.
+ */
 int BailOutFclose(FILE *stream, int error);
 
+/**
+ * @brief Same behavior as fseek on success; calls perror and returns the error
+ * code returned by fseek, which is always -1.
+ * @link https://man7.org/linux/man-pages/man3/fseek.3.html
+ */
 int GuardedFseek(FILE *stream, long off, int whence);
 
+/**
+ * @brief Calls fread and returns 0 on success; prints out the error occurred
+ * and returns a non-zero error code otherwise.
+ * @details The fread function never sets errno and therefore perror does not
+ * generate helpful error messages.
+ * @link https://man7.org/linux/man-pages/man3/fread.3.html
+ *
+ * @return 0 on success; returns 2 if EOF is reached before N items are read, or
+ * 3 if there is an error with STREAM.
+ */
 int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream);
 
+/**
+ * @brief Calls fwrite and returns 0 on success; calls perror and returns errno
+ * otherwise.
+ */
 int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream);
 
+/**
+ * @brief Same behavior as open on success; calls perror and returns -1
+ * otherwise.
+ * @link https://man7.org/linux/man-pages/man2/open.2.html
+ */
 int GuardedOpen(const char *filename, int flags);
 
+/**
+ * @brief Same behavior as close on success; calls perror and returns -1
+ * otherwise.
+ * @link https://man7.org/linux/man-pages/man2/close.2.html
+ */
 int GuardedClose(int fd);
 
+/**
+ * @brief Calls close on FD and returns error.
+ * @details This function is typically called when an error occurred in the
+ * middle of a function call and the function needs to close the given FD before
+ * returning. This function will close the FD, and return the ERROR code so
+ * that the caller of this function can save one line of code by writting
+ * "return BailOutClose(fd, error);" as the return statement, instead of
+ * "close(fd); return error;".
+ *
+ * @param fd File descriptor to close.
+ * @param error Error code to be returned by this function.
+ * @return ERROR.
+ */
 int BailOutClose(int fd, int error);
 
+/**
+ * @brief Calls lseek and returns 0 if the value returned by lseek matches
+ * OFFSET; calls perror and returns -1 otherwise.
+ * @link https://man7.org/linux/man-pages/man2/lseek.2.html
+ */
 int GuardedLseek(int fd, off_t offset, int whence);
 
+/**
+ * @brief Same behavior as gzopen on success; calls perror and returns Z_NULL
+ * otherwise.
+ */
 gzFile GuardedGzopen(const char *path, const char *mode);
 
+/**
+ * @brief Same behavior as gzdopen on success; calls perror and returns Z_NULL
+ * otherwise.
+ */
 gzFile GuardedGzdopen(int fd, const char *mode);
 
+/**
+ * @brief Same behavior as gzclose on success; calls perror and returns the
+ * non-zero error code returned by gzclose otherwise.
+ */
 int GuardedGzclose(gzFile file);
 
+/**
+ * @brief Calls gzclose on FILE and returns error.
+ * @details This function is typically called when an error occurred in the
+ * middle of a function call and the function needs to close the given FILE
+ * before returning. This function will close the FILE, and return the ERROR
+ * code so that the caller of this function can save one line of code by
+ * writting "return BailOutGzclose(file, error);" as the return statement,
+ * instead of "gzclose(file); return error;".
+ *
+ * @param file gzFile to close.
+ * @param error Error code to be returned by this function.
+ * @return ERROR.
+ */
 int BailOutGzclose(gzFile file, int error);
 
+/**
+ * @brief Calls gzseek and returns 0 if the value returned by gzseek matches
+ * OFF; calls perror and returns -1 otherwise.
+ */
 int GuardedGzseek(gzFile file, off_t off, int whence);
 
+/**
+ * @brief Calls gzread with the given FILE, BUF, and LENGTH and returns 0 if the
+ * correct number of bytes are read or EOF_OK is set to true; returns a non-zero
+ * error code otherwise.
+ *
+ * @param file Source gzFile.
+ * @param buf Destination buffer, which is assumed to be of size at least LENGTH
+ * bytes.
+ * @param length Number of uncompressed bytes to read from FILE.
+ * @param eof_ok Whether end-of-file is accepted as no error. Set this to false
+ * if you expect FILE to contain at least LENGTH bytes of uncompressed data.
+ * @return 0 on success, 2 if EOF_OK is set to false and EOF is reached before
+ * LENGTH bytes are read, or 3 if gzerror returns an error on FILE.
+ */
 int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
 
+/**
+ * @brief Calls gz64_read with the given FILE, BUF, and LENGTH and returns 0 if
+ * the correct number of bytes are read or EOF_OK is set to true; returns a
+ * non-zero error code otherwise.
+ *
+ * @param file Source gzFile.
+ * @param buf Destination buffer, which is assumed to be of size at least LENGTH
+ * bytes.
+ * @param length Number of uncompressed bytes to read from FILE.
+ * @param eof_ok Whether end-of-file is accepted as no error. Set this to false
+ * if you expect FILE to contain at least LENGTH bytes of uncompressed data.
+ * @return 0 on success, 2 if EOF_OK is set to false and EOF is reached before
+ * LENGTH bytes are read, or 3 if gzerror returns an error on FILE.
+ */
 int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok);
 
+/**
+ * @brief Calls gzwrite with the given FILE, BUF, and LEN and returns 0 if the
+ * correct number of bytes are written; returns the error value returned by
+ * gzerror otherwise.
+ */
 int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len);
 
 /**
@@ -134,6 +283,10 @@ int64_t PrevPrime(int64_t n);
  */
 int64_t NextPrime(int64_t n);
 
+/**
+ * @brief Returns the next multiple of MULTIPLE starting from N. Returns
+ * N if N is a multiple of MULTIPLE.
+ */
 int64_t NextMultiple(int64_t n, int64_t multiple);
 
 /**
@@ -158,6 +311,10 @@ int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
  */
 int64_t NChooseR(int n, int r);
 
+/**
+ * @brief Returns N / D if D divides N; returns N / D + 1 otherwise.
+ * @warning D must not be 0.
+ */
 int64_t RoundUpDivide(int64_t n, int64_t d);
 
 #endif  // GAMESMANEXPERIMENT_CORE_MISC_H_
