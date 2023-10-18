@@ -42,6 +42,7 @@ static bool Step2LoadFringe(void);
 static bool Step3Discover(Analysis *dest);
 static TierPositionArray GetChildPositions(TierPosition tier_position,
                                            Analysis *dest);
+static bool IsCanonicalPosition(TierPosition tier_position);
 static bool DiscoverHelper(Analysis *dest);
 static bool DiscoverHelperProcessThisTier(Position child);
 static bool DiscoverHelperProcessChildTier(TierPosition child);
@@ -62,7 +63,7 @@ void TierAnalyzerInit(const TierSolverApi *api) { current_api = api; }
 
 int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force) {
     int ret = -1;
-    
+
     this_tier = tier;
     if (current_api == NULL) goto _bailout;
     if (!force) {
@@ -273,15 +274,25 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     MoveArray moves = current_api->GenerateMoves(tier_position);
     if (moves.size < 0) return ret;
 
-    AnalysisDiscoverMoves(dest, tier_position, moves.size);
-
     TierPositionArrayInit(&ret);
+    int num_canonical_children = 0;
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = current_api->DoMove(tier_position, moves.array[i]);
         TierPositionArrayAppend(&ret, child);
+        num_canonical_children += IsCanonicalPosition(child);
     }
+    // Using multiplication to avoid branching.
+    int num_canonical_moves =
+        num_canonical_children * IsCanonicalPosition(tier_position);
+    AnalysisDiscoverMoves(dest, tier_position, moves.size, num_canonical_moves);
     MoveArrayDestroy(&moves);
+
     return ret;
+}
+
+static bool IsCanonicalPosition(TierPosition tier_position) {
+    return current_api->GetCanonicalPosition(tier_position) ==
+           tier_position.position;
 }
 
 static bool Step4SaveChildMaps(void) {

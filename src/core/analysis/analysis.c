@@ -103,8 +103,9 @@ void AnalysisSetHashSize(Analysis *analysis, int64_t hash_size) {
 }
 
 void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
-                           int num_moves) {
+                           int num_moves, int num_canonical_moves) {
     analysis->move_count += num_moves;
+    analysis->canonical_move_count += num_canonical_moves;
     if (num_moves > analysis->max_num_moves) {
         analysis->max_num_moves = num_moves;
         analysis->position_with_most_moves = tier_position;
@@ -146,6 +147,7 @@ void AnalysisConvertToNoncanonical(Analysis *analysis) {
     analysis->canonical_lose_count = 0;
     analysis->canonical_tie_count = 0;
     analysis->canonical_draw_count = 0;
+    analysis->canonical_move_count = 0;
     for (int64_t i = 0; i < kNumRemotenesses; ++i) {
         analysis->canonical_win_summary[i] = 0;
         analysis->canonical_lose_summary[i] = 0;
@@ -168,6 +170,7 @@ void AnalysisAggregate(Analysis *dest, const Analysis *src) {
     dest->canonical_lose_count += src->canonical_lose_count;
     dest->canonical_tie_count += src->canonical_tie_count;
     dest->canonical_draw_count += src->canonical_draw_count;
+    dest->canonical_move_count += src->canonical_move_count;
 
     for (int remoteness = 0; remoteness < kRemotenessMax; ++remoteness) {
         AggregatePositions(dest, src, remoteness);
@@ -267,6 +270,11 @@ double AnalysisGetAverageBranchingFactor(const Analysis *analysis) {
     return (double)analysis->move_count / (double)num_reachable;
 }
 
+double AnalysisGetCanonicalBranchingFactor(const Analysis *analysis) {
+    int64_t num_canonical = AnalysisGetNumCanonicalPositions(analysis);
+    return (double)analysis->canonical_move_count / (double)num_canonical;
+}
+
 double AnalysisGetHashEfficiency(const Analysis *analysis) {
     int64_t num_reachable = AnalysisGetNumReachablePositions(analysis);
     return (double)num_reachable / (double)analysis->hash_size;
@@ -351,11 +359,15 @@ void AnalysisPrintStatistics(FILE *stream, const Analysis *analysis) {
             analysis->draw_count, analysis->canonical_draw_count);
 
     // Move count.
-    fprintf(stream, "Total moves: %" PRId64 "\n", analysis->move_count);
+    fprintf(stream, "Total moves: %" PRId64 " (%" PRId64 " canonical)\n",
+            analysis->move_count, analysis->canonical_move_count);
 
     // Average branching factor.
     double branching_factor = AnalysisGetAverageBranchingFactor(analysis);
-    fprintf(stream, "Average branching factor: %f\n", branching_factor);
+    double canonical_branching_factor =
+        AnalysisGetCanonicalBranchingFactor(analysis);
+    fprintf(stream, "Average branching factor: %f (%f canonical)\n",
+            branching_factor, canonical_branching_factor);
 }
 
 void AnalysisPrintPositionWithMostMoves(FILE *stream,

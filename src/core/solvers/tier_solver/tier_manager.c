@@ -437,11 +437,10 @@ static int DiscoverTierTree(bool force) {
             ++failed_tiers;
         }
 
-        if (tier != canonical) {
-            // TODO: Change Aggregate instead of using this conversion!
-            AnalysisConvertToNoncanonical(&tier_analysis);
-        }
-
+        // If tier is non-canonical, we must convert the analysis to non-
+        // cannonical. Note that the analysis here is the analysis of the
+        // canonical tier on disk.
+        if (tier != canonical) AnalysisConvertToNoncanonical(&tier_analysis);
         AnalysisAggregate(&game_analysis, &tier_analysis);
         AnalysisDestroy(&tier_analysis);
     }
