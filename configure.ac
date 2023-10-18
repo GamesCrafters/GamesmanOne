@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.71])
-AC_INIT([GamesmanExperiment], [0.3], [robertyishi@berkeley.edu])
+AC_PREREQ([2.69])
+AC_INIT([GamesmanExperiment], [0.4], [robertyishi@berkeley.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AC_CONFIG_SRCDIR([src/core/main.c])
 AC_CONFIG_HEADERS([config.h])
