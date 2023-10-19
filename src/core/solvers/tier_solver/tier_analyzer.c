@@ -253,7 +253,7 @@ static bool Step2LoadFringe(void) {
             if (!append_success) success = false;
         }
     }
-
+  
     return success;
 }
 
@@ -350,6 +350,7 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
 #ifdef _OPENMP
     omp_unset_lock(&child_tier_map_locks[child_tier_index]);
 #endif
+
     return error == 0;
 }
 
@@ -438,7 +439,7 @@ static bool Step5Analyze(Analysis *dest) {
             success = false;
         }
     }
-
+  
     BitStreamDestroy(&this_tier_map);
     return success;
 }
