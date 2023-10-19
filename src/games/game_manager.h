@@ -26,8 +26,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_GAMES_GAME_MANAGER_H_
-#define GAMESMANEXPERIMENT_GAMES_GAME_MANAGER_H_
+#ifndef GAMESMANONE_GAMES_GAME_MANAGER_H_
+#define GAMESMANONE_GAMES_GAME_MANAGER_H_
 
 #include "core/gamesman_types.h"
 
@@ -39,4 +39,4 @@ const Game *const *GameManagerGetAllGames(void);
 /** @brief Returns the total number of games in GAMESMAN. */
 int GameManagerNumGames(void);
 
-#endif  // GAMESMANEXPERIMENT_GAMES_GAME_MANAGER_H_
+#endif  // GAMESMANONE_GAMES_GAME_MANAGER_H_

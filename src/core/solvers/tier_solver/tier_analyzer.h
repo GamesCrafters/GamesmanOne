@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
 
 #include <stdbool.h>  // bool
 
@@ -50,11 +50,11 @@ void TierAnalyzerInit(const TierSolverApi *api);
  * the Module believes that TIER has been correctly analyzed already.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force);
+int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force);
 
 /**
  * @brief Finalizes the Tier Analyzer Module.
  */
 void TierAnalyzerFinalize(void);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_

@@ -1,4 +1,4 @@
-# GamesmanExperiment
+# GamesmanOne
 
 ## Steps to Compile
 

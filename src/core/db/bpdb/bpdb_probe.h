@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_PROBE_H_
-#define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_PROBE_H_
+#ifndef GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
+#define GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
 
 #include "core/gamesman_types.h"
 
@@ -59,4 +59,4 @@ int BpdbProbeDestroy(DbProbe *probe);
 uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
                          TierPosition tier_position);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_PROBE_H_
+#endif  // GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_

@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_
-#define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_
+#ifndef GAMESMANONE_CORE_DB_BPDB_BPARRAY_H_
+#define GAMESMANONE_CORE_DB_BPDB_BPARRAY_H_
 
 #include <stdint.h>  // int8_t, uint8_t, int32_t, int64_t, uint64_t
 
@@ -117,4 +117,4 @@ int32_t BpArrayGetNumUniqueValues(const BpArray *array);
  */
 const int32_t *BpArrayGetDecompDict(const BpArray *array);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPARRAY_H_
+#endif  // GAMESMANONE_CORE_DB_BPDB_BPARRAY_H_

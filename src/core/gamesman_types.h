@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_
-#define GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_
+#ifndef GAMESMANONE_CORE_GAMESMAN_TYPES_H_
+#define GAMESMANONE_CORE_GAMESMAN_TYPES_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -930,4 +930,4 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
 
 int GameVariantToIndex(const GameVariant *variant);
 
-#endif  // GAMESMANEXPERIMENT_CORE_GAMESMAN_TYPES_H_
+#endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_

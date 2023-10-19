@@ -34,8 +34,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 
 #include <stdbool.h>  // bool
 
@@ -64,4 +64,4 @@ int TierManagerSolve(const TierSolverApi *api, bool force);
  */
 int TierManagerAnalyze(const TierSolverApi *api, bool force);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

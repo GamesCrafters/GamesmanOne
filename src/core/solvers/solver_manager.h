@@ -33,8 +33,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_SOLVER_MANAGER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_SOLVER_MANAGER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
+#define GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
 
 #include "core/gamesman_types.h"
 
@@ -68,4 +68,4 @@ int SolverManagerSolve(void *aux);
 
 int SolverManagerAnalyze(void *aux);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_SOLVER_MANAGER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_

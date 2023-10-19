@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -290,4 +290,4 @@ typedef struct TierSolverApi {
     Tier (*GetCanonicalTier)(Tier tier);
 } TierSolverApi;
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_

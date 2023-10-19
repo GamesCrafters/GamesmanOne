@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_MISC_H_
-#define GAMESMANEXPERIMENT_CORE_MISC_H_
+#ifndef GAMESMANONE_CORE_MISC_H_
+#define GAMESMANONE_CORE_MISC_H_
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
@@ -317,4 +317,4 @@ int64_t NChooseR(int n, int r);
  */
 int64_t RoundUpDivide(int64_t n, int64_t d);
 
-#endif  // GAMESMANEXPERIMENT_CORE_MISC_H_
+#endif  // GAMESMANONE_CORE_MISC_H_

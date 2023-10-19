@@ -32,8 +32,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_GENERIC_HASH_GENERIC_HASH_H_
-#define GAMESMANEXPERIMENT_CORE_GENERIC_HASH_GENERIC_HASH_H_
+#ifndef GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_
+#define GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_
 
 #include <stdint.h>
 
@@ -200,4 +200,4 @@ bool GenericHashUnhashLabel(int64_t context_label, Position hash, char *board);
  */
 int GenericHashGetTurnLabel(int64_t context_label, Position hash);
 
-#endif  // GAMESMANEXPERIMENT_CORE_GENERIC_HASH_GENERIC_HASH_H_
+#endif  // GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_

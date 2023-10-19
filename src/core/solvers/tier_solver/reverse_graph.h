@@ -33,8 +33,8 @@
  * ReverseGraphGetIndex method.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -131,4 +131,4 @@ int64_t ReverseGraphGetIndex(ReverseGraph *graph, TierPosition tier_position);
  */
 bool ReverseGraphAdd(ReverseGraph *graph, TierPosition child, Position parent);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
