@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.0
- * @date 2023-10-18
+ * @version 1.1
+ * @date 2023-10-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,6 +40,24 @@
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 
+// Include and use OpenMP if the _OPENMP flag is set.
+#ifdef _OPENMP
+#include <omp.h>
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
+#define PRAGMA_OMP_FOR PRAGMA(omp for)
+#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
+
+// Otherwise, the following macros do nothing.
+#else
+#define PRAGMA
+#define PRAGMA_OMP_PARALLEL
+#define PRAGMA_OMP_FOR
+#define PRAGMA_OMP_PARALLEL_FOR
+#define PRAGMA_OMP_CRITICAL(name)
+#endif
+
 static const TierSolverApi *current_api;
 
 static Tier this_tier;          // The tier being analyzed.
@@ -51,6 +69,9 @@ static TierHashMap child_tier_to_index;
 
 static BitStream this_tier_map;
 static BitStream *child_tier_maps;
+#ifdef _OPENMP
+static omp_lock_t *child_tier_map_locks;
+#endif
 
 static PositionArray fringe;      // Discovered but unprocessed positions.
 static PositionArray discovered;  // Newly discovered positions.
@@ -87,7 +108,7 @@ static void Step8CleanUp(void);
 
 void TierAnalyzerInit(const TierSolverApi *api) { current_api = api; }
 
-int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force) {
+int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     int ret = -1;
 
     this_tier = tier;
@@ -144,6 +165,9 @@ static bool Step0Initialize(Analysis *dest) {
 
     memset(&this_tier_map, 0, sizeof(this_tier_map));
     child_tier_maps = NULL;
+#ifdef _OPENMP
+    child_tier_map_locks = NULL;
+#endif
 
     AnalysisInit(dest);
     AnalysisSetHashSize(dest, this_tier_size);
@@ -177,6 +201,15 @@ static bool Step1LoadDiscoveryMaps(void) {
     child_tier_maps = (BitStream *)calloc(child_tiers.size, sizeof(BitStream));
     if (child_tier_maps == NULL) return false;
 
+#ifdef _OPENMP
+    child_tier_map_locks =
+        (omp_lock_t *)malloc(child_tiers.size * sizeof(omp_lock_t));
+    if (child_tier_map_locks == NULL) return false;
+    for (int64_t i = 0; i < child_tiers.size; ++i) {
+        omp_init_lock(&child_tier_map_locks[i]);
+    }
+#endif
+
     this_tier_map = LoadDiscoveryMap(this_tier);
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         child_tier_maps[i] = LoadDiscoveryMap(child_tiers.array[i]);
@@ -208,12 +241,19 @@ static BitStream LoadDiscoveryMap(Tier tier) {
 
 static bool Step2LoadFringe(void) {
     bool success = true;
-    for (int64_t position = 0; position < this_tier_size; ++position) {
+
+    PRAGMA_OMP_PARALLEL_FOR
+    for (Position position = 0; position < this_tier_size; ++position) {
+        if (!success) continue;
         if (BitStreamGet(&this_tier_map, position)) {
-            // critical section here
-            if (!PositionArrayAppend(&fringe, position)) success = false;
+            bool append_success;
+            PRAGMA_OMP_CRITICAL(tier_analyzer_fringe) {
+                append_success = PositionArrayAppend(&fringe, position);
+            }
+            if (!append_success) success = false;
         }
     }
+
     return success;
 }
 
@@ -240,8 +280,10 @@ static bool Step3Discover(Analysis *dest) {
 static bool DiscoverHelper(Analysis *dest) {
     bool success = true;
 
-    // parallel for
-    for (int64_t i = 0; success && i < fringe.size; ++i) {
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < fringe.size; ++i) {
+        if (!success) continue;
+
         TierPosition parent = {.tier = this_tier, .position = fringe.array[i]};
         TierPositionArray children = GetChildPositions(parent, dest);
         if (children.size < 0) {
@@ -264,11 +306,22 @@ static bool DiscoverHelper(Analysis *dest) {
 }
 
 static bool DiscoverHelperProcessThisTier(Position child) {
-    // Only add each unique position to the fringe once.
-    if (BitStreamGet(&this_tier_map, child)) return true;
+    int error = 0;
+    bool child_is_discovered;
+    PRAGMA_OMP_CRITICAL(tier_analyzer_this_tier_map) {
+        child_is_discovered = BitStreamGet(&this_tier_map, child);
+        if (!child_is_discovered) {
+            error = BitStreamSet(&this_tier_map, child);
+        }
+    }
+    if (error != 0) return false;
 
-    PositionArrayAppend(&discovered, child);
-    int error = BitStreamSet(&this_tier_map, child);
+    PRAGMA_OMP_CRITICAL(tier_analyzer_discovered) {
+        // Only add each unique position to the fringe once.
+        if (!child_is_discovered) {
+            error = !PositionArrayAppend(&discovered, child);
+        }
+    }
     return error == 0;
 }
 
@@ -290,7 +343,13 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
 
     int64_t child_tier_index = TierHashMapIteratorValue(&it);
     BitStream *target_map = &child_tier_maps[child_tier_index];
+#ifdef _OPENMP
+    omp_set_lock(&child_tier_map_locks[child_tier_index]);
+#endif
     int error = BitStreamSet(target_map, child.position);
+#ifdef _OPENMP
+    omp_unset_lock(&child_tier_map_locks[child_tier_index]);
+#endif
     return error == 0;
 }
 
@@ -310,7 +369,11 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     // Using multiplication to avoid branching.
     int num_canonical_moves =
         num_canonical_children * IsCanonicalPosition(tier_position);
-    AnalysisDiscoverMoves(dest, tier_position, moves.size, num_canonical_moves);
+
+    PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
+        AnalysisDiscoverMoves(dest, tier_position, moves.size,
+                              num_canonical_moves);
+    }
     MoveArrayDestroy(&moves);
 
     return ret;
@@ -327,37 +390,55 @@ static bool Step4SaveChildMaps(void) {
                                                 child_tiers.array[i]);
         if (error != 0) return false;
         BitStreamDestroy(&child_tier_maps[i]);
+#ifdef _OPENMP
+        omp_destroy_lock(&child_tier_map_locks[i]);
+#endif
     }
+
     free(child_tier_maps);
     child_tier_maps = NULL;
+#ifdef _OPENMP
+    free(child_tier_map_locks);
+    child_tier_map_locks = NULL;
+#endif
 
     return true;
 }
 
 static bool Step5Analyze(Analysis *dest) {
-    DbProbe probe;
-    int error = DbManagerProbeInit(&probe);
-    if (error != 0) return false;
-
     bool success = true;
 
-    // parallel, for, move probe inside parallel
-    for (int64_t i = 0; success && i < this_tier_size; ++i) {
-        TierPosition tier_position = {.tier = this_tier, .position = i};
-        TierPosition canonical = {
-            .tier = this_tier,
-            .position = current_api->GetCanonicalPosition(tier_position),
-        };
-        if (!BitStreamGet(&this_tier_map, i)) continue;
+    PRAGMA_OMP_PARALLEL {
+        DbProbe probe;
+        int error = DbManagerProbeInit(&probe);
+        if (error == 0) {
+            PRAGMA_OMP_FOR
+            for (int64_t i = 0; i < this_tier_size; ++i) {
+                TierPosition tier_position = {.tier = this_tier, .position = i};
+                TierPosition canonical = {
+                    .tier = this_tier,
+                    .position =
+                        current_api->GetCanonicalPosition(tier_position),
+                };
+                if (!BitStreamGet(&this_tier_map, i)) continue;
 
-        Value value = DbManagerProbeValue(&probe, canonical);
-        int remoteness = DbManagerProbeRemoteness(&probe, canonical);
-        bool is_canonical = (tier_position.position == canonical.position);
-        int error =
-            AnalysisCount(dest, tier_position, value, remoteness, is_canonical);
-        if (error != 0) success = false;
+                // Must probe canonical positions. Original might not be solved.
+                Value value = DbManagerProbeValue(&probe, canonical);
+                int remoteness = DbManagerProbeRemoteness(&probe, canonical);
+                bool is_canonical =
+                    (tier_position.position == canonical.position);
+                PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
+                    error = AnalysisCount(dest, tier_position, value,
+                                          remoteness, is_canonical);
+                }
+                if (error != 0) success = false;
+            }
+            DbManagerProbeDestroy(&probe);
+        } else {
+            success = false;
+        }
     }
-    DbManagerProbeDestroy(&probe);
+
     BitStreamDestroy(&this_tier_map);
     return success;
 }
@@ -377,9 +458,22 @@ static void Step8CleanUp(void) {
     BitStreamDestroy(&this_tier_map);
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         BitStreamDestroy(&child_tier_maps[i]);
+#ifdef _OPENMP
+        omp_destroy_lock(&child_tier_map_locks[i]);
+#endif
     }
     free(child_tier_maps);
     child_tier_maps = NULL;
+#ifdef _OPENMP
+    free(child_tier_map_locks);
+    child_tier_map_locks = NULL;
+#endif
     PositionArrayDestroy(&fringe);
     PositionArrayDestroy(&discovered);
 }
+
+#undef PRAGMA
+#undef PRAGMA_OMP_PARALLEL
+#undef PRAGMA_OMP_FOR
+#undef PRAGMA_OMP_PARALLEL_FOR
+#undef PRAGMA_OMP_CRITICAL

@@ -50,7 +50,7 @@ void TierAnalyzerInit(const TierSolverApi *api);
  * the Module believes that TIER has been correctly analyzed already.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierAnalyzerDiscover(Analysis *dest, Tier tier, bool force);
+int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force);
 
 /**
  * @brief Finalizes the Tier Analyzer Module.

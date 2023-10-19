@@ -197,7 +197,7 @@ static int RegularSolverAnalyze(void *aux) {
     bool force = (aux != NULL) && *((bool *)aux);
     Analysis analysis;
     TierAnalyzerInit(&current_api);
-    int error = TierAnalyzerDiscover(&analysis, kDefaultTier, force);
+    int error = TierAnalyzerAnalyze(&analysis, kDefaultTier, force);
     TierAnalyzerFinalize();
     if (error != 0) {
         fprintf(stderr, "RegularSolverAnalyze: failed with code %d\n", error);
