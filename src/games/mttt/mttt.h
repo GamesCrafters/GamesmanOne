@@ -28,12 +28,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
-#define GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
+#ifndef GAMESMANONE_GAMES_MTTT_MTTT_H_
+#define GAMESMANONE_GAMES_MTTT_MTTT_H_
 
 #include "core/gamesman_types.h"
 
 /** @brief Tic-Tac-Toe */
 extern const Game kMttt;
 
-#endif  // GAMESMANEXPERIMENT_GAMES_MTTT_MTTT_H_
+#endif  // GAMESMANONE_GAMES_MTTT_MTTT_H_

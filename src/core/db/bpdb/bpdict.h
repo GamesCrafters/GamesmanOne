@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDICT_H_
-#define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDICT_H_
+#ifndef GAMESMANONE_CORE_DB_BPDB_BPDICT_H_
+#define GAMESMANONE_CORE_DB_BPDB_BPDICT_H_
 
 #include <stdint.h>  // int32_t
 
@@ -99,4 +99,4 @@ int32_t BpDictGet(const BpDict *dict, int32_t key);
  */
 int32_t BpDictGetKey(const BpDict *dict, int32_t value);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDICT_H_
+#endif  // GAMESMANONE_CORE_DB_BPDB_BPDICT_H_

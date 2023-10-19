@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
-#define GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
+#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
+#define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -85,4 +85,4 @@ bool Int64QueuePush(Int64Queue *queue, int64_t item);
  */
 int64_t Int64QueuePop(Int64Queue *queue);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
+#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_

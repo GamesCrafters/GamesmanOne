@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
-#define GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
+#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
+#define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -108,4 +108,4 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
 bool Int64ArrayResize(Int64Array *array, int64_t size);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
+#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_

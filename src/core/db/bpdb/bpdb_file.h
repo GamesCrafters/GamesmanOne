@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
-#define GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
+#ifndef GAMESMANONE_CORE_DB_BPDB_BPDB_FILE_H_
+#define GAMESMANONE_CORE_DB_BPDB_BPDB_FILE_H_
 
 #include <stdint.h>  // int64_t, int32_t
 
@@ -95,4 +95,4 @@ int BpdbFileGetBlockSize(int bits_per_entry);
 
 int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DB_BPDB_BPDB_FILE_H_
+#endif  // GAMESMANONE_CORE_DB_BPDB_BPDB_FILE_H_

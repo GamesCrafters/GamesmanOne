@@ -27,8 +27,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_LIBS_MGZ_MGZ_H_
-#define GAMESMANEXPERIMENT_LIBS_MGZ_MGZ_H_
+#ifndef GAMESMANONE_LIBS_MGZ_MGZ_H_
+#define GAMESMANONE_LIBS_MGZ_MGZ_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -167,4 +167,4 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
  */
 int64_t MgzRead(void *buf, int64_t size, int64_t offset, int fd, FILE *lookup);
 
-#endif  // GAMESMANEXPERIMENT_LIBS_MGZ_MGZ_H_
+#endif  // GAMESMANONE_LIBS_MGZ_MGZ_H_

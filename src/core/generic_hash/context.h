@@ -29,8 +29,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_GENERIC_HASH_CONTEXT_H_
-#define GAMESMANEXPERIMENT_CORE_GENERIC_HASH_CONTEXT_H_
+#ifndef GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
+#define GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
 
 #include "core/gamesman_types.h"
 
@@ -219,4 +219,4 @@ bool GenericHashContextUnhash(GenericHashContext *context, Position hash,
  */
 int GenericHashContextGetTurn(GenericHashContext *context, Position hash);
 
-#endif  // GAMESMANEXPERIMENT_CORE_GENERIC_HASH_CONTEXT_H_
+#endif  // GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_

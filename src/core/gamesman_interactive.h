@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_GAMESMAN_INTERACTIVE_H_
-#define GAMESMANEXPERIMENT_CORE_GAMESMAN_INTERACTIVE_H_
+#ifndef GAMESMANONE_CORE_GAMESMAN_INTERACTIVE_H_
+#define GAMESMANONE_CORE_GAMESMAN_INTERACTIVE_H_
 
 /**
  * @brief Entry point of GAMESMAN interactive mode.
@@ -34,4 +34,4 @@
  */
 int GamesmanInteractiveMain(void);
 
-#endif  // GAMESMANEXPERIMENT_CORE_GAMESMAN_INTERACTIVE_H_
+#endif  // GAMESMANONE_CORE_GAMESMAN_INTERACTIVE_H_

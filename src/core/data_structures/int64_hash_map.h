@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
-#define GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
+#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
+#define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -200,4 +200,4 @@ bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it);
 bool Int64HashMapIteratorNext(Int64HashMapIterator *it, int64_t *key,
                               int64_t *value);
 
-#endif  // GAMESMANEXPERIMENT_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_
+#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_MAP_H_

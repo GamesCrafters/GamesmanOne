@@ -1,5 +1,5 @@
-#ifndef GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_
-#define GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_
+#ifndef GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_
+#define GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_
 
 #include <stddef.h>  // size_t
 
@@ -16,4 +16,4 @@ void AutoMenu(ReadOnlyString title, int num_items,
               ConstantReadOnlyString *items, ConstantReadOnlyString *keys,
               const HookFunctionPointer *hooks);
 
-#endif  // GAMESMANEXPERIMENT_CORE_INTERACTIVE_AUTOMENU_H_
+#endif  // GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_

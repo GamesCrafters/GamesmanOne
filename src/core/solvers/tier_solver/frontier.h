@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -139,4 +139,4 @@ void FrontierAccumulateDividers(Frontier *frontier);
  */
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_

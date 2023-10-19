@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
-#define GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
 
@@ -54,4 +54,4 @@ void TierWorkerInit(const TierSolverApi *api);
  */
 int TierWorkerSolve(Tier tier, bool force);
 
-#endif  // GAMESMANEXPERIMENT_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_
-#define GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_
+#ifndef GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
+#define GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -365,4 +365,4 @@ void AnalysisPrintPositionWithMostMoves(FILE *stream, const Analysis *analysis);
  */
 void AnalysisPrintEverything(FILE *stream, const Analysis *analysis);
 
-#endif  // GAMESMANEXPERIMENT_CORE_ANALYSIS_ANALYSIS_H_
+#endif  // GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
