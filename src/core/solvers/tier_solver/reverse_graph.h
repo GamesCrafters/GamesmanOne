@@ -10,8 +10,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declaration of the ReverseGraph type.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,9 +28,6 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * @todo Create accessor functions for the parents_of array and hide the
- * ReverseGraphGetIndex method.
  */
 
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
@@ -106,18 +103,11 @@ bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
 void ReverseGraphDestroy(ReverseGraph *graph);
 
 /**
- * @brief Returns the index into the parents_of array of GRAPH corresponding to
- * TIER_POSITION.
- *
- * @note Assumes that GRAPH is initialized. Results in undefined behavior
- * otherwise.
- *
- * @param graph Reverse graph.
- * @param tier_position Position to get index of.
- * @return Non-negative index into GRAPH.parents_of to get to retrieve parent
- * positions of TIER_POSITION on success. Negative error code on failure.
+ * @brief Pops out the array of parents of TIER_POSITION from reverse GRAPH.
+ * The caller is responsible for destroying the PositionArray returned.
  */
-int64_t ReverseGraphGetIndex(ReverseGraph *graph, TierPosition tier_position);
+PositionArray ReverseGraphPopParentsOf(ReverseGraph *graph,
+                                       TierPosition tier_position);
 
 /**
  * @brief Adds position CHILD as a child of position PARENT into the reverse
