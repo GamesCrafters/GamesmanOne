@@ -41,6 +41,7 @@
 #include <stdbool.h>   // bool, true, false
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // fprintf, stderr
+#include <stdlib.h>    // malloc, free
 
 #include "core/analysis/analysis.h"
 #include "core/gamesman_types.h"
@@ -51,7 +52,7 @@
 
 enum TierManagementType {
     kTierSolving,
-    kTierDiscovering,
+    kTierAnalyzing,
 };
 
 typedef enum TierGraphNodeStatus {
@@ -127,7 +128,7 @@ int TierManagerSolve(const TierSolverApi *api, bool force) {
 
 int TierManagerAnalyze(const TierSolverApi *api, bool force) {
     current_api = api;
-    if (InitGlobalVariables(kTierDiscovering) != 0) {
+    if (InitGlobalVariables(kTierAnalyzing) != 0) {
         fprintf(stderr, "TierManagerAnalyze: initialization failed.\n");
         return 1;
     }
@@ -144,7 +145,7 @@ static int InitGlobalVariables(int type) {
     failed_tiers = 0;
     TierQueueInit(&pending_tiers);
     TierHashMapInit(&tier_tree, 0.5);
-    if (type == kTierDiscovering) {
+    if (type == kTierAnalyzing) {
         AnalysisInit(&game_analysis);
         AnalysisSetHashSize(&game_analysis, 0);
     }
@@ -154,7 +155,6 @@ static int InitGlobalVariables(int type) {
 static void DestroyGlobalVariables(void) {
     TierHashMapDestroy(&tier_tree);
     TierQueueDestroy(&pending_tiers);
-    AnalysisDestroy(&game_analysis);
 }
 
 /**
@@ -199,17 +199,10 @@ static int BuildTierTree(int type) {
         switch (error) {
             case kNoError:
                 continue;
-                break;
 
-            case kOutOfMemory:
-                ret = 1;
+            default:
+                ret = error;
                 goto _bailout;
-                break;
-
-            case kLoopDetected:
-                ret = 2;
-                goto _bailout;
-                break;
         }
     }
 
@@ -220,7 +213,7 @@ _bailout:
         CreateTierTreePrintError(ret);
     } else if (type == kTierSolving) {
         EnqueuePrimitiveTiers();
-    } else {
+    } else {  // type == kTierAnalyzing
         TierQueuePush(&pending_tiers, initial_tier);
     }
     return ret;
@@ -425,29 +418,36 @@ static int DiscoverTierTree(bool force) {
         Tier canonical = current_api->GetCanonicalTier(tier);
 
         // Analyze the canonical tier instead.
-        Analysis tier_analysis;
-        int error = TierAnalyzerAnalyze(&tier_analysis, canonical, force);
+        Analysis *tier_analysis = (Analysis *)malloc(sizeof(Analysis));
+        if (tier_analysis == NULL) {
+            TierAnalyzerFinalize();
+            return 1;
+        }
+        AnalysisInit(tier_analysis);
+
+        int error = TierAnalyzerAnalyze(tier_analysis, canonical, force);
         if (error == 0) {
             // Analyzer succeeded.
+            printf("\n--- Tier %" PRId64 " analyzed ---\n", tier);
+            AnalysisPrintStatistics(stdout, tier_analysis);
             AnalyzeUpdateTierTree(tier);
             ++processed_tiers;
+
+            // If tier is non-canonical, we must convert the analysis to non-
+            // cannonical. Note that the analysis here is the analysis of the
+            // canonical tier on disk.
+            if (tier != canonical) AnalysisConvertToNoncanonical(tier_analysis);
+            AnalysisAggregate(&game_analysis, tier_analysis);
         } else {
             printf("Failed to analyze tier %" PRId64 ", code %d\n", tier,
                    error);
             ++failed_tiers;
         }
-
-        // If tier is non-canonical, we must convert the analysis to non-
-        // cannonical. Note that the analysis here is the analysis of the
-        // canonical tier on disk.
-        if (tier != canonical) AnalysisConvertToNoncanonical(&tier_analysis);
-        AnalysisAggregate(&game_analysis, &tier_analysis);
-        AnalysisDestroy(&tier_analysis);
+        free(tier_analysis);
     }
 
-    TierAnalyzerFinalize();
     PrintAnalyzerResult();
-    AnalysisPrintEverything(stdout, &game_analysis);
+    TierAnalyzerFinalize();
     return 0;
 }
 
@@ -471,10 +471,17 @@ static void AnalyzeUpdateTierTree(Tier analyzed_tier) {
 
 static void PrintAnalyzerResult(void) {
     printf(
-        "Finished analyzing all tiers.\n"
+        "\n--- Finished analyzing all tiers. ---\n"
         "Number of canonical tiers analyzed: %" PRId64
         "\nNumber of tiers failed due to OOM: %" PRId64
-        "\nTotal tiers scanned: %" PRId64 "\n",
+        "\nTotal tiers scanned: %" PRId64 "\n\n",
         processed_tiers, failed_tiers, processed_tiers + failed_tiers);
-    printf("\n");
+
+    if (failed_tiers > 0) {
+        printf(
+            "DiscoverTierTree: (WARNING) At least one tier failed to be "
+            "analyzed and the analysis of the game may be inaccurate.\n");
+    }
+
+    AnalysisPrintEverything(stdout, &game_analysis);
 }

@@ -112,11 +112,6 @@ typedef struct Analysis {
 void AnalysisInit(Analysis *analysis);
 
 /**
- * @brief Destroys the given ANALYSIS, freeing all allocated memory.
- */
-void AnalysisDestroy(Analysis *analysis);
-
-/**
  * @brief Writes the given ANALYSIS to the file with file descriptor FD.
  * Assumes FD is correctly opened and writable. FD is not closed after a call to
  * this function.

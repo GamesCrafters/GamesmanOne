@@ -102,10 +102,6 @@ void AnalysisInit(Analysis *analysis) {
     analysis->largest_tie_remoteness = -1;
 }
 
-void AnalysisDestroy(Analysis *analysis) {
-    memset(analysis, 0, sizeof(*analysis));
-}
-
 int AnalysisWrite(const Analysis *analysis, int fd) {
     int gzfd = dup(fd);
     gzFile file = GuardedGzdopen(gzfd, "wb");
