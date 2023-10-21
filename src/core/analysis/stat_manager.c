@@ -124,48 +124,52 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
 }
 
 BitStream StatManagerLoadDiscoveryMap(Tier tier) {
-    static const BitStream kInvalidStream;
-    BitStream ret;
+    BitStream ret = {0};
+    int error = -1;
+    FILE *file = NULL;
+    int fd = -1;
+    gzFile gzfile = Z_NULL;
 
     char *filename = GetPathToTierDiscoveryMap(tier);
-    if (filename == NULL) return kInvalidStream;
+    if (filename == NULL) goto _bailout;
 
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        free(filename);
-        return kInvalidStream;
-    }
+    file = fopen(filename, "rb");
+    if (file == NULL) goto _bailout;
 
-    int fd = GuardedOpen(filename, O_RDONLY);
-    free(filename);
-    if (fd < 0) return kInvalidStream;
+    fd = GuardedOpen(filename, O_RDONLY);
+    if (fd < 0) goto _bailout;
 
     // Read BitStream size.
-    int error = GuardedFread(&ret.size, sizeof(ret.size), 1, file);
-    if (error != 0) return kInvalidStream;
-
-    error = GuardedFclose(file);
-    if (error != 0) return kInvalidStream;
+    error = GuardedFread(&ret.size, sizeof(ret.size), 1, file);
+    if (error != 0) goto _bailout;
 
     // Initialize BitStream with size.
     error = BitStreamInit(&ret, ret.size);
-    if (error != 0) return kInvalidStream;
+    if (error != 0) goto _bailout;
 
     // Read compressed stream.
     error = GuardedLseek(fd, sizeof(ret.size), SEEK_SET);
-    if (error != 0) return kInvalidStream;
+    if (error != 0) goto _bailout;
 
-    gzFile gzfile = GuardedGzdopen(fd, "rb");
-    if (gzfile == Z_NULL) return kInvalidStream;
+    gzfile = GuardedGzdopen(fd, "rb");
+    if (gzfile == Z_NULL) goto _bailout;
+    fd = -1;  // Prevent double closing.
 
     error = GuardedGz64Read(gzfile, ret.stream, ret.num_bytes, false);
+    if (error != 0) goto _bailout;
+
+    // Success.
+    error = 0;
+
+_bailout:
+    free(filename);
+    if (file != NULL) GuardedFclose(file);
+    if (fd >= 0) GuardedClose(fd);
+    if (gzfile != Z_NULL) GuardedGzclose(gzfile);
     if (error != 0) {
         BitStreamDestroy(&ret);
-        GuardedGzclose(gzfile);
-        return kInvalidStream;
+        ret = (BitStream){0};
     }
-
-    GuardedGzclose(gzfile);
     return ret;
 }
 
