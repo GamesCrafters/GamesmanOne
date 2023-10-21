@@ -165,46 +165,35 @@ static void DestroyGlobalVariables(void) {
  * @link https://stackoverflow.com/a/73210346
  */
 static int BuildTierTree(int type) {
-    int ret = 0;
+    int ret = 1;
     TierStack fringe;
     TierStackInit(&fringe);
-
     Tier initial_tier = current_api->GetInitialTier();
-    if (!TierStackPush(&fringe, initial_tier)) {
-        ret = 1;
-        goto _bailout;
-    }
-
-    if (!TierTreeSetInitial(initial_tier)) {
-        ret = 1;
-        goto _bailout;
-    }
+    if (!TierStackPush(&fringe, initial_tier)) goto _bailout;
+    if (!TierTreeSetInitial(initial_tier)) goto _bailout;
 
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);
         int status = GetStatus(parent);
         if (status == kStatusInProgress) {
-            if (!TierTreeSetStatus(parent, kStatusClosed)) {
-                ret = 1;
-                goto _bailout;
-            }
+            if (!TierTreeSetStatus(parent, kStatusClosed)) goto _bailout;
             TierStackPop(&fringe);
             continue;
         } else if (status == kStatusClosed) {
             TierStackPop(&fringe);
             continue;
         }
-        TierTreeSetStatus(parent, kStatusInProgress);
+        if (!TierTreeSetStatus(parent, kStatusInProgress)) goto _bailout;
         int error = BuildTierTreeProcessChildren(parent, &fringe, type);
         switch (error) {
             case kNoError:
                 continue;
-
             default:
                 ret = error;
                 goto _bailout;
         }
     }
+    ret = 0;
 
 _bailout:
     TierStackDestroy(&fringe);
@@ -232,7 +221,7 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
             Tier child = tier_children.array[i];
             if (!IncrementNumParentTiers(child)) {
                 TierArrayDestroy(&tier_children);
-                return 1;
+                return (int)kOutOfMemory;
             }
         }
     }
