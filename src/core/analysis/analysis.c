@@ -95,9 +95,9 @@ void AnalysisInit(Analysis *analysis) {
     analysis->longest_tie_position = kIllegalTierPosition;
 
     analysis->max_num_moves = -1;
-    analysis->largest_win_remoteness = -1;
-    analysis->largest_lose_remoteness = -1;
-    analysis->largest_tie_remoteness = -1;
+    analysis->largest_win_remoteness = kIllegalRemoteness;
+    analysis->largest_lose_remoteness = kIllegalRemoteness;
+    analysis->largest_tie_remoteness = kIllegalRemoteness;
 }
 
 int AnalysisWrite(const Analysis *analysis, int fd) {
