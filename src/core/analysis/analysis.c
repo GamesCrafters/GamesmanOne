@@ -34,10 +34,10 @@
 #include <stdlib.h>    // malloc, free
 #include <string.h>    // memset
 
+#include "core/constants.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 
-static const TierPosition kIllegalTierPosition = {.tier = -1, .position = -1};
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
 
@@ -73,8 +73,6 @@ static void PrintSummaryLineHelper(FILE *stream, ReadOnlyString format,
 // -----------------------------------------------------------------------------
 
 void AnalysisInit(Analysis *analysis) {
-    static const TierPosition kIllegalTierPosition = {.tier = -1,
-                                                      .position = -1};
     memset(analysis, 0, sizeof(*analysis));
     analysis->hash_size = -1;  // Unset.
 
@@ -455,10 +453,10 @@ static void CountWin(Analysis *analysis, TierPosition tier_position,
     analysis->canonical_win_count += is_canonical;
     ++analysis->win_summary[remoteness];
     analysis->canonical_win_summary[remoteness] += is_canonical;
-    if (analysis->win_examples[remoteness].tier == -1) {
+    if (analysis->win_examples[remoteness].tier == kIllegalTier) {
         analysis->win_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_win_examples[remoteness].tier == -1 &&
+    if (analysis->canonical_win_examples[remoteness].tier == kIllegalTier &&
         is_canonical) {
         //
         analysis->canonical_win_examples[remoteness] = tier_position;
@@ -475,10 +473,10 @@ static void CountLose(Analysis *analysis, TierPosition tier_position,
     analysis->canonical_lose_count += is_canonical;
     ++analysis->lose_summary[remoteness];
     analysis->canonical_lose_summary[remoteness] += is_canonical;
-    if (analysis->lose_examples[remoteness].tier == -1) {
+    if (analysis->lose_examples[remoteness].tier == kIllegalTier) {
         analysis->lose_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_lose_examples[remoteness].tier == -1 &&
+    if (analysis->canonical_lose_examples[remoteness].tier == kIllegalTier &&
         is_canonical) {
         //
         analysis->canonical_lose_examples[remoteness] = tier_position;
@@ -495,10 +493,10 @@ static void CountTie(Analysis *analysis, TierPosition tier_position,
     analysis->canonical_tie_count += is_canonical;
     ++analysis->tie_summary[remoteness];
     analysis->canonical_tie_summary[remoteness] += is_canonical;
-    if (analysis->tie_examples[remoteness].tier == -1) {
+    if (analysis->tie_examples[remoteness].tier == kIllegalTier) {
         analysis->tie_examples[remoteness] = tier_position;
     }
-    if (analysis->canonical_tie_examples[remoteness].tier == -1 &&
+    if (analysis->canonical_tie_examples[remoteness].tier == kIllegalTier &&
         is_canonical) {
         //
         analysis->canonical_tie_examples[remoteness] = tier_position;
@@ -513,10 +511,10 @@ static void CountDraw(Analysis *analysis, TierPosition tier_position,
                       bool is_canonical) {
     ++analysis->draw_count;
     analysis->canonical_draw_count += is_canonical;
-    if (analysis->draw_example.tier == -1) {
+    if (analysis->draw_example.tier == kIllegalTier) {
         analysis->draw_example = tier_position;
     }
-    if (analysis->canonical_draw_example.tier == -1 && is_canonical) {
+    if (analysis->canonical_draw_example.tier == kIllegalTier && is_canonical) {
         analysis->canonical_draw_example = tier_position;
     }
 }
@@ -527,16 +525,16 @@ static void AggregatePositions(Analysis *dest, const Analysis *src,
     dest->lose_summary[remoteness] += src->lose_summary[remoteness];
     dest->tie_summary[remoteness] += src->tie_summary[remoteness];
 
-    if (dest->win_examples[remoteness].tier == -1) {
+    if (dest->win_examples[remoteness].tier == kIllegalTier) {
         dest->win_examples[remoteness] = src->win_examples[remoteness];
     }
-    if (dest->lose_examples[remoteness].tier == -1) {
+    if (dest->lose_examples[remoteness].tier == kIllegalTier) {
         dest->lose_examples[remoteness] = src->lose_examples[remoteness];
     }
-    if (dest->tie_examples[remoteness].tier == -1) {
+    if (dest->tie_examples[remoteness].tier == kIllegalTier) {
         dest->tie_examples[remoteness] = src->tie_examples[remoteness];
     }
-    if (dest->draw_example.tier == -1) {
+    if (dest->draw_example.tier == kIllegalTier) {
         dest->draw_example = src->draw_example;
     }
 }
@@ -550,19 +548,19 @@ static void AggregateCanonicalPositions(Analysis *dest, const Analysis *src,
     dest->canonical_tie_summary[remoteness] +=
         src->canonical_tie_summary[remoteness];
 
-    if (dest->canonical_win_examples[remoteness].tier == -1) {
+    if (dest->canonical_win_examples[remoteness].tier == kIllegalTier) {
         dest->canonical_win_examples[remoteness] =
             src->canonical_win_examples[remoteness];
     }
-    if (dest->canonical_lose_examples[remoteness].tier == -1) {
+    if (dest->canonical_lose_examples[remoteness].tier == kIllegalTier) {
         dest->canonical_lose_examples[remoteness] =
             src->canonical_lose_examples[remoteness];
     }
-    if (dest->canonical_tie_examples[remoteness].tier == -1) {
+    if (dest->canonical_tie_examples[remoteness].tier == kIllegalTier) {
         dest->canonical_tie_examples[remoteness] =
             src->canonical_tie_examples[remoteness];
     }
-    if (dest->canonical_draw_example.tier == -1) {
+    if (dest->canonical_draw_example.tier == kIllegalTier) {
         dest->canonical_draw_example = src->canonical_draw_example;
     }
 }

@@ -38,6 +38,7 @@
 #include <string.h>  // memset
 #include <zlib.h>
 
+#include "core/constants.h"
 #include "core/db/bpdb/bpdb_file.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
@@ -86,7 +87,7 @@ int BpdbProbeInit(DbProbe *probe) {
     probe->buffer = malloc(default_buffer_size);
     if (probe->buffer == NULL) return 1;
 
-    probe->tier = -1;
+    probe->tier = kIllegalTier;
     probe->begin = -1;
     probe->size = default_buffer_size;
 

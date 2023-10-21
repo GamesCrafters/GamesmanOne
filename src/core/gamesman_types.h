@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -77,6 +77,23 @@ typedef enum Value {
     kTie,
     kWin,
 } Value;
+
+/** @brief Constant limits of GAMESMAN types. */
+enum GamesmanTypesLimits {
+    /**
+     * Largest remoteness expected. Increase this value and recompile if
+     * this value is not large enough for a game in the future.
+     */
+    kRemotenessMax = 1023,
+    kNumRemotenesses = 1024,
+    kDbNameLengthMax = 31,
+    kDbFormalNameLengthMax = 63,
+    kSolverOptionNameLengthMax = 63,
+    kSolverNameLengthMax = 63,
+    kGameVariantOptionNameMax = 63,
+    kGameNameLengthMax = 31,
+    kGameFormalNameLengthMax = 127,
+};
 
 /**
  * @brief Dynamic Position array.
@@ -158,25 +175,6 @@ typedef struct TierPositionHashSet {
     int64_t size;
     double max_load_factor;
 } TierPositionHashSet;
-
-/**
- * @brief Constant limits of GAMESMAN types.
- */
-typedef enum GamesmanTypesLimits {
-    /**
-     * Largest remoteness expected. Increase this value and recompile if
-     * this value is not large enough for a game in the future.
-     */
-    kRemotenessMax = 1023,
-    kNumRemotenesses = 1024,
-    kDbNameLengthMax = 31,
-    kDbFormalNameLengthMax = 63,
-    kSolverOptionNameLengthMax = 63,
-    kSolverNameLengthMax = 63,
-    kGameVariantOptionNameMax = 63,
-    kGameNameLengthMax = 31,
-    kGameFormalNameLengthMax = 127,
-} GamesmanTypesLimits;
 
 /**
  * @brief Database probe which can be used to probe the database on permanent
@@ -828,39 +826,6 @@ typedef struct Game {
      */
     int (*SetVariantOption)(int option, int selection);
 } Game;
-
-/**
- * @brief Precalculated string length limits for integers of different types.
- */
-typedef enum IntBase10StringLengthLimits {
-    /** int8_t: [-128, 127] */
-    kInt8Base10StringLengthMax = 4,
-
-    /** uint8_t: [0, 255] */
-    kUint8Base10StringLengthMax = 3,
-
-    /** int16_t: [-32768, 32767] */
-    kInt16Base10StringLengthMax = 6,
-
-    /** uint16_t: [0, 65535] */
-    kUint16Base10StringLengthMax = 5,
-
-    /** int32_t: [-2147483648, 2147483647] */
-    kInt32Base10StringLengthMax = 11,
-
-    /** uint32_t: [0, 4294967295] */
-    kUint32Base10StringLengthMax = 10,
-
-    /** int64_t: [-9223372036854775808, 9223372036854775807] */
-    kInt64Base10StringLengthMax = 20,
-
-    /** uint64_t: [0, 18446744073709551615] */
-    kUint64Base10StringLengthMax = 20,
-} IntBase10StringLengthLimits;
-
-typedef enum CommonConstants {
-    kBitsPerByte = 8,
-} CommonConstants;
 
 // GAMESMAN Types Related Accessor and Mutator Functions.
 

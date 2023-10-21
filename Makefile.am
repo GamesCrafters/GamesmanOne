@@ -57,6 +57,7 @@ bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_worker.c
 bin_gamesman_SOURCES += src/core/solvers/solver_manager.c
 
 # src/core
+bin_gamesman_SOURCES += src/core/constants.c
 bin_gamesman_SOURCES += src/core/gamesman_headless.c
 bin_gamesman_SOURCES += src/core/gamesman_interactive.c
 bin_gamesman_SOURCES += src/core/gamesman_types.c

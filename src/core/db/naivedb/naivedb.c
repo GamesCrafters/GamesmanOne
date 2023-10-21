@@ -34,6 +34,7 @@
 #include <stdlib.h>    // malloc, calloc, free
 #include <string.h>    // memset
 
+#include "core/constants.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 
@@ -176,8 +177,8 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
-    current_tier = -1;
-    current_tier_size = -1;
+    current_tier = kIllegalTier;
+    current_tier_size = kIllegalSize;
     assert(records == NULL);
 
     return 0;
@@ -233,8 +234,8 @@ static int NaiveDbFlushSolvingTier(void *aux) {
 static int NaiveDbFreeSolvingTier(void) {
     free(records);
     records = NULL;
-    current_tier = -1;
-    current_tier_size = -1;
+    current_tier = kIllegalTier;
+    current_tier_size = kIllegalSize;
     return 0;
 }
 
@@ -260,7 +261,7 @@ static int NaiveDbProbeInit(DbProbe *probe) {
     probe->buffer = malloc(kBufferSize);
     if (probe->buffer == NULL) return 1;
 
-    probe->tier = -1;
+    probe->tier = kIllegalTier;
     probe->begin = 0;
     probe->size = kBufferSize;
 
@@ -313,7 +314,7 @@ static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position) {
 }
 
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeFillBuffer(probe, tier_position)) return -1;
+    if (!ProbeFillBuffer(probe, tier_position)) return kIllegalRemoteness;
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.remoteness;
 }
@@ -328,6 +329,6 @@ static int NaiveDbTierStatus(Tier tier) {
 
     int error = GuardedFclose(db_file);
     if (error != 0) return kDbTierCheckError;
-    
+
     return kDbTierSolved;
 }

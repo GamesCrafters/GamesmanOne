@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN interactive mode.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,12 +28,16 @@
 
 #include <stddef.h>  // NULL
 #include <stdio.h>   // printf
+#include <stdlib.h>  // free
+#include <string.h>  // strlen
 #include <unistd.h>  // usleep
 
+#include "core/constants.h"
 #include "core/gamesman_types.h"
 #include "core/interactive/main_menu.h"
+#include "core/misc.h"
 
-static ConstantReadOnlyString kOpeningCredits =
+static ConstantReadOnlyString kOpeningCreditsFormat =
     "\n"
     "  ____               http://gamescrafters.berkeley.edu  : A finite,  two-person\n"
     " / ___| __ _ _ __ ___   ___  ___ _ __ ___   __ _ _ __   : complete  information\n"
@@ -42,7 +46,7 @@ static ConstantReadOnlyString kOpeningCredits =
     " \\____|\\__,_|_| |_| |_|\\___||___/_| |_| |_|\\__,_|_| |_| : ddgarcia@berkeley.edu\n"
     "...............................................................................\n"
     "\n"
-    "Welcome to GAMESMAN, version 2023.08.14. Originally       (G)ame-independent\n"
+    "Welcome to GAMESMAN, version %s. Originally       (G)ame-independent\n"
     "written by Dan Garcia, it has undergone a series of       (A)utomatic       \n"
     "exhancements from 2001-present by GamesCrafters, the      (M)ove-tree       \n"
     "UC Berkeley Undergraduate Game Theory Research Group.     (E)xhaustive      \n"
@@ -52,12 +56,18 @@ static ConstantReadOnlyString kOpeningCredits =
     "                                                          (N)avigation      \n";
 
 void PrintOpeningCredits(void) {
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(kDate);
+    char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
+    sprintf(opening_credits, kOpeningCreditsFormat, kDate);
+
     int i = 0;
-    while (kOpeningCredits[i] != '\0') {
-        printf("%c", kOpeningCredits[i++]);
+    while (opening_credits[i] != '\0') {
+        printf("%c", opening_credits[i++]);
         fflush(stdout);
         usleep(800);
     }
+
+    free(opening_credits);
 }
 
 int GamesmanInteractiveMain(void) {

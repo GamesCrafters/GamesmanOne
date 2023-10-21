@@ -42,7 +42,9 @@
 #include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // calloc, free
+#include <string.h>    // memcpy
 
+#include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
 #include "core/solvers/tier_solver/frontier.h"
@@ -176,7 +178,7 @@ static bool Step0Initialize(Tier tier) {
     // Initialize child tier array.
     this_tier = tier;
     child_tiers = current_api.GetChildTiers(this_tier);
-    if (child_tiers.size == -1) return false;
+    if (child_tiers.size == kIllegalSize) return false;
 
     use_reverse_graph = (current_api.GetCanonicalParentPositions == NULL);
     if (use_reverse_graph) {
@@ -580,8 +582,8 @@ static void Step6SaveValues(void) {
 }
 
 static void Step7Cleanup(void) {
-    this_tier = -1;
-    this_tier_size = -1;
+    this_tier = kIllegalTier;
+    this_tier_size = kIllegalSize;
     TierArrayDestroy(&child_tiers);
     DestroyFrontiers();
     free(num_undecided_children);

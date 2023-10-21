@@ -51,7 +51,8 @@ void InteractiveGames(ReadOnlyString key) {
     char **keys = ListOfGamesAllocateKeys(num_items);
     HookFunctionPointer *hooks = ListOfGamesAllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        SafeStrncpy(items[i], all_games[i]->formal_name, kGameFormalNameLengthMax + 1);
+        SafeStrncpy(items[i], all_games[i]->formal_name,
+                    kGameFormalNameLengthMax + 1);
         items[i][kGameFormalNameLengthMax] = '\0';
         snprintf(keys[i], kKeyLengthMax, "%d", i);
         hooks[i] = &InteractivePresolve;
