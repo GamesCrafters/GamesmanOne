@@ -73,8 +73,12 @@ static int64_t GetByteOffset(Position position, int bits_per_entry);
 static int64_t GetBlockOffset(Position position, int bits_per_entry,
                               int block_size);
 static void *ProbeGetBitStream(const DbProbe *probe);
-static int64_t ReadCompressedOffset(const DbProbe *probe, Position position,
-                                    const char *full_path);
+static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
+                                                      Position position,
+                                                      const char *full_path);
+static int ProbeRecordStep2_1HandleFile(const DbProbe *probe,
+                                        const char *full_path,
+                                        int64_t compressed_offset);
 
 static uint64_t ProbeRecordStep3LoadRecord(const DbProbe *probe,
                                            Position position);
@@ -232,54 +236,30 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
 
 static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
                                       DbProbe *probe, Position position) {
-    // Calculate the address of probe's bit stream blocks.
-    int32_t decomp_dict_size = ProbeGetDecompDictSize(probe);
-    int32_t lookup_table_size = ProbeGetLookupTableSize(probe);
-    int bits_per_entry = ProbeGetBitsPerEntry(probe);
-    void *buffer_blocks = ProbeGetBitStream(probe);
-
+    int ret = -1;
     char *full_path = BpdbFileGetFullPath(sandbox_path, probe->tier);
     if (full_path == NULL) return 1;
 
     // Get offset into the compressed bit stream.
     int64_t compressed_offset =
-        ReadCompressedOffset(probe, position, full_path);
-    if (compressed_offset == -1) {
-        free(full_path);
-        return -1;
-    }
-    compressed_offset += kHeaderSize + decomp_dict_size + lookup_table_size;
+        ProbeRecordStep2_0ReadCompressedOffset(probe, position, full_path);
+    if (compressed_offset == -1) goto _bailout;
 
-    // Open db_file
-    int db_fd = GuardedOpen(full_path, O_RDONLY);
-    free(full_path);
-    full_path = NULL;
-    if (db_fd == -1) return BailOutClose(db_fd, -1);
-
-    // lseek() to the beginning of the first block that contains POSITION.
-    int error = GuardedLseek(db_fd, compressed_offset, SEEK_SET);
-    if (error != 0) return BailOutClose(db_fd, error);
-
-    // Wrap db_fd in a gzFile container.
-    gzFile compressed_stream = GuardedGzdopen(db_fd, "rb");
-    if (compressed_stream == Z_NULL) return BailOutClose(db_fd, -1);
-
-    // Since the cursor is already at the beginning of the first block,
-    // we can start reading from there.
-    int block_size = ProbeGetBlockSize(probe);
-    error = GuardedGzread(compressed_stream, buffer_blocks,
-                          kBlocksPerBuffer * block_size, true);
-    if (error != 0) return BailOutGzclose(compressed_stream, error);
-
-    // This will also close db_fd.
-    error = GuardedGzclose(compressed_stream);
-    if (error != Z_OK) return -1;
+    ret = ProbeRecordStep2_1HandleFile(probe, full_path, compressed_offset);
+    if (ret != 0) goto _bailout;
 
     // Set PROBE->begin
+    int block_size = ProbeGetBlockSize(probe);
+    int bits_per_entry = ProbeGetBitsPerEntry(probe);
     int64_t block_offset = GetBlockOffset(position, bits_per_entry, block_size);
     probe->begin = block_offset * block_size;
 
-    return 0;
+    // Success.
+    ret = 0;
+
+_bailout:
+    free(full_path);
+    return ret;
 }
 
 static int64_t GetBitOffset(Position position, int bits_per_entry) {
@@ -302,18 +282,18 @@ static void *ProbeGetBitStream(const DbProbe *probe) {
     return GenericPointerAdd(probe->buffer, kHeaderSize + decomp_dict_size);
 }
 
-static int64_t ReadCompressedOffset(const DbProbe *probe, Position position,
-                                    const char *full_path) {
-    int32_t decomp_dict_size = ProbeGetDecompDictSize(probe);
-    int bits_per_entry = ProbeGetBitsPerEntry(probe);
-    int block_size = ProbeGetBlockSize(probe);
-
+static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
+                                                      Position position,
+                                                      const char *full_path) {
     FILE *db_file = GuardedFopen(full_path, "rb");
     if (db_file == NULL) return -1;
 
+    int bits_per_entry = ProbeGetBitsPerEntry(probe);
+    int block_size = ProbeGetBlockSize(probe);
     int64_t block_offset = GetBlockOffset(position, bits_per_entry, block_size);
 
     // Seek to the entry in lookup that corresponds to block_offset.
+    int32_t decomp_dict_size = ProbeGetDecompDictSize(probe);
     int64_t seek_length =
         kHeaderSize + decomp_dict_size + block_offset * sizeof(int64_t);
     int error = GuardedFseek(db_file, seek_length, SEEK_SET);
@@ -328,7 +308,37 @@ static int64_t ReadCompressedOffset(const DbProbe *probe, Position position,
     error = GuardedFclose(db_file);
     if (error != 0) return -1;
 
-    return compressed_offset;
+    int32_t lookup_table_size = ProbeGetLookupTableSize(probe);
+    return compressed_offset + kHeaderSize + decomp_dict_size +
+           lookup_table_size;
+}
+
+static int ProbeRecordStep2_1HandleFile(const DbProbe *probe,
+                                        const char *full_path,
+                                        int64_t compressed_offset) {
+    // Open db_file
+    int db_fd = GuardedOpen(full_path, O_RDONLY);
+    if (db_fd == -1) return BailOutClose(db_fd, -1);
+
+    // lseek() to the beginning of the first block that contains POSITION.
+    int error = GuardedLseek(db_fd, compressed_offset, SEEK_SET);
+    if (error != 0) return BailOutClose(db_fd, error);
+
+    // Wrap db_fd in a gzFile container.
+    gzFile compressed_stream = GuardedGzdopen(db_fd, "rb");
+    if (compressed_stream == Z_NULL) return BailOutClose(db_fd, -1);
+
+    // Since the cursor is already at the beginning of the first block,
+    // we can start reading from there.
+    int block_size = ProbeGetBlockSize(probe);
+    void *buffer_blocks = ProbeGetBitStream(probe);
+    error = GuardedGzread(compressed_stream, buffer_blocks,
+                          kBlocksPerBuffer * block_size, true);
+    if (error != 0) return BailOutGzclose(compressed_stream, error);
+
+    // This will also close db_fd.
+    error = GuardedGzclose(compressed_stream);
+    return error;
 }
 
 // Loads the record of POSITION, assuming the requested record is in PROBE's
