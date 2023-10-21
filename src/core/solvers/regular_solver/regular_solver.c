@@ -34,6 +34,7 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // malloc, free
 #include <string.h>   // memset
 
 #include "core/analysis/stat_manager.h"
@@ -158,7 +159,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
 
     ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
     if (ret != 0) goto _bailout;
-    
+
     ret = StatManagerInit(game_name, variant);
     if (ret != 0) goto _bailout;
 
@@ -195,15 +196,22 @@ static int RegularSolverSolve(void *aux) {
 
 static int RegularSolverAnalyze(void *aux) {
     bool force = (aux != NULL) && *((bool *)aux);
-    Analysis analysis;
+    Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
+    if (analysis == NULL) return 1;
+
+    AnalysisInit(analysis);
     TierAnalyzerInit(&current_api);
-    int error = TierAnalyzerAnalyze(&analysis, kDefaultTier, force);
+    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, force);
     TierAnalyzerFinalize();
-    if (error != 0) {
+    if (error == 0) {
+        printf("\n--- Game analyzed ---\n");
+        AnalysisPrintEverything(stdout, analysis);
+    } else {
         fprintf(stderr, "RegularSolverAnalyze: failed with code %d\n", error);
-        return error;
     }
-    return 0;
+
+    free(analysis);
+    return error;
 }
 
 static int RegularSolverGetStatus(void) {

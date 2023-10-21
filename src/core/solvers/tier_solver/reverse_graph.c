@@ -10,8 +10,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseGraph type.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,6 +37,7 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdlib.h>   // malloc, free
+#include <string.h>   // memset
 
 #include "core/gamesman_types.h"  // PositionArray, TierArray, TierPosition
 
@@ -135,12 +136,36 @@ void ReverseGraphDestroy(ReverseGraph *graph) {
     TierHashMapDestroy(&graph->offset_map);
 }
 
-int64_t ReverseGraphGetIndex(ReverseGraph *graph, TierPosition tier_position) {
+/**
+ * @brief Returns the index into the parents_of array of GRAPH corresponding to
+ * TIER_POSITION.
+ *
+ * @note Assumes that GRAPH is initialized. Results in undefined behavior
+ * otherwise.
+ *
+ * @param graph Reverse graph.
+ * @param tier_position Position to get index of.
+ * @return Non-negative index into GRAPH->parents_of to get to retrieve parent
+ * positions of TIER_POSITION on success. Negative error code on failure.
+ */
+static int64_t ReverseGraphGetIndex(ReverseGraph *graph,
+                                    TierPosition tier_position) {
     TierHashMapIterator it =
         TierHashMapGet(&graph->offset_map, tier_position.tier);
     assert(TierHashMapIteratorIsValid(&it));
     int64_t offset = TierHashMapIteratorValue(&it);
     return offset + tier_position.position;
+}
+
+PositionArray ReverseGraphPopParentsOf(ReverseGraph *graph,
+                                       TierPosition tier_position) {
+    int64_t index = ReverseGraphGetIndex(graph, tier_position);
+    PositionArray ret = graph->parents_of[index];
+
+    // Clears the entry in reverse graph since it is no longer needed.
+    // The caller of this function is responsible for freeing the array.
+    memset(&graph->parents_of[index], 0, sizeof(graph->parents_of[index]));
+    return ret;
 }
 
 bool ReverseGraphAdd(ReverseGraph *graph, TierPosition child, Position parent) {

@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of utility functions related to GAMESMAN types.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1
+ * @date 2023-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,7 @@
 #include <stdint.h>   // int64_t
 #include <stdlib.h>   // calloc, realloc, free,
 
+#include "core/constants.h"
 #include "core/data_structures/int64_array.h"
 #include "core/data_structures/int64_hash_map.h"
 #include "core/data_structures/int64_queue.h"
@@ -224,7 +225,7 @@ bool TierPositionArrayResize(TierPositionArray *array, int64_t size) {
     }
 
     for (int64_t i = array->size; i < size; ++i) {
-        array->array[i] = (TierPosition){.tier = -1, .position = -1};
+        array->array[i] = kIllegalTierPosition;
     }
 
     array->size = size;

@@ -30,14 +30,15 @@
 
 #include "core/db/bpdb/bparray.h"
 
-#include <assert.h>    // assert
-#include <stdbool.h>   // bool
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int8_t, uint8_t, int32_t, int64_t, uint64_t
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // memset
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int8_t, uint8_t, int32_t, int64_t, uint64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // calloc, free
+#include <string.h>   // memset
 
+#include "core/constants.h"
 #include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
 
@@ -88,10 +89,9 @@ int BpArrayInit(BpArray *array, int64_t size) {
     array->meta.num_entries = size;
     int error = BpDictInit(&array->dict);
     if (error != 0) {
-        fprintf(
-            stderr,
-            "BpArrayInit: failed to initialize BP dictionary, code %d\n",
-            error);
+        fprintf(stderr,
+                "BpArrayInit: failed to initialize BP dictionary, code %d\n",
+                error);
         free(array->stream);
         memset(array, 0, sizeof(*array));
         return error;

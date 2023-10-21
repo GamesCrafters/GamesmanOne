@@ -100,9 +100,7 @@ static bool Step5Analyze(Analysis *dest);
 
 static bool Step6SaveAnalysis(const Analysis *dest);
 
-static void Step7PrintResults(FILE *stream, const Analysis *dest);
-
-static void Step8CleanUp(void);
+static void Step7CleanUp(void);
 
 // -----------------------------------------------------------------------------
 
@@ -134,11 +132,10 @@ int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     if (!Step6SaveAnalysis(dest)) goto _bailout;
 
 _done:
-    Step7PrintResults(stdout, dest);
     ret = 0;
 
 _bailout:
-    Step8CleanUp();
+    Step7CleanUp();
     return ret;
 }
 
@@ -448,12 +445,7 @@ static bool Step6SaveAnalysis(const Analysis *dest) {
     return StatManagerSaveAnalysis(this_tier, dest) == 0;
 }
 
-static void Step7PrintResults(FILE *stream, const Analysis *dest) {
-    fprintf(stream, "Tier %" PRId64 " analyzed:\n", this_tier);
-    AnalysisPrintEverything(stream, dest);
-}
-
-static void Step8CleanUp(void) {
+static void Step7CleanUp(void) {
     TierArrayDestroy(&child_tiers);
     TierHashMapDestroy(&child_tier_to_index);
     BitStreamDestroy(&this_tier_map);

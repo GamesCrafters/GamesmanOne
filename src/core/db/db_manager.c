@@ -33,6 +33,7 @@
 #include <stdlib.h>    // exit, EXIT_FAILURE
 #include <string.h>    // strlen
 
+#include "core/constants.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
 

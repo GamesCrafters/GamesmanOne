@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "core/constants.h"
 #include "core/gamesman_types.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"

@@ -32,6 +32,7 @@
 #include <stdlib.h>    // calloc, free
 #include <string.h>    // strlen
 
+#include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
 #include "core/gamesman_types.h"
 #include "core/misc.h"
@@ -110,7 +111,7 @@ int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier) {
 
     int error = GuardedFclose(db_file);
     if (error != 0) return kDbTierCheckError;
-    
+
     return kDbTierSolved;
 }
 

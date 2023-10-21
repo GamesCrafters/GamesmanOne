@@ -38,6 +38,7 @@
 #include <stdlib.h>  // malloc, free, realloc
 #include <string.h>  // strlen
 
+#include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
 #include "core/db/bpdb/bpdb_probe.h"
@@ -130,8 +131,8 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
-    current_tier = -1;
-    current_tier_size = -1;
+    current_tier = kIllegalTier;
+    current_tier_size = kIllegalSize;
 
     return 0;
 }
@@ -174,8 +175,8 @@ static int BpdbLiteFlushSolvingTier(void *aux) {
 
 static int BpdbLiteFreeSolvingTier(void) {
     BpArrayDestroy(&records);
-    current_tier = -1;
-    current_tier_size = -1;
+    current_tier = kIllegalTier;
+    current_tier_size = -kIllegalSize;
     return 0;
 }
 
