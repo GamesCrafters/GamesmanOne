@@ -36,5 +36,5 @@ const TierPosition kIllegalTierPosition = {
 };
 const int kIllegalRemoteness = -1;
 
-ConstantReadOnlyString kDate = "2023.10.21";
-ConstantReadOnlyString kVersion = "0.5";
+ConstantReadOnlyString kGamesmanDate = "2023.10.21";
+ConstantReadOnlyString kGamesmanVersion = "0.5";

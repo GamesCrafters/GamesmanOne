@@ -23,6 +23,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef GAMESMANONE_CORE_CONSTANTS_H_
+#define GAMESMANONE_CORE_CONSTANTS_H_
 
 #include "core/gamesman_types.h"
 
@@ -65,5 +67,7 @@ extern const Position kIllegalPosition;
 extern const TierPosition kIllegalTierPosition;
 extern const int kIllegalRemoteness;
 
-extern ConstantReadOnlyString kDate;
-extern ConstantReadOnlyString kVersion;
+extern ConstantReadOnlyString kGamesmanDate;
+extern ConstantReadOnlyString kGamesmanVersion;
+
+#endif  // GAMESMANONE_CORE_CONSTANTS_H_
