@@ -30,6 +30,9 @@ bin_gamesman_SOURCES += src/core/db/db_manager.c
 bin_gamesman_SOURCES += src/core/generic_hash/context.c
 bin_gamesman_SOURCES += src/core/generic_hash/generic_hash.c
 
+# src/core/generic_hash
+bin_gamesman_SOURCES += src/core/headless/parser.c
+
 # src/core/interactive
 bin_gamesman_SOURCES += src/core/interactive/credits/credits.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/options/options.c

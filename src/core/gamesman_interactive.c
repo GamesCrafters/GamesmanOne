@@ -56,9 +56,9 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "                                                          (N)avigation      \n";
 
 void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(kDate);
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(kGamesmanDate);
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
-    sprintf(opening_credits, kOpeningCreditsFormat, kDate);
+    sprintf(opening_credits, kOpeningCreditsFormat, kGamesmanDate);
 
     int i = 0;
     while (opening_credits[i] != '\0') {
