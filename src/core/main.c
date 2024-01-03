@@ -24,8 +24,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-
 #include "core/gamesman_headless.h"
 #include "core/gamesman_interactive.h"
 

@@ -39,19 +39,22 @@
 #include "core/gamesman_types.h"
 
 /**
- * @brief Initializes the Solver specified by GAME, finalizing any games/solvers
- * that were previously loaded.
+ * @brief Initializes the Solver specified by GAME, finalizing the previous
+ * solver.
+ * @details Current implementation only supports loading one game at a time.
  *
- * @param game The one and only game that we are loading into GAMESMAN.
+ * @param game Game to load.
+ * @param data_path Absolute or relative path to the data directory if non-NULL.
+ * The default path "data" will be used if set to NULL.
  * @return 0 on success, non-zero error code otherwise.
  */
-int SolverManagerInitSolver(const Game *game);
+int SolverManagerInit(const Game *game, ReadOnlyString data_path);
 
 /**
  * @brief Returns the solver status of the current game.
  *
  * @note Assumes a game together with its solver have been loaded using the
- * SolverManagerInitSolver() function. Results in undefined behavior otherwise.
+ * SolverManagerInit() function. Results in undefined behavior otherwise.
  *
  * @return Status encoded as an int. The encoding is specific to each solver
  * module.
@@ -66,6 +69,12 @@ int SolverManagerGetSolverStatus(void);
  */
 int SolverManagerSolve(void *aux);
 
+/**
+ * @brief Analyzes the current game.
+ * 
+ * @param aux Auxiliary parameter.
+ * @return 0 on success, non-zero error code otherwise.
+ */
 int SolverManagerAnalyze(void *aux);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_

@@ -106,6 +106,17 @@ bool Int64ArrayEmpty(const Int64Array *array);
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
+/**
+ * @brief Resizes ARRAY to have SIZE elements. If the current size of ARRAY is
+ * greater than SIZE, the content is reduced to its first SIZE elements. If the
+ * current size of ARRAY is less than SIZE, zeros shall be inserted to the back
+ * of the array.
+ *
+ * @param array Array to resize, assumed to be initialized.
+ * @param size New size of the array.
+ * @return true on success,
+ * @return false otherwise.
+ */
 bool Int64ArrayResize(Int64Array *array, int64_t size);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_

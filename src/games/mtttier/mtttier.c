@@ -90,7 +90,7 @@ static const TierSolverApi kSolverApi = {
 };
 
 // Gameplay API Setup
-static const GameplayApi kGameplayApi = {
+static const GameplayApi kMtttGameplayApi = {
     .GetInitialTier = &MtttierGetInitialTier,
     .GetInitialPosition = &MtttierGetInitialPosition,
 
@@ -118,7 +118,7 @@ const Game kMtttier = {
     .formal_name = "Tic-Tac-Tier",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
 
     .Init = &MtttierInit,
     .Finalize = &MtttierFinalize,
@@ -334,10 +334,10 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
     int actual_length =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
+        snprintf(buffer, kMtttGameplayApi.position_string_length_max + 1, kFormat,
                  board[0], board[1], board[2], board[3], board[4], board[5],
                  board[6], board[7], board[8]);
-    if (actual_length >= kGameplayApi.position_string_length_max + 1) {
+    if (actual_length >= kMtttGameplayApi.position_string_length_max + 1) {
         fprintf(
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
@@ -349,8 +349,8 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
 
 static int MtttierMoveToString(Move move, char *buffer) {
     int actual_length = snprintf(
-        buffer, kGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
-    if (actual_length >= kGameplayApi.move_string_length_max + 1) {
+        buffer, kMtttGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
+    if (actual_length >= kMtttGameplayApi.move_string_length_max + 1) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");

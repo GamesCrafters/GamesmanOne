@@ -15,12 +15,12 @@ void InteractivePostSolve(ReadOnlyString key) {
     (void)key;  // Unused.
 
     const Game *current_game = InteractiveMatchGetCurrentGame();
-    int variant_index = InteractiveMatchGetCurrentVariant();
+    int variant_id = InteractiveMatchGetCurrentVariant();
 
     // Hard-coded size based on the title definition below.
     char title[44 + kGameFormalNameLengthMax + kInt32Base10StringLengthMax];
     sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
-            current_game->formal_name, variant_index);
+            current_game->formal_name, variant_id);
     static ConstantReadOnlyString items[] = {
         "Play new game",
         "Configure play options",

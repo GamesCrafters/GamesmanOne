@@ -81,6 +81,12 @@ void *GenericPointerAdd(const void *p, int64_t offset);
 FILE *GuardedFopen(const char *filename, const char *modes);
 
 /**
+ * @brief Same behavior as freopen on success; calls perror and returns NULL
+ * otherwise.
+ */
+FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream);
+
+/**
  * @brief Same behavior as fclose on success; calls perror and returns a
  * non-zero error code otherwise.
  */

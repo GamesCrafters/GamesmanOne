@@ -98,6 +98,12 @@ FILE *GuardedFopen(const char *filename, const char *modes) {
     return f;
 }
 
+FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream) {
+    FILE *ret = freopen(filename, modes, stream);
+    if (ret == NULL) perror("freopen");
+    return ret;
+}
+
 int GuardedFclose(FILE *stream) {
     int error = fclose(stream);
     if (error != 0) perror("fclose");

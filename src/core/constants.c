@@ -28,6 +28,11 @@
 
 #include "core/gamesman_types.h"
 
+ConstantReadOnlyString kValueStrings[] = {
+    "undecided", "lose", "draw", "tie", "win",
+};
+
+const Tier kDefaultTier = 0;
 const Tier kIllegalTier = -1;
 const Position kIllegalPosition = -1;
 const TierPosition kIllegalTierPosition = {
@@ -35,6 +40,7 @@ const TierPosition kIllegalTierPosition = {
     .position = kIllegalPosition,
 };
 const int kIllegalRemoteness = -1;
+const int kIllegalVariantIndex = -1;
 
 ConstantReadOnlyString kGamesmanDate = "2023.10.21";
 ConstantReadOnlyString kGamesmanVersion = "0.5";

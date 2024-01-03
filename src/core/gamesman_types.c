@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of utility functions related to GAMESMAN types.
- * @version 1.1
- * @date 2023-10-21
+ * @version 1.11
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -319,6 +319,14 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     return true;
 }
 
+int GameVariantGetNumOptions(const GameVariant *variant) {
+    int ret = 0;
+    while (variant->options[ret].num_choices > 0) {
+        ++ret;
+    }
+    return ret;
+}
+
 int GameVariantToIndex(const GameVariant *variant) {
     if (variant == NULL) return 0;
 
@@ -326,5 +334,21 @@ int GameVariantToIndex(const GameVariant *variant) {
     for (int i = 0; variant->options[i].num_choices > 0; ++i) {
         ret = ret * variant->options[i].num_choices + variant->selections[i];
     }
+
+    return ret;
+}
+
+Int64Array VariantIndexToSelections(int index, const GameVariant *variant) {
+    int num_options = GameVariantGetNumOptions(variant);
+    Int64Array ret;
+    Int64ArrayInit(&ret);
+    if (!Int64ArrayResize(&ret, num_options)) return ret;
+
+    for (int i = num_options; i >= 0; --i) {
+        int selection = index % variant->options[i].num_choices;
+        ret.array[i] = selection;
+        index /= variant->options[i].num_choices;
+    }
+
     return ret;
 }

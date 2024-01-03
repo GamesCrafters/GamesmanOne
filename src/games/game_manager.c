@@ -27,22 +27,19 @@
 
 #include "games/game_manager.h"
 
-#include <stddef.h>   // NULL
+#include <stddef.h>  // NULL
 
 // 1. To add a new game, include the game header here.
 
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
 
-// 2. Then add the new game object to the end of the list.
+// 2. Then add the new game object to the list. Note that the list must be
+// NULL-terminated.
 
-static const Game *const kAllGames[] = {
-    &kMtttier, &kMttt, NULL
-};
+static const Game *const kAllGames[] = {&kMtttier, &kMttt, NULL};
 
-const Game *const *GameManagerGetAllGames(void) {
-    return kAllGames;
-}
+const Game *const *GameManagerGetAllGames(void) { return kAllGames; }
 
 int GameManagerNumGames(void) {
     static int count = -1;

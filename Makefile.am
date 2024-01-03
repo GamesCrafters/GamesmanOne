@@ -13,6 +13,7 @@ bin_gamesman_SOURCES += src/core/analysis/stat_manager.c
 
 # src/core/data_structures
 bin_gamesman_SOURCES += src/core/data_structures/bitstream.c
+bin_gamesman_SOURCES += src/core/data_structures/cstring.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_array.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_hash_map.c
 bin_gamesman_SOURCES += src/core/data_structures/int64_queue.c
@@ -30,8 +31,12 @@ bin_gamesman_SOURCES += src/core/db/db_manager.c
 bin_gamesman_SOURCES += src/core/generic_hash/context.c
 bin_gamesman_SOURCES += src/core/generic_hash/generic_hash.c
 
-# src/core/generic_hash
-bin_gamesman_SOURCES += src/core/headless/parser.c
+# src/core/headless
+bin_gamesman_SOURCES += src/core/headless/hanalyze.c
+bin_gamesman_SOURCES += src/core/headless/hparser.c
+bin_gamesman_SOURCES += src/core/headless/hquery.c
+bin_gamesman_SOURCES += src/core/headless/hsolve.c
+bin_gamesman_SOURCES += src/core/headless/hutils.c
 
 # src/core/interactive
 bin_gamesman_SOURCES += src/core/interactive/credits/credits.c

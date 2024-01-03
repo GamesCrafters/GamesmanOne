@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.0
- * @date 2023-10-18
+ * @version 1.1
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -44,16 +44,20 @@
 
 static char *sandbox_path;
 
-static char *SetupStatPath(ReadOnlyString game_name, int variant);
+static char *SetupStatPath(ReadOnlyString game_name, int variant,
+                           ReadOnlyString data_path);
 
 static char *GetPathToTierAnalysis(Tier tier);
 static char *GetPathToTierDiscoveryMap(Tier tier);
 static char *GetPathTo(Tier tier, ReadOnlyString extension);
 
-int StatManagerInit(ReadOnlyString game_name, int variant) {
+// -----------------------------------------------------------------------------
+
+int StatManagerInit(ReadOnlyString game_name, int variant,
+                    ReadOnlyString data_path) {
     if (sandbox_path != NULL) StatManagerFinalize();
 
-    sandbox_path = SetupStatPath(game_name, variant);
+    sandbox_path = SetupStatPath(game_name, variant, data_path);
     if (sandbox_path == NULL) return 1;
 
     return 0;
@@ -199,13 +203,16 @@ int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
     return 0;
 }
 
-static char *SetupStatPath(ReadOnlyString game_name, int variant) {
-    // path = "data/<game_name>/<variant>/analysis/"
-    static ConstantReadOnlyString kDataPath = "data";
+// -----------------------------------------------------------------------------
+
+static char *SetupStatPath(ReadOnlyString game_name, int variant,
+                           ReadOnlyString data_path) {
+    // path = "<data_path>/<game_name>/<variant>/analysis/"
+    if (data_path == NULL) data_path = "data";
     static ConstantReadOnlyString kAnalysisDirName = "analysis";
     char *path = NULL;
 
-    int path_length = strlen(kDataPath) + 1;  // +1 for '/'.
+    int path_length = strlen(data_path) + 1;  // +1 for '/'.
     path_length += strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
     path_length += strlen(kAnalysisDirName) + 1;
@@ -214,7 +221,7 @@ static char *SetupStatPath(ReadOnlyString game_name, int variant) {
         fprintf(stderr, "SetupStatPath: failed to calloc path.\n");
         return NULL;
     }
-    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", kDataPath,
+    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
                                  game_name, variant, kAnalysisDirName);
     if (actual_length >= path_length) {
         fprintf(stderr,

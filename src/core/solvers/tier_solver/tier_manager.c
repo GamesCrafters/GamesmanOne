@@ -105,34 +105,34 @@ static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
-static int SolveTierTree(bool force);
+static int SolveTierTree(bool force, int verbose);
 static void SolveUpdateTierTree(Tier solved_tier);
 static void PrintSolverResult(void);
 
-static int DiscoverTierTree(bool force);
+static int DiscoverTierTree(bool force, int verbose);
 static void AnalyzeUpdateTierTree(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
 // -----------------------------------------------------------------------------
 
-int TierManagerSolve(const TierSolverApi *api, bool force) {
+int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
     current_api = api;
     if (InitGlobalVariables(kTierSolving) != 0) {
         fprintf(stderr, "TierManagerSolve: initialization failed.\n");
         return 1;
     }
-    int ret = SolveTierTree(force);
+    int ret = SolveTierTree(force, verbose);
     DestroyGlobalVariables();
     return ret;
 }
 
-int TierManagerAnalyze(const TierSolverApi *api, bool force) {
+int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
     current_api = api;
     if (InitGlobalVariables(kTierAnalyzing) != 0) {
         fprintf(stderr, "TierManagerAnalyze: initialization failed.\n");
         return 1;
     }
-    int ret = DiscoverTierTree(force);
+    int ret = DiscoverTierTree(force, verbose);
     DestroyGlobalVariables();
     return ret;
 }
@@ -285,7 +285,7 @@ static void CreateTierTreePrintError(int error) {
     }
 }
 
-static int SolveTierTree(bool force) {
+static int SolveTierTree(bool force, int verbose) {
     TierWorkerInit(current_api);
     while (!TierQueueIsEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -305,7 +305,7 @@ static int SolveTierTree(bool force) {
             ++skipped_tiers;
         }
     }
-    PrintSolverResult();
+    if (verbose > 0) PrintSolverResult();
     return 0;
 }
 
@@ -400,7 +400,16 @@ static void PrintSolverResult(void) {
     printf("\n");
 }
 
-static int DiscoverTierTree(bool force) {
+static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
+    if (verbose > 0) printf("\n--- Tier %" PRId64 " analyzed ---\n", tier);
+    if (verbose > 1) {
+        AnalysisPrintEverything(stdout, analysis);
+    } else if (verbose > 0) {
+        AnalysisPrintStatistics(stdout, analysis);
+    }
+}
+
+static int DiscoverTierTree(bool force, int verbose) {
     TierAnalyzerInit(current_api);
     while (!TierQueueIsEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -417,8 +426,7 @@ static int DiscoverTierTree(bool force) {
         int error = TierAnalyzerAnalyze(tier_analysis, canonical, force);
         if (error == 0) {
             // Analyzer succeeded.
-            printf("\n--- Tier %" PRId64 " analyzed ---\n", tier);
-            AnalysisPrintStatistics(stdout, tier_analysis);
+            PrintAnalyzed(tier, tier_analysis, verbose);
             AnalyzeUpdateTierTree(tier);
             ++processed_tiers;
 
@@ -435,7 +443,7 @@ static int DiscoverTierTree(bool force) {
         free(tier_analysis);
     }
 
-    PrintAnalyzerResult();
+    if (verbose > 0) PrintAnalyzerResult();
     TierAnalyzerFinalize();
     return 0;
 }

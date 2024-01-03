@@ -25,7 +25,8 @@ static int SetCurrentGame(ReadOnlyString key) {
     int error = InteractiveMatchSetGame(current_game);
     if (error != 0) return error;
 
-    return SolverManagerInitSolver(current_game);
+    // TODO: add support to user-specified data_path.
+    return SolverManagerInit(current_game, NULL);
 }
 
 static void SolveAndStart(ReadOnlyString key) {
@@ -44,12 +45,12 @@ void InteractivePresolve(ReadOnlyString key) {
     }
 
     const Game *current_game = InteractiveMatchGetCurrentGame();
-    int variant_index = InteractiveMatchGetCurrentVariant();
+    int variant_id = InteractiveMatchGetCurrentVariant();
 
     // Hard-coded size based on the title definition below.
     char title[43 + kGameFormalNameLengthMax + kUint32Base10StringLengthMax];
     sprintf(title, "Main (Pre-Solved) Menu for %s (variant %d)",
-            current_game->formal_name, variant_index);
+            current_game->formal_name, variant_id);
     static ConstantReadOnlyString items[] = {
         "Solve and start",
         "Start without solving",

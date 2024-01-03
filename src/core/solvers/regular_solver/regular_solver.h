@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declaration of the Regular Solver API.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.11
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -193,5 +193,15 @@ typedef struct RegularSolverApi {
      */
     PositionArray (*GetCanonicalParentPositions)(Position position);
 } RegularSolverApi;
+
+typedef struct RegularSolverSolveOptions {
+    int verbose;
+    bool force;
+} RegularSolverSolveOptions;
+
+typedef struct RegularSolverAnalyzeOptions {
+    int verbose;
+    bool force;
+} RegularSolverAnalyzeOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_

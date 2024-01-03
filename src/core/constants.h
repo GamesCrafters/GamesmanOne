@@ -28,6 +28,9 @@
 
 #include "core/gamesman_types.h"
 
+/** @brief String representations for all possible Values. */
+extern ConstantReadOnlyString kValueStrings[];
+
 /**
  * @brief Precalculated string length limits for integers of different types.
  */
@@ -62,10 +65,12 @@ enum CommonConstants {
     kBitsPerByte = 8,  /**< 8 bits per byte. */
 };
 
+extern const Tier kDefaultTier;
 extern const Tier kIllegalTier;
 extern const Position kIllegalPosition;
 extern const TierPosition kIllegalTierPosition;
 extern const int kIllegalRemoteness;
+extern const int kIllegalVariantIndex;
 
 extern ConstantReadOnlyString kGamesmanDate;
 extern ConstantReadOnlyString kGamesmanVersion;

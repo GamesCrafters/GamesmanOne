@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
- * @version 1.1
- * @date 2023-10-21
+ * @version 1.11
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,6 +30,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
+#include "core/data_structures/cstring.h"
 #include "core/data_structures/int64_array.h"
 #include "core/data_structures/int64_hash_map.h"
 #include "core/data_structures/int64_queue.h"
@@ -48,19 +49,13 @@ typedef const char *ReadOnlyString;
  */
 typedef const ReadOnlyString ConstantReadOnlyString;
 
-/**
- * @brief Tier as a 64-bit integer.
- */
+/** @brief Tier as a 64-bit integer. */
 typedef int64_t Tier;
 
-/**
- * @brief Game position as a 64-bit integer hash.
- */
+/** @brief Game position as a 64-bit integer hash. */
 typedef int64_t Position;
 
-/**
- * @brief Game move as a 64-bit integer.
- */
+/** @brief Game move as a 64-bit integer. */
 typedef int64_t Move;
 
 /**
@@ -95,49 +90,31 @@ enum GamesmanTypesLimits {
     kGameFormalNameLengthMax = 127,
 };
 
-/**
- * @brief Dynamic Position array.
- */
+/** @brief Dynamic Position array. */
 typedef Int64Array PositionArray;
 
-/**
- * @brief Linear-probing Position hash set using Int64HashMap.
- */
+/** @brief Linear-probing Position hash set using Int64HashMap. */
 typedef Int64HashMap PositionHashSet;
 
-/**
- * @brief Dynamic Move array.
- */
+/** @brief Dynamic Move array. */
 typedef Int64Array MoveArray;
 
-/**
- * @brief Dynamic Tier array.
- */
+/** @brief Dynamic Tier array. */
 typedef Int64Array TierArray;
 
-/**
- * @brief Dynamic Tier stack using Int64Array.
- */
+/** @brief Dynamic Tier stack using Int64Array. */
 typedef Int64Array TierStack;
 
-/**
- * @brief Dynamic Tier queue using Int64Queue.
- */
+/** @brief Dynamic Tier queue using Int64Queue. */
 typedef Int64Queue TierQueue;
 
-/**
- * @brief Linear-probing Tier to int64_t hash map using Int64HashMap.
- */
+/** @brief Linear-probing Tier to int64_t hash map using Int64HashMap. */
 typedef Int64HashMap TierHashMap;
 
-/**
- * @brief Iterator for TierHashMap.
- */
+/** @brief Iterator for TierHashMap. */
 typedef Int64HashMapIterator TierHashMapIterator;
 
-/**
- * @brief Linear-probing Tier hash set using Int64HashMap.
- */
+/** @brief Linear-probing Tier hash set using Int64HashMap. */
 typedef Int64HashMap TierHashSet;
 
 /**
@@ -149,26 +126,20 @@ typedef struct TierPosition {
     Position position;
 } TierPosition;
 
-/**
- * @brief Dynamic TierPositionArray.
- */
+/** @brief Dynamic TierPositionArray. */
 typedef struct TierPositionArray {
     TierPosition *array;
     int64_t size;
     int64_t capacity;
 } TierPositionArray;
 
-/**
- * @brief Entry in a TierPositionHashSet.
- */
+/** @brief Entry in a TierPositionHashSet. */
 typedef struct TierPositionHashSetEntry {
     TierPosition key;
     bool used;
 } TierPositionHashSetEntry;
 
-/**
- * @brief Linear-probing TierPosition hash set.
- */
+/** @brief Linear-probing TierPosition hash set. */
 typedef struct TierPositionHashSet {
     TierPositionHashSetEntry *entries;
     int64_t capacity;
@@ -187,6 +158,7 @@ typedef struct DbProbe {
     int64_t size;
 } DbProbe;
 
+/** @brief Enumeration of all possible statuses of a tier's database file. */
 typedef enum DatabaseTierStatus {
     kDbTierSolved,
     kDbTierCorrupted,
@@ -194,6 +166,7 @@ typedef enum DatabaseTierStatus {
     kDbTierCheckError,
 } DatabaseTierStatus;
 
+/** @brief Enumeration of all possible statuses of a tier's analysis. */
 typedef enum AnalysisTierStatus {
     kAnalysisTierAnalyzed,
     kAnalysisTierUnanalyzed,
@@ -404,10 +377,13 @@ typedef struct Solver {
      * correct type of Solver API that applies to the current Solver,
      * implementing and setting up required API functions, and casting the
      * pointer to a generic constant pointer (const void *) type.
+     * @param data_path Absolute or relative path to the data directory if
+     * non-NULL. The default path "data" will be used if set to NULL.
      *
      * @return 0 on success, non-zero error code otherwise.
      */
-    int (*Init)(ReadOnlyString game_name, int variant, const void *solver_api);
+    int (*Init)(ReadOnlyString game_name, int variant, const void *solver_api,
+                ReadOnlyString data_path);
 
     /**
      * @brief Finalizes the Solver, freeing all allocated memory.
@@ -752,7 +728,7 @@ typedef struct GameplayApi {
      * @note Assumes both TIER_POSITION and SYMMETRIC are valid. Furthermore,
      * assumes that the tier as specified by TIER_POSITION is symmetric to the
      * SYMMETRIC tier; that is, calling GetCanonicalTier(tier_position.tier)
-     * and calling GetCanonicalTier(symmetric) returns the same canonical tier.
+     * and calling GetCanonicalTier(symmetric) return the same canonical tier.
      *
      * @note Required for TIER games ONLY IF tier symmetry removal optimization
      * was used to solve the game. Set to NULL otherwise. Inconsistent usage of
@@ -761,6 +737,24 @@ typedef struct GameplayApi {
     Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
                                            Tier symmetric);
 } GameplayApi;
+
+typedef struct UniversalWebApi {
+    Position (*FormalPositionToPosition)(ReadOnlyString formal_position);
+    TierPosition (*FormalPositionToTierPosition)(
+        ReadOnlyString formal_position);
+
+    CString (*PositionToFormalPosition)(Position position);
+    CString (*TierPositionToFormalPosition)(TierPosition position);
+
+    CString (*PositionToUwapiPosition)(Position position);
+    CString (*TierPositionToUwapiPosition)(TierPosition position);
+
+    CString (*MoveToUwapiMove)(Position position, Move move);
+    CString (*TierMoveToUwapiMove)(TierPosition position, Move move);
+
+    Position (*GetRandomLegalPosition)(void);
+    TierPosition (*GetRandomLegalTierPosition)(void);
+} UniversalWebApi;
 
 /**
  * @brief Generic Game type.
@@ -792,6 +786,8 @@ typedef struct Game {
     /** Pointer to a GameplayApi object which contains implemented gameplay API
      * functions. */
     const GameplayApi *gameplay_api;
+
+    const UniversalWebApi *uwapi;
 
     /**
      * @brief Initializes the game module.
@@ -826,6 +822,17 @@ typedef struct Game {
      */
     int (*SetVariantOption)(int option, int selection);
 } Game;
+
+/** @brief Enumeration of all possible actions in headless mode. */
+typedef enum HeadlessActions {
+    kInvalidHeadlessAction = -1,
+    kHeadlessSolve,
+    kHeadlessAnalyze,
+    kHeadlessQuery,
+    kHeadlessGetStart,
+    kHeadlessGetRandom,
+    kNumHeadlessActions,
+} HeadlessAction;
 
 // GAMESMAN Types Related Accessor and Mutator Functions.
 
@@ -893,6 +900,8 @@ void TierPositionHashSetDestroy(TierPositionHashSet *set);
 bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
 
+int GameVariantGetNumOptions(const GameVariant *variant);
 int GameVariantToIndex(const GameVariant *variant);
+Int64Array VariantIndexToSelections(int index, const GameVariant *variant);
 
 #endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_

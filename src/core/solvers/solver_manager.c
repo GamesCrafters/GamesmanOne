@@ -42,17 +42,18 @@
 
 static const Solver *current_solver;
 
-int SolverManagerInitSolver(const Game *game) {
+int SolverManagerInit(const Game *game, ReadOnlyString data_path) {
     if (game == NULL) return -1;
 
     const GameVariant *variant = game->GetCurrentVariant();
-    int variant_index = GameVariantToIndex(variant);
+    int variant_id = GameVariantToIndex(variant);
 
     if (current_solver != NULL) {
         current_solver->Finalize();
     }
     current_solver = game->solver;
-    return current_solver->Init(game->name, variant_index, game->solver_api);
+    return current_solver->Init(game->name, variant_id, game->solver_api,
+                                data_path);
 }
 
 int SolverManagerGetSolverStatus(void) {

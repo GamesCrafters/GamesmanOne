@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Statistics Manager Module for game analysis.
- * @version 1.0
- * @date 2023-10-18
+ * @version 1.1
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,9 +40,12 @@
  *
  * @param game_name Internal name of the game.
  * @param variant Index of the game variant as an integer.
+ * @param data_path Absolute or relative path to the data directory if non-NULL.
+ * The default path "data" will be used if set to NULL.
  * @return 0 on success, non-zero otherwise.
  */
-int StatManagerInit(ReadOnlyString game_name, int variant);
+int StatManagerInit(ReadOnlyString game_name, int variant,
+                    ReadOnlyString data_path);
 
 /**
  * @brief Finalizes the Statistics Manager Module, freeing all dynamically
@@ -89,7 +92,7 @@ BitStream StatManagerLoadDiscoveryMap(Tier tier);
  * @details A discovery map is a bit stream of length equal to the size of TIER,
  * with the i-th bit turned on if and only if the position i has been discovered
  * as reachable in TIER.
- * 
+ *
  * @param stream Discovery map of TIER as a BitStream.
  * @param tier Tier being discovered.
  * @return 0 on success, non-zero error code otherwise.

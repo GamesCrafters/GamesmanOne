@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Tier Solver.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.11
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -45,7 +45,7 @@
 // Solver API functions.
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
-                          const void *solver_api);
+                          const void *solver_api, ReadOnlyString data_path);
 static int TierSolverFinalize(void);
 static int TierSolverSolve(void *aux);
 static int TierSolverAnalyze(void *aux);
@@ -132,15 +132,15 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 // -----------------------------------------------------------------------------
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
-                          const void *solver_api) {
+                          const void *solver_api, ReadOnlyString data_path) {
     int ret = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path, NULL);
     if (ret != 0) goto _bailout;
 
-    ret = StatManagerInit(game_name, variant);
+    ret = StatManagerInit(game_name, variant, data_path);
     if (ret != 0) goto _bailout;
 
     // Success.
@@ -167,13 +167,23 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverSolve(void *aux) {
-    bool force = (aux != NULL) && *((bool *)aux);
-    return TierManagerSolve(&current_api, force);
+    static const TierSolverSolveOptions kDefaultSolveOptions = {
+        .force = false,
+        .verbose = 1,
+    };
+    const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
+    if (options == NULL) options = &kDefaultSolveOptions;
+    return TierManagerSolve(&current_api, options->force, options->verbose);
 }
 
 static int TierSolverAnalyze(void *aux) {
-    bool force = (aux != NULL) && *((bool *)aux);
-    return TierManagerAnalyze(&current_api, force);
+    static const TierSolverSolveOptions kDefaultAnalyzeOptions = {
+        .force = false,
+        .verbose = 1,
+    };
+    const TierSolverAnalyzeOptions *options = (TierSolverAnalyzeOptions *)aux;
+    if (options == NULL) options = &kDefaultAnalyzeOptions;
+    return TierManagerAnalyze(&current_api, options->force, options->verbose);
 }
 
 static int TierSolverGetStatus(void) {

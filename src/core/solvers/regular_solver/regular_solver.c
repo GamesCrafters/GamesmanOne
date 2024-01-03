@@ -7,8 +7,8 @@
  * @details The Regular Solver is in fact the Tier Solver on a single tier in
  * disguise, and therefore, the Tier Solver Worker Module is used in this file.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.11
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,6 +38,7 @@
 #include <string.h>   // memset
 
 #include "core/analysis/stat_manager.h"
+#include "core/constants.h"
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
@@ -49,7 +50,7 @@
 // Solver API functions.
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
-                             const void *solver_api);
+                             const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
 static int RegularSolverSolve(void *aux);
 static int RegularSolverAnalyze(void *aux);
@@ -121,8 +122,6 @@ static bool SetCurrentApi(const RegularSolverApi *api);
 
 // Converted Tier Solver API Variables and Functions
 
-static const Tier kDefaultTier = 0;
-
 static Tier GetInitialTier(void);
 static Position TierGetInitialPosition(void);
 
@@ -152,15 +151,15 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 // -----------------------------------------------------------------------------
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
-                             const void *solver_api) {
+                             const void *solver_api, ReadOnlyString data_path) {
     int ret = -1;
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path, NULL);
     if (ret != 0) goto _bailout;
 
-    ret = StatManagerInit(game_name, variant);
+    ret = StatManagerInit(game_name, variant, data_path);
     if (ret != 0) goto _bailout;
 
     // Success.
@@ -187,23 +186,34 @@ static int RegularSolverFinalize(void) {
 }
 
 static int RegularSolverSolve(void *aux) {
-    bool force = false;
-    if (aux != NULL) force = *((bool *)aux);
-
+    static const RegularSolverSolveOptions kDefaultSolveOptions = {
+        .force = false,
+        .verbose = 1,
+    };
+    const RegularSolverSolveOptions *options =
+        (const RegularSolverSolveOptions *)aux;
+    if (options == NULL) options = &kDefaultSolveOptions;
     TierWorkerInit(&current_api);
-    return TierWorkerSolve(kDefaultTier, force);
+    return TierWorkerSolve(kDefaultTier, options->force);
 }
 
 static int RegularSolverAnalyze(void *aux) {
-    bool force = (aux != NULL) && *((bool *)aux);
+    static const RegularSolverAnalyzeOptions kDefaultAnalyzeOptions = {
+        .force = false,
+        .verbose = 1,
+    };
+
     Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
     if (analysis == NULL) return 1;
-
     AnalysisInit(analysis);
+
     TierAnalyzerInit(&current_api);
-    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, force);
+    const RegularSolverAnalyzeOptions *options =
+        (const RegularSolverAnalyzeOptions *)aux;
+    if (options == NULL) options = &kDefaultAnalyzeOptions;
+    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, options->force);
     TierAnalyzerFinalize();
-    if (error == 0) {
+    if (error == 0 && options->verbose > 0) {
         printf("\n--- Game analyzed ---\n");
         AnalysisPrintEverything(stdout, analysis);
     } else {
