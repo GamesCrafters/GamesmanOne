@@ -35,6 +35,8 @@ const Game *HeadlessGetGame(ReadOnlyString game_name) {
 }
 
 int HeadlessRedirectOutput(ReadOnlyString output) {
+    if (output == NULL) return 0;
+    
     int error = MakeDirectory(output);
     if (error != 0) {
         fprintf(

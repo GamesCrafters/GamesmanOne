@@ -199,7 +199,7 @@ static void ValidateArguments(struct argp_state *state,
 }
 
 static void PrintArguments(const ArgpArguments *arguments) {
-    printf("Command: %d\n", arguments->command);
+    printf("Command: %s\n", arguments->command);
     printf("Action: %d\n", arguments->action);
     printf("Game: %s\n", arguments->game ? arguments->game : "-");
     printf("Variant ID: %s\n",

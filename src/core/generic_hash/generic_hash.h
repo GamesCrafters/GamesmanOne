@@ -68,8 +68,8 @@ void GenericHashReinitialize(void);
  * - The $-1$ is used to mark the end of the array.
  * E.g., set this to {'-', 0, 9, 'O', 0, 4, 'X', 0, 5, -1} for the game of
  * Tic-Tac-Toe. Explanation: there can be at least 0 or at most 9 blank slots,
- * there can be at least 0 or at most 4 O's on the board, and there can be at
- * least 0 or at most 5 X's on the board, assuming X always goes first.
+ * at least 0 or at most 4 O's on the board, and at least 0 or at most 5 X's on
+ * the board, assuming X always goes first.
  * @param IsValidConfiguration Pointer to a user-defined configuration
  * validation function which returns true if the given piece configuration is
  * valid based on game rules. The system will determine if configuration is
