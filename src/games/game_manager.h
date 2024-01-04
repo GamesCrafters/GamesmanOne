@@ -6,8 +6,8 @@
  * @brief The Game Manager Module, which provides a list to all games in
  * GAMESMAN.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.01
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,6 +31,8 @@
 
 #include "core/gamesman_types.h"
 
+#include <stdbool.h>
+
 /**
  * @brief Returns a NULL-terminated read-only array of all games in GAMESMAN.
  */
@@ -38,5 +40,15 @@ const Game *const *GameManagerGetAllGames(void);
 
 /** @brief Returns the total number of games in GAMESMAN. */
 int GameManagerNumGames(void);
+
+const Game *GameManagerInitGame(ReadOnlyString game_name, void *aux);
+
+const Game *GameManagerInitGameIndex(int index, void *aux);
+
+const Game *GameManagerGetCurrentGame(void);
+
+int GameManagerSetVariant(int variant_id);
+
+void GameManagerFinalize(void);
 
 #endif  // GAMESMANONE_GAMES_GAME_MANAGER_H_

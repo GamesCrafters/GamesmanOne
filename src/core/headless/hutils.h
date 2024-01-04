@@ -9,8 +9,6 @@ int HeadlessGetVerbosity(bool verbose, bool quiet);
 
 int HeadlessRedirectOutput(ReadOnlyString output);
 
-const Game *HeadlessGetGame(ReadOnlyString game_name);
-
 int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
                        ReadOnlyString data_path);
 

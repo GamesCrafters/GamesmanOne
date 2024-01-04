@@ -17,10 +17,10 @@ void InteractivePostSolve(ReadOnlyString key) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
     int variant_id = InteractiveMatchGetCurrentVariant();
 
-    // Hard-coded size based on the title definition below.
-    char title[44 + kGameFormalNameLengthMax + kInt32Base10StringLengthMax];
-    sprintf(title, "Play (Post-Solved) Menu for %s (variant %d)",
-            current_game->formal_name, variant_id);
+    const char title_format[] = "Play (Post-Solved) Menu for %s (variant %d)";
+    char title[sizeof(title_format) + kGameFormalNameLengthMax +
+               kInt32Base10StringLengthMax];
+    sprintf(title, title_format, current_game->formal_name, variant_id);
     static ConstantReadOnlyString items[] = {
         "Play new game",
         "Configure play options",

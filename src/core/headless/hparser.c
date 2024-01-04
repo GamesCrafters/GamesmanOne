@@ -36,8 +36,6 @@ static void ParseCommand(char *arg, ArgpArguments *arguments);
 static void ValidateArguments(struct argp_state *state,
                               struct ArgpArguments *arguments);
 
-static void PrintArguments(const ArgpArguments *arguments);
-
 // Argp extern global variables.
 
 void (*argp_program_version_hook)(FILE *, struct argp_state *) = &PrintVersion;
@@ -88,7 +86,7 @@ ArgpArguments HeadlessParseArguments(int argc, char **argv) {
                 "HeadlessParseArguments: argp_parse returned error code %d\n",
                 error);
     }
-    PrintArguments(&arguments);  // TODO: remove this
+    
     return arguments;
 }
 
@@ -196,19 +194,4 @@ static void ValidateArguments(struct argp_state *state,
             "too many arguments for command %s (at most %d, provided %d)",
             command, max_args, arg_num);
     }
-}
-
-static void PrintArguments(const ArgpArguments *arguments) {
-    printf("Command: %s\n", arguments->command);
-    printf("Action: %d\n", arguments->action);
-    printf("Game: %s\n", arguments->game ? arguments->game : "-");
-    printf("Variant ID: %s\n",
-           arguments->variant_id ? arguments->variant_id : "-");
-    printf("Position: %s\n", arguments->position ? arguments->position : "-");
-    printf("Data Directory: %s\n",
-           arguments->data_path ? arguments->data_path : "-");
-    printf("Output: %s\n", arguments->output ? arguments->output : "-");
-    printf("Force: %d\n", arguments->force);
-    printf("Verbose: %d\n", arguments->verbose);
-    printf("Quiet: %d\n", arguments->quiet);
 }

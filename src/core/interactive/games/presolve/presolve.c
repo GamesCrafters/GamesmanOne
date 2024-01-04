@@ -20,13 +20,14 @@ static int SetCurrentGame(ReadOnlyString key) {
     int game_index = atoi(key);
     assert(game_index >= 0 && game_index < GameManagerNumGames());
 
-    const Game *const *all_games = GameManagerGetAllGames();
-    const Game *current_game = all_games[game_index];
+    // Aux parameter for game initialization currently unused.
+    const Game *current_game = GameManagerInitGameIndex(game_index, NULL);
+    assert(current_game != NULL);
     int error = InteractiveMatchSetGame(current_game);
     if (error != 0) return error;
 
     // TODO: add support to user-specified data_path.
-    return SolverManagerInit(current_game, NULL);
+    return SolverManagerInit(NULL);
 }
 
 static void SolveAndStart(ReadOnlyString key) {
@@ -47,10 +48,10 @@ void InteractivePresolve(ReadOnlyString key) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
     int variant_id = InteractiveMatchGetCurrentVariant();
 
-    // Hard-coded size based on the title definition below.
-    char title[43 + kGameFormalNameLengthMax + kUint32Base10StringLengthMax];
-    sprintf(title, "Main (Pre-Solved) Menu for %s (variant %d)",
-            current_game->formal_name, variant_id);
+    const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";
+    char title[sizeof(title_format) + kGameFormalNameLengthMax +
+               kUint32Base10StringLengthMax];
+    sprintf(title, title_format, current_game->formal_name, variant_id);
     static ConstantReadOnlyString items[] = {
         "Solve and start",
         "Start without solving",

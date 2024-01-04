@@ -37,7 +37,6 @@ int InteractiveMatchSetGame(const Game *game) {
     MatchDestroy();
     memset(&match, 0, sizeof(match));
     match.game = game;
-    game->Init(NULL);
     if (!ImplementsBasicGameplayApi(game->gameplay_api)) {
         return kInteractiveMatchSetGameBasicApiIncomplete;
     } else if (ImplementsRegularGameplayApi(game->gameplay_api)) {

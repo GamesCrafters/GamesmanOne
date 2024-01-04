@@ -394,7 +394,7 @@ void AnalysisPrintPositionWithMostMoves(FILE *stream,
                                         const Analysis *analysis) {
     fprintf(stream,
             "Position %" PRId64 " in tier %" PRId64
-            " has the most number of available moves: %d\n",
+            " has the largest number of available moves: %d\n",
             analysis->position_with_most_moves.position,
             analysis->position_with_most_moves.tier, analysis->max_num_moves);
 }
@@ -436,6 +436,7 @@ void AnalysisPrintLargestRemotenesses(FILE *stream, const Analysis *analysis) {
 
 void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
     AnalysisPrintStatistics(stream, analysis);
+    fprintf(stream, "\n");
     AnalysisPrintSummary(stream, analysis);
     fprintf(stream, "\n");
     AnalysisPrintCanonicalSummary(stream, analysis);

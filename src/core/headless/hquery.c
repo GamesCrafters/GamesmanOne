@@ -8,6 +8,7 @@
 #include "core/db/db_manager.h"
 #include "core/gamesman_types.h"
 #include "core/headless/hutils.h"
+#include "games/game_manager.h"
 
 static bool ImplementsBasicUwapi(const Game *game);
 static bool ImplementsRegularUwapi(const Game *game);
@@ -20,14 +21,15 @@ static int QueryTier(const Game *game, ReadOnlyString formal_position);
 
 int HeadlessQuery(ReadOnlyString game_name, int variant_id,
                   ReadOnlyString data_path, ReadOnlyString formal_position) {
-    const Game *game = HeadlessGetGame(game_name);
+    int error = HeadlessInitSolver(game_name, variant_id, data_path);
+    if (error != 0) return error;
+
+    const Game *game = GameManagerGetCurrentGame();
+    assert(game != NULL);
     bool implements_regular = ImplementsRegularUwapi(game);
     bool implements_tier = ImplementsTierUwapi(game);
 
-    if (game == NULL) {
-        fprintf(stderr, "HeadlessQuery: game [%s] not found\n", game_name);
-        return -1;
-    } else if (!implements_regular && !implements_tier) {
+    if (!implements_regular && !implements_tier) {
         fprintf(
             stderr,
             "HeadlessQuery: %s does not have a valid UWAPI implementation\n",
@@ -36,8 +38,6 @@ int HeadlessQuery(ReadOnlyString game_name, int variant_id,
     }
 
     // Either regular or tier UWAPI is implemented.
-    int error = HeadlessInitSolver(game_name, variant_id, data_path);
-    if (error != 0) return error;
     if (implements_regular) return QueryRegular(game, formal_position);
     return QueryTier(game, formal_position);
 }

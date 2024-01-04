@@ -13,8 +13,8 @@
  * loaded at the same time. This module handles the loading and deallocation
  * of THE ONE solver used by the current GAMESMAN instance.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.01
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,16 +39,15 @@
 #include "core/gamesman_types.h"
 
 /**
- * @brief Initializes the Solver specified by GAME, finalizing the previous
- * solver.
+ * @brief Initializes the Solver specified by the current game loaded in the
+ * Game Manager Module, and finalizes the previous solver.
  * @details Current implementation only supports loading one game at a time.
  *
- * @param game Game to load.
  * @param data_path Absolute or relative path to the data directory if non-NULL.
  * The default path "data" will be used if set to NULL.
  * @return 0 on success, non-zero error code otherwise.
  */
-int SolverManagerInit(const Game *game, ReadOnlyString data_path);
+int SolverManagerInit(ReadOnlyString data_path);
 
 /**
  * @brief Returns the solver status of the current game.
@@ -63,7 +62,7 @@ int SolverManagerGetSolverStatus(void);
 
 /**
  * @brief Solves the current game.
- * 
+ *
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero error code otherwise.
  */
@@ -71,7 +70,7 @@ int SolverManagerSolve(void *aux);
 
 /**
  * @brief Analyzes the current game.
- * 
+ *
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero error code otherwise.
  */

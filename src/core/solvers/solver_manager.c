@@ -13,8 +13,8 @@
  * loaded at the same time. This module handles the loading and deallocation
  * of THE solver used by the current GAMESMAN instance.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.01
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,10 +39,12 @@
 #include <stddef.h>  // NULL
 
 #include "core/gamesman_types.h"
+#include "games/game_manager.h"
 
 static const Solver *current_solver;
 
-int SolverManagerInit(const Game *game, ReadOnlyString data_path) {
+int SolverManagerInit(ReadOnlyString data_path) {
+    const Game *game = GameManagerGetCurrentGame();
     if (game == NULL) return -1;
 
     const GameVariant *variant = game->GetCurrentVariant();
