@@ -31,7 +31,8 @@
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // FILE
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
+#include "core/constants.h"
 
 /**
  * @brief Analysis of a game or a single tier.

@@ -36,7 +36,7 @@
 #include "core/analysis/stat_manager.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 

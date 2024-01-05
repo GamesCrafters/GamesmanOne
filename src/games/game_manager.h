@@ -29,7 +29,7 @@
 #ifndef GAMESMANONE_GAMES_GAME_MANAGER_H_
 #define GAMESMANONE_GAMES_GAME_MANAGER_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 #include <stdbool.h>
 

@@ -36,7 +36,7 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
 #define GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the Solver specified by the current game loaded in the

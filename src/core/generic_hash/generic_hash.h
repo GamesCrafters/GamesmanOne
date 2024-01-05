@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief (Re)initializes the Generic Hash system, clearing all previously

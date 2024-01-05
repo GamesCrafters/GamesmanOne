@@ -31,7 +31,7 @@
 #ifndef GAMESMANONE_GAMES_MTTT_MTTT_H_
 #define GAMESMANONE_GAMES_MTTT_MTTT_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Tic-Tac-Toe */
 extern const Game kMttt;

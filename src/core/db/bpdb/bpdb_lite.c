@@ -42,7 +42,7 @@
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
 #include "core/db/bpdb/bpdb_probe.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.

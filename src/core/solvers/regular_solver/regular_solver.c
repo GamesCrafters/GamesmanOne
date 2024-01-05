@@ -42,7 +42,7 @@
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
@@ -55,7 +55,7 @@ static int RegularSolverFinalize(void);
 static int RegularSolverSolve(void *aux);
 static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
-static const SolverConfiguration *RegularSolverGetCurrentConfiguration(void);
+static const SolverConfig *RegularSolverGetCurrentConfig(void);
 static int RegularSolverSetOption(int option, int selection);
 
 /**
@@ -71,7 +71,7 @@ const Solver kRegularSolver = {
     .Analyze = &RegularSolverAnalyze,
     .GetStatus = &RegularSolverGetStatus,
 
-    .GetCurrentConfiguration = &RegularSolverGetCurrentConfiguration,
+    .GetCurrentConfig = &RegularSolverGetCurrentConfig,
     .SetOption = &RegularSolverSetOption,
 };
 
@@ -100,7 +100,7 @@ static TierSolverApi default_api;
 static TierSolverApi current_api;
 
 // Solver settings for external use
-static SolverConfiguration current_config;
+static SolverConfig current_config;
 static int num_options;
 #define NUM_OPTIONS_MAX 3  // At most 2 options and 1 zero-terminator.
 static SolverOption current_options[NUM_OPTIONS_MAX];
@@ -229,7 +229,7 @@ static int RegularSolverGetStatus(void) {
     return 0;
 }
 
-static const SolverConfiguration *RegularSolverGetCurrentConfiguration(void) {
+static const SolverConfig *RegularSolverGetCurrentConfig(void) {
     return &current_config;
 }
 

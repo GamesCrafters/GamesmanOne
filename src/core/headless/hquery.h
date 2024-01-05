@@ -1,7 +1,7 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HQUERY_H_
 #define GAMESMANONE_CORE_HEADLESS_HQUERY_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 int HeadlessQuery(ReadOnlyString game_name, int variant_id,
                   ReadOnlyString data_path, ReadOnlyString formal_position);

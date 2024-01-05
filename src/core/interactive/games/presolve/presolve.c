@@ -7,7 +7,7 @@
 #include <stdlib.h>   // atoi
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/options.h"

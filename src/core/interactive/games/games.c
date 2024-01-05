@@ -3,7 +3,7 @@
 #include <stdio.h>   // sprintf
 #include <stdlib.h>  // free
 
-#include "core/gamesman_types.h"  // Game
+#include "core/types/gamesman_types.h"  // Game
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
 #include "core/misc.h"           // SafeMalloc

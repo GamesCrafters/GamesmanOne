@@ -36,7 +36,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman_types.h"  // PositionArray
+#include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>  // omp_lock_t

@@ -6,7 +6,7 @@
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/headless/hutils.h"
 #include "games/game_manager.h"
 
@@ -44,12 +44,16 @@ int HeadlessQuery(ReadOnlyString game_name, int variant_id,
 
 int HeadlessGetStart(ReadOnlyString game_name, int variant_id) {
     // TODO
+    (void)game_name;
+    (void)variant_id;
     printf("HeadlessGetStart: unimplemented\n");
     return 1;
 }
 
 int HeadlessGetRandom(ReadOnlyString game_name, int variant_id) {
     // TODO
+    (void)game_name;
+    (void)variant_id;
     printf("HeadlessGetRandom: unimplemented\n");
     return 1;
 }
@@ -105,4 +109,5 @@ static int QueryRegular(const Game *game, ReadOnlyString formal_position) {
 
 static int QueryTier(const Game *game, ReadOnlyString formal_position) {
     // TODO
+    
 }

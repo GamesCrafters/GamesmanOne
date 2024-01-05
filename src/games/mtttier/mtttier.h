@@ -32,7 +32,7 @@
 #ifndef GAMESMANONE_GAMES_MTTTIER_MTTTIER_H_
 #define GAMESMANONE_GAMES_MTTTIER_MTTTIER_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 extern const Game kMtttier;
 

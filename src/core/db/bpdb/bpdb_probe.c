@@ -40,7 +40,7 @@
 
 #include "core/constants.h"
 #include "core/db/bpdb/bpdb_file.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 static const int kBlocksPerBuffer = 2;

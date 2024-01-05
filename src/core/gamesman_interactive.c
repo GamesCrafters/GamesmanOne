@@ -33,7 +33,7 @@
 #include <unistd.h>  // usleep
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
 

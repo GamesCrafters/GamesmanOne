@@ -39,7 +39,7 @@
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 
 // Solver API functions.
@@ -50,7 +50,7 @@ static int TierSolverFinalize(void);
 static int TierSolverSolve(void *aux);
 static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
-static const SolverConfiguration *TierSolverGetCurrentConfiguration(void);
+static const SolverConfig *TierSolverGetCurrentConfig(void);
 static int TierSolverSetOption(int option, int selection);
 
 /**
@@ -66,7 +66,7 @@ const Solver kTierSolver = {
     .Analyze = &TierSolverAnalyze,
     .GetStatus = &TierSolverGetStatus,
 
-    .GetCurrentConfiguration = &TierSolverGetCurrentConfiguration,
+    .GetCurrentConfig = &TierSolverGetCurrentConfig,
     .SetOption = &TierSolverSetOption,
 };
 
@@ -98,7 +98,7 @@ static TierSolverApi default_api;
 static TierSolverApi current_api;
 
 // Solver settings for external use
-static SolverConfiguration current_config;
+static SolverConfig current_config;
 static int num_options;
 #define NUM_OPTIONS_MAX 4  // At most 3 options and 1 zero-terminator.
 static SolverOption current_options[NUM_OPTIONS_MAX];
@@ -177,7 +177,7 @@ static int TierSolverSolve(void *aux) {
 }
 
 static int TierSolverAnalyze(void *aux) {
-    static const TierSolverSolveOptions kDefaultAnalyzeOptions = {
+    static const TierSolverAnalyzeOptions kDefaultAnalyzeOptions = {
         .force = false,
         .verbose = 1,
     };
@@ -191,7 +191,7 @@ static int TierSolverGetStatus(void) {
     return 0;
 }
 
-static const SolverConfiguration *TierSolverGetCurrentConfiguration(void) {
+static const SolverConfig *TierSolverGetCurrentConfig(void) {
     return &current_config;
 }
 

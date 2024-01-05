@@ -33,7 +33,7 @@
 #include <stdio.h>    // FILE
 #include <zlib.h>     // gzFile
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Exits GAMESMAN. */
 void GamesmanExit(void);

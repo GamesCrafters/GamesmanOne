@@ -34,7 +34,7 @@
 #include <string.h>    // strlen
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 static const Database *current_db;

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>  // atoi
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/interactive/automenu.h"
 
 static ConstantReadOnlyString kHelpWhatIsGameValue =

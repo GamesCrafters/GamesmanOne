@@ -35,7 +35,7 @@
 #include <string.h>    // memset
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 static const int kFirstLineReservedRemotness = -1;

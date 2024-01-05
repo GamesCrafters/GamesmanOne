@@ -41,7 +41,7 @@
 #include <unistd.h>     // close
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {

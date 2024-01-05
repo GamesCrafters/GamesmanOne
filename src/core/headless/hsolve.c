@@ -6,7 +6,7 @@
 #include <stdio.h>    // printf, fprintf, stderr
 #include <stdlib.h>   // free
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"

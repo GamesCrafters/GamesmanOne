@@ -3,7 +3,7 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 int HeadlessGetVerbosity(bool verbose, bool quiet);
 

@@ -39,7 +39,7 @@
 
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 
 // Game, Solver, and Gameplay API Functions

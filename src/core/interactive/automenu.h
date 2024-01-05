@@ -3,7 +3,7 @@
 
 #include <stddef.h>  // size_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 extern const size_t kKeyLengthMax;
 

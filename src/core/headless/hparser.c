@@ -7,7 +7,8 @@
 #include <string.h>   // strcmp
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/gamesman_headless.h"
+#include "core/types/gamesman_types.h"
 
 ConstantReadOnlyString HeadlessCommands[] = {
     "solve", "analyze", "query", "getstart", "getrandom",
@@ -86,7 +87,7 @@ ArgpArguments HeadlessParseArguments(int argc, char **argv) {
                 "HeadlessParseArguments: argp_parse returned error code %d\n",
                 error);
     }
-    
+
     return arguments;
 }
 

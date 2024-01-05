@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * @version 1.0
- * @date 2023-10-21
+ * @version 1.1
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,7 +26,7 @@
 #ifndef GAMESMANONE_CORE_CONSTANTS_H_
 #define GAMESMANONE_CORE_CONSTANTS_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief String representations for all possible Values. */
 extern ConstantReadOnlyString kValueStrings[];
@@ -63,6 +63,32 @@ enum IntBase10StringLengthLimits {
 enum CommonConstants {
     kIllegalSize = -1, /**< Valid sizes are non-negative. */
     kBitsPerByte = 8,  /**< 8 bits per byte. */
+};
+
+/** @brief Enumeration of all possible statuses of a tier's database file. */
+enum DatabaseTierStatus {
+    kDbTierSolved,
+    kDbTierCorrupted,
+    kDbTierMissing,
+    kDbTierCheckError,
+};
+
+/** @brief Enumeration of all possible statuses of a tier's analysis. */
+enum AnalysisTierStatus {
+    kAnalysisTierAnalyzed,
+    kAnalysisTierUnanalyzed,
+    kAnalysisTierCheckError,
+};
+
+/**
+ * @brief Largest supported remoteness.
+ *
+ * @note Increase the values here and recompile if the old limit is not large
+ * enough for a new game in the future.
+ */
+enum RemotenessLimits {
+    kRemotenessMax = 1023,
+    kNumRemotenesses,  // kRemotenessMax + 1
 };
 
 extern const Tier kDefaultTier;

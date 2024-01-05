@@ -30,7 +30,7 @@
 #include <stdint.h>  // int64_t, int32_t
 
 #include "core/db/bpdb/bparray.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Decompression dictionary metadata. */
 typedef struct DecompDictMeta {

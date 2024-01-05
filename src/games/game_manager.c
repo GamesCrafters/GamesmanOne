@@ -30,9 +30,10 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 #include <stdio.h>   // fprintf, stderr
+#include <string.h>  // strcmp
 
 #include "core/data_structures/int64_array.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 // 1. To add a new game, include the game header here.
 

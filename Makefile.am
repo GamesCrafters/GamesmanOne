@@ -64,11 +64,24 @@ bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_worker.c
 bin_gamesman_SOURCES += src/core/solvers/solver_manager.c
 
+# src/core/types
+bin_gamesman_SOURCES += src/core/types/base.c
+bin_gamesman_SOURCES += src/core/types/game_variant.c
+bin_gamesman_SOURCES += src/core/types/move_array.c
+bin_gamesman_SOURCES += src/core/types/position_array.c
+bin_gamesman_SOURCES += src/core/types/position_hash_set.c
+bin_gamesman_SOURCES += src/core/types/tier_array.c
+bin_gamesman_SOURCES += src/core/types/tier_hash_map.c
+bin_gamesman_SOURCES += src/core/types/tier_hash_set.c
+bin_gamesman_SOURCES += src/core/types/tier_position_array.c
+bin_gamesman_SOURCES += src/core/types/tier_position_hash_set.c
+bin_gamesman_SOURCES += src/core/types/tier_queue.c
+bin_gamesman_SOURCES += src/core/types/tier_stack.c
+
 # src/core
 bin_gamesman_SOURCES += src/core/constants.c
 bin_gamesman_SOURCES += src/core/gamesman_headless.c
 bin_gamesman_SOURCES += src/core/gamesman_interactive.c
-bin_gamesman_SOURCES += src/core/gamesman_types.c
 bin_gamesman_SOURCES += src/core/misc.c
 
 # src/games

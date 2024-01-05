@@ -33,7 +33,7 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 
 /**

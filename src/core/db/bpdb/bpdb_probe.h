@@ -31,7 +31,7 @@
 #ifndef GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
 #define GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes PROBE.

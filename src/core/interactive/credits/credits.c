@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 void InteractiveCredits(ReadOnlyString key) {
     // TODO

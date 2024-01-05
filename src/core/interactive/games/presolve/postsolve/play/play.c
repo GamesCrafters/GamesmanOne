@@ -9,7 +9,7 @@
 #include <string.h>   // strncmp
 
 #include "core/db/db_manager.h"
-#include "core/gamesman_types.h"  // Game
+#include "core/types/gamesman_types.h"  // Game
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"  // SafeMalloc, GameVariantToIndex, GamesmanExit
 

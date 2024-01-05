@@ -38,7 +38,7 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "games/game_manager.h"
 
 static const Solver *current_solver;

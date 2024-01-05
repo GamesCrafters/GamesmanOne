@@ -3,12 +3,13 @@
 #include <stdbool.h>  // bool
 #include <stdlib.h>   // atoi
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/headless/hanalyze.h"
 #include "core/headless/hparser.h"
 #include "core/headless/hquery.h"
 #include "core/headless/hsolve.h"
 #include "core/headless/hutils.h"
+#include "core/misc.h"
 
 // -----------------------------------------------------------------------------
 

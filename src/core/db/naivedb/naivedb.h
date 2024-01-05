@@ -28,7 +28,7 @@
 #ifndef GAMESMANONE_CORE_DB_NAIVEDB_NAIVEDB_H_
 #define GAMESMANONE_CORE_DB_NAIVEDB_NAIVEDB_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Naive database which stores Values and Remotenesses in uncompressed

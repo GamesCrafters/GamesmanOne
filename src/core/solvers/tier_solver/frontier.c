@@ -40,7 +40,7 @@
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
-#include "core/gamesman_types.h"  // PositionArray
+#include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>

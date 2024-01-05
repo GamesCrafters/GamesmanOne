@@ -29,7 +29,7 @@
 
 #include "core/analysis/analysis.h"
 #include "core/data_structures/bitstream.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the Statistics Manager Module.

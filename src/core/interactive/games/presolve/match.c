@@ -9,7 +9,7 @@
 
 #include "core/constants.h"
 #include "core/data_structures/int64_array.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/solvers/solver_manager.h"
 
 typedef struct Match {

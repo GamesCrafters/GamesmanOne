@@ -32,7 +32,7 @@
 #ifndef GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
 #define GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Describes the restrictions on pieces and board size of an hash

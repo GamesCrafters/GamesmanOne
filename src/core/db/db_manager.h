@@ -29,7 +29,7 @@
 
 #include <stdint.h>  // int64_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the database system and load the chosen DB module.

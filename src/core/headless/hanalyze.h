@@ -3,7 +3,7 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
                     ReadOnlyString data_path, bool force, int verbose);

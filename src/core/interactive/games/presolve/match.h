@@ -3,7 +3,7 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 typedef enum InteractiveMatchSetGameErrorCode {
     kInteractiveMatchSetGameOk = 0,

@@ -38,7 +38,7 @@
 
 #include "core/analysis/analysis.h"
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "libs/mgz/mgz.h"
 

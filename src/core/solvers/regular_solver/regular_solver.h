@@ -31,7 +31,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief The Regular Solver. */
 extern const Solver kRegularSolver;
