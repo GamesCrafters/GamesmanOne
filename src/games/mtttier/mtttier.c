@@ -9,8 +9,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.01
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,9 +39,9 @@
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // atoi
 
-#include "core/types/gamesman_types.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_types.h"
 
 // Game, Solver, and Gameplay API Functions
 
@@ -90,18 +90,22 @@ static const TierSolverApi kSolverApi = {
 };
 
 // Gameplay API Setup
-static const GameplayApi kMtttGameplayApi = {
-    .GetInitialTier = &MtttierGetInitialTier,
-    .GetInitialPosition = &MtttierGetInitialPosition,
 
+static const GameplayApiCommon kMtttierGameplayApiCommon = {
+    .GetInitialPosition = &MtttierGetInitialPosition,
     .position_string_length_max = 120,
-    .TierPositionToString = &MtttTierPositionToString,
 
     .move_string_length_max = 1,
     .MoveToString = &MtttierMoveToString,
 
     .IsValidMoveString = &MtttierIsValidMoveString,
     .StringToMove = &MtttierStringToMove,
+};
+
+static const GameplayApiTier kMtttierGameplayApiTier = {
+    .GetInitialTier = &MtttierGetInitialTier,
+
+    .TierPositionToString = &MtttTierPositionToString,
 
     .TierGenerateMoves = &MtttierGenerateMoves,
     .TierDoMove = &MtttierDoMove,
@@ -113,12 +117,17 @@ static const GameplayApi kMtttGameplayApi = {
     .GetPositionInSymmetricTier = NULL,
 };
 
+static const GameplayApi kMtttierGameplayApi = {
+    .common = &kMtttierGameplayApiCommon,
+    .tier = &kMtttierGameplayApiTier,
+};
+
 const Game kMtttier = {
     .name = "mtttier",
     .formal_name = "Tic-Tac-Tier",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
+    .gameplay_api = (const GameplayApi *)&kMtttierGameplayApi,
 
     .Init = &MtttierInit,
     .Finalize = &MtttierFinalize,
@@ -333,11 +342,12 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         "         ( 1 2 3 )           : %c %c %c\n"
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
-    int actual_length =
-        snprintf(buffer, kMtttGameplayApi.position_string_length_max + 1, kFormat,
-                 board[0], board[1], board[2], board[3], board[4], board[5],
-                 board[6], board[7], board[8]);
-    if (actual_length >= kMtttGameplayApi.position_string_length_max + 1) {
+    int actual_length = snprintf(
+        buffer, kMtttierGameplayApiCommon.position_string_length_max + 1,
+        kFormat, board[0], board[1], board[2], board[3], board[4], board[5],
+        board[6], board[7], board[8]);
+    if (actual_length >=
+        kMtttierGameplayApiCommon.position_string_length_max + 1) {
         fprintf(
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
@@ -348,9 +358,10 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
 }
 
 static int MtttierMoveToString(Move move, char *buffer) {
-    int actual_length = snprintf(
-        buffer, kMtttGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
-    if (actual_length >= kMtttGameplayApi.move_string_length_max + 1) {
+    int actual_length =
+        snprintf(buffer, kMtttierGameplayApiCommon.move_string_length_max + 1,
+                 "%" PRId64, move + 1);
+    if (actual_length >= kMtttierGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");

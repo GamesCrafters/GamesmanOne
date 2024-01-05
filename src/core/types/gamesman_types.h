@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
- * @version 1.11
- * @date 2023-10-22
+ * @version 1.2
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,12 +28,9 @@
 #define GAMESMANONE_CORE_GAMESMAN_TYPES_H_
 
 #include "core/types/base.h"
-#include "core/types/database.h"
-#include "core/types/db_probe.h"
-#include "core/types/game.h"
-#include "core/types/game_variant.h"
-#include "core/types/game_variant_option.h"
-#include "core/types/gameplay_api.h"
+#include "core/types/database/database.h"
+#include "core/types/game/game.h"
+#include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/move_array.h"
 #include "core/types/position_array.h"
 #include "core/types/position_hash_set.h"

@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Toe.
  *
- * @version 1.1
- * @date 2023-10-22
+ * @version 1.11
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,8 +39,8 @@
 
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/types/gamesman_types.h"
 #include "core/solvers/regular_solver/regular_solver.h"
+#include "core/types/gamesman_types.h"
 
 // Game, Solver, and Gameplay API Functions
 
@@ -85,23 +85,31 @@ static const RegularSolverApi kMtttSolverApi = {
 };
 
 // Gameplay API Setup
-static const GameplayApi kMtttGameplayApi = {
-    .GetInitialPosition = &MtttGetInitialPosition,
 
+static const GameplayApiCommon kMtttGameplayApiCommon = {
+    .GetInitialPosition = &MtttGetInitialPosition,
     .position_string_length_max = 120,
-    .PositionToString = &MtttPositionToString,
 
     .move_string_length_max = 1,
     .MoveToString = &MtttMoveToString,
 
     .IsValidMoveString = &MtttIsValidMoveString,
     .StringToMove = &MtttStringToMove,
+};
+
+static const GameplayApiRegular kMtttGameplayApiRegular = {
+    .PositionToString = &MtttPositionToString,
 
     .GenerateMoves = &MtttGenerateMoves,
     .DoMove = &MtttDoMove,
     .Primitive = &MtttPrimitive,
 
     .GetCanonicalPosition = &MtttGetCanonicalPosition,
+};
+
+static const GameplayApi kMtttGameplayApi = {
+    .common = &kMtttGameplayApiCommon,
+    .regular = &kMtttGameplayApiRegular,
 };
 
 // UWAPI Setup
@@ -318,11 +326,12 @@ static int MtttPositionToString(Position position, char *buffer) {
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
     int actual_length = snprintf(
-        buffer, kMtttGameplayApi.position_string_length_max + 1, kFormat,
+        buffer, kMtttGameplayApiCommon.position_string_length_max + 1, kFormat,
         kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
         kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
         kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
-    if (actual_length >= kMtttGameplayApi.position_string_length_max + 1) {
+    if (actual_length >=
+        kMtttGameplayApiCommon.position_string_length_max + 1) {
         fprintf(
             stderr,
             "MtttTierPositionToString: (BUG) not enough space was allocated "
@@ -334,9 +343,9 @@ static int MtttPositionToString(Position position, char *buffer) {
 
 static int MtttMoveToString(Move move, char *buffer) {
     int actual_length =
-        snprintf(buffer, kMtttGameplayApi.move_string_length_max + 1,
+        snprintf(buffer, kMtttGameplayApiCommon.move_string_length_max + 1,
                  "%" PRId64, move + 1);
-    if (actual_length >= kMtttGameplayApi.move_string_length_max + 1) {
+    if (actual_length >= kMtttGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "MtttMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");

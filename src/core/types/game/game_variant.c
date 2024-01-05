@@ -1,9 +1,9 @@
-#include "core/types/game_variant.h"
+#include "core/types/game/game_variant.h"
 
 #include <stddef.h>  // NULL
 
 #include "core/data_structures/int64_array.h"
-#include "core/types/game_variant_option.h"
+#include "core/types/game/game_variant_option.h"
 
 int GameVariantGetNumOptions(const GameVariant *variant) {
     int ret = 0;

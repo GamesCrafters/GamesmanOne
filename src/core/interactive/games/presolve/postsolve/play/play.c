@@ -9,9 +9,9 @@
 #include <string.h>   // strncmp
 
 #include "core/db/db_manager.h"
-#include "core/types/gamesman_types.h"  // Game
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"  // SafeMalloc, GameVariantToIndex, GamesmanExit
+#include "core/types/gamesman_types.h"  // Game
 
 static DbProbe probe;
 static bool solved;
@@ -66,7 +66,7 @@ static void PrintPrediction(void) {
 
 static void PrintCurrentPosition(const Game *game) {
     int position_string_size =
-        game->gameplay_api->position_string_length_max + 1;
+        game->gameplay_api->common->position_string_length_max + 1;
     char *position_string =
         (char *)SafeMalloc(position_string_size * sizeof(char));
 
@@ -131,14 +131,15 @@ static void MakeComputerMove(void) {
 }
 
 static bool PromptForAndProcessUserMove(const Game *game) {
-    int move_string_size = game->gameplay_api->move_string_length_max + 1;
+    int move_string_size =
+        game->gameplay_api->common->move_string_length_max + 1;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
     MoveArray moves = InteractiveMatchGenerateMoves();
 
     // Print all valid move strings.
     printf("Player %d's move [(u)ndo", InteractiveMatchGetTurn() + 1);
     for (int64_t i = 0; i < moves.size; ++i) {
-        game->gameplay_api->MoveToString(moves.array[i], move_string);
+        game->gameplay_api->common->MoveToString(moves.array[i], move_string);
         printf("/%s", move_string);
     }
     printf("]: ");
@@ -155,12 +156,12 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     if (strncmp(move_string, "u", 1) == 0) {
         return InteractiveMatchUndo();
     }
-    if (!game->gameplay_api->IsValidMoveString(move_string)) {
+    if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
         return false;
     }
-    Move user_move = game->gameplay_api->StringToMove(move_string);
+    Move user_move = game->gameplay_api->common->StringToMove(move_string);
     if (!MoveArrayContains(&moves, user_move)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);

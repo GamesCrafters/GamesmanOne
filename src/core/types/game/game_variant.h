@@ -2,7 +2,7 @@
 #define GAMESMANONE_CORE_TYPES_GAME_VARIANT_H
 
 #include "core/data_structures/int64_array.h"
-#include "core/types/game_variant_option.h"
+#include "core/types/game/game_variant_option.h"
 
 /**
  * @brief Game variant as an array of selected variant options.

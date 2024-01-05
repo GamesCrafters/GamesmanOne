@@ -1,8 +1,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_GAME_H
 #define GAMESMANONE_CORE_TYPES_GAME_H
 
-#include "core/types/game_variant.h"
-#include "core/types/gameplay_api.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/solver.h"
 #include "core/types/universal_web_api.h"
 

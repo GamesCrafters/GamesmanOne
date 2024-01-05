@@ -4,7 +4,7 @@
 #include <stdint.h>  // int64_t
 
 #include "core/types/base.h"
-#include "core/types/db_probe.h"
+#include "core/types/database/db_probe.h"
 
 enum DatabaseConstants {
     kDbNameLengthMax = 31,
