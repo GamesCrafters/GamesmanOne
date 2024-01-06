@@ -3,11 +3,11 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The Game Manager Module, which provides a list to all games in
- * GAMESMAN.
+ * @brief The Game Manager Module which handles game initialization and
+ * finalization.
  *
- * @version 1.01
- * @date 2024-01-04
+ * @version 1.1
+ * @date 2024-01-05
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,8 +30,6 @@
 #define GAMESMANONE_GAMES_GAME_MANAGER_H_
 
 #include "core/types/gamesman_types.h"
-
-#include <stdbool.h>
 
 /**
  * @brief Returns a NULL-terminated read-only array of all games in GAMESMAN.

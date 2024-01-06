@@ -12,7 +12,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "games/game_manager.h"
+#include "core/game_manager.h"
 
 static void *GenerateAnalyzeOptions(bool force, int verbose);
 

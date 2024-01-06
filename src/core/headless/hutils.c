@@ -10,7 +10,7 @@
 #include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
-#include "games/game_manager.h"
+#include "core/game_manager.h"
 
 static int MakeDirectory(ReadOnlyString output);
 

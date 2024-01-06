@@ -80,12 +80,13 @@ bin_gamesman_SOURCES += src/core/types/tier_stack.c
 
 # src/core
 bin_gamesman_SOURCES += src/core/constants.c
+bin_gamesman_SOURCES += src/core/game_manager.c
 bin_gamesman_SOURCES += src/core/gamesman_headless.c
 bin_gamesman_SOURCES += src/core/gamesman_interactive.c
 bin_gamesman_SOURCES += src/core/misc.c
 
 # src/games
-bin_gamesman_SOURCES += src/games/game_manager.c
+bin_gamesman_SOURCES += src/games/game_list.c
 
 # src/libs
 bin_gamesman_SOURCES += src/libs/mgz/gz64.c

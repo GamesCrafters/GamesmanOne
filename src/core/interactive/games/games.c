@@ -7,7 +7,7 @@
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
 #include "core/misc.h"           // SafeMalloc
-#include "games/game_manager.h"  // GameManagerGetAllGames, GameManagerNumGames
+#include "core/game_manager.h"  // GameManagerGetAllGames, GameManagerNumGames
 
 static char **ListOfGamesAllocateItems(int num_items) {
     char **items = (char **)SafeMalloc(num_items * sizeof(char *));

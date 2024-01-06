@@ -39,7 +39,7 @@
 #include <stddef.h>  // NULL
 
 #include "core/types/gamesman_types.h"
-#include "games/game_manager.h"
+#include "core/game_manager.h"
 
 static const Solver *current_solver;
 

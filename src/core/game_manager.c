@@ -25,7 +25,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_manager.h"
+#include "core/game_manager.h"
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
@@ -34,15 +34,8 @@
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/gamesman_types.h"
+#include "games/game_list.h"
 
-// 1. To add a new game, include the game header here.
-
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-
-// 2. Then add the new game object to the list.
-
-static const Game *const kAllGames[] = {&kMtttier, &kMttt};
 static const Game *current_game;
 
 // -----------------------------------------------------------------------------
@@ -50,7 +43,11 @@ static const Game *current_game;
 const Game *const *GameManagerGetAllGames(void) { return kAllGames; }
 
 int GameManagerNumGames(void) {
-    return sizeof(kAllGames) / sizeof(kAllGames[0]);
+    int i = 0;
+    while (kAllGames[i] != NULL) {
+        ++i;
+    }
+    return i;
 }
 
 const Game *GameManagerInitGame(ReadOnlyString game_name, void *aux) {

@@ -8,7 +8,7 @@
 #include "core/db/db_manager.h"
 #include "core/types/gamesman_types.h"
 #include "core/headless/hutils.h"
-#include "games/game_manager.h"
+#include "core/game_manager.h"
 
 static bool ImplementsBasicUwapi(const Game *game);
 static bool ImplementsRegularUwapi(const Game *game);
