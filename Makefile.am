@@ -1,6 +1,12 @@
 AM_CFLAGS = -I$(srcdir)/src
-AM_CFLAGS += -Wall -Wextra -std=gnu99
+
+# Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
+
+# Configure json-c.
+JSON_C_DIR = $(srcdir)/res
+AM_CFLAGS += -I$(JSON_C_DIR)/include
+AM_LDFLAGS = -L$(JSON_C_DIR)/lib -ljson-c
 
 noinst_PROGRAMS = bin/gamesman
 

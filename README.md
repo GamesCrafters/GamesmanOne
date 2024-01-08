@@ -4,10 +4,10 @@
 
 1. `autoreconf --install` in the base directory.
 2. Configure the project using one of the following commands:
-    - `./configure 'CFLAGS=-g -O0' --disable-openmp` for debugging on a single thread, or
-    - `./configure 'CFLAGS=-g -O0'` for debugging with OpenMP multithreading enabled, or
-    - `./configure 'CFLAGS=-g -O3 -DNDEBUG' --disable-openmp` for solving on a single thread, or
-    - `./configure 'CFLAGS=-g -O3 -DNDEBUG'` for solving on multiple threads.
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O0' --disable-openmp` for debugging on a single thread, or
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O0'` for debugging with OpenMP multithreading enabled, or
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG' --disable-openmp` for solving on a single thread, or
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG'` for solving on multiple threads.
 3. `make`.
 
 ## Steps to Add New Source Files

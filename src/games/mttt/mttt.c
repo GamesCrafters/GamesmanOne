@@ -113,13 +113,16 @@ static const GameplayApi kMtttGameplayApi = {
 };
 
 // UWAPI Setup
-static const UniversalWebApi kMtttUwapi = {
+
+static const UwapiRegular kMtttUwapiRegular = {
     .FormalPositionToPosition = &MtttFormalPositionToPosition,
     .PositionToFormalPosition = &MtttPositionToFormalPosition,
     .PositionToUwapiPosition = &MtttPositionToUwapiPosition,
     .MoveToUwapiMove = &MtttMoveToUwapiMove,
     .GetRandomLegalPosition = NULL,
 };
+
+static const Uwapi kMtttUwapi = {.regular = &kMtttUwapiRegular};
 
 // -----------------------------------------------------------------------------
 
@@ -129,7 +132,7 @@ const Game kMttt = {
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kMtttSolverApi,
     .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
-    .uwapi = (const UniversalWebApi *)&kMtttUwapi,
+    .uwapi = (const Uwapi *)&kMtttUwapi,
 
     .Init = &MtttInit,
     .Finalize = &MtttFinalize,

@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_GAME_VARIANT_H
-#define GAMESMANONE_CORE_TYPES_GAME_VARIANT_H
+#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
+#define GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/game/game_variant_option.h"
@@ -41,4 +41,4 @@ int GameVariantGetNumOptions(const GameVariant *variant);
 int GameVariantToIndex(const GameVariant *variant);
 Int64Array VariantIndexToSelections(int index, const GameVariant *variant);
 
-#endif  // GAMESMANONE_CORE_TYPES_GAME_VARIANT_H
+#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H

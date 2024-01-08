@@ -26,8 +26,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_GAMES_GAME_MANAGER_H_
-#define GAMESMANONE_GAMES_GAME_MANAGER_H_
+#ifndef GAMESMANONE_CORE_GAME_MANAGER_H_
+#define GAMESMANONE_CORE_GAME_MANAGER_H_
 
 #include "core/types/gamesman_types.h"
 
@@ -49,4 +49,4 @@ int GameManagerSetVariant(int variant_id);
 
 void GameManagerFinalize(void);
 
-#endif  // GAMESMANONE_GAMES_GAME_MANAGER_H_
+#endif  // GAMESMANONE_CORE_GAME_MANAGER_H_

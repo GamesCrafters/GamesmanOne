@@ -1,10 +1,10 @@
-#ifndef GAMESMANONE_CORE_TYPES_GAME_H
-#define GAMESMANONE_CORE_TYPES_GAME_H
+#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_H
+#define GAMESMANONE_CORE_TYPES_GAME_GAME_H
 
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/solver.h"
-#include "core/types/universal_web_api.h"
+#include "core/types/uwapi/uwapi.h"
 
 enum GameConstants {
     kGameNameLengthMax = 31,
@@ -42,7 +42,7 @@ typedef struct Game {
      * functions. */
     const GameplayApi *gameplay_api;
 
-    const UniversalWebApi *uwapi;
+    const Uwapi *uwapi;
 
     /**
      * @brief Initializes the game module.
@@ -78,4 +78,4 @@ typedef struct Game {
     int (*SetVariantOption)(int option, int selection);
 } Game;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAME_H
+#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_H

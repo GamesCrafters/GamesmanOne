@@ -1,12 +1,13 @@
 /**
- * @file game_manager.c
+ * @file game_manager.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the Game Manager Module.
+ * @brief The Game Manager Module which handles game initialization and
+ * finalization.
  *
- * @version 1.01
- * @date 2024-01-04
+ * @version 1.1
+ * @date 2024-01-05
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

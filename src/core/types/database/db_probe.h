@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_DB_PROBE_H
-#define GAMESMANONE_CORE_TYPES_DB_PROBE_H
+#ifndef GAMESMANONE_CORE_TYPES_DATABASE_DB_PROBE_H
+#define GAMESMANONE_CORE_TYPES_DATABASE_DB_PROBE_H
 
 #include <stdint.h>  // int64_t
 
@@ -16,4 +16,4 @@ typedef struct DbProbe {
     int64_t size;
 } DbProbe;
 
-#endif  // GAMESMANONE_CORE_TYPES_DB_PROBE_H
+#endif  // GAMESMANONE_CORE_TYPES_DATABASE_DB_PROBE_H

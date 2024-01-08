@@ -44,6 +44,6 @@
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/tier_queue.h"
 #include "core/types/tier_stack.h"
-#include "core/types/universal_web_api.h"
+#include "core/types/uwapi/uwapi.h"
 
 #endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_

@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_DATABASE_H
-#define GAMESMANONE_CORE_TYPES_DATABASE_H
+#ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
+#define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 
 #include <stdint.h>  // int64_t
 
@@ -158,4 +158,4 @@ typedef struct Database {
     int (*TierStatus)(Tier tier);
 } Database;
 
-#endif  // GAMESMANONE_CORE_TYPES_DATABASE_H
+#endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
