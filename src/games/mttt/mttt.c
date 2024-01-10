@@ -8,7 +8,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Toe.
  *
- * @version 1.11
+ * @version 1.1.1
  * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

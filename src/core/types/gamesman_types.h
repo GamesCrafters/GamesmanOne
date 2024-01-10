@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
- * @version 1.2
+ * @version 1.2.0
  * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

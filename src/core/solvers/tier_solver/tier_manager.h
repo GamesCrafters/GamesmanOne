@@ -14,7 +14,7 @@
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
  *
- * @version 1.1
+ * @version 1.1.0
  * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

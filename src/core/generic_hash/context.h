@@ -5,7 +5,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @note This module is for Generic Hash system internal use only. The user of

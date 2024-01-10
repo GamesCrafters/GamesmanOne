@@ -13,7 +13,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash system for finite board games with
  * fixed sets of pieces.
- * @version 1.01
+ * @version 1.0.1
  * @date 2024-01-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

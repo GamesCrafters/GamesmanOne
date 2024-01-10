@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definitions of global constants.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

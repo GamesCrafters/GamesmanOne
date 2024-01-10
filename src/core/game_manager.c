@@ -6,7 +6,7 @@
  * @brief The Game Manager Module which handles game initialization and
  * finalization.
  *
- * @version 1.1
+ * @version 1.1.0
  * @date 2024-01-05
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

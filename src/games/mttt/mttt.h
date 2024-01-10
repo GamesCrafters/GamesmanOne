@@ -8,7 +8,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tic-Tac-Toe
  *
- * @version 1.1
+ * @version 1.1.0
  * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

@@ -8,7 +8,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declaration of the Tier Solver API.
  *
- * @version 1.2
+ * @version 1.2.0
  * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
