@@ -6,7 +6,9 @@
 #include <string.h>   // memset, strlen
 
 bool CStringInit(CString *cstring, const char *src) {
-    memset(cstring, 0, sizeof(*cstring));
+    cstring->length = -1;
+    cstring->capacity = -1;
+    
     int64_t length = strlen(src);
     cstring->str = (char *)malloc(length + 1);
     if (cstring->str == NULL) return false;

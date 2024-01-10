@@ -5,11 +5,14 @@
 #include "core/types/base.h"
 
 typedef struct UwapiTier {
+    MoveArray (*GenerateMoves)(TierPosition tier_position);
+    TierPosition (*DoMove)(TierPosition tier_position, Move move);
     TierPosition (*FormalPositionToTierPosition)(
         ReadOnlyString formal_position);
     CString (*TierPositionToFormalPosition)(TierPosition position);
-    CString (*TierPositionToUwapiPosition)(TierPosition position);
-    CString (*TierMoveToUwapiMove)(TierPosition position, Move move);
+    CString (*TierPositionToAutoGuiPosition)(TierPosition position);
+    CString (*MoveToFormalMove)(TierPosition position, Move move);
+    CString (*MoveToAutoGuiMove)(TierPosition position, Move move);
     TierPosition (*GetInitialTierPosition)(void);
     TierPosition (*GetRandomLegalTierPosition)(void);
 } UwapiTier;

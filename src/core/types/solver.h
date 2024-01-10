@@ -10,15 +10,14 @@ enum SolverConstants {
 
 /**
  * @brief Generic Solver type.
- * @note To implement a new Solver module, correctly set the name of the new
- * Solver and set each member function pointer to a module-specific function.
+ * @note To implement a new Solver module, set the name of the new Solver and
+ * each member function pointer to a module-specific function.
  *
  * @note A Solver can either be a regular solver or a tier solver. The actual
  * behavior and requirements of the solver is decided by the Solver and
  * reflected on its SOLVER_API, which is a custom struct defined in the Solver
- * module and implemented by the game developer. Therefore, the game developer
- * must decide which Solver to use and implement the required Solver API
- * functions.
+ * module and implemented by the game developer. The game developer should
+ * decide which Solver to use and implement its required Solver API functions.
  */
 typedef struct Solver {
     /** Human-readable name of the solver. */
@@ -26,17 +25,14 @@ typedef struct Solver {
 
     /**
      * @brief Initializes the Solver.
-     * @note The user is responsible for passing the correct solver API that
-     * appies to the current Solver. Passing NULL or an incompatible Solver API
-     * results in undefined behavior.
      *
-     * @param game_name Internal name of the game.
+     * @param game_name Game name used internally by Gamesman.
      * @param variant Index of the current game variant.
      * @param solver_api Pointer to a struct that contains the implemented
      * Solver API functions. The game developer is responsible for using the
      * correct type of Solver API that applies to the current Solver,
      * implementing and setting up required API functions, and casting the
-     * pointer to a generic constant pointer (const void *) type.
+     * pointer to a constant generic pointer (const void *) type.
      * @param data_path Absolute or relative path to the data directory if
      * non-NULL. The default path "data" will be used if set to NULL.
      *
@@ -87,6 +83,10 @@ typedef struct Solver {
      * @return 0 on success, non-zero error code otherwise.
      */
     int (*SetOption)(int option, int selection);
+
+    Value (*GetValue)(TierPosition tier_position);
+
+    int (*GetRemoteness)(TierPosition tier_position);
 } Solver;
 
 #endif

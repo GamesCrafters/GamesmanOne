@@ -7,8 +7,8 @@
  * @details The Regular Solver is in fact the Tier Solver on a single tier in
  * disguise, and therefore, the Tier Solver Worker Module is used in this file.
  *
- * @version 1.11
- * @date 2023-10-22
+ * @version 1.2.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -42,10 +42,11 @@
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
-#include "core/types/gamesman_types.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/types/gamesman_types.h"
 
 // Solver API functions.
 
@@ -57,6 +58,8 @@ static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
 static const SolverConfig *RegularSolverGetCurrentConfig(void);
 static int RegularSolverSetOption(int option, int selection);
+static Value RegularSolverGetValue(TierPosition tier_position);
+static int RegularSolverGetRemoteness(TierPosition tier_position);
 
 /**
  * @brief The Regular Solver definition. Used externally.
@@ -73,6 +76,9 @@ const Solver kRegularSolver = {
 
     .GetCurrentConfig = &RegularSolverGetCurrentConfig,
     .SetOption = &RegularSolverSetOption,
+
+    .GetValue = &RegularSolverGetValue,
+    .GetRemoteness = &RegularSolverGetRemoteness,
 };
 
 static ConstantReadOnlyString kChoices[] = {"On", "Off"};
@@ -255,6 +261,40 @@ static int RegularSolverSetOption(int option, int selection) {
         ToggleRetrogradeAnalysis(!selection);
     }
     return 0;
+}
+
+static Value RegularSolverGetValue(TierPosition tier_position) {
+    TierPosition canonical = {
+        .tier = kDefaultTier,
+        .position = current_api.GetCanonicalPosition(tier_position),
+    };
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    Value ret = DbManagerProbeValue(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
+}
+
+static int RegularSolverGetRemoteness(TierPosition tier_position) {
+    TierPosition canonical = {
+        .tier = kDefaultTier,
+        .position = current_api.GetCanonicalPosition(tier_position),
+    };
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    int ret = DbManagerProbeRemoteness(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
 }
 
 // -----------------------------------------------------------------------------

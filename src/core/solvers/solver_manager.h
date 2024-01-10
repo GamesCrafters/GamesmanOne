@@ -13,8 +13,8 @@
  * loaded at the same time. This module handles the loading and deallocation
  * of THE ONE solver used by the current GAMESMAN instance.
  *
- * @version 1.01
- * @date 2024-01-04
+ * @version 1.1
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -75,5 +75,9 @@ int SolverManagerSolve(void *aux);
  * @return 0 on success, non-zero error code otherwise.
  */
 int SolverManagerAnalyze(void *aux);
+
+Value SolverManagerGetValue(TierPosition tier_position);
+
+int SolverManagerGetRemoteness(TierPosition tier_position);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_

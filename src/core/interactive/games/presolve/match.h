@@ -27,7 +27,6 @@ bool InteractiveMatchCommitMove(Move move);
 Value InteractiveMatchPrimitive(void);
 bool InteractiveMatchUndo(void);
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer);
-TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position);
 
 void InteractiveMatchSetSolved(bool solved);
 bool InteractiveMatchSolved(void);

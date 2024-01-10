@@ -107,14 +107,9 @@ static const GameplayApiTier kMtttierGameplayApiTier = {
 
     .TierPositionToString = &MtttTierPositionToString,
 
-    .TierGenerateMoves = &MtttierGenerateMoves,
-    .TierDoMove = &MtttierDoMove,
-    .TierPrimitive = &MtttierPrimitive,
-
-    .TierGetCanonicalPosition = &MtttierGetCanonicalPosition,
-
-    .GetCanonicalTier = NULL,
-    .GetPositionInSymmetricTier = NULL,
+    .GenerateMoves = &MtttierGenerateMoves,
+    .DoMove = &MtttierDoMove,
+    .Primitive = &MtttierPrimitive,
 };
 
 static const GameplayApi kMtttierGameplayApi = {

@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Tier Solver.
  *
- * @version 1.11
- * @date 2023-10-22
+ * @version 1.2
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,8 +39,9 @@
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
-#include "core/types/gamesman_types.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
+#include "core/types/gamesman_types.h"
 
 // Solver API functions.
 
@@ -52,6 +53,8 @@ static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
 static const SolverConfig *TierSolverGetCurrentConfig(void);
 static int TierSolverSetOption(int option, int selection);
+static Value TierSolverGetValue(TierPosition tier_position);
+static int TierSolverGetRemoteness(TierPosition tier_position);
 
 /**
  * @brief The Tier Solver definition. Used externally.
@@ -68,6 +71,9 @@ const Solver kTierSolver = {
 
     .GetCurrentConfig = &TierSolverGetCurrentConfig,
     .SetOption = &TierSolverSetOption,
+
+    .GetValue = &TierSolverGetValue,
+    .GetRemoteness = &TierSolverGetRemoteness,
 };
 
 static ConstantReadOnlyString kChoices[] = {"On", "Off"};
@@ -117,6 +123,8 @@ static void TogglePositionSymmetryRemoval(bool on);
 static void ToggleRetrogradeAnalysis(bool on);
 
 static bool SetCurrentApi(const TierSolverApi *api);
+
+static TierPosition GetCanonicalTierPosition(TierPosition tier_position);
 
 // Default API functions
 
@@ -221,6 +229,34 @@ static int TierSolverSetOption(int option, int selection) {
         ToggleRetrogradeAnalysis(!selection);
     }
     return 0;
+}
+
+static Value TierSolverGetValue(TierPosition tier_position) {
+    TierPosition canonical = GetCanonicalTierPosition(tier_position);
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    Value ret = DbManagerProbeValue(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
+}
+
+static int TierSolverGetRemoteness(TierPosition tier_position) {
+    TierPosition canonical = GetCanonicalTierPosition(tier_position);
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    int ret = DbManagerProbeRemoteness(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
 }
 
 // Helper functions
@@ -330,6 +366,20 @@ static bool SetCurrentApi(const TierSolverApi *api) {
             &DefaultGetCanonicalChildPositions;
     }
     return true;
+}
+
+static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
+    TierPosition canonical;
+
+    // Convert to the tier position inside the canonical tier.
+    canonical.tier = current_api.GetCanonicalTier(tier_position.tier);
+    canonical.position =
+        current_api.GetPositionInSymmetricTier(tier_position, canonical.tier);
+
+    // Find the canonical position inside the canonical tier.
+    canonical.position = current_api.GetCanonicalPosition(canonical);
+
+    return canonical;
 }
 
 // Default API functions

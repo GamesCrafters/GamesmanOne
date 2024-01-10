@@ -67,8 +67,9 @@ static Move MtttStringToMove(ReadOnlyString move_string);
 
 static Position MtttFormalPositionToPosition(ReadOnlyString formal_position);
 static CString MtttPositionToFormalPosition(Position position);
-static CString MtttPositionToUwapiPosition(Position position);
-static CString MtttMoveToUwapiMove(Position position, Move move);
+static CString MtttPositionToAutoGuiPosition(Position position);
+static CString MtttMoveToFormalMove(Position position, Move move);
+static CString MtttMoveToAutoGuiMove(Position position, Move move);
 
 // Solver API Setup
 static const RegularSolverApi kMtttSolverApi = {
@@ -103,8 +104,6 @@ static const GameplayApiRegular kMtttGameplayApiRegular = {
     .GenerateMoves = &MtttGenerateMoves,
     .DoMove = &MtttDoMove,
     .Primitive = &MtttPrimitive,
-
-    .GetCanonicalPosition = &MtttGetCanonicalPosition,
 };
 
 static const GameplayApi kMtttGameplayApi = {
@@ -115,10 +114,14 @@ static const GameplayApi kMtttGameplayApi = {
 // UWAPI Setup
 
 static const UwapiRegular kMtttUwapiRegular = {
+    .GenerateMoves = &MtttGenerateMoves,
+    .DoMove = &MtttDoMove,
     .FormalPositionToPosition = &MtttFormalPositionToPosition,
     .PositionToFormalPosition = &MtttPositionToFormalPosition,
-    .PositionToUwapiPosition = &MtttPositionToUwapiPosition,
-    .MoveToUwapiMove = &MtttMoveToUwapiMove,
+    .PositionToAutoGuiPosition = &MtttPositionToAutoGuiPosition,
+    .MoveToFormalMove = &MtttMoveToFormalMove,
+    .MoveToAutoGuiMove = &MtttMoveToAutoGuiMove,
+    .GetInitialPosition = &MtttGetInitialPosition,
     .GetRandomLegalPosition = NULL,
 };
 
@@ -408,7 +411,7 @@ static CString MtttPositionToFormalPosition(Position position) {
     return ret;
 }
 
-static CString MtttPositionToUwapiPosition(Position position) {
+static CString MtttPositionToAutoGuiPosition(Position position) {
     static const char kUwapiPieceMap[3] = {'-', 'o', 'x'};
     BlankOX board[9] = {0};
     Unhash(position, board);
@@ -424,7 +427,14 @@ static CString MtttPositionToUwapiPosition(Position position) {
     return ret;
 }
 
-static CString MtttMoveToUwapiMove(Position position, Move move) {
+static CString MtttMoveToFormalMove(Position position, Move move) {
+    CString ret;
+    if (!CStringInit(&ret, "0")) return ret;
+    ret.str[0] = '0' + move;
+    return ret;
+}
+
+static CString MtttMoveToAutoGuiMove(Position position, Move move) {
     BlankOX board[9] = {0};
     Unhash(position, board);
     CString ret;

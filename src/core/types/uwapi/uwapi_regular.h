@@ -5,10 +5,13 @@
 #include "core/types/base.h"
 
 typedef struct UwapiRegular {
+    MoveArray (*GenerateMoves)(Position position);
+    Position (*DoMove)(Position position, Move move);
     Position (*FormalPositionToPosition)(ReadOnlyString formal_position);
     CString (*PositionToFormalPosition)(Position position);
-    CString (*PositionToUwapiPosition)(Position position);
-    CString (*MoveToUwapiMove)(Position position, Move move);
+    CString (*PositionToAutoGuiPosition)(Position position);
+    CString (*MoveToFormalMove)(Position position, Move move);
+    CString (*MoveToAutoGuiMove)(Position position, Move move);
     Position (*GetInitialPosition)(void);
     Position (*GetRandomLegalPosition)(void);
 } UwapiRegular;

@@ -1,14 +1,21 @@
+# Include headers from the src directory.
 AM_CFLAGS = -I$(srcdir)/src
+
+# Local resources directory.
+RES_DIR = $(srcdir)/res
 
 # Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
 
 # Configure json-c.
-JSON_C_DIR = $(srcdir)/res
-AM_CFLAGS += -I$(JSON_C_DIR)/include
-AM_LDFLAGS = -L$(JSON_C_DIR)/lib -ljson-c
+AM_CFLAGS += -I$(RES_DIR)/include
+AM_LDFLAGS = -L$(RES_DIR)/lib
 
+# Build Gamesman as a non-installable program.
 noinst_PROGRAMS = bin/gamesman
+
+# Add linker directives.
+bin_gamesman_LDADD = -ljson-c
 
 # Source file containing the main() function. 
 bin_gamesman_SOURCES = src/core/main.c
@@ -39,6 +46,7 @@ bin_gamesman_SOURCES += src/core/generic_hash/generic_hash.c
 
 # src/core/headless
 bin_gamesman_SOURCES += src/core/headless/hanalyze.c
+bin_gamesman_SOURCES += src/core/headless/hjson.c
 bin_gamesman_SOURCES += src/core/headless/hparser.c
 bin_gamesman_SOURCES += src/core/headless/hquery.c
 bin_gamesman_SOURCES += src/core/headless/hsolve.c

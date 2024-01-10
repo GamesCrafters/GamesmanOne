@@ -100,14 +100,14 @@ int InteractiveMatchGetTurn(void) {
 MoveArray InteractiveMatchGenerateMoves(void) {
     TierPosition current = TierPositionArrayBack(&match.position_history);
     if (match.is_tier_game) {
-        return match.game->gameplay_api->tier->TierGenerateMoves(current);
+        return match.game->gameplay_api->tier->GenerateMoves(current);
     }
     return match.game->gameplay_api->regular->GenerateMoves(current.position);
 }
 
 TierPosition InteractiveMatchDoMove(TierPosition tier_position, Move move) {
     if (match.is_tier_game) {
-        return match.game->gameplay_api->tier->TierDoMove(tier_position, move);
+        return match.game->gameplay_api->tier->DoMove(tier_position, move);
     }
     return (TierPosition){
         .tier = kDefaultTier,
@@ -138,7 +138,7 @@ bool InteractiveMatchCommitMove(Move move) {
 Value InteractiveMatchPrimitive(void) {
     TierPosition current = TierPositionArrayBack(&match.position_history);
     if (match.is_tier_game) {
-        return match.game->gameplay_api->tier->TierPrimitive(current);
+        return match.game->gameplay_api->tier->Primitive(current);
     }
     return match.game->gameplay_api->regular->Primitive(current.position);
 }
@@ -169,38 +169,6 @@ int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer) {
     }
     return match.game->gameplay_api->regular->PositionToString(
         tier_position.position, buffer);
-}
-
-TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position) {
-    TierPosition canonical = tier_position;
-
-    // Convert to the tier position inside the canonical tier.
-    if (match.is_tier_game &&
-        match.game->gameplay_api->tier->GetCanonicalTier != NULL &&
-        match.game->gameplay_api->tier->GetPositionInSymmetricTier != NULL) {
-        //
-        canonical.tier = match.game->gameplay_api->tier->GetCanonicalTier(
-            tier_position.tier);
-        canonical.position =
-            match.game->gameplay_api->tier->GetPositionInSymmetricTier(
-                tier_position, canonical.tier);
-    }
-
-    // Find the canonical position inside the canonical tier.
-    if (match.is_tier_game &&
-        match.game->gameplay_api->tier->TierGetCanonicalPosition != NULL) {
-        //
-        canonical.position =
-            match.game->gameplay_api->tier->TierGetCanonicalPosition(canonical);
-    } else if (!match.is_tier_game &&
-               match.game->gameplay_api->regular->GetCanonicalPosition !=
-                   NULL) {
-        canonical.position =
-            match.game->gameplay_api->regular->GetCanonicalPosition(
-                canonical.position);
-    }
-
-    return canonical;
 }
 
 void InteractiveMatchSetSolved(bool solved) { match.solved = solved; }
@@ -241,9 +209,9 @@ static bool ImplementsTierGameplayApi(const GameplayApi *api) {
     if (api->tier->GetInitialTier == NULL) return false;
     if (api->tier->GetInitialTier() < 0) return false;
     if (api->tier->TierPositionToString == NULL) return false;
-    if (api->tier->TierGenerateMoves == NULL) return false;
-    if (api->tier->TierDoMove == NULL) return false;
-    if (api->tier->TierPrimitive == NULL) return false;
+    if (api->tier->GenerateMoves == NULL) return false;
+    if (api->tier->DoMove == NULL) return false;
+    if (api->tier->Primitive == NULL) return false;
 
     return true;
 }
