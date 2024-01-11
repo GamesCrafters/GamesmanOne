@@ -7,6 +7,7 @@
 typedef struct UwapiRegular {
     MoveArray (*GenerateMoves)(Position position);
     Position (*DoMove)(Position position, Move move);
+    bool (*IsLegalFormalPosition)(ReadOnlyString formal_position);
     Position (*FormalPositionToPosition)(ReadOnlyString formal_position);
     CString (*PositionToFormalPosition)(Position position);
     CString (*PositionToAutoGuiPosition)(Position position);

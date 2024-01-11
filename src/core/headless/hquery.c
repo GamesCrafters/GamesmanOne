@@ -1,10 +1,11 @@
 #include "core/headless/hquery.h"
 
-#include <assert.h>  // assert
-#include <json-c/json_object.h>
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // printf
+#include <assert.h>              // assert
+#include <json-c/json_object.h>  // json_object and related functions
+#include <stdbool.h>             // bool, true, false
+#include <stdbool.h>             // bool
+#include <stdint.h>              // int64_t
+#include <stdio.h>               // printf
 
 #include "core/constants.h"
 #include "core/game_manager.h"
@@ -116,6 +117,7 @@ static bool ImplementsRegularUwapi(const Game *game) {
     if (game->uwapi->regular == NULL) return false;
     if (game->uwapi->regular->GenerateMoves == NULL) return false;
     if (game->uwapi->regular->DoMove == NULL) return false;
+    if (game->uwapi->regular->IsLegalFormalPosition == NULL) return false;
     if (game->uwapi->regular->FormalPositionToPosition == NULL) return false;
     if (game->uwapi->regular->PositionToFormalPosition == NULL) return false;
     if (game->uwapi->regular->PositionToAutoGuiPosition == NULL) return false;
@@ -132,34 +134,42 @@ static bool ImplementsTierUwapi(const Game *game) {
     if (game->uwapi->tier == NULL) return false;
     if (game->uwapi->tier->GenerateMoves == NULL) return false;
     if (game->uwapi->tier->DoMove == NULL) return false;
+    if (game->uwapi->tier->IsLegalFormalPosition == NULL) return false;
     if (game->uwapi->tier->FormalPositionToTierPosition == NULL) return false;
     if (game->uwapi->tier->TierPositionToFormalPosition == NULL) return false;
     if (game->uwapi->tier->TierPositionToAutoGuiPosition == NULL) return false;
     // MoveToFormalMove is optional.
     if (game->uwapi->tier->MoveToAutoGuiMove == NULL) return false;
-    if (game->uwapi->tier->GetInitialTierPosition == NULL) return false;
+    if (game->uwapi->tier->GetInitialTier == NULL) return false;
+    if (game->uwapi->tier->GetInitialPosition == NULL) return false;
     // GetRandomLegalTierPosition is optional.
 
     return true;
 }
 
 static int QueryRegular(const Game *game, ReadOnlyString formal_position) {
-    Position position =
-        game->uwapi->regular->FormalPositionToPosition(formal_position);
-    if (position < 0) {
+    bool legal = game->uwapi->regular->IsLegalFormalPosition(formal_position);
+    if (!legal) {
         fprintf(stderr, "illegal position");
         return kIllegalGamePositionError;
     }
+
+    Position position =
+        game->uwapi->regular->FormalPositionToPosition(formal_position);
+    assert(position >= 0);
     return JsonPrintPositionResponse(game, position);
 }
 
 static int QueryTier(const Game *game, ReadOnlyString formal_position) {
-    TierPosition tier_position =
-        game->uwapi->tier->FormalPositionToTierPosition(formal_position);
-    if (tier_position.tier < 0 || tier_position.position < 0) {
+    bool legal = game->uwapi->tier->IsLegalFormalPosition(formal_position);
+    if (!legal) {
         fprintf(stderr, "illegal position");
         return kIllegalGamePositionError;
     }
+
+    TierPosition tier_position =
+        game->uwapi->tier->FormalPositionToTierPosition(formal_position);
+    assert(tier_position.tier >= 0 && tier_position.position >= 0);
     return JsonPrintTierPositionResponse(game, tier_position);
 }
 
@@ -190,7 +200,10 @@ static int GetStartRegular(const Game *game) {
 }
 
 static int GetStartTier(const Game *game) {
-    TierPosition start = game->uwapi->tier->GetInitialTierPosition();
+    TierPosition start = {
+        .tier = game->uwapi->tier->GetInitialTier(),
+        .position = game->uwapi->tier->GetInitialPosition(),
+    };
     if (start.tier < 0 || start.position < 0) {
         fprintf(
             stderr,
@@ -279,7 +292,7 @@ static int JsonPrintPositionResponse(const Game *game, Position position) {
     int ret = 0;
     MoveArray moves = game->uwapi->regular->GenerateMoves(position);
     json_object *moves_array_obj = NULL, *child_obj = NULL, *parent_obj = NULL;
-    if (moves.array == NULL) {
+    if (moves.size < 0) {
         fprintf(stderr, "out of memory");
         ret = 1;
         goto _bailout;
@@ -401,7 +414,7 @@ static int JsonPrintTierPositionResponse(const Game *game,
     int ret = 0;
     MoveArray moves = game->uwapi->tier->GenerateMoves(tier_position);
     json_object *moves_array_obj = NULL, *child_obj = NULL, *parent_obj = NULL;
-    if (moves.array == NULL) {
+    if (moves.size < 0) {
         fprintf(stderr, "out of memory");
         ret = 1;
         goto _bailout;

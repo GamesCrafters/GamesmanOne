@@ -42,7 +42,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
-// Game, Solver, and Gameplay API Functions
+// Game, Solver, Gameplay, and UWAPI Functions
 
 static int MtttInit(void *aux);
 static int MtttFinalize(void);
@@ -65,6 +65,7 @@ static int MtttMoveToString(Move move, char *buffer);
 static bool MtttIsValidMoveString(ReadOnlyString move_string);
 static Move MtttStringToMove(ReadOnlyString move_string);
 
+static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position);
 static Position MtttFormalPositionToPosition(ReadOnlyString formal_position);
 static CString MtttPositionToFormalPosition(Position position);
 static CString MtttPositionToAutoGuiPosition(Position position);
@@ -116,6 +117,7 @@ static const GameplayApi kMtttGameplayApi = {
 static const UwapiRegular kMtttUwapiRegular = {
     .GenerateMoves = &MtttGenerateMoves,
     .DoMove = &MtttDoMove,
+    .IsLegalFormalPosition = &MtttIsLegalFormalPosition,
     .FormalPositionToPosition = &MtttFormalPositionToPosition,
     .PositionToFormalPosition = &MtttPositionToFormalPosition,
     .PositionToAutoGuiPosition = &MtttPositionToAutoGuiPosition,
@@ -376,6 +378,17 @@ static Move MtttStringToMove(ReadOnlyString move_string) {
     return (Move)atoi(move_string) - 1;
 }
 
+static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position) {
+    if (formal_position == NULL) return false;
+    for (int i = 0; i < 9; ++i) {
+        char curr = formal_position[i];
+        if (curr != '-' && curr != 'o' && curr != 'x') return false;
+    }
+    if (formal_position[9] != '\0') return false;
+
+    return true;
+}
+
 static Position MtttFormalPositionToPosition(ReadOnlyString formal_position) {
     // Formal position string format: 9 characters '-', 'o', or 'x'.
     BlankOX board[9] = {0};
@@ -418,13 +431,13 @@ static CString MtttPositionToAutoGuiPosition(Position position) {
     BlankOX board[9] = {0};
     Unhash(position, board);
     CString ret;
-    if (!CStringInit(&ret, "R_A_3_3_---------")) return ret;
+    if (!CStringInit(&ret, "1_---------")) return ret;
 
     BlankOX turn = WhoseTurn(board);
-    ret.str[2] = turn == kX ? 'A' : 'B';
+    ret.str[0] = turn == kX ? '1' : '2';
 
     for (int i = 0; i < 9; ++i) {
-        ret.str[i + 8] = kUwapiPieceMap[board[i]];
+        ret.str[i + 2] = kUwapiPieceMap[board[i]];
     }
     return ret;
 }
