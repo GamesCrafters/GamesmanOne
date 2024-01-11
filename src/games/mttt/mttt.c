@@ -197,12 +197,12 @@ static BlankOX WhoseTurn(BlankOX *board);
 static int MtttInit(void *aux) {
     (void)aux;  // Unused.
     InitSymmetryMatrix();
-    return 0;
+    return kNoError;
 }
 
 static int MtttFinalize(void) {
     // Nothing to deallocate.
-    return 0;
+    return kNoError;
 }
 
 static const GameVariant *MtttGetCurrentVariant(void) {
@@ -212,7 +212,7 @@ static const GameVariant *MtttGetCurrentVariant(void) {
 static int MtttSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return 0;  // Not implemented.
+    return kNotImplementedError;  // Not implemented.
 }
 
 static int64_t MtttGetNumPositions(void) {
@@ -342,9 +342,10 @@ static int MtttPositionToString(Position position, char *buffer) {
             stderr,
             "MtttTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static int MtttMoveToString(Move move, char *buffer) {
@@ -355,9 +356,10 @@ static int MtttMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static bool MtttIsValidMoveString(ReadOnlyString move_string) {
@@ -428,6 +430,7 @@ static CString MtttPositionToAutoGuiPosition(Position position) {
 }
 
 static CString MtttMoveToFormalMove(Position position, Move move) {
+    (void)position;  // Unused.
     CString ret;
     if (!CStringInit(&ret, "0")) return ret;
     ret.str[0] = '0' + move;

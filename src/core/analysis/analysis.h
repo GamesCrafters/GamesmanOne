@@ -177,7 +177,7 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
  * @param value
  * @param remoteness
  * @param is_canonical
- * @return 0 on success, -1 if VALUE is invalid.
+ * @return 0 on success, kIllegalGamePositionValueError if VALUE is invalid.
  */
 int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                   int remoteness, bool is_canonical);

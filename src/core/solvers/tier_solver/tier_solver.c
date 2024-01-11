@@ -171,7 +171,8 @@ static int TierSolverFinalize(void) {
     memset(&current_options, 0, sizeof(current_options));
     memset(&current_selections, 0, sizeof(current_selections));
     num_options = 0;
-    return 0;
+
+    return kNoError;
 }
 
 static int TierSolverSolve(void *aux) {
@@ -196,7 +197,7 @@ static int TierSolverAnalyze(void *aux) {
 
 static int TierSolverGetStatus(void) {
     // TODO
-    return 0;
+    return kNotImplementedError;
 }
 
 static const SolverConfig *TierSolverGetCurrentConfig(void) {
@@ -208,13 +209,13 @@ static int TierSolverSetOption(int option, int selection) {
         fprintf(stderr,
                 "TierSolverSetOption: (BUG) option index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
     if (selection < 0 || selection > 1) {
         fprintf(stderr,
                 "TierSolverSetOption: (BUG) selection index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
 
     current_selections[option] = selection;
@@ -228,7 +229,8 @@ static int TierSolverSetOption(int option, int selection) {
     } else {
         ToggleRetrogradeAnalysis(!selection);
     }
-    return 0;
+
+    return kNoError;
 }
 
 static Value TierSolverGetValue(TierPosition tier_position) {

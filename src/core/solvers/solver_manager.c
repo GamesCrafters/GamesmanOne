@@ -45,7 +45,7 @@ static const Solver *current_solver;
 
 int SolverManagerInit(ReadOnlyString data_path) {
     const Game *game = GameManagerGetCurrentGame();
-    if (game == NULL) return -1;
+    if (game == NULL) return kUseBeforeInitializationError;
 
     const GameVariant *variant = game->GetCurrentVariant();
     int variant_id = GameVariantToIndex(variant);

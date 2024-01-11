@@ -88,7 +88,7 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
         fprintf(stderr,
                 "BpdbLiteFlushSolvingTier: failed to compress records using "
                 "mgz.\n");
-        return 1;
+        return kMallocFailureError;
     }
 
     // Write compressed data to file.
@@ -135,7 +135,7 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
                                  const int32_t *decomp_dict, mgz_res_t result) {
     // Write header to file.
     FILE *db_file = GuardedFopen(full_path, "wb");
-    if (db_file == NULL) return 2;
+    if (db_file == NULL) return kFileSystemError;
 
     int error = GuardedFwrite(header, sizeof(*header), 1, db_file);
     if (error != 0) return BailOutFclose(db_file, error);

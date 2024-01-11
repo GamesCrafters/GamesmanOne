@@ -58,9 +58,9 @@ int StatManagerInit(ReadOnlyString game_name, int variant,
     if (sandbox_path != NULL) StatManagerFinalize();
 
     sandbox_path = SetupStatPath(game_name, variant, data_path);
-    if (sandbox_path == NULL) return 1;
+    if (sandbox_path == NULL) return kMallocFailureError;
 
-    return 0;
+    return kNoError;
 }
 
 void StatManagerFinalize(void) {
@@ -90,15 +90,15 @@ int StatManagerGetStatus(Tier tier) {
 int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
     if (sandbox_path == NULL) {
         fprintf(stderr, "StatManagerSaveAnalysis: StatManager uninitialized\n");
-        return -1;
+        return kUseBeforeInitializationError;
     }
 
     char *filename = GetPathToTierAnalysis(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
     mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;  // This sets permissions to 0777
     int stat_fd = open(filename, O_CREAT | O_WRONLY, mode);
     free(filename);
-    if (stat_fd < 0) return 2;
+    if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisWrite(analysis, stat_fd);
     if (error != 0) return error;
@@ -110,15 +110,15 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
 int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
     if (sandbox_path == NULL) {
         fprintf(stderr, "StatManagerLoadAnalysis: StatManager uninitialized\n");
-        return -1;
+        return kUseBeforeInitializationError;
     }
 
     char *filename = GetPathToTierAnalysis(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
 
     int stat_fd = GuardedOpen(filename, O_RDONLY);
     free(filename);
-    if (stat_fd < 0) return 2;
+    if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisRead(dest, stat_fd);
     if (error != 0) return error;
@@ -180,14 +180,14 @@ _bailout:
 int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
     mgz_res_t res =
         MgzParallelDeflate(stream->stream, stream->num_bytes, 9, 0, false);
-    if (res.out == NULL) return 1;
+    if (res.out == NULL) return kMallocFailureError;
 
     char *filename = GetPathToTierDiscoveryMap(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
 
     FILE *file = GuardedFopen(filename, "wb");
     free(filename);
-    if (file == NULL) return -1;
+    if (file == NULL) return kFileSystemError;
 
     int error = GuardedFwrite(&stream->size, sizeof(stream->size), 1, file);
     if (error != 0) return error;
@@ -200,7 +200,7 @@ int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
     error = GuardedFclose(file);
     if (error != 0) return error;
 
-    return 0;
+    return kNoError;
 }
 
 // -----------------------------------------------------------------------------

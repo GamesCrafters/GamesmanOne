@@ -155,9 +155,9 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
 
         default:
             fprintf(stderr, "AnalysisCount: unknown value %d\n", value);
-            return -1;
+            return kIllegalGamePositionValueError;
     }
-    return 0;
+    return kNoError;
 }
 
 // Aggregating

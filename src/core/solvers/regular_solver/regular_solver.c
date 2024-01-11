@@ -188,7 +188,8 @@ static int RegularSolverFinalize(void) {
     memset(&current_options, 0, sizeof(current_options));
     memset(&current_selections, 0, sizeof(current_selections));
     num_options = 0;
-    return 0;
+
+    return kNoError;
 }
 
 static int RegularSolverSolve(void *aux) {
@@ -210,7 +211,7 @@ static int RegularSolverAnalyze(void *aux) {
     };
 
     Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
-    if (analysis == NULL) return 1;
+    if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
 
     TierAnalyzerInit(&current_api);
@@ -232,7 +233,7 @@ static int RegularSolverAnalyze(void *aux) {
 
 static int RegularSolverGetStatus(void) {
     // TODO
-    return 0;
+    return kNotImplementedError;
 }
 
 static const SolverConfig *RegularSolverGetCurrentConfig(void) {
@@ -244,13 +245,13 @@ static int RegularSolverSetOption(int option, int selection) {
         fprintf(stderr,
                 "RegularSolverSetOption: (BUG) option index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
     if (selection < 0 || selection > 1) {
         fprintf(stderr,
                 "RegularSolverSetOption: (BUG) selection index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
 
     current_selections[option] = selection;
@@ -260,7 +261,7 @@ static int RegularSolverSetOption(int option, int selection) {
     } else {
         ToggleRetrogradeAnalysis(!selection);
     }
-    return 0;
+    return kNoError;
 }
 
 static Value RegularSolverGetValue(TierPosition tier_position) {

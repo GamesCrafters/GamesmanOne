@@ -82,12 +82,12 @@ int GameManagerSetVariant(int variant_id) {
     if (variant == NULL) {
         // If variants are not implemented, 0 is the only valid default variant
         // id.
-        if (variant_id == 0) return 0;
+        if (variant_id == 0) return kNoError;
         fprintf(stderr,
                 "GameManagerSetVariant: game [%s] has no variant [%d] (only "
                 "variant 0 is available)\n",
                 current_game->name, variant_id);
-        return -1;
+        return kIllegalGameVariantError;
     }
 
     int num_variants = 1;
@@ -99,11 +99,11 @@ int GameManagerSetVariant(int variant_id) {
                 "GameManagerSetVariant: game [%s] has no variant [%d] (only "
                 "variants 0-%d are available)\n",
                 current_game->name, variant_id, num_variants - 1);
-        return -1;
+        return kIllegalGameVariantError;
     }
 
     Int64Array selections = VariantIndexToSelections(variant_id, variant);
-    if (selections.size <= 0) return 1;
+    if (selections.array == NULL) return kMallocFailureError;
 
     for (int64_t i = 0; i < selections.size; ++i) {
         int selection = selections.array[i];
@@ -118,7 +118,7 @@ int GameManagerSetVariant(int variant_id) {
     }
     Int64ArrayDestroy(&selections);
 
-    return 0;
+    return kNoError;
 }
 
 void GameManagerFinalize(void) {

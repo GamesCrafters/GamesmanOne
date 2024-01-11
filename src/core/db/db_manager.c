@@ -56,7 +56,7 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                 "DbManagerInitDb: The %s does not have all the required "
                 "functions implemented and cannot be used.\n",
                 db->formal_name);
-        return -1;
+        return kNotImplementedError;
     }
     current_db = db;
 

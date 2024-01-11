@@ -75,5 +75,6 @@ int GamesmanInteractiveMain(void) {
     printf("--- press <return> to continue ---");
     getchar();
     InteractiveMainMenu(NULL);
-    return 0;
+    
+    return kNoError;
 }

@@ -13,6 +13,5 @@ int HeadlessJsonAddAutoGuiMove(json_object *dest, ReadOnlyString autogui_move);
 int HeadlessJsonAddValue(json_object *dest, Value value);
 int HeadlessJsonAddRemoteness(json_object *dest, int remoteness);
 int HeadlessJsonAddMovesArray(json_object *dest, json_object *moves_array_obj);
-int HeadlessJsonAddError(json_object *dest, ReadOnlyString message);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HJSON_H_

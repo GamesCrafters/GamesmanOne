@@ -161,7 +161,7 @@ static int MtttierInit(void *aux) {
     return !InitGenericHash();
 }
 
-static int MtttierFinalize(void) { return 0; }
+static int MtttierFinalize(void) { return kNoError; }
 
 static const GameVariant *MtttierGetCurrentVariant(void) {
     return NULL;  // Not implemented.
@@ -170,7 +170,7 @@ static const GameVariant *MtttierGetCurrentVariant(void) {
 static int MtttierSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return 0;  // Not implemented.
+    return kNotImplementedError;  // Not implemented.
 }
 
 static Tier MtttierGetInitialTier(void) { return 0; }
@@ -327,7 +327,7 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
     char board[9] = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);
-    if (!success) return 1;
+    if (!success) return kRuntimeError;
 
     for (int i = 0; i < 9; ++i) {
         board[i] = ConvertBlankToken(board[i]);
@@ -347,9 +347,10 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static int MtttierMoveToString(Move move, char *buffer) {
@@ -360,9 +361,10 @@ static int MtttierMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static bool MtttierIsValidMoveString(ReadOnlyString move_string) {

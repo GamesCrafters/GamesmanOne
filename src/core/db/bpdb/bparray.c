@@ -41,6 +41,7 @@
 #include "core/constants.h"
 #include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static const int kDefaultBitsPerEntry = 1;
 
@@ -82,7 +83,7 @@ int BpArrayInit(BpArray *array, int64_t size) {
     if (array->stream == NULL) {
         fprintf(stderr, "BpArrayInit: failed to calloc array\n");
         memset(array, 0, sizeof(*array));
-        return 1;
+        return kMallocFailureError;
     }
 
     array->meta.bits_per_entry = kDefaultBitsPerEntry;
@@ -97,7 +98,7 @@ int BpArrayInit(BpArray *array, int64_t size) {
         return error;
     }
 
-    return 0;
+    return kNoError;
 }
 
 void BpArrayDestroy(BpArray *array) {
@@ -138,7 +139,7 @@ int BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
     segment |= compressed << local_bit_offset;  // Put new entry.
     SetSegment(array, i, segment);              // Put segment back.
 
-    return 0;
+    return kNoError;
 }
 
 int32_t BpArrayGetNumUniqueValues(const BpArray *array) {
@@ -213,7 +214,7 @@ static int BpArrayExpand(BpArray *array) {
                 "BpArrayExpand: new entry cannot be represented by the longest "
                 "number of bits allowed (%d) and therefore cannot be stored\n",
                 kMaxBitsPerEntry);
-        return -1;
+        return kIntegerOverflowError;
     }
 
     return ExpandHelper(array, new_bits_per_entry);
@@ -246,7 +247,7 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
     uint8_t *new_stream = (uint8_t *)calloc(new_stream_length, sizeof(uint8_t));
     if (new_stream == NULL) {
         fprintf(stderr, "ExpandHelper: failed to calloc new stream\n");
-        return 1;
+        return kMallocFailureError;
     }
 
     static const int kEntriesPerChunk = 8;
@@ -265,5 +266,5 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
     array->stream = new_stream;
     array->meta.bits_per_entry = new_bits_per_entry;
     array->meta.stream_length = new_stream_length;
-    return 0;
+    return kNoError;
 }

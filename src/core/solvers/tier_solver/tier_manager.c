@@ -44,11 +44,11 @@
 #include <stdlib.h>    // malloc, free
 
 #include "core/analysis/analysis.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/types/gamesman_types.h"
 
 enum TierManagementType {
     kTierSolving,
@@ -63,9 +63,9 @@ typedef enum TierGraphNodeStatus {
 } TierGraphNodeStatus;
 
 enum TierTreeErrorTypes {
-    kNoError,
-    kOutOfMemory,
-    kLoopDetected,
+    kTierTreeNoError,
+    kTierTreeOutOfMemory,
+    kTierTreeLoopDetected,
 };
 
 static const TierSolverApi *current_api;
@@ -117,9 +117,12 @@ static void PrintAnalyzerResult(void);
 
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
     current_api = api;
-    if (InitGlobalVariables(kTierSolving) != 0) {
-        fprintf(stderr, "TierManagerSolve: initialization failed.\n");
-        return 1;
+    int error = InitGlobalVariables(kTierSolving);
+    if (error != 0) {
+        fprintf(stderr,
+                "TierManagerSolve: initialization failed with code %d.\n",
+                error);
+        return error;
     }
     int ret = SolveTierTree(force, verbose);
     DestroyGlobalVariables();
@@ -128,9 +131,12 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
 
 int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
     current_api = api;
-    if (InitGlobalVariables(kTierAnalyzing) != 0) {
-        fprintf(stderr, "TierManagerAnalyze: initialization failed.\n");
-        return 1;
+    int error = InitGlobalVariables(kTierAnalyzing);
+    if (error != 0) {
+        fprintf(stderr,
+                "TierManagerAnalyze: initialization failed with code %d.\n",
+                error);
+        return error;
     }
     int ret = DiscoverTierTree(force, verbose);
     DestroyGlobalVariables();
@@ -186,7 +192,7 @@ static int BuildTierTree(int type) {
         if (!TierTreeSetStatus(parent, kStatusInProgress)) goto _bailout;
         int error = BuildTierTreeProcessChildren(parent, &fringe, type);
         switch (error) {
-            case kNoError:
+            case kTierTreeNoError:
                 continue;
             default:
                 ret = error;
@@ -214,14 +220,14 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
     if (type == kTierSolving) {
         if (!TierTreeSetNumTiers(parent, (int)tier_children.size)) {
             TierArrayDestroy(&tier_children);
-            return (int)kOutOfMemory;
+            return (int)kTierTreeOutOfMemory;
         }
     } else {
         for (int64_t i = 0; i < tier_children.size; ++i) {
             Tier child = tier_children.array[i];
             if (!IncrementNumParentTiers(child)) {
                 TierArrayDestroy(&tier_children);
-                return (int)kOutOfMemory;
+                return (int)kTierTreeOutOfMemory;
             }
         }
     }
@@ -234,7 +240,7 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
                         "BuildTierTreeProcessChildren: failed to set new child "
                         "in tier tree.\n");
                 TierArrayDestroy(&tier_children);
-                return (int)kOutOfMemory;
+                return (int)kTierTreeOutOfMemory;
             }
         }
         int status = GetStatus(child);
@@ -242,12 +248,12 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
             TierArrayDestroy(&tier_children);
-            return (int)kLoopDetected;
+            return (int)kTierTreeLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
     TierArrayDestroy(&tier_children);
-    return (int)kNoError;
+    return (int)kTierTreeNoError;
 }
 
 static int EnqueuePrimitiveTiers(void) {
@@ -256,7 +262,9 @@ static int EnqueuePrimitiveTiers(void) {
     int64_t value;
     while (TierHashMapIteratorNext(&it, &tier, &value)) {
         if (ValueToNumTiers(value) == 0) {
-            if (!TierQueuePush(&pending_tiers, tier)) return 1;
+            if (!TierQueuePush(&pending_tiers, tier)) {
+                return kMallocFailureError;
+            }
         }
     }
 
@@ -264,9 +272,9 @@ static int EnqueuePrimitiveTiers(void) {
         fprintf(stderr,
                 "EnqueuePrimitiveTiers: (BUG) The tier graph contains no "
                 "primitive tiers.\n");
-        return 2;
+        return kIllegalGameTierGraphError;
     }
-    return 0;
+    return kNoError;
 }
 
 static void CreateTierTreePrintError(int error) {
@@ -274,11 +282,11 @@ static void CreateTierTreePrintError(int error) {
         case kNoError:
             break;
 
-        case kOutOfMemory:
+        case kTierTreeOutOfMemory:
             fprintf(stderr, "BuildTierTree: out of memory.\n");
             break;
 
-        case kLoopDetected:
+        case kTierTreeLoopDetected:
             fprintf(stderr,
                     "BuildTierTree: a loop is detected in the tier graph.\n");
             break;
@@ -306,7 +314,8 @@ static int SolveTierTree(bool force, int verbose) {
         }
     }
     if (verbose > 0) PrintSolverResult();
-    return 0;
+
+    return kNoError;
 }
 
 static void SolveUpdateTierTree(Tier solved_tier) {
@@ -419,7 +428,7 @@ static int DiscoverTierTree(bool force, int verbose) {
         Analysis *tier_analysis = (Analysis *)malloc(sizeof(Analysis));
         if (tier_analysis == NULL) {
             TierAnalyzerFinalize();
-            return 1;
+            return kMallocFailureError;
         }
         AnalysisInit(tier_analysis);
 
@@ -445,7 +454,7 @@ static int DiscoverTierTree(bool force, int verbose) {
 
     if (verbose > 0) PrintAnalyzerResult();
     TierAnalyzerFinalize();
-    return 0;
+    return kNoError;
 }
 
 static void AnalyzeUpdateTierTree(Tier analyzed_tier) {

@@ -124,7 +124,7 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
     if (sandbox_path == NULL) {
         fprintf(stderr, "BpdbLiteInit: failed to malloc path.\n");
-        return 1;
+        return kMallocFailureError;
     }
     strcpy(sandbox_path, path);
 
@@ -134,7 +134,7 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
 
-    return 0;
+    return kNoError;
 }
 
 static void BpdbLiteFinalize(void) {
@@ -157,19 +157,19 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
         return error;
     }
 
-    return 0;
+    return kNoError;
 }
 
 static int BpdbLiteFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
     char *full_path = BpdbFileGetFullPath(sandbox_path, current_tier);
-    if (full_path == NULL) return 1;
+    if (full_path == NULL) return kMallocFailureError;
 
     int error = BpdbFileFlush(full_path, &records);
     if (error != 0) fprintf(stderr, "BpdbLiteFlushSolvingTier: code %d", error);
-
     free(full_path);
+    
     return error;
 }
 
@@ -177,7 +177,8 @@ static int BpdbLiteFreeSolvingTier(void) {
     BpArrayDestroy(&records);
     current_tier = kIllegalTier;
     current_tier_size = -kIllegalSize;
-    return 0;
+
+    return kNoError;
 }
 
 static uint64_t GetRecord(Position position) {

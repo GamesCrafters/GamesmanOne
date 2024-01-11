@@ -35,8 +35,8 @@
 #include <string.h>    // memset
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 // Database API.
 
@@ -130,21 +130,21 @@ static char *GetFullPathToFile(Tier tier) {
 
 static int ReadFromFile(TierPosition tier_position, void *buffer) {
     char *full_path = GetFullPathToFile(tier_position.tier);
-    if (full_path == NULL) return 1;  // OOM.
+    if (full_path == NULL) return kMallocFailureError;  // OOM.
 
     FILE *file = fopen(full_path, "rb");
     free(full_path);
 
     if (file == NULL) {
         perror("fopen");
-        return 2;
+        return kFileSystemError;
     }
 
     int64_t offset = tier_position.position * sizeof(NaiveDbEntry);
     if (fseek(file, offset, SEEK_SET) != 0) {
         perror("fseek");
         fclose(file);
-        return 2;
+        return kFileSystemError;
     }
 
     size_t num_entries = kBufferSize / sizeof(NaiveDbEntry);
@@ -152,14 +152,14 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
         !feof(file)) {
         perror("fread");
         fclose(file);
-        return 2;
+        return kFileSystemError;
     }
 
     if (fclose(file) != 0) {
         perror("fclose");
     }
 
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
@@ -170,7 +170,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
     if (sandbox_path == NULL) {
         fprintf(stderr, "NaiveDbInit: failed to malloc path.\n");
-        return 1;
+        return kMallocFailureError;
     }
     strcpy(sandbox_path, path);
 
@@ -181,7 +181,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     current_tier_size = kIllegalSize;
     assert(records == NULL);
 
-    return 0;
+    return kNoError;
 }
 
 static void NaiveDbFinalize(void) {
@@ -200,9 +200,9 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
     if (records == NULL) {
         fprintf(stderr,
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
-        return 1;
+        return kMallocFailureError;
     }
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbFlushSolvingTier(void *aux) {
@@ -210,25 +210,25 @@ static int NaiveDbFlushSolvingTier(void *aux) {
 
     // Create a file <tier> at the given path
     char *full_path = GetFullPathToFile(current_tier);
-    if (full_path == NULL) return 1;
+    if (full_path == NULL) return kMallocFailureError;
 
     FILE *file = fopen(full_path, "wb");
     free(full_path);
 
     if (file == NULL) {
         perror("fopen");
-        return 1;
+        return kFileSystemError;
     }
 
     // Write records
     int64_t n = fwrite(records, sizeof(records[0]), current_tier_size, file);
     if (n != current_tier_size) {
         perror("fwrite");
-        return 1;
+        return kFileSystemError;
     }
 
     fclose(file);
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbFreeSolvingTier(void) {
@@ -236,17 +236,17 @@ static int NaiveDbFreeSolvingTier(void) {
     records = NULL;
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbSetValue(Position position, Value value) {
     records[position].value = value;
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbSetRemoteness(Position position, int remoteness) {
     records[position].remoteness = remoteness;
-    return 0;
+    return kNoError;
 }
 
 static Value NaiveDbGetValue(Position position) {
@@ -259,19 +259,19 @@ static int NaiveDbGetRemoteness(Position position) {
 
 static int NaiveDbProbeInit(DbProbe *probe) {
     probe->buffer = malloc(kBufferSize);
-    if (probe->buffer == NULL) return 1;
+    if (probe->buffer == NULL) return kMallocFailureError;
 
     probe->tier = kIllegalTier;
     probe->begin = 0;
     probe->size = kBufferSize;
 
-    return 0;
+    return kNoError;
 }
 
 static int NaiveDbProbeDestroy(DbProbe *probe) {
     free(probe->buffer);
     memset(probe, 0, sizeof(*probe));
-    return 0;
+    return kNoError;
 }
 
 static bool ProbeBufferHit(DbProbe *probe, TierPosition tier_position) {

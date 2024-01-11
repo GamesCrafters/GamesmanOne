@@ -11,8 +11,6 @@
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 
-// -----------------------------------------------------------------------------
-
 int GamesmanHeadlessMain(int argc, char **argv) {
     ArgpArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
@@ -41,7 +39,5 @@ int GamesmanHeadlessMain(int argc, char **argv) {
             NotReached("GamesmanHeadlessMain: unknown action\n");
     }
     // Not reached.
-    return -1;
+    return kNotReachedError;
 }
-
-// -----------------------------------------------------------------------------

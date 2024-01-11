@@ -2,7 +2,7 @@
 #define GAMESMANONE_CORE_GAMESMAN_HEADLESS_H_
 
 /** @brief Enumeration of all possible actions in headless mode. */
-typedef enum HeadlessActions {
+enum HeadlessAction {
     kInvalidHeadlessAction = -1,
     kHeadlessSolve,
     kHeadlessAnalyze,
@@ -10,7 +10,7 @@ typedef enum HeadlessActions {
     kHeadlessGetStart,
     kHeadlessGetRandom,
     kNumHeadlessActions,
-} HeadlessAction;
+};
 
 int GamesmanHeadlessMain(int argc, char **argv);
 

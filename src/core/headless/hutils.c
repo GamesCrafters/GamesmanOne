@@ -22,7 +22,7 @@ int HeadlessGetVerbosity(bool verbose, bool quiet) {
 }
 
 int HeadlessRedirectOutput(ReadOnlyString output) {
-    if (output == NULL) return 0;
+    if (output == NULL) return kNoError;
 
     int error = MakeDirectory(output);
     if (error != 0) {
@@ -31,11 +31,13 @@ int HeadlessRedirectOutput(ReadOnlyString output) {
             "HeadlessRedirectOutput: failed to mkdir for the output file\n");
         return error;
     }
+
     if (GuardedFreopen(output, "w", stdout) == NULL) {
         fprintf(stderr, "HeadlessRedirectOutput: failed to redirect output\n");
-        return -1;
+        return kFileSystemError;
     }
-    return 0;
+    
+    return kNoError;
 }
 
 int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
@@ -43,7 +45,7 @@ int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
     const Game *game = GameManagerInitGame(game_name, NULL);
     if (game == NULL) {
         fprintf(stderr, "HeadlessInitSolver: game [%s] not found\n", game_name);
-        return -1;
+        return kIllegalGameNameError;
     }
 
     if (variant_id >= 0) {
@@ -63,7 +65,7 @@ static int MakeDirectory(ReadOnlyString output) {
     // Path is not valid for a file if it's empty or its last character is '/'.
     if (length == 0 || output[length - 1] == '/') return -1;
 
-    int ret = 0;
+    int ret = kNoError;
     char *path = (char *)SafeCalloc(length + 1, sizeof(char));
     strcpy(path, output);
     for (int i = length; i >= 0; --i) {

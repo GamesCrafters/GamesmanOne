@@ -37,7 +37,7 @@
  * @brief Initializes PROBE.
  * 
  * @return 0 on success, or
- * @return 1 on malloc failure.
+ * @return kMallocFailureError on malloc failure.
  */
 int BpdbProbeInit(DbProbe *probe);
 
