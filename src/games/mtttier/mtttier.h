@@ -9,8 +9,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tic-Tac-Tier - Tiered Tic-Tac-Toe.
  *
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.0.2
+ * @date 2024-01-12
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

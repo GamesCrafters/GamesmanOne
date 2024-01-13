@@ -71,7 +71,8 @@ typedef struct ReverseGraph {
     int64_t size;
 
     /**
-     * @brief Maps tiers relavent to the solver of current tier to tier offsets.
+     * @brief Maps tiers (relavent to the solving of current tier) to tier
+     * offsets.
      *
      * @par
      * Relavent tiers include the current solving tier and all of its child

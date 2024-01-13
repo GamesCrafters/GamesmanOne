@@ -72,6 +72,7 @@ bin_gamesman_SOURCES += src/core/interactive/main_menu.c
 bin_gamesman_SOURCES += src/core/solvers/regular_solver/regular_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/frontier.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/reverse_graph.c
+bin_gamesman_SOURCES += src/core/solvers/tier_solver/reverse_tier_graph.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_analyzer.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_manager.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_solver.c

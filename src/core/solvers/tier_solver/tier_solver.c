@@ -276,7 +276,6 @@ static bool RequiredApiFunctionsImplemented(const TierSolverApi *api) {
     if (api->IsLegalPosition == NULL) return false;
 
     if (api->GetChildTiers == NULL) return false;
-    if (api->GetParentTiers == NULL) return false;
 
     return true;
 }

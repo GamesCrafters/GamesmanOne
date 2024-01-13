@@ -34,8 +34,8 @@
 #include <string.h>    // strlen
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static const Database *current_db;
 
@@ -68,7 +68,7 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
 }
 
 void DbManagerFinalizeDb(void) {
-    current_db->Finalize();
+    if (current_db) current_db->Finalize();
     current_db = NULL;
 }
 

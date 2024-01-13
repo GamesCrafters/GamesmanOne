@@ -263,12 +263,11 @@ typedef struct TierSolverApi {
      *
      * @note Assumes TIER is valid. Results in undefined behavior otherwise.
      *
-     * @note This function is REQUIRED. The solver system will panic if this
-     * function is not implemented.
-     *
-     * @todo Decide whether to make this function optional.. A reverse tier
-     * graph can be constructed while we perform topological sort on the tier
-     * graph, but will increase memory usage.
+     * @note This function is OPTIONAL, but is required for Tier Retrograde
+     * Analysis. If not implemented, Tier Retrograde Analysis will be disabled
+     * and a reverse tier graph will be built and stored in memory by performing
+     * a DFS on the tier graph implicitly defined by the initial tier and the
+     * GetChildTiers function.
      */
     TierArray (*GetParentTiers)(Tier tier);
 
