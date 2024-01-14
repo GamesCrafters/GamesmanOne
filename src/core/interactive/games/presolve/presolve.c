@@ -7,14 +7,52 @@
 #include <stdlib.h>   // atoi
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
+#include "core/game_manager.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
 #include "core/solvers/solver_manager.h"
-#include "core/game_manager.h"
+#include "core/types/gamesman_types.h"
+
+static const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";
+static char title[sizeof(title_format) + kGameFormalNameLengthMax +
+                  kUint32Base10StringLengthMax];
+
+static int SetCurrentGame(ReadOnlyString key);
+static void SolveAndStart(ReadOnlyString key);
+static void UpdateTitle(void);
+
+// -----------------------------------------------------------------------------
+
+void InteractivePresolve(ReadOnlyString key) {
+    int error = SetCurrentGame(key);
+    if (error != 0) {
+        fprintf(stderr,
+                "InteractivePresolve: failed to set game. Error code %d\n",
+                error);
+        return;
+    }
+
+    static ConstantReadOnlyString items[] = {
+        "Solve and start",
+        "Start without solving",
+        "Game options",
+        "Solver options",
+    };
+    static ConstantReadOnlyString keys[] = {"s", "w", "g", "o"};
+    static const HookFunctionPointer hooks[] = {
+        &SolveAndStart,
+        &InteractivePostSolve,
+        &InteractiveGameOptions,
+        &InteractiveSolverOptions,
+    };
+    int num_items = sizeof(items) / sizeof(items[0]);
+    AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
+}
+
+// -----------------------------------------------------------------------------
 
 static int SetCurrentGame(ReadOnlyString key) {
     int game_index = atoi(key);
@@ -36,34 +74,8 @@ static void SolveAndStart(ReadOnlyString key) {
     InteractivePostSolve(key);
 }
 
-void InteractivePresolve(ReadOnlyString key) {
-    int error = SetCurrentGame(key);
-    if (error != 0) {
-        fprintf(stderr,
-                "InteractivePresolve: failed to set game. Error code %d\n",
-                error);
-        return;
-    }
-
+static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
-    int variant_id = InteractiveMatchGetCurrentVariant();
-
-    const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";
-    char title[sizeof(title_format) + kGameFormalNameLengthMax +
-               kUint32Base10StringLengthMax];
-    sprintf(title, title_format, current_game->formal_name, variant_id);
-    static ConstantReadOnlyString items[] = {
-        "Solve and start",
-        "Start without solving",
-        "Game options",
-        "Solver options",
-    };
-    static ConstantReadOnlyString keys[] = {"s", "w", "g", "o"};
-    static const HookFunctionPointer hooks[] = {
-        &SolveAndStart,
-        &InteractivePostSolve,
-        &InteractiveGameOptions,
-        &InteractiveSolverOptions,
-    };
-    AutoMenu(title, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    int variant_index = InteractiveMatchGetVariantIndex();
+    sprintf(title, title_format, current_game->formal_name, variant_index);
 }

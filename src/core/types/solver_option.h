@@ -5,6 +5,7 @@
 
 enum SolverOptionConstants {
     kSolverOptionNameLengthMax = 63,
+    kSolverOptionChoiceNameLengthMax = 127,
 };
 
 /** @brief Solver option for display in GAMESMAN interactive mode. */

@@ -3,13 +3,13 @@
 #include <stdio.h>   // sprintf
 #include <stdlib.h>  // free
 
-#include "core/types/gamesman_types.h"  // Game
+#include "core/game_manager.h"  // GameManagerGetAllGames, GameManagerNumGames
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
-#include "core/misc.h"           // SafeMalloc
-#include "core/game_manager.h"  // GameManagerGetAllGames, GameManagerNumGames
+#include "core/misc.h"                  // SafeMalloc
+#include "core/types/gamesman_types.h"  // Game
 
-static char **ListOfGamesAllocateItems(int num_items) {
+static char **AllocateItems(int num_items) {
     char **items = (char **)SafeMalloc(num_items * sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
         items[i] = (char *)SafeMalloc(kGameFormalNameLengthMax + 1);
@@ -17,7 +17,7 @@ static char **ListOfGamesAllocateItems(int num_items) {
     return items;
 }
 
-static char **ListOfGamesAllocateKeys(int num_items) {
+static char **AllocateKeys(int num_items) {
     char **keys = (char **)SafeMalloc(num_items * sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
         keys[i] = (char *)SafeMalloc(kKeyLengthMax);
@@ -25,13 +25,13 @@ static char **ListOfGamesAllocateKeys(int num_items) {
     return keys;
 }
 
-static HookFunctionPointer *ListOfGamesAllocateHooks(int num_items) {
+static HookFunctionPointer *AllocateHooks(int num_items) {
     return (HookFunctionPointer *)SafeMalloc(num_items *
                                              sizeof(HookFunctionPointer));
 }
 
-static void ListOfGamesFreeAll(int num_items, char **items, char **keys,
-                               HookFunctionPointer *hooks) {
+static void FreeAll(int num_items, char **items, char **keys,
+                    HookFunctionPointer *hooks) {
     for (int i = 0; i < num_items; ++i) {
         free(items[i]);
         free(keys[i]);
@@ -47,9 +47,9 @@ void InteractiveGames(ReadOnlyString key) {
     const Game *const *all_games = GameManagerGetAllGames();
     static ConstantReadOnlyString kTitle = "List of All Games";
     int num_items = GameManagerNumGames();
-    char **items = ListOfGamesAllocateItems(num_items);
-    char **keys = ListOfGamesAllocateKeys(num_items);
-    HookFunctionPointer *hooks = ListOfGamesAllocateHooks(num_items);
+    char **items = AllocateItems(num_items);
+    char **keys = AllocateKeys(num_items);
+    HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
         SafeStrncpy(items[i], all_games[i]->formal_name,
                     kGameFormalNameLengthMax + 1);
@@ -59,6 +59,6 @@ void InteractiveGames(ReadOnlyString key) {
     }
     AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,
              (ConstantReadOnlyString *)keys,
-             (const HookFunctionPointer *)hooks);
-    ListOfGamesFreeAll(num_items, items, keys, hooks);
+             (const HookFunctionPointer *)hooks, NULL);
+    FreeAll(num_items, items, keys, hooks);
 }

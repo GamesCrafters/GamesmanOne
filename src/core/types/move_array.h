@@ -11,6 +11,7 @@ void MoveArrayInit(MoveArray *array);
 void MoveArrayDestroy(MoveArray *array);
 bool MoveArrayAppend(MoveArray *array, Move move);
 bool MoveArrayPopBack(MoveArray *array);
+void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *));
 bool MoveArrayContains(const MoveArray *array, Move move);
 
 #endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H

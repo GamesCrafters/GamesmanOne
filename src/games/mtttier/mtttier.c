@@ -191,13 +191,13 @@ static int MtttierInit(void *aux) {
 static int MtttierFinalize(void) { return kNoError; }
 
 static const GameVariant *MtttierGetCurrentVariant(void) {
-    return NULL;  // Not implemented.
+    return NULL;  // No other variants implemented.
 }
 
 static int MtttierSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return kNotImplementedError;  // Not implemented.
+    return kNotImplementedError;  // No other variants implemented.
 }
 
 static Tier MtttierGetInitialTier(void) { return 0; }

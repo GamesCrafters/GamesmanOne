@@ -30,6 +30,9 @@ typedef struct GameplayApiCommon {
      * plus one additional byte for the NULL-terminating character ('\0') as
      * buffer for move strings. It is the game developer's responsibility to
      * precalculate this value and make sure that enough space is provided.
+     *
+     * @note Keep in mind that one must avoid letting a move string be one 
+     * of the following strings: "b", "q", "u", "v", as these are reserved.
      */
     int move_string_length_max;
 
@@ -38,6 +41,9 @@ typedef struct GameplayApiCommon {
      *
      * @note Assumes that MOVE is valid and BUFFER has enough space to hold the
      * move string. Results in undefined behavior otherwise.
+     *
+     * @note Keep in mind that one must avoid letting a move string be one 
+     * of the following strings: "b", "q", "u", "v", as these are reserved.
      */
     int (*MoveToString)(Move move, char *buffer);
 

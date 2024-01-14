@@ -79,13 +79,23 @@ bool InteractiveMatchPlayerIsComputer(int player) {
     return match.is_computer[player];
 }
 
-int InteractiveMatchGetCurrentVariant(void) {
+const GameVariant *InteractiveMatchGetVariant(void) {
+    if (match.game->GetCurrentVariant == NULL) return NULL;
+    return match.game->GetCurrentVariant();
+}
+
+int InteractiveMatchGetVariantIndex(void) {
     if (match.game->GetCurrentVariant == NULL) return 0;
 
     const GameVariant *variant = match.game->GetCurrentVariant();
     if (variant == NULL) return 0;
 
     return GameVariantToIndex(variant);
+}
+
+int InteractiveMatchSetVariantOption(int option, int selection) {
+    if (match.game->SetVariantOption == NULL) return -1;
+    return match.game->SetVariantOption(option, selection);
 }
 
 TierPosition InteractiveMatchGetCurrentPosition(void) {

@@ -71,7 +71,7 @@ void Int64ArrayDestroy(Int64Array *array);
 /**
  * @brief Pushes a new ITEM to the back of the ARRAY.
  *
- * @param array Destiniation.
+ * @param array Destination.
  * @param item New item.
  * @return true on success,
  * @return false otherwise.
@@ -105,6 +105,9 @@ bool Int64ArrayEmpty(const Int64Array *array);
  * otherwise.
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
+
+/** @brief Sorts the given ARRAY according to the given comparison function. */
+void Int64ArraySort(Int64Array *array, int (*comp)(const void *, const void *));
 
 /**
  * @brief Resizes ARRAY to have SIZE elements. If the current size of ARRAY is

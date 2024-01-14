@@ -17,6 +17,10 @@ bool MoveArrayPopBack(MoveArray *array) {
     return true;
 }
 
+void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *)) {
+    Int64ArraySort(array, comp);
+}
+
 bool MoveArrayContains(const MoveArray *array, Move move) {
     return Int64ArrayContains(array, move);
 }

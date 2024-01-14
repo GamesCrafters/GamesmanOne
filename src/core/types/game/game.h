@@ -62,13 +62,13 @@ typedef struct Game {
 
     /**
      * @brief Returns the current variant of the game as a read-only GameVariant
-     * object.
+     * object. Set to NULL if the game has only one variant.
      */
     const GameVariant *(*GetCurrentVariant)(void);
 
     /**
      * @brief Sets the game variant option with index OPTION to the choice of
-     * index SELECTION.
+     * index SELECTION. Set to NULL if the game has only one variant.
      *
      * @param option Index of the option to modify.
      * @param selection Index of the choice to select.
