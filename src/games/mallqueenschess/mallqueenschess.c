@@ -198,29 +198,9 @@ static int MallqueenschessInit(void *aux) {
                 "Mallqueenschess: failed to initialize generic hash context. "
                 "Aborting...\n");
         GenericHashReinitialize();
-        return false;
+        return 1;
     }
-    // char board[26];
-    // GenericHashUnhash(6090972958, board);
-    // board[25] = '\0';
-    // printf("HELLO: %s", board);
-    // PositionArray pa = MallqueenschessGetCanonicalParentPositions(6090972958);
-    // for (int64_t i = 0; i < pa.size; i++) {
-    //     printf("%" PRId64 " ", pa.array[i]);
-    // }
-    // printf("\n");
-    // Position hd = MallqueenschessGetCanonicalPosition(GenericHashHash("WBWBW-----B---W-----BWBWB", 1));
-    // printf("PARENT: %" PRId64 "\n", hd);
-    // #pragma omp parallel for
-    // for (Position p = 0; p < MallqueenschessGetNumPositions(); p++) {
-    //     if ((p & 0xFFFFF) == 0) {
-    //         printf("%" PRId64 "\n", p);
-    //     }
-    //     if (!BigCanonicalTest(p)) {
-    //         printf("ERROR");
-    //     }
-    // }
-    return true;
+    return 0;
 }
 
 static int MallqueenschessFinalize(void) { return 0; }
