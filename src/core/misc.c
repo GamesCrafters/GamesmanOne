@@ -38,6 +38,7 @@
 #include <string.h>     // strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
+#include <time.h>       // clock_t, CLOCKS_PER_SEC
 #include <unistd.h>     // close
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 
@@ -90,6 +91,59 @@ char *SafeStrncpy(char *dest, const char *src, size_t n) {
 
 void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
+}
+
+double ClockToSeconds(clock_t n) {
+    return (double)n / CLOCKS_PER_SEC;
+}
+
+char *GetTimeStampString(void) {
+    time_t rawtime = time(NULL);
+    char *time_str = ctime(&rawtime);
+    time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+    return time_str;
+}
+
+static void AppendIfPositive(char *buf, int val, ReadOnlyString label) {
+    if (val <= 0) return;
+    sprintf(buf + strlen(buf), "%d %s", val, label);
+}
+
+char *SecondsToFormattedTimeString(double _seconds) {
+    // Format is the following or "INFINITE" if yyyy is greater than 9999.
+    static const char format[] = "[yyyy y mm m dd d hh h mm m ]ss s";
+    static char buf[sizeof(format)];
+    if (_seconds < 0.0) {
+        sprintf(buf, "NEGATIVE TIME ERROR");
+        return buf;
+    }
+
+    int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds;
+    int64_t remainder = _seconds;
+    seconds = remainder % 60;
+    remainder /= 60;
+    minutes = remainder % 60;
+    remainder /= 60;
+    hours = remainder % 24;
+    remainder /= 24;
+    days = remainder % 30;
+    remainder /= 30;
+    months = remainder %= 12;
+    remainder /= 12;
+    years = remainder > 9999 ? -1 : remainder;
+    if (years < 0) {
+        sprintf(buf, "INFINITE");
+    } else {
+        buf[0] = '\0';
+        AppendIfPositive(buf, years, "y ");
+        AppendIfPositive(buf, months, "m ");
+        AppendIfPositive(buf, days, "d ");
+        AppendIfPositive(buf, hours, "h ");
+        AppendIfPositive(buf, minutes, "m ");
+        sprintf(buf + strlen(buf), "%d %s", seconds, "s");
+    }
+
+    return buf;
 }
 
 FILE *GuardedFopen(const char *filename, const char *modes) {

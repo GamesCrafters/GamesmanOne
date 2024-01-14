@@ -31,6 +31,7 @@
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t, uint64_t
 #include <stdio.h>    // FILE
+#include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
 
 #include "core/types/gamesman_types.h"
@@ -73,6 +74,12 @@ char *SafeStrncpy(char *dest, const char *src, size_t n);
  * @return Shifted pointer (void *)((uint8_t *)P + offset)).
  */
 void *GenericPointerAdd(const void *p, int64_t offset);
+
+double ClockToSeconds(clock_t n);
+
+char *GetTimeStampString(void);
+
+char *SecondsToFormattedTimeString(double seconds);
 
 /**
  * @brief Same behavior as fopen on success; calls perror and returns NULL

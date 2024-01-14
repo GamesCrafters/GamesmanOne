@@ -321,14 +321,14 @@ static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 
 static int NaiveDbTierStatus(Tier tier) {
     char *full_path = GetFullPathToFile(tier);
-    if (full_path == NULL) return kDbTierCheckError;
+    if (full_path == NULL) return kDbTierStatusCheckError;
 
     FILE *db_file = fopen(full_path, "rb");
     free(full_path);
-    if (db_file == NULL) return kDbTierMissing;
+    if (db_file == NULL) return kDbTierStatusMissing;
 
     int error = GuardedFclose(db_file);
-    if (error != 0) return kDbTierCheckError;
+    if (error != 0) return kDbTierStatusCheckError;
 
-    return kDbTierSolved;
+    return kDbTierStatusSolved;
 }

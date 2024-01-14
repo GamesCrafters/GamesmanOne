@@ -201,7 +201,7 @@ static int RegularSolverSolve(void *aux) {
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
     TierWorkerInit(&current_api);
-    return TierWorkerSolve(kDefaultTier, options->force);
+    return TierWorkerSolve(kDefaultTier, options->force, NULL);
 }
 
 static int RegularSolverAnalyze(void *aux) {

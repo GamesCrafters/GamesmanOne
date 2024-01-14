@@ -8,8 +8,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
- * @version 1.0.0
- * @date 2023-08-19
+ * 
+ * @version 1.0.1
+ * @date 2024-01-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,8 +34,8 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/types/gamesman_types.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the Tier Worker Module using the given API functions.
@@ -50,8 +51,11 @@ void TierWorkerInit(const TierSolverApi *api);
  * @param force If set to true, the Module will perform the solving process
  * regardless of the current database status. Otherwise, the solving process is
  * skipped if the Module believes that TIER has been correctly solved already.
+ * @param solved If not NULL, a truth value indicating whether the given TIER is
+ * actually solved instead of loaded from the existing database will be stored
+ * in this variable.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierWorkerSolve(Tier tier, bool force);
+int TierWorkerSolve(Tier tier, bool force, bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

@@ -67,10 +67,10 @@ enum CommonConstants {
 
 /** @brief Enumeration of all possible statuses of a tier's database file. */
 enum DatabaseTierStatus {
-    kDbTierSolved,
-    kDbTierCorrupted,
-    kDbTierMissing,
-    kDbTierCheckError,
+    kDbTierStatusSolved,
+    kDbTierStatusCorrupted,
+    kDbTierStatusMissing,
+    kDbTierStatusCheckError,
 };
 
 /** @brief Enumeration of all possible statuses of a tier's analysis. */

@@ -8,8 +8,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.0.0
- * @date 2023-08-19
+ * 
+ * @version 1.0.1
+ * @date 2024-01-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -150,10 +151,11 @@ void TierWorkerInit(const TierSolverApi *api) {
     memcpy(&current_api, api, sizeof(current_api));
 }
 
-int TierWorkerSolve(Tier tier, bool force) {
-    int ret = -1;
-    if (!force && DbManagerTierStatus(tier) == kDbTierSolved) {
-        ret = 0;  // Success.
+int TierWorkerSolve(Tier tier, bool force, bool *solved) {
+    if (solved != NULL) *solved = false;
+    int ret = kRuntimeError;
+    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+        ret = kNoError;  // Success.
         goto _bailout;
     }
 
@@ -165,7 +167,8 @@ int TierWorkerSolve(Tier tier, bool force) {
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();
     Step6SaveValues();
-    ret = 0;  // Success.
+    if (solved != NULL) *solved = true;
+    ret = kNoError;  // Success.
 
 _bailout:
     Step7Cleanup();
