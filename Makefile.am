@@ -3,13 +3,12 @@ AM_CFLAGS = -I$(srcdir)/src
 
 # Local resources directory.
 RES_DIR = $(srcdir)/res
+AM_CFLAGS += -I$(RES_DIR)/include
+AM_LDFLAGS = -L$(RES_DIR)/lib
+AM_LDFLAGS += -L$(RES_DIR)/lib64
 
 # Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
-
-# Configure json-c.
-AM_CFLAGS += -I$(RES_DIR)/include
-AM_LDFLAGS = -L$(RES_DIR)/lib
 
 # Build Gamesman as a non-installable program.
 noinst_PROGRAMS = bin/gamesman
