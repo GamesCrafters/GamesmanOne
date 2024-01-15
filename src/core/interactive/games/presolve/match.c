@@ -38,15 +38,15 @@ int InteractiveMatchSetGame(const Game *game) {
     memset(&match, 0, sizeof(match));
     match.game = game;
     if (!ImplementsCommonGameplayApi(game->gameplay_api)) {
-        return kInteractiveMatchSetGameBasicApiIncomplete;
+        return kIncompleteGameplayApiError;
     } else if (ImplementsRegularGameplayApi(game->gameplay_api)) {
         match.is_tier_game = false;
     } else if (ImplementsTierGameplayApi(game->gameplay_api)) {
         match.is_tier_game = true;
     } else {
-        return kInteractiveMatchSetGameRegularOrTierApiIncomplete;
+        return kIncompleteGameplayApiError;
     }
-    return kInteractiveMatchSetGameOk;
+    return kNoError;
 }
 
 bool InteractiveMatchRestart(void) {

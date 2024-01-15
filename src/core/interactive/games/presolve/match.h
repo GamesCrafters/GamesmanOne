@@ -5,12 +5,6 @@
 
 #include "core/types/gamesman_types.h"
 
-typedef enum InteractiveMatchSetGameErrorCode {
-    kInteractiveMatchSetGameOk = 0,
-    kInteractiveMatchSetGameBasicApiIncomplete,
-    kInteractiveMatchSetGameRegularOrTierApiIncomplete,
-} InteractiveMatchSetGameErrorCode;
-
 int InteractiveMatchSetGame(const Game *game);
 const Game *InteractiveMatchGetCurrentGame(void);
 

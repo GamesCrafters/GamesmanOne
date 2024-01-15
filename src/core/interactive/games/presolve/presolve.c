@@ -60,7 +60,8 @@ static int SetCurrentGame(ReadOnlyString key) {
 
     // Aux parameter for game initialization currently unused.
     const Game *current_game = GameManagerInitGameIndex(game_index, NULL);
-    assert(current_game != NULL);
+    if (current_game == NULL) return kGameInitFailureError;
+
     int error = InteractiveMatchSetGame(current_game);
     if (error != 0) return error;
 

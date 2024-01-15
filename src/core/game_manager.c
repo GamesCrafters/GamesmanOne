@@ -63,12 +63,12 @@ const Game *GameManagerInitGame(ReadOnlyString game_name, void *aux) {
 
 const Game *GameManagerInitGameIndex(int index, void *aux) {
     assert(index >= 0 && index < GameManagerNumGames());
-    int ret = kAllGames[index]->Init(aux);
-    if (ret != 0) {
+    int error = kAllGames[index]->Init(aux);
+    if (error != kNoError) {
         fprintf(stderr,
                 "GameManagerInitGameIndex: failed to initialize game [%s], "
                 "code %d.\n",
-                kAllGames[index]->name, ret);
+                kAllGames[index]->name, error);
         return NULL;
     }
 

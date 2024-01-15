@@ -16,6 +16,8 @@ enum GamesmanError {
     kIllegalGamePositionValueError,
     kIllegalGameTierGraphError,
     kIllegalSolverOptionError,
+    kIncompleteGameplayApiError,
+    kGameInitFailureError,
     kUseBeforeInitializationError,
     kRuntimeError,
 };
