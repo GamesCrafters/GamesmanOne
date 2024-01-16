@@ -161,6 +161,18 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
  */
 int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
+/**
+ * @brief Returns the status of TIER.
+ * 
+ * @details The status of a TIER can be one of the following:
+ *  - kDbTierStatusSolved: solved
+ *  - kDbTierStatusCorrupted: corrupted
+ *  - kDbTierStatusMissing: not solved
+ *  - kDbTierStatusCheckError: there was an error checking the status of TIER.
+ * 
+ * @param tier Tier to check.
+ * @return Integer tier status code.
+ */
 int DbManagerTierStatus(Tier tier);
 
 #endif  // GAMESMANONE_CORE_DB_DB_MANAGER_H_

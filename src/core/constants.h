@@ -4,8 +4,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * @version 1.1.0
- * @date 2024-01-04
+ * 
+ * @version 1.1.1
+ * @date 2024-01-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

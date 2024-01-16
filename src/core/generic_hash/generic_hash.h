@@ -13,7 +13,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash system for finite board games with fixed sets of pieces.
  * @version 1.0.1
- * @date 2023-09-27
+ * @date 2024-01-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

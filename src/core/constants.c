@@ -4,8 +4,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definitions of global constants.
- * @version 1.0.0
- * @date 2023-10-21
+ * 
+ * @version 1.1.1
+ * @date 2024-01-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -42,5 +43,5 @@ const TierPosition kIllegalTierPosition = {
 const int kIllegalRemoteness = -1;
 const int kIllegalVariantIndex = -1;
 
-ConstantReadOnlyString kGamesmanDate = "2023.10.21";
-ConstantReadOnlyString kGamesmanVersion = "0.5";
+ConstantReadOnlyString kGamesmanDate = "2024.01.15";
+ConstantReadOnlyString kGamesmanVersion = "0.5.0";
