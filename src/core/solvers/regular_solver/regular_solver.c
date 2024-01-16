@@ -232,8 +232,7 @@ static int RegularSolverAnalyze(void *aux) {
 }
 
 static int RegularSolverGetStatus(void) {
-    // TODO
-    return kNotImplementedError;
+    return DbManagerTierStatus(kDefaultTier);
 }
 
 static const SolverConfig *RegularSolverGetCurrentConfig(void) {
