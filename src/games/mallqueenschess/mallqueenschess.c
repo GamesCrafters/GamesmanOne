@@ -149,56 +149,11 @@ static const int symmetries[8][25] = {
 
 static void UnhashMove(Move move, int *from, int *to);
 
-// bool BigCanonicalTest(Position p) {
-//     char board[boardSize];
-//     char symmetricBoard[boardSize];
-//     GenericHashUnhash(p, board);
-//     int turn = GenericHashGetTurn(p);
-//     int oppTurn = (turn == 1) ? 2 : 1;
-//     Position canonicalPosition = MallqueenschessGetCanonicalPosition(p);
-//     Position symP;
-//     Position canonsymP;
-//     for (int i = 0; i < 8; i++) {
-//         for (int j = 0; j < boardSize; j++) {
-//             symmetricBoard[j] = board[symmetries[i][j]];
-//         }
-//         symP = GenericHashHash(symmetricBoard, turn);
-//         canonsymP = MallqueenschessGetCanonicalPosition(symP);
-//         if (canonsymP != canonicalPosition) {
-//             printf("ERROR1 %d: %" PRId64 " : %" PRId64 " while %" PRId64 " :
-//             %" PRId64 "!\n", i, p, canonicalPosition, symP, canonsymP);
-//             return false;
-//         }
-//     }
-
-//     for (int i = 0; i < boardSize; i++) {
-//         if (board[i] == W) {
-//             board[i] = B;
-//         } else if (board[i] == B) {
-//             board[i] = W;
-//         }
-//     }
-
-//     for (int i = 0; i < 8; i++) {
-//         for (int j = 0; j < boardSize; j++) {
-//             symmetricBoard[j] = board[symmetries[i][j]];
-//         }
-//         symP = GenericHashHash(symmetricBoard, oppTurn);
-//         canonsymP = MallqueenschessGetCanonicalPosition(symP);
-//         if (canonsymP != canonicalPosition) {
-//             printf("ERROR2 %d: %" PRId64 " : %" PRId64 " while %" PRId64 " :
-//             %" PRId64 "!\n", i, p, canonicalPosition, symP, canonsymP);
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
 static int MallqueenschessInit(void *aux) {
     (void)aux;  // Unused.
 
     GenericHashReinitialize();
-    int pieces_init_array[10] = {BLANK, 13, 13, W, 6, 6, B, 6, 6, -1};
+    int pieces_init_array[10] = {BLANK, 13, 13, B, 6, 6, W, 6, 6, -1};
     bool success =
         GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
     if (!success) {
@@ -208,27 +163,6 @@ static int MallqueenschessInit(void *aux) {
         GenericHashReinitialize();
         return kRuntimeError;
     }
-    // char board[26];
-    // GenericHashUnhash(6090972958, board);
-    // board[25] = '\0';
-    // printf("HELLO: %s", board);
-    // PositionArray pa =
-    // MallqueenschessGetCanonicalParentPositions(6090972958); for (int64_t i =
-    // 0; i < pa.size; i++) {
-    //     printf("%" PRId64 " ", pa.array[i]);
-    // }
-    // printf("\n");
-    // Position hd =
-    // MallqueenschessGetCanonicalPosition(GenericHashHash("WBWBW-----B---W-----BWBWB",
-    // 1)); printf("PARENT: %" PRId64 "\n", hd); #pragma omp parallel for for
-    // (Position p = 0; p < MallqueenschessGetNumPositions(); p++) {
-    //     if ((p & 0xFFFFF) == 0) {
-    //         printf("%" PRId64 "\n", p);
-    //     }
-    //     if (!BigCanonicalTest(p)) {
-    //         printf("ERROR");
-    //     }
-    // }
     return kNoError;
 }
 
@@ -500,25 +434,14 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
 
     char pieceInSymmetry, pieceInCurrentCanonical;
     int i, symmetryNum;
-
-    if (GenericHashGetTurn(position) == 2) {
-        for (i = 0; i < boardSize; i++) {
-            if (board[i] == W) {
-                board[i] = B;
-            } else if (board[i] == B) {
-                board[i] = W;
-            }
-        }
-    }
+    int turn = GenericHashGetTurn(position);
 
     /* Figure out which symmetry transformation on the input board
     leads to the smallest-ternary-number board in the input board's orbit
-    (where the transformations are just rotation/reflection/
-    inner-outer flip). */
+    (where the transformations are just rotation/reflection. */
     int bestSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
-         symmetryNum++) {
-        for (i = 0; i < boardSize; i++) {
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+        for (i = boardSize - 1; i >= 0; i--) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
             if (pieceInSymmetry != pieceInCurrentCanonical) {
@@ -529,10 +452,51 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
             }
         }
     }
-
     char canonBoard[boardSize];
-    for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
+    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
         canonBoard[i] = board[symmetries[bestSymmetryNum][i]];
+    }
+
+    // Invert the piece colors of the board
+    for (i = 0; i < boardSize; i++) {
+        if (board[i] == W) {
+            board[i] = B;
+        } else if (board[i] == B) {
+            board[i] = W;
+        }
+    }
+
+    /* Figure out which symmetry transformation on the swapped input board
+    leads to the smallest-ternary-number board in the input board's orbit
+    (where the transformations are just rotation/reflection. */
+    bestSymmetryNum = 0;
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+        for (i = boardSize - 1; i >= 0; i--) {
+            pieceInSymmetry = board[symmetries[symmetryNum][i]];
+            pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
+            if (pieceInSymmetry != pieceInCurrentCanonical) {
+                if (pieceInSymmetry < pieceInCurrentCanonical) {
+                    bestSymmetryNum = symmetryNum;
+                }
+                break;
+            }
+        }
+    }
+    char canonSwappedBoard[boardSize];
+    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+        canonSwappedBoard[i] = board[symmetries[bestSymmetryNum][i]];
+    }
+
+    // Compare canonBoard and canonSwappedBoard
+    char pieceInRegular, pieceInSwapped;
+    for (i = boardSize - 1; i >= 0; i--) {
+        pieceInRegular = canonBoard[i];
+        pieceInSwapped = canonSwappedBoard[i];
+        if (pieceInRegular < pieceInSwapped) {
+            return GenericHashHash(canonBoard, turn);
+        } else if (pieceInSwapped < pieceInRegular) {
+            return GenericHashHash(canonSwappedBoard, turn == 1 ? 2 : 1);
+        }
     }
     return GenericHashHash(canonBoard, 1);
 }
