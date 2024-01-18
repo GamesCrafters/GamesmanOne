@@ -6,6 +6,7 @@
 
 // 1. To add a new game, include the game header here.
 
+#include "games/fsvp/fsvp.h"
 #include "games/mallqueenschess/mallqueenschess.h"
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
@@ -13,4 +14,6 @@
 // 2. Then add the new game object to the list. Note that the list must be
 // NULL-terminated.
 
-const Game *const kAllGames[] = {&kMtttier, &kMttt, &kMallqueenschess, NULL};
+const Game *const kAllGames[] = {
+    &kFsvp, &kMtttier, &kMttt, &kMallqueenschess, NULL,
+};

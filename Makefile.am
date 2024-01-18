@@ -108,6 +108,7 @@ bin_gamesman_SOURCES += src/libs/mgz/gz64.c
 bin_gamesman_SOURCES += src/libs/mgz/mgz.c
 
 # All Games
+bin_gamesman_SOURCES += src/games/fsvp/fsvp.c
 bin_gamesman_SOURCES += src/games/mallqueenschess/mallqueenschess.c
 bin_gamesman_SOURCES += src/games/mttt/mttt.c
 bin_gamesman_SOURCES += src/games/mtttier/mtttier.c
