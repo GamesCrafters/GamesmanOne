@@ -95,7 +95,7 @@ const Game kFsvp = {
     .solver = &kRegularSolver,
     .solver_api = &kFsvpSolverApi,
     .gameplay_api = &kFsvpGameplayApi,
-    .uwapi = NULL,         // TODO
+    .uwapi = NULL,  // TODO
 
     .Init = FsvpInit,
     .Finalize = FsvpFinalize,
@@ -118,9 +118,12 @@ static int variant_size;
 static int partition[VARIANT_SIZE_MAX + 1][VARIANT_SIZE_MAX + 1];
 static int proper_factors[VARIANT_SIZE_MAX + 1][VARIANT_SIZE_MAX + 1];
 
-// API Implementation
+// Helper functions
 
+static Position Hash(const Board *board);
 static Board Unhash(Position hashed);
+
+// API Implementation
 
 static int FsvpInit(void *aux) {
     (void)aux;  // Unused.
@@ -150,15 +153,7 @@ static int FsvpInit(void *aux) {
             if (i % j == 0) proper_factors[i][num_factors++] = j;
         }
     }
-
-    for (int i = 0; i < 42; ++i) {
-        Board board = Unhash(i);
-        for (int i = 1; i <= 10; ++i) {
-            printf("%d ", board.counts[i]);
-        }
-        printf("\n");
-    }
-
+    
     return kNoError;
 }
 
@@ -176,41 +171,6 @@ static int FsvpSetVariantOption(int option, int selection) {
     selections[0] = selection;
     variant_size = selection + 1;
     return kNoError;
-}
-#undef VARIANT_SIZE_MAX
-
-/**
- * @cite Wouter M. (https://mathoverflow.net/users/35587/wouter-m), Computing
- * the lexicographic indices of integer partition, URL (version: 2013-10-18):
- * https://mathoverflow.net/q/145186
- */
-static Position Hash(const Board *board) {
-    Position ret = 0;
-    int sum = 0;
-    for (int i = 1; i <= variant_size; ++i) {
-        for (int j = 0; j < board->counts[i]; ++j) {
-            sum += i;
-            ret += partition[sum][i - 1];
-        }
-    }
-    return FsvpGetNumPositions() - ret - 1;
-}
-
-static Board Unhash(Position hashed) {
-    Board ret = {0};
-    int diff = FsvpGetNumPositions() - hashed - 1;
-    int sum = variant_size, i;
-    while (diff > 0) {
-        for (i = 1; i <= variant_size; ++i) {
-            if (partition[sum][i] > diff) break;
-        }
-        diff -= partition[sum][i];
-        sum -= i;
-        ++ret.counts[i];
-    }
-    ret.counts[1] += sum;
-
-    return ret;
 }
 
 static int64_t FsvpGetNumPositions(void) {
@@ -248,18 +208,24 @@ static MoveArray FsvpGenerateMoves(Position position) {
     }
 
     // Combining moves
-    for (int i = 1; i <= variant_size; ++i) {
-        if (board.counts[i] == 0) continue;
+    int available[VARIANT_SIZE_MAX], size = 0;
+    for (int i = variant_size; i > 0; --i) {
+        if (board.counts[i] > 0) {  // Collect all available counts.
+            available[size++] = i;
+        }
+    }
+
+    for (int i = 0; i < size; ++i) {
         // two numbers must not equal to each other.
-        for (int j = i + 1; j <= variant_size; ++j) {
-            if (board.counts[j] == 0) continue;
-            Move move = ConstructMove(false, i, j);
+        for (int j = i + 1; j < size; ++j) {
+            Move move = ConstructMove(false, available[i], available[j]);
             MoveArrayAppend(&moves, move);
         }
     }
 
     return moves;
 }
+#undef VARIANT_SIZE_MAX
 
 static Value FsvpPrimitive(Position position) {
     // The partition that contains all ones is guaranteed to be of index
@@ -364,4 +330,40 @@ static Move FsvpStringToMove(ReadOnlyString move_string) {
     }
 
     return ConstructMove(splitting, values[0], values[1]);
+}
+
+// Helper functions
+
+/**
+ * @cite Wouter M. (https://mathoverflow.net/users/35587/wouter-m), Computing
+ * the lexicographic indices of integer partition, URL (version: 2013-10-18):
+ * https://mathoverflow.net/q/145186
+ */
+static Position Hash(const Board *board) {
+    Position ret = 0;
+    int sum = 0;
+    for (int i = 1; i <= variant_size; ++i) {
+        for (int j = 0; j < board->counts[i]; ++j) {
+            sum += i;
+            ret += partition[sum][i - 1];
+        }
+    }
+    return FsvpGetNumPositions() - ret - 1;
+}
+
+static Board Unhash(Position hashed) {
+    Board ret = {0};
+    int diff = FsvpGetNumPositions() - hashed - 1;
+    int sum = variant_size, i;
+    while (diff > 0) {
+        for (i = 1; i <= variant_size; ++i) {
+            if (partition[sum][i] > diff) break;
+        }
+        diff -= partition[sum][i - 1];
+        sum -= i;
+        ++ret.counts[i];
+    }
+    ret.counts[1] += sum;
+
+    return ret;
 }
