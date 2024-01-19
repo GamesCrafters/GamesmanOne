@@ -30,7 +30,7 @@ Int64Array VariantIndexToSelections(int index, const GameVariant *variant) {
     Int64ArrayInit(&ret);
     if (!Int64ArrayResize(&ret, num_options)) return ret;
 
-    for (int i = num_options; i >= 0; --i) {
+    for (int i = num_options - 1; i >= 0; --i) {
         int selection = index % variant->options[i].num_choices;
         ret.array[i] = selection;
         index /= variant->options[i].num_choices;

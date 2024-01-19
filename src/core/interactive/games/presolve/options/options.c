@@ -1,7 +1,7 @@
 #include "core/interactive/games/presolve/options/options.h"
 
 #include <stddef.h>  // NULL
-#include <stdio.h>   // sprintf
+#include <stdio.h>   // printf, fprintf, stderr, sprintf
 #include <stdlib.h>  // free
 #include <string.h>  // strcat, strncat, strlen
 
@@ -9,6 +9,7 @@
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/choices/choices.h"
 #include "core/misc.h"
+#include "core/solvers/solver_manager.h"
 #include "core/types/gamesman_types.h"
 
 static char **items;
@@ -49,6 +50,12 @@ void InteractiveGameOptions(ReadOnlyString key) {
     AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
              (ConstantReadOnlyString *)keys, hooks, &UpdateItems);
     FreeAll(num_items, keys, hooks);
+
+    // Reinitialize the solver.
+    int error = SolverManagerInit(NULL);  // TODO: custom datapath.
+    if (error != kNoError) {
+        NotReached("failed to initialize solver for the current game variant");
+    }
 }
 
 static int GetNumOptions(const GameVariant *variant) {

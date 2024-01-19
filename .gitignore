@@ -112,3 +112,6 @@ Makefile
 
 # VSCode
 .vscode
+
+# GCC
+*.gcda

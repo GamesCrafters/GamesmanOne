@@ -33,19 +33,22 @@ static Move FsvpStringToMove(ReadOnlyString move_string);
 
 // Variants
 
+#define VARIANT_SIZE_MAX 100
 static ConstantReadOnlyString kFsvpGameSizeChoices[] = {
-    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    "4",  "5",  "6",  "7",  "8",  "9",  "10", "11", "12",
+    "20", "50", "60", "70", "80", "90", "100"
 };
 
 static const GameVariantOption kFsvpGameSize = {
     .name = "size",
-    .num_choices = 10,
+    .num_choices =
+        sizeof(kFsvpGameSizeChoices) / sizeof(kFsvpGameSizeChoices[0]),
     .choices = kFsvpGameSizeChoices,
 };
 
 #define NUM_OPTIONS 2  // 1 option and 1 zero-terminator.
 static GameVariantOption options[NUM_OPTIONS];
-static int selections[NUM_OPTIONS] = {9, 0};
+static int selections[NUM_OPTIONS] = {6, 0};
 #undef NUM_OPTIONS
 static GameVariant current_variant;
 
@@ -108,7 +111,6 @@ const Game kFsvp = {
 
 // Helper structs and global variables
 
-#define VARIANT_SIZE_MAX 10
 typedef struct Board {
     // index 0 is unused.
     int counts[VARIANT_SIZE_MAX + 1];
@@ -153,7 +155,7 @@ static int FsvpInit(void *aux) {
             if (i % j == 0) proper_factors[i][num_factors++] = j;
         }
     }
-    
+
     return kNoError;
 }
 
@@ -169,7 +171,8 @@ static int FsvpSetVariantOption(int option, int selection) {
     }
 
     selections[0] = selection;
-    variant_size = selection + 1;
+    variant_size = atoi(kFsvpGameSizeChoices[selection]);
+    printf("setting size to %d\n", variant_size);
     return kNoError;
 }
 
@@ -180,7 +183,8 @@ static int64_t FsvpGetNumPositions(void) {
 static Position FsvpGetInitialPosition(void) {
     // The partition that contains only the max value is guaranteed
     // to be of index 0 in a reverse lexicographical order.
-    return 0;
+    if (variant_size % 2 == 0) return 0;
+    return 1;
 }
 
 // Encoding of a move: the LSB is 0 if it's a splitting move, otherwise it's
@@ -284,7 +288,7 @@ static int FsvpMoveToString(Move move, char *buffer) {
     }
     move >>= 1;
     size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
-    size += sprintf(buffer + size, "%" PRId64, move % variant_size);          // y
+    size += sprintf(buffer + size, "%" PRId64, move % variant_size);      // y
 
     return kNoError;
 }
