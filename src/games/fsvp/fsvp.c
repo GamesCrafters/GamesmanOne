@@ -1,3 +1,29 @@
+/**
+ * @file fsvp.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of the game of Fair Shares and Varied Pairs.
+ * @version 1.0.0
+ * @date 2024-01-24
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "games/fsvp/fsvp.h"
 
 #include <assert.h>    // assert
@@ -35,9 +61,8 @@ static Move FsvpStringToMove(ReadOnlyString move_string);
 
 #define VARIANT_SIZE_MAX 100
 static ConstantReadOnlyString kFsvpGameSizeChoices[] = {
-    "4",  "5",  "6",  "7",  "8",  "9",  "10", "11", "12",
-    "20", "50", "60", "70", "80", "90", "100"
-};
+    "4",  "5",  "6",  "7",  "8",  "9",  "10", "11",
+    "12", "20", "50", "60", "70", "80", "90", "100"};
 
 static const GameVariantOption kFsvpGameSize = {
     .name = "size",

@@ -8,7 +8,8 @@
  * thread-safety for the new OpenMP multithreaded tier solver.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Frontier type.
+ * @brief Dynamic 2D Position array which stores solved positions that have not
+ * been used to deduce the values of their parents.
  *
  * @version 1.0.0
  * @date 2023-08-19

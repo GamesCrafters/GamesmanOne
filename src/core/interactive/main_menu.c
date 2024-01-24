@@ -7,7 +7,7 @@
 
 void InteractiveMainMenu(ReadOnlyString key) {
     (void)key;  // Unused.
-    static ConstantReadOnlyString kTitle = "Gamesman Main Menu";
+    static ConstantReadOnlyString kTitle = "GAMESMAN Main Menu";
     static ConstantReadOnlyString items[] = {
         "List of Games",
         "GAMESMAN Help",

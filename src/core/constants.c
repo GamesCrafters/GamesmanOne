@@ -6,7 +6,7 @@
  * @brief Definitions of global constants.
  * 
  * @version 1.1.1
- * @date 2024-01-15
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -43,5 +43,5 @@ const TierPosition kIllegalTierPosition = {
 const int kIllegalRemoteness = -1;
 const int kIllegalVariantIndex = -1;
 
-ConstantReadOnlyString kGamesmanDate = "2024.01.15";
+ConstantReadOnlyString kGamesmanDate = "2024.01.24";
 ConstantReadOnlyString kGamesmanVersion = "0.5.0";

@@ -1,5 +1,5 @@
 /**
- * @file game_manager.h
+ * @file game_manager.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
@@ -7,7 +7,7 @@
  * finalization.
  *
  * @version 1.1.0
- * @date 2024-01-05
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

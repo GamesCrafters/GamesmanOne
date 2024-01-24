@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the UwapiRegular type.
+ * @brief The UwapiRegular type.
  * @details A UwapiRegular object defines a set of helper functions that must be
  * implemented by all regular (non-tier) games to facilitate the generation of
  * JSON responses for GamesCraftersUWAPI (Universal Web API). UWAPI is an

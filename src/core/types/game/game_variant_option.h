@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the GameVariantOption type and related constants.
+ * @brief The GameVariantOption type and related constants.
  * @details A GameVariantOption defines an option of a game. A set of options
  * choices make up the rule of a variant of a game.
  * @version 1.0.0

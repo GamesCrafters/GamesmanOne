@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Regular Solver API.
+ * @brief The Regular Solver API.
  *
  * @version 1.2.0
  * @date 2024-01-08

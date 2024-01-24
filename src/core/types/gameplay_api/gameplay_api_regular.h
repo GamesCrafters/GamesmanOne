@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the GameplayApiRegular type.
+ * @brief The GameplayApiRegular type.
  * @details A GameplayApiRegular object contains a set of API functions that all
  * regular (non-tier) games should implement as part of their gameplay API. All
  * member variables and functions of GameplayApiRegular are REQUIRED unless

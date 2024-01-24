@@ -1,8 +1,35 @@
-#ifndef GAMESMANONE_CORE_TYPES_SOLVER_H
-#define GAMESMANONE_CORE_TYPES_SOLVER_H
+/**
+ * @file solver.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief The generic solver type.
+ *
+ * @version 1.0.0
+ * @date 2024-01-23
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H
+#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H
 
 #include "core/types/base.h"
-#include "core/types/solver_config.h"
+#include "core/types/solver/solver_config.h"
 
 enum SolverConstants {
     kSolverNameLengthMax = 63,
@@ -26,7 +53,7 @@ typedef struct Solver {
     /**
      * @brief Initializes the Solver.
      *
-     * @param game_name Game name used internally by Gamesman.
+     * @param game_name Game name used internally by GAMESMAN.
      * @param variant Index of the current game variant.
      * @param solver_api Pointer to a struct that contains the implemented
      * Solver API functions. The game developer is responsible for using the
@@ -107,4 +134,4 @@ typedef struct Solver {
     int (*GetRemoteness)(TierPosition tier_position);
 } Solver;
 
-#endif
+#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H

@@ -6,7 +6,7 @@
  * graph implementation as a separate module from the tier solver
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the ReverseTierGraph type.
+ * @brief The ReverseTierGraph type.
  *
  * @version 1.0.0
  * @date 2024-01-19

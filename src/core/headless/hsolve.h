@@ -35,7 +35,7 @@
  * @brief Solves the game of name GAME_NAME and variant index VARIANT_ID and
  * stores the database at the given DATA_PATH.
  *
- * @param game_name Name of the game used internally by Gamesman.
+ * @param game_name Name of the game used internally by GAMESMAN.
  * @param variant_id Index of the variant to solve for. If negative, the default
  * variant will be solved.
  * @param data_path Path to the "data" directory. The default path will be used

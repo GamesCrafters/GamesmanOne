@@ -6,7 +6,7 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Tier Solver API.
+ * @brief The Tier Solver API.
  *
  * @version 1.2.0
  * @date 2024-01-08

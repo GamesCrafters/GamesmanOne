@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the GameplayApiTier type.
+ * @brief The GameplayApiTier type.
  * @details A GameplayApiTier object contains a set of API functions that all
  * tier games should implement as part of their gameplay API. All member
  * variables and functions of GameplayApiTier are REQUIRED unless otherwise

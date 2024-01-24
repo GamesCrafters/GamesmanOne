@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of miscellaneous utility functions.
+ * @brief Miscellaneous utility functions.
  * @version 1.1.0
  * @date 2023-10-18
  *
@@ -75,10 +75,16 @@ char *SafeStrncpy(char *dest, const char *src, size_t n);
  */
 void *GenericPointerAdd(const void *p, int64_t offset);
 
+/** @brief Return the number of seconds corresponding to N clock ticks. */
 double ClockToSeconds(clock_t n);
 
+/** @brief Return the current system time stamp as a c-string. */
 char *GetTimeStampString(void);
 
+/**
+ * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
+ * y MM m DD d HH h MM m ]SS s" as a c-string.
+ */
 char *SecondsToFormattedTimeString(double seconds);
 
 /**

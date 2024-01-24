@@ -54,7 +54,7 @@ int HeadlessRedirectOutput(ReadOnlyString output);
  * @brief Initializes the solver for game of name GAME_NAME and variant index
  * VARIANT_ID.
  *
- * @param game_name Name of the game used internally by Gamesman.
+ * @param game_name Name of the game used internally by GAMESMAN.
  * @param variant_id Index of the variant to initialize. If negative, the
  * default variant will be initialized.
  * @param data_path Path to the "data" directory. The default path will be used

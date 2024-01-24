@@ -34,7 +34,7 @@
  * of game GAME_NAME, variant index VARIANT_ID in the UWAPI json format to
  * stdout.
  *
- * @param game_name Name of the game used internally by Gamesman.
+ * @param game_name Name of the game used internally by GAMESMAN.
  * @param variant_id Index of the variant to load. If negative, the default
  * variant will be loaded.
  * @param data_path Path to the "data" directory. The default path will be used
@@ -49,7 +49,7 @@ int HeadlessQuery(ReadOnlyString game_name, int variant_id,
  * @brief Prints out a start position response for game of name GAME_NAME and
  * variant index VARIANT_ID.
  *
- * @param game_name Name of the game used internally by Gamesman.
+ * @param game_name Name of the game used internally by GAMESMAN.
  * @param variant_id Index of the variant to load. If negative, the default
  * variant will be loaded.
  * @return 0 on success, non-zero error code otherwise.
@@ -61,7 +61,7 @@ int HeadlessGetStart(ReadOnlyString game_name, int variant_id);
  * variant index VARIANT_ID, if implemented. Prints out an error response and
  * returns kNotImplementedError otherwise.
  *
- * @param game_name Name of the game used internally by Gamesman.
+ * @param game_name Name of the game used internally by GAMESMAN.
  * @param variant_id Index of the variant to load. If negative, the default
  * variant will be loaded.
  * @return 0 on success, non-zero error code otherwise.

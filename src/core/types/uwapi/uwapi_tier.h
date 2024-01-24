@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the UwapiTier type.
+ * @brief The UwapiTier type.
  * @details A UwapiTier object defines a set of helper functions that must be
  * implemented by all tier games to facilitate the generation of JSON responses
  * for GamesCraftersUWAPI (Universal Web API). UWAPI is an internal

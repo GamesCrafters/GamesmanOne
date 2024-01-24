@@ -3,7 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Uwapi type.
+ * @brief High-level container of helper methods that are used by games to
+ * generate responses for GamesCraftersUWAPI (Universal Web API.)
  * @details A Uwapi object contains a set of helper functions that facilitates
  * the generation of JSON responses for GamesCraftersUWAPI (Universal Web API).
  * UWAPI is an internal request-routing server framework that allows the

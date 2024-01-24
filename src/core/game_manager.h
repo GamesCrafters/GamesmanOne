@@ -7,7 +7,7 @@
  * finalization.
  *
  * @version 1.1.0
- * @date 2024-01-05
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,14 +39,43 @@ const Game *const *GameManagerGetAllGames(void);
 /** @brief Returns the total number of games in GAMESMAN. */
 int GameManagerNumGames(void);
 
+/**
+ * @brief Initializes the game module corresponding to the given GAME_NAME.
+ *
+ * @param game_name Internal game name.
+ * @param aux Axiliary parameter.
+ * @return Read-only pointer to the game initialized on success, or
+ * @return NULL otherwise.
+ */
 const Game *GameManagerInitGame(ReadOnlyString game_name, void *aux);
 
+/**
+ * @brief Initializes the game module corresponding to the given INDEX of the
+ * game in the list of all games.
+ *
+ * @param index Index of the game in the list of all games.
+ * @param aux Axiliary parameter.
+ * @return Read-only pointer to the game initialized on success, or
+ * @return NULL otherwise.
+ */
 const Game *GameManagerInitGameIndex(int index, void *aux);
 
+/**
+ * @brief Returns the current game initialized and loaded into the GAMESMAN
+ * system, or NULL if no game has been loaded.
+ */
 const Game *GameManagerGetCurrentGame(void);
 
+/**
+ * @brief Set the variant of the current loaded game to the variant of index
+ * VARIANT_ID.
+ *
+ * @param variant_id Index of the variant to set to.
+ * @return 0 on success, non-zero error code otherwise.
+ */
 int GameManagerSetVariant(int variant_id);
 
+/** @brief Finalizes the Game Manager Module and free all allocated memory. */
 void GameManagerFinalize(void);
 
 #endif  // GAMESMANONE_CORE_GAME_MANAGER_H_

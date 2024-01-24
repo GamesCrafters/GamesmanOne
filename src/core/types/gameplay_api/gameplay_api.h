@@ -3,8 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the GameplayApi type.
- * @details A GameplayApi defines a set of functions that the Gamesman
+ * @brief GAMESMAN interactive game play API.
+ * @details A GameplayApi defines a set of functions that the GAMESMAN
  * interactive system will use to provide a command line interface for gameplay.
  * All games must implement all required fields in GameplayApi::common and one
  * of the other API collections depending on the type of the game.

@@ -6,7 +6,7 @@
  * @brief Global constants.
  *
  * @version 1.1.1
- * @date 2024-01-15
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -74,7 +74,7 @@ enum CommonConstants {
  * enough for a new game in the future.
  */
 enum RemotenessLimits {
-    kRemotenessMax = 1023, /**< Maximum remoteness supported by Gamesman. */
+    kRemotenessMax = 1023, /**< Maximum remoteness supported by GAMESMAN. */
     kNumRemotenesses,      /**< Number of values a remoteness can take. */
 };
 
@@ -96,10 +96,10 @@ extern const int kIllegalRemoteness;
 /** @brief Illegal variant which can be returned as an error. */
 extern const int kIllegalVariantIndex;
 
-/** @brief Date of the current version of Gamesman. */
+/** @brief Date of the current version of GAMESMAN. */
 extern ConstantReadOnlyString kGamesmanDate;
 
-/** @brief Current version of Gamesman. */
+/** @brief Current version of GAMESMAN. */
 extern ConstantReadOnlyString kGamesmanVersion;
 
 #endif  // GAMESMANONE_CORE_CONSTANTS_H_

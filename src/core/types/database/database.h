@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Database type and associated constants.
+ * @brief Generic Database type and associated constants.
  * @details A Database is an abstract type of a database. To implement a new
  * Database, fully implement all member functions and set function pointers.
  * All member functions are required unless otherwise noted.

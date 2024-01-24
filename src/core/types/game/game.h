@@ -3,9 +3,9 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Game type and related constants.
+ * @brief Generic Game type and related constants.
  * @details The Game type is an abstract type of a generic game that can be
- * solved through the Gamesman system. To implement a new game, correctly set
+ * solved through the GAMESMAN system. To implement a new game, correctly set
  * all members variables and function pointers that are marked as REQUIRED.
  * @version 1.0.0
  * @date 2024-01-21
@@ -32,7 +32,7 @@
 
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
-#include "core/types/solver.h"
+#include "core/types/solver/solver.h"
 #include "core/types/uwapi/uwapi.h"
 
 /** @brief Constants used by the Game type. */

@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the DbProbe type.
+ * @brief Generic Database probe type.
  * @details A DbProbe is an abstract type for a database probe, which is used to
  * extract information such as value and remoteness from a database. It is
  * considered a helper type for the Database type, which uses this structure to

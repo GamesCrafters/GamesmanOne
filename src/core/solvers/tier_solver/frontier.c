@@ -175,7 +175,7 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
         fprintf(stderr,
                 "FrontierAdd: hard-coded frontier size is not large enough to "
                 "hold remoteness %d. Consider changing the value in tier "
-                "solver and recompile Gamesman.\n",
+                "solver and recompile GAMESMAN.\n",
                 remoteness);
         return false;
     }

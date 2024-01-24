@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_SOLVER_OPTION_H
-#define GAMESMANONE_CORE_TYPES_SOLVER_OPTION_H
+#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_OPTION_H
+#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_OPTION_H
 
 #include "core/types/base.h"
 
@@ -21,4 +21,4 @@ typedef struct SolverOption {
     const ConstantReadOnlyString *choices;
 } SolverOption;
 
-#endif  // GAMESMANONE_CORE_TYPES_SOLVER_OPTION_H
+#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_OPTION_H

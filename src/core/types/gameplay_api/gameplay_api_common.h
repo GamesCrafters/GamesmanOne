@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the GameplayApiCommon type.
+ * @brief The GameplayApiCommon type.
  * @details A GameplayApiCommon object contains a set of constants and API
  * functions that all types of games should implement as part of their gameplay
  * API. To implement a GameplayApiCommon, the game developer should correctly

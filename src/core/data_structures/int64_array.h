@@ -91,17 +91,15 @@ void Int64ArrayPopBack(Int64Array *array);
  * empty ARRAY results in undefined behavior.
  *
  * @param array Array to get the item from.
- * @return int64_t item popped.
+ * @return Item at the back of ARRAY.
  */
 int64_t Int64ArrayBack(const Int64Array *array);
 
-/**
- * @brief Returns true if the given ARRAY is empty, false otherwise.
- */
+/** @brief Returns true if the given ARRAY is empty, or false otherwise. */
 bool Int64ArrayEmpty(const Int64Array *array);
 
 /**
- * @brief Returns true if the given ARRAY contains the given ITEM, false
+ * @brief Returns true if the given ARRAY contains the given ITEM, or false
  * otherwise.
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);

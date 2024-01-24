@@ -34,7 +34,7 @@
 /**
  * @brief Analyzes the variant VARIANT_ID of game GAME_NAME.
  *
- * @param game_name Name of the game internal to Gamesman.
+ * @param game_name Name of the game internal to GAMESMAN.
  * @param variant_id Variant index of the game. The default variant will be
  * analyzed instead set to a negative value.
  * @param data_path Path to the `data` directory. The default data path will be

@@ -10,7 +10,7 @@ AM_LDFLAGS += -L$(RES_DIR)/lib64
 # Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
 
-# Build Gamesman as a non-installable program.
+# Build GAMESMAN as a non-installable program.
 noinst_PROGRAMS = bin/gamesman
 
 # Add linker directives.
