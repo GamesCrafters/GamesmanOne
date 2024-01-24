@@ -24,11 +24,18 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>  // printf
+
 #include "core/gamesman_headless.h"
 #include "core/gamesman_interactive.h"
 
 int main(int argc, char **argv) {
+#ifdef MPI_VERSION
+    printf("MPI enabled\n");
+#else
+    printf("MPI disabled\n");
+#endif
     if (argc == 1) return GamesmanInteractiveMain();
-    
+
     return GamesmanHeadlessMain(argc, argv);
 }
