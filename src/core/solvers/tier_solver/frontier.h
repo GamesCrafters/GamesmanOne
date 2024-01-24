@@ -88,7 +88,11 @@ typedef struct Frontier {
     /** An array of locks for each bucket (PositionArray). */
     omp_lock_t *locks;
 #endif
+
+    /** Number of frontier arrays. */
     int size;
+
+    /** Number of dividers. */
     int dividers_size;
 } Frontier;
 

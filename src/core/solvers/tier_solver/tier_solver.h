@@ -289,14 +289,16 @@ typedef struct TierSolverApi {
     Tier (*GetCanonicalTier)(Tier tier);
 } TierSolverApi;
 
+/** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
-    int verbose;
-    bool force;
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
 } TierSolverSolveOptions;
 
+/** @brief Analyzer options of the Tier Solver. */
 typedef struct TierSolverAnalyzeOptions {
-    int verbose;
-    bool force;
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
 } TierSolverAnalyzeOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_

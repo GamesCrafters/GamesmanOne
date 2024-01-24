@@ -76,8 +76,28 @@ int SolverManagerSolve(void *aux);
  */
 int SolverManagerAnalyze(void *aux);
 
+/**
+ * @brief Probes and returns the value of the given TIER_POSITION.
+ *
+ * @note Assumes the solver manager is initialized with the SolverManagerInit
+ * function. Results in undefined behavior if called before the solver manager
+ * module is initialized.
+ *
+ * @param tier_position Tier position to probe.
+ * @return Value of the given TIER_POSITION.
+ */
 Value SolverManagerGetValue(TierPosition tier_position);
 
+/**
+ * @brief Probes and returns the remoteness of the given TIER_POSITION.
+ *
+ * @note Assumes the solver manager is initialized with the SolverManagerInit
+ * function. Results in undefined behavior if called before the solver manager
+ * module is initialized.
+ *
+ * @param tier_position Tier position to probe.
+ * @return Remoteness of the given TIER_POSITION.
+ */
 int SolverManagerGetRemoteness(TierPosition tier_position);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_

@@ -1,3 +1,29 @@
+/**
+ * @file game_variant.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Declaration of the GameVariant type.
+ * @version 1.0.0
+ * @date 2024-01-21
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
 #define GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
 
@@ -12,7 +38,7 @@
  * responsible for providing the possible choices for each one of the variant
  * options as strings (see GameVariantOption::choices). The user of GAMESMAN
  * interactive can then set the variant by selecting a value for each option
- * using the game-specific SetVariantOption method.
+ * using the SetVariantOption method provided by the game module.
  *
  * @example A Tic-Tac-Toe game can be generalized and played on a M by N board
  * with a goal of connecting K pieces in a row. Then, we can have three game
@@ -37,8 +63,26 @@ typedef struct GameVariant {
     const int *selections;
 } GameVariant;
 
-int GameVariantGetNumOptions(const GameVariant *variant);
+/**
+ * @brief Returns the index of the given game VARIANT according to its option
+ * selections.
+ *
+ * @param variant A game variant that belongs to some game.
+ * @return Index of the game variant or
+ * @return 0 if VARIANT is NULL.
+ */
 int GameVariantToIndex(const GameVariant *variant);
+
+/**
+ * @brief Returns an array of option selections that corresponds to the given
+ * VARIANT, which is assumed to be non-NULL.
+ *
+ * @param index Index of the game variant.
+ * @param variant A dummy variant object from which the options available for
+ * that game is extracted.
+ * @return An array of option selections that corresponds to the given
+ * VARIANT.
+ */
 Int64Array VariantIndexToSelections(int index, const GameVariant *variant);
 
 #endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H

@@ -194,14 +194,16 @@ typedef struct RegularSolverApi {
     PositionArray (*GetCanonicalParentPositions)(Position position);
 } RegularSolverApi;
 
+/** @brief Solver options of the Regular Solver. */
 typedef struct RegularSolverSolveOptions {
-    int verbose;
-    bool force;
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)solve the game. */
 } RegularSolverSolveOptions;
 
+/** @brief Analyzer options of the Regular Solver. */
 typedef struct RegularSolverAnalyzeOptions {
-    int verbose;
-    bool force;
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
 } RegularSolverAnalyzeOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_

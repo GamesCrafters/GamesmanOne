@@ -1,3 +1,34 @@
+/**
+ * @file hparser.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Command line parsing module for headless mode.
+ * @version 1.0.0
+ * @date 2024-01-20
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef GAMESMANONE_CORE_HEADLESS_HPARSER_H_
+#define GAMESMANONE_CORE_HEADLESS_HPARSER_H_
+
+#include <stdbool.h>  // bool
+
 /*
  * Headless Commands:
  * solve <game> [<variant_id>]    // solve and analyze game.
@@ -18,22 +49,31 @@
  * -?, --help     // automatic
  */
 
-#ifndef GAMESMANONE_CORE_HEADLESS_HPARSER_H_
-#define GAMESMANONE_CORE_HEADLESS_HPARSER_H_
+/** @brief Enumeration of all possible actions in headless mode. */
+enum HeadlessAction {
+    kInvalidHeadlessAction = -1, /**< Invalid. */
+    kHeadlessSolve,              /**< Solve. */
+    kHeadlessAnalyze,            /**< Analyze. */
+    kHeadlessQuery,              /**< Query position. */
+    kHeadlessGetStart,           /**< Get start position. */
+    kHeadlessGetRandom,          /**< Get random position. */
+    kNumHeadlessActions,         /**< Number of all valid actions. */
+};
 
-#include <stdbool.h>  // bool
-
+/**
+ * @brief Collection of all arguments used by argp for command line parsing.
+ */
 typedef struct ArgpArguments {
-    char *command;
-    char *game;
-    char *variant_id;
-    char *position;
-    char *data_path;
-    char *output;
-    int action;
-    bool force;
-    bool verbose;
-    bool quiet;
+    char *command;    /**< User command. See Headless Commands for details. */
+    char *game;       /**< Game name. */
+    char *variant_id; /**< Variant index. */
+    char *position;   /**< Position to query. */
+    char *data_path;  /**< Path to the "data" directory, NULL for default. */
+    char *output;     /**< Path to output file, defaults to stdout if NULL. */
+    int action;       /**< Action to take. */
+    bool force;       /**< Whether to force solve/analyze. */
+    bool verbose;     /**< Whether to print additional output. */
+    bool quiet;       /**< Whether to give no output. */
 } ArgpArguments;
 
 ArgpArguments HeadlessParseArguments(int argc, char **argv);

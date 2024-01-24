@@ -164,14 +164,12 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 /**
  * @brief Returns the status of TIER.
  * 
- * @details The status of a TIER can be one of the following:
- *  - kDbTierStatusSolved: solved
- *  - kDbTierStatusCorrupted: corrupted
- *  - kDbTierStatusMissing: not solved
- *  - kDbTierStatusCheckError: there was an error checking the status of TIER.
- * 
  * @param tier Tier to check.
- * @return Integer tier status code.
+ * @return kDbTierStatusSolved if solved,
+ * @return kDbTierStatusCorrupted if corrupted,
+ * @return kDbTierStatusMissing if not solved, or
+ * @return kDbTierStatusCheckError if an error occurred when checking the status
+ * of TIER.
  */
 int DbManagerTierStatus(Tier tier);
 

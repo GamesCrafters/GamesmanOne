@@ -81,7 +81,6 @@ bin_gamesman_SOURCES += src/core/solvers/solver_manager.c
 
 # src/core/types
 bin_gamesman_SOURCES += src/core/types/game/game_variant.c
-bin_gamesman_SOURCES += src/core/types/base.c
 bin_gamesman_SOURCES += src/core/types/move_array.c
 bin_gamesman_SOURCES += src/core/types/position_array.c
 bin_gamesman_SOURCES += src/core/types/position_hash_set.c

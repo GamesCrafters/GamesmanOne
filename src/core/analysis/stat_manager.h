@@ -31,6 +31,13 @@
 #include "core/data_structures/bitstream.h"
 #include "core/types/gamesman_types.h"
 
+/** @brief Enumeration of all possible statuses of a tier's analysis. */
+enum AnalysisTierStatus {
+    kAnalysisTierAnalyzed,   /**< Analyzed and correctly stored. */
+    kAnalysisTierUnanalyzed, /**< Unanalyzed (stat file not found.) */
+    kAnalysisTierCheckError, /**< Error encountered. */
+};
+
 /**
  * @brief Initializes the Statistics Manager Module.
  *
@@ -56,8 +63,10 @@ void StatManagerFinalize(void);
 /**
  * @brief Returns the analysis status of the given TIER.
  * @return kAnalysisTierAnalyzed if TIER has been anaylized and stored,
- * kAnalysisTierUnanalyzed if the analysis of TIER is not found on disk, or
- * kAnalysisTierCheckError if an error occurred during the check process.
+ * @return kAnalysisTierUnanalyzed if the analysis of TIER is not found on disk,
+ * or
+ * @return kAnalysisTierCheckError if an error occurred during the check
+ * process.
  */
 int StatManagerGetStatus(Tier tier);
 

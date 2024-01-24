@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * 
+ *
  * @version 1.1.1
  * @date 2024-01-15
  *
@@ -61,24 +61,10 @@ enum IntBase10StringLengthLimits {
     kUint64Base10StringLengthMax = 20,
 };
 
+/** @brief Constants that are used as common knowledge. */
 enum CommonConstants {
     kIllegalSize = -1, /**< Valid sizes are non-negative. */
     kBitsPerByte = 8,  /**< 8 bits per byte. */
-};
-
-/** @brief Enumeration of all possible statuses of a tier's database file. */
-enum DatabaseTierStatus {
-    kDbTierStatusSolved,
-    kDbTierStatusCorrupted,
-    kDbTierStatusMissing,
-    kDbTierStatusCheckError,
-};
-
-/** @brief Enumeration of all possible statuses of a tier's analysis. */
-enum AnalysisTierStatus {
-    kAnalysisTierAnalyzed,
-    kAnalysisTierUnanalyzed,
-    kAnalysisTierCheckError,
 };
 
 /**
@@ -88,18 +74,32 @@ enum AnalysisTierStatus {
  * enough for a new game in the future.
  */
 enum RemotenessLimits {
-    kRemotenessMax = 1023,
-    kNumRemotenesses,  // kRemotenessMax + 1
+    kRemotenessMax = 1023, /**< Maximum remoteness supported by Gamesman. */
+    kNumRemotenesses,      /**< Number of values a remoteness can take. */
 };
 
+/** @brief Default tier for games that are not implemented as tier games. */
 extern const Tier kDefaultTier;
+
+/** @brief Illegal tier which can be returned as an error. */
 extern const Tier kIllegalTier;
+
+/** @brief Illegal position which can be returned as an error. */
 extern const Position kIllegalPosition;
+
+/** @brief Illegal tier position which can be returned as an error. */
 extern const TierPosition kIllegalTierPosition;
+
+/** @brief Illegal remoteness which can be returned as an error. */
 extern const int kIllegalRemoteness;
+
+/** @brief Illegal variant which can be returned as an error. */
 extern const int kIllegalVariantIndex;
 
+/** @brief Date of the current version of Gamesman. */
 extern ConstantReadOnlyString kGamesmanDate;
+
+/** @brief Current version of Gamesman. */
 extern ConstantReadOnlyString kGamesmanVersion;
 
 #endif  // GAMESMANONE_CORE_CONSTANTS_H_

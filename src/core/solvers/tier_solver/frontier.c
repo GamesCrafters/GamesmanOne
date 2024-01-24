@@ -118,7 +118,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
         FrontierInitAllFields(frontier);
     } else {
         // Otherwise, pointers are either NULL or pointing
-        // to spaces that can be free()-d.
+        // to spaces that can be freed with function free.
         free(frontier->buckets);
         if (frontier->dividers) {
             for (int i = 0; i < dividers_size; ++i) {

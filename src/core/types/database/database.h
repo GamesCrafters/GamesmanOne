@@ -1,3 +1,32 @@
+/**
+ * @file database.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Declaration of the Database type and associated constants.
+ * @details A Database is an abstract type of a database. To implement a new
+ * Database, fully implement all member functions and set function pointers.
+ * All member functions are required unless otherwise noted.
+ * @version 1.0.0
+ * @date 2024-01-19
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 #define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 
@@ -6,9 +35,18 @@
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
 
+/** @brief Constants associated with the Database type. */
 enum DatabaseConstants {
-    kDbNameLengthMax = 31,
-    kDbFormalNameLengthMax = 63,
+    kDbNameLengthMax = 31,       /**< Maximum length of a DB's internal name. */
+    kDbFormalNameLengthMax = 63, /**< Max length of a DB's formal name. */
+};
+
+/** @brief Enumeration of all possible statuses of a tier's database file. */
+enum DatabaseTierStatus {
+    kDbTierStatusSolved,     /**< Solved and correctly stored. */
+    kDbTierStatusCorrupted,  /**< DB exists but corrupted. */
+    kDbTierStatusMissing,    /**< DB file not found. */
+    kDbTierStatusCheckError, /**< Error encountered. */
 };
 
 /**
@@ -155,6 +193,18 @@ typedef struct Database {
      */
     int (*ProbeRemoteness)(DbProbe *probe, TierPosition tier_position);
 
+    /**
+     * @brief Probes the current data path and returns the solving status of the
+     * given TIER.
+     *
+     * @param tier The tier to check status of.
+     *
+     * @return kDbTierStatusSolved if solved,
+     * @return kDbTierStatusCorrupted if corrupted,
+     * @return kDbTierStatusMissing if not solved, or
+     * @return kDbTierStatusCheckError if an error occurred when checking the
+     * status of TIER.
+     */
     int (*TierStatus)(Tier tier);
 } Database;
 

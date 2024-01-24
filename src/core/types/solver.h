@@ -84,8 +84,26 @@ typedef struct Solver {
      */
     int (*SetOption)(int option, int selection);
 
+    /**
+     * @brief Probes and returns the value of the given TIER_POSITION. Results
+     * in undefined behavior if the TIER_POSITION has not been solved, or if
+     * TIER_POSITION is invalid or unreachable.
+     *
+     * @param tier_position Tier position to probe.
+     *
+     * @return Value of TIER_POSITION.
+     */
     Value (*GetValue)(TierPosition tier_position);
 
+    /**
+     * @brief Probes and returns the remoteness of the given TIER_POSITION.
+     * Results in undefined behavior if the TIER_POSITION has not been solved,
+     * or if TIER_POSITION is invalid or unreachable.
+     *
+     * @param tier_position Tier position to probe.
+     *
+     * @return Remoteness of TIER_POSITION.
+     */
     int (*GetRemoteness)(TierPosition tier_position);
 } Solver;
 

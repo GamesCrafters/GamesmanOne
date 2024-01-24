@@ -4,8 +4,10 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Regular Solver.
- * @details The Regular Solver is in fact the Tier Solver on a single tier in
- * disguise, and therefore, the Tier Solver Worker Module is used in this file.
+ * 
+ * @details The Regular Solver is implemented as a single-tier special case of
+ * the Tier Solver, which is why the Tier Solver Worker Module is used in this
+ * file.
  *
  * @version 1.2.0
  * @date 2024-01-08

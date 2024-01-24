@@ -32,36 +32,50 @@
 #include "core/types/gamesman_types.h"
 
 /**
- * @brief Adds {"position: <formal_position>"} to the DEST json object.
+ * @brief Adds {"position: <FORMAL_POSITION>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddPosition(json_object *dest, ReadOnlyString formal_position);
 
 /**
- * @brief Adds {"autoguiPosition: <autogui_position>"} to the DEST json object.
+ * @brief Adds {"autoguiPosition: <AUTOGUI_POSITION>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddAutoGuiPosition(json_object *dest,
                                    ReadOnlyString autogui_position);
 
 /**
- * @brief Adds {"move: <formal_move>"} to the DEST json object.
+ * @brief Adds {"move: <FORMAL_MOVE>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddMove(json_object *dest, ReadOnlyString formal_move);
 
 /**
- * @brief Adds {"autoguiMove: <autogui_move>"} to the DEST json object.
+ * @brief Adds {"autoguiMove: <AUTOGUI_MOVE>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddAutoGuiMove(json_object *dest, ReadOnlyString autogui_move);
 
 /**
- * @brief Adds {"autoguiMove: <autogui_move>"} to the DEST json object.
+ * @brief Adds {"value: <VALUE>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddValue(json_object *dest, Value value);
+
+/**
+ * @brief Adds {"remoteness: <REMOTENESS>"} to the DEST json object.
+ * @return 0 on success, non-zero error code otherwise.
+ */
 int HeadlessJsonAddRemoteness(json_object *dest, int remoteness);
+
+/**
+ * @brief Adds {"moves: MOVE_ARRAY_OBJECT"} to the DEST json object.
+ *
+ * @param dest Destination object.
+ * @param move_array_obj A json object that contains an array of moves and
+ * outcomes. Must be of type json_type_array.
+ * @return 0 on success, non-zero error code otherwise.
+ */
 int HeadlessJsonAddMovesArray(json_object *dest, json_object *moves_array_obj);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HJSON_H_
