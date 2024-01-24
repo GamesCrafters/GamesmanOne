@@ -11,6 +11,7 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CC([mpicc gcc])
+AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_LN_S
