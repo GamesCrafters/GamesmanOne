@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,27 +26,28 @@
 
 #include "core/misc.h"
 
-#include <assert.h>    // assert
-#include <errno.h>     // errno
-#include <fcntl.h>     // open
-#include <inttypes.h>  // PRId64, PRIu64
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // size_t
-#include <stdint.h>    // int64_t, uint64_t, INT64_MAX, uint8_t
-#include <stdio.h>     // fprintf, stderr, FILE
-#include <stdlib.h>    // exit, EXIT_SUCCESS, EXIT_FAILURE, malloc, calloc, free
-#include <string.h>    // strlen, strncpy
-#include <sys/stat.h>  // mkdir, struct stat
+#include <assert.h>     // assert
+#include <errno.h>      // errno
+#include <fcntl.h>      // open
+#include <inttypes.h>   // PRId64, PRIu64
+#include <stdbool.h>    // bool, true, false
+#include <stddef.h>     // size_t
+#include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
+#include <stdio.h>      // fprintf, stderr, FILE
+#include <stdlib.h>     // exit, malloc, calloc, free
+#include <string.h>     // strlen, strncpy
+#include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
+#include <time.h>       // clock_t, CLOCKS_PER_SEC
 #include <unistd.h>     // close
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
-    exit(EXIT_SUCCESS);
+    exit(kNoError);
 }
 
 void NotReached(ReadOnlyString message) {
@@ -54,7 +55,7 @@ void NotReached(ReadOnlyString message) {
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
-    exit(EXIT_FAILURE);
+    exit(kNotReachedError);
 }
 
 void *SafeMalloc(size_t size) {
@@ -64,7 +65,7 @@ void *SafeMalloc(size_t size) {
                 "SafeMalloc: failed to allocate %zd bytes. This ususally "
                 "indicates a bug.\n",
                 size);
-        exit(EXIT_FAILURE);
+        exit(kMallocFailureError);
     }
     return ret;
 }
@@ -77,7 +78,7 @@ void *SafeCalloc(size_t n, size_t size) {
                 "bytes. This ususally "
                 "indicates a bug.\n",
                 n, size);
-        exit(EXIT_FAILURE);
+        exit(kMallocFailureError);
     }
     return ret;
 }
@@ -92,10 +93,69 @@ void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
 
+double ClockToSeconds(clock_t n) {
+    return (double)n / CLOCKS_PER_SEC;
+}
+
+char *GetTimeStampString(void) {
+    time_t rawtime = time(NULL);
+    char *time_str = ctime(&rawtime);
+    time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+    return time_str;
+}
+
+static void AppendIfPositive(char *buf, int val, ReadOnlyString label) {
+    if (val <= 0) return;
+    sprintf(buf + strlen(buf), "%d %s", val, label);
+}
+
+char *SecondsToFormattedTimeString(double _seconds) {
+    // Format is the following or "INFINITE" if yyyy is greater than 9999.
+    static const char format[] = "[yyyy y mm m dd d hh h mm m ]ss s";
+    static char buf[sizeof(format)];
+    if (_seconds < 0.0) {
+        sprintf(buf, "NEGATIVE TIME ERROR");
+        return buf;
+    }
+
+    int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds;
+    int64_t remainder = _seconds;
+    seconds = remainder % 60;
+    remainder /= 60;
+    minutes = remainder % 60;
+    remainder /= 60;
+    hours = remainder % 24;
+    remainder /= 24;
+    days = remainder % 30;
+    remainder /= 30;
+    months = remainder %= 12;
+    remainder /= 12;
+    years = remainder > 9999 ? -1 : remainder;
+    if (years < 0) {
+        sprintf(buf, "INFINITE");
+    } else {
+        buf[0] = '\0';
+        AppendIfPositive(buf, years, "y ");
+        AppendIfPositive(buf, months, "m ");
+        AppendIfPositive(buf, days, "d ");
+        AppendIfPositive(buf, hours, "h ");
+        AppendIfPositive(buf, minutes, "m ");
+        sprintf(buf + strlen(buf), "%d %s", seconds, "s");
+    }
+
+    return buf;
+}
+
 FILE *GuardedFopen(const char *filename, const char *modes) {
     FILE *f = fopen(filename, modes);
     if (f == NULL) perror("fopen");
     return f;
+}
+
+FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream) {
+    FILE *ret = freopen(filename, modes, stream);
+    if (ret == NULL) perror("freopen");
+    return ret;
 }
 
 int GuardedFclose(FILE *stream) {
@@ -179,7 +239,7 @@ int GuardedLseek(int fd, off_t offset, int whence) {
 gzFile GuardedGzopen(const char *path, const char *mode) {
     gzFile file = gzopen(path, mode);
     if (file == Z_NULL) perror("gzopen");
-    
+
     return file;
 }
 
@@ -270,8 +330,8 @@ int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
  * @brief Makes a directory at the given path or does nothing if the directory
  * already exists.
  *
- * @return 0 on success. On error, -1 is returned and errno is set to indicate
- * the error.
+ * @return 0 on success. On error, kFileSystemError is returned and errno is set
+ * to indicate the error.
  *
  * @author Jonathon Reinhart
  * @link
@@ -281,39 +341,40 @@ static int MaybeMkdir(ReadOnlyString path, mode_t mode) {
     errno = 0;
 
     // Try to make the directory
-    if (mkdir(path, mode) == 0) return 0;
+    if (mkdir(path, mode) == 0) return kNoError;
 
     // If it fails for any reason but EEXIST, fail
-    if (errno != EEXIST) return -1;
+    if (errno != EEXIST) return kFileSystemError;
 
     // Check if the existing path is a directory
     struct stat st;
-    if (stat(path, &st) != 0) return -1;
+    if (stat(path, &st) != 0) return kFileSystemError;
 
     // If not, fail with ENOTDIR
     if (!S_ISDIR(st.st_mode)) {
         errno = ENOTDIR;
-        return -1;
+        return kFileSystemError;
     }
 
     errno = 0;
-    return 0;
+    return kNoError;
 }
 
 int MkdirRecursive(ReadOnlyString path) {
     // Fail if path is NULL.
     if (path == NULL) {
         errno = EINVAL;
-        return -1;
+        return kIllegalArgumentError;
     }
 
-    int result = -1;
+    int ret = kFileSystemError;
     errno = 0;
 
     // Copy string so it's mutable
     size_t path_length = strlen(path);
     char *path_copy = (char *)malloc((path_length + 1) * sizeof(char));
     if (path_copy == NULL) {
+        ret = kMallocFailureError;
         errno = ENOMEM;
         goto _bailout;
     }
@@ -327,11 +388,11 @@ int MkdirRecursive(ReadOnlyString path) {
         }
     }
     if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
-    result = 0;  // Success
+    ret = kNoError;  // Success
 
 _bailout:
     free(path_copy);
-    return result;
+    return ret;
 }
 
 bool IsPrime(int64_t n) {

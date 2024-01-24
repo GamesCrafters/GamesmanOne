@@ -8,7 +8,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Probe for the Bit-Perfect Database.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -31,13 +31,15 @@
 #ifndef GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
 #define GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_
 
-#include "core/gamesman_types.h"
+#include <stdint.h>  // uint64_t
+
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes PROBE.
  * 
  * @return 0 on success, or
- * @return 1 on malloc failure.
+ * @return kMallocFailureError on malloc failure.
  */
 int BpdbProbeInit(DbProbe *probe);
 

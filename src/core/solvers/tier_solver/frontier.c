@@ -10,7 +10,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Frontier type.
  *
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -40,7 +40,7 @@
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
-#include "core/gamesman_types.h"  // PositionArray
+#include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -118,7 +118,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
         FrontierInitAllFields(frontier);
     } else {
         // Otherwise, pointers are either NULL or pointing
-        // to spaces that can be free()-d.
+        // to spaces that can be freed with function free.
         free(frontier->buckets);
         if (frontier->dividers) {
             for (int i = 0; i < dividers_size; ++i) {
@@ -175,7 +175,7 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
         fprintf(stderr,
                 "FrontierAdd: hard-coded frontier size is not large enough to "
                 "hold remoteness %d. Consider changing the value in tier "
-                "solver and recompile Gamesman.\n",
+                "solver and recompile GAMESMAN.\n",
                 remoteness);
         return false;
     }

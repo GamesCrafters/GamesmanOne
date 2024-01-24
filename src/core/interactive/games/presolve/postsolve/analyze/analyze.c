@@ -2,7 +2,7 @@
 
 #include <stdio.h>  // fprintf, stderr
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/interactive/automenu.h"
 #include "core/solvers/solver_manager.h"
 

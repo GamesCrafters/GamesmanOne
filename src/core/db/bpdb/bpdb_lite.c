@@ -9,7 +9,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Bit-Perfect Database Lite.
  * @details
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -42,7 +42,7 @@
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
 #include "core/db/bpdb/bpdb_probe.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
@@ -124,7 +124,7 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
     if (sandbox_path == NULL) {
         fprintf(stderr, "BpdbLiteInit: failed to malloc path.\n");
-        return 1;
+        return kMallocFailureError;
     }
     strcpy(sandbox_path, path);
 
@@ -134,7 +134,7 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
 
-    return 0;
+    return kNoError;
 }
 
 static void BpdbLiteFinalize(void) {
@@ -157,19 +157,19 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
         return error;
     }
 
-    return 0;
+    return kNoError;
 }
 
 static int BpdbLiteFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
     char *full_path = BpdbFileGetFullPath(sandbox_path, current_tier);
-    if (full_path == NULL) return 1;
+    if (full_path == NULL) return kMallocFailureError;
 
     int error = BpdbFileFlush(full_path, &records);
     if (error != 0) fprintf(stderr, "BpdbLiteFlushSolvingTier: code %d", error);
-
     free(full_path);
+    
     return error;
 }
 
@@ -177,7 +177,8 @@ static int BpdbLiteFreeSolvingTier(void) {
     BpArrayDestroy(&records);
     current_tier = kIllegalTier;
     current_tier_size = -kIllegalSize;
-    return 0;
+
+    return kNoError;
 }
 
 static uint64_t GetRecord(Position position) {

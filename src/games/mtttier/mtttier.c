@@ -9,8 +9,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.0.2
+ * @date 2024-01-12
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,6 +32,7 @@
 #include "games/mtttier/mtttier.h"
 
 #include <assert.h>    // assert
+#include <ctype.h>     // toupper
 #include <inttypes.h>  // PRId64
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
@@ -39,11 +40,11 @@
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // atoi
 
-#include "core/gamesman_types.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_types.h"
 
-// Game, Solver, and Gameplay API Functions
+// Game, Solver, Gameplay, and UWAPI Functions
 
 static int MtttierInit(void *aux);
 static int MtttierFinalize(void);
@@ -63,12 +64,19 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position);
 static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
-static TierArray MtttierGetParentTiers(Tier tier);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
 static bool MtttierIsValidMoveString(ReadOnlyString move_string);
 static Move MtttierStringToMove(ReadOnlyString move_string);
+
+static bool MtttierIsLegalFormalPosition(ReadOnlyString formal_position);
+static TierPosition MtttierFormalPositionToTierPosition(
+    ReadOnlyString formal_position);
+static CString MtttierTierPositionToFormalPosition(TierPosition tier_position);
+static CString MtttierTierPositionToAutoGuiPosition(TierPosition tier_position);
+static CString MtttierMoveToFormalMove(TierPosition tier_position, Move move);
+static CString MtttierMoveToAutoGuiMove(TierPosition tier_position, Move move);
 
 // Solver API Setup
 static const TierSolverApi kSolverApi = {
@@ -85,40 +93,63 @@ static const TierSolverApi kSolverApi = {
     .GetCanonicalParentPositions = &MtttierGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = NULL,
     .GetChildTiers = &MtttierGetChildTiers,
-    .GetParentTiers = &MtttierGetParentTiers,
+    .GetParentTiers = NULL,
     .GetCanonicalTier = NULL,
 };
 
 // Gameplay API Setup
-static const GameplayApi kGameplayApi = {
-    .GetInitialTier = &MtttierGetInitialTier,
-    .GetInitialPosition = &MtttierGetInitialPosition,
 
+static const GameplayApiCommon kMtttierGameplayApiCommon = {
+    .GetInitialPosition = &MtttierGetInitialPosition,
     .position_string_length_max = 120,
-    .TierPositionToString = &MtttTierPositionToString,
 
     .move_string_length_max = 1,
     .MoveToString = &MtttierMoveToString,
 
     .IsValidMoveString = &MtttierIsValidMoveString,
     .StringToMove = &MtttierStringToMove,
-
-    .TierGenerateMoves = &MtttierGenerateMoves,
-    .TierDoMove = &MtttierDoMove,
-    .TierPrimitive = &MtttierPrimitive,
-
-    .TierGetCanonicalPosition = &MtttierGetCanonicalPosition,
-
-    .GetCanonicalTier = NULL,
-    .GetPositionInSymmetricTier = NULL,
 };
+
+static const GameplayApiTier kMtttierGameplayApiTier = {
+    .GetInitialTier = &MtttierGetInitialTier,
+
+    .TierPositionToString = &MtttTierPositionToString,
+
+    .GenerateMoves = &MtttierGenerateMoves,
+    .DoMove = &MtttierDoMove,
+    .Primitive = &MtttierPrimitive,
+};
+
+static const GameplayApi kMtttierGameplayApi = {
+    .common = &kMtttierGameplayApiCommon,
+    .tier = &kMtttierGameplayApiTier,
+};
+
+// UWAPI Setup
+
+static const UwapiTier kMtttierUwapiTier = {
+    .GenerateMoves = &MtttierGenerateMoves,
+    .DoMove = &MtttierDoMove,
+    .IsLegalFormalPosition = &MtttierIsLegalFormalPosition,
+    .FormalPositionToTierPosition = &MtttierFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = &MtttierTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = &MtttierTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = &MtttierMoveToFormalMove,
+    .MoveToAutoGuiMove = &MtttierMoveToAutoGuiMove,
+    .GetInitialTier = &MtttierGetInitialTier,
+    .GetInitialPosition = &MtttierGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+};
+
+static const Uwapi kMtttierUwapi = {.tier = &kMtttierUwapiTier};
 
 const Game kMtttier = {
     .name = "mtttier",
     .formal_name = "Tic-Tac-Tier",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = (const GameplayApi *)&kMtttierGameplayApi,
+    .uwapi = &kMtttierUwapi,
 
     .Init = &MtttierInit,
     .Finalize = &MtttierFinalize,
@@ -157,16 +188,16 @@ static int MtttierInit(void *aux) {
     return !InitGenericHash();
 }
 
-static int MtttierFinalize(void) { return 0; }
+static int MtttierFinalize(void) { return kNoError; }
 
 static const GameVariant *MtttierGetCurrentVariant(void) {
-    return NULL;  // Not implemented.
+    return NULL;  // No other variants implemented.
 }
 
 static int MtttierSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return 0;  // Not implemented.
+    return kNotImplementedError;  // No other variants implemented.
 }
 
 static Tier MtttierGetInitialTier(void) { return 0; }
@@ -312,18 +343,11 @@ static TierArray MtttierGetChildTiers(Tier tier) {
     return children;
 }
 
-static TierArray MtttierGetParentTiers(Tier tier) {
-    TierArray parents;
-    TierArrayInit(&parents);
-    if (tier > 0) TierArrayAppend(&parents, tier - 1);
-    return parents;
-}
-
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
     char board[9] = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);
-    if (!success) return 1;
+    if (!success) return kRuntimeError;
 
     for (int i = 0; i < 9; ++i) {
         board[i] = ConvertBlankToken(board[i]);
@@ -333,30 +357,34 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         "         ( 1 2 3 )           : %c %c %c\n"
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
-    int actual_length =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
-                 board[0], board[1], board[2], board[3], board[4], board[5],
-                 board[6], board[7], board[8]);
-    if (actual_length >= kGameplayApi.position_string_length_max + 1) {
+    int actual_length = snprintf(
+        buffer, kMtttierGameplayApiCommon.position_string_length_max + 1,
+        kFormat, board[0], board[1], board[2], board[3], board[4], board[5],
+        board[6], board[7], board[8]);
+    if (actual_length >=
+        kMtttierGameplayApiCommon.position_string_length_max + 1) {
         fprintf(
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static int MtttierMoveToString(Move move, char *buffer) {
-    int actual_length = snprintf(
-        buffer, kGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
-    if (actual_length >= kGameplayApi.move_string_length_max + 1) {
+    int actual_length =
+        snprintf(buffer, kMtttierGameplayApiCommon.move_string_length_max + 1,
+                 "%" PRId64, move + 1);
+    if (actual_length >= kMtttierGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static bool MtttierIsValidMoveString(ReadOnlyString move_string) {
@@ -371,6 +399,97 @@ static bool MtttierIsValidMoveString(ReadOnlyString move_string) {
 static Move MtttierStringToMove(ReadOnlyString move_string) {
     assert(MtttierIsValidMoveString(move_string));
     return (Move)atoi(move_string) - 1;
+}
+
+static bool MtttierIsLegalFormalPosition(ReadOnlyString formal_position) {
+    if (formal_position == NULL) return false;
+    for (int i = 0; i < 9; ++i) {
+        char curr = formal_position[i];
+        if (curr != '-' && curr != 'o' && curr != 'x') return false;
+    }
+    if (formal_position[9] != '\0') return false;
+
+    return true;
+}
+
+static TierPosition MtttierFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    // Formal position string format: 9 characters '-', 'o', or 'x'.
+    char board[9];
+    int piece_count = 0;
+    for (int i = 0; i < 9; ++i) {
+        board[i] = toupper(formal_position[i]);
+        piece_count += board[i] != '-';
+    }
+
+    TierPosition ret = {
+        .tier = piece_count,
+        .position = GenericHashHashLabel(piece_count, board, 1),
+    };
+
+    return ret;
+}
+
+static CString MtttierTierPositionToFormalPosition(TierPosition tier_position) {
+    char board[9];
+    CString ret = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return ret;
+
+    for (int i = 0; i < 9; ++i) {
+        board[i] = tolower(board[i]);
+    }
+    CStringInit(&ret, board);
+
+    return ret;
+}
+
+static CString MtttierTierPositionToAutoGuiPosition(
+    TierPosition tier_position) {
+    //
+    char board[9];
+    CString ret = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return ret;
+
+    char turn = WhoseTurn(board) == 'X' ? '1' : '2';
+    if (!CStringInit(&ret, "1_---------")) return ret;
+
+    ret.str[0] = turn;
+    for (int i = 0; i < 9; ++i) {
+        ret.str[i + 2] = tolower(board[i]);
+    }
+
+    return ret;
+}
+
+static CString MtttierMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused.
+    CString ret;
+    if (!CStringInit(&ret, "0")) return ret;
+
+    assert(move >= 0 && move < 9);
+    ret.str[0] = '0' + move;
+
+    return ret;
+}
+
+static CString MtttierMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    CString ret = {0};
+    char board[9] = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return ret;
+    if (!CStringInit(&ret, "A_x_0")) return ret;
+
+    char turn = WhoseTurn(board);
+    ret.str[2] = turn == 'X' ? 'x' : 'o';
+    assert(move >= 0 && move < 9);
+    ret.str[4] = '0' + move;
+
+    return ret;
 }
 
 // Helper functions implementation

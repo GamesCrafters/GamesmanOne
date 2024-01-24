@@ -3,8 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of miscellaneous utility functions.
- * @version 1.1
+ * @brief Miscellaneous utility functions.
+ * @version 1.1.0
  * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -31,9 +31,10 @@
 #include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t, uint64_t
 #include <stdio.h>    // FILE
+#include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Exits GAMESMAN. */
 void GamesmanExit(void);
@@ -74,11 +75,29 @@ char *SafeStrncpy(char *dest, const char *src, size_t n);
  */
 void *GenericPointerAdd(const void *p, int64_t offset);
 
+/** @brief Return the number of seconds corresponding to N clock ticks. */
+double ClockToSeconds(clock_t n);
+
+/** @brief Return the current system time stamp as a c-string. */
+char *GetTimeStampString(void);
+
+/**
+ * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
+ * y MM m DD d HH h MM m ]SS s" as a c-string.
+ */
+char *SecondsToFormattedTimeString(double seconds);
+
 /**
  * @brief Same behavior as fopen on success; calls perror and returns NULL
  * otherwise.
  */
 FILE *GuardedFopen(const char *filename, const char *modes);
+
+/**
+ * @brief Same behavior as freopen on success; calls perror and returns NULL
+ * otherwise.
+ */
+FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream);
 
 /**
  * @brief Same behavior as fclose on success; calls perror and returns a

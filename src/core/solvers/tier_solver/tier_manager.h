@@ -14,7 +14,7 @@
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
  *
- * @version 1.1
+ * @version 1.1.0
  * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -48,9 +48,11 @@
  * @param force If set to true, the solver will solve each tier regardless of
  * the current database status. Otherwise, the solving stage is skipped if Tier
  * Manager believes that the given tier has been correctly solved already.
+ * @param verbose Set to 0 for quiet (only error messages will be printed,) 1
+ * for default, and 2 for verbose.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierManagerSolve(const TierSolverApi *api, bool force);
+int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
 
 /**
  * @brief Creates and analyzes the tier tree.
@@ -60,8 +62,10 @@ int TierManagerSolve(const TierSolverApi *api, bool force);
  * of the current analysis status. Otherwise, the analyzing stage is skipped if
  * Tier Manager believes that the given tier has been correctly analyzed
  * already.
+ * @param verbose Set to 0 for quiet (only error messages will be printed,) 1
+ * for default, and 2 for verbose.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierManagerAnalyze(const TierSolverApi *api, bool force);
+int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

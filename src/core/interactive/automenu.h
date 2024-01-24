@@ -3,7 +3,7 @@
 
 #include <stddef.h>  // size_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 extern const size_t kKeyLengthMax;
 
@@ -14,6 +14,6 @@ typedef void (*HookFunctionPointer)(ReadOnlyString key);
 // will be overridden by default behaviors.
 void AutoMenu(ReadOnlyString title, int num_items,
               ConstantReadOnlyString *items, ConstantReadOnlyString *keys,
-              const HookFunctionPointer *hooks);
+              const HookFunctionPointer *hooks, void (*Update)(void));
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_

@@ -8,9 +8,10 @@
  * thread-safety for the new OpenMP multithreaded tier solver.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Frontier type.
+ * @brief Dynamic 2D Position array which stores solved positions that have not
+ * been used to deduce the values of their parents.
  *
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -36,7 +37,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman_types.h"  // PositionArray
+#include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>  // omp_lock_t
@@ -88,7 +89,11 @@ typedef struct Frontier {
     /** An array of locks for each bucket (PositionArray). */
     omp_lock_t *locks;
 #endif
+
+    /** Number of frontier arrays. */
     int size;
+
+    /** Number of dividers. */
     int dividers_size;
 } Frontier;
 

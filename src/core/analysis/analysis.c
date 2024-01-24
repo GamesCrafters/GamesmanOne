@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -35,7 +35,7 @@
 #include <string.h>    // memset
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 static const int kFirstLineReservedRemotness = -1;
@@ -155,9 +155,9 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
 
         default:
             fprintf(stderr, "AnalysisCount: unknown value %d\n", value);
-            return -1;
+            return kIllegalGamePositionValueError;
     }
-    return 0;
+    return kNoError;
 }
 
 // Aggregating
@@ -394,7 +394,7 @@ void AnalysisPrintPositionWithMostMoves(FILE *stream,
                                         const Analysis *analysis) {
     fprintf(stream,
             "Position %" PRId64 " in tier %" PRId64
-            " has the most number of available moves: %d\n",
+            " has the largest number of available moves: %d\n",
             analysis->position_with_most_moves.position,
             analysis->position_with_most_moves.tier, analysis->max_num_moves);
 }
@@ -436,6 +436,7 @@ void AnalysisPrintLargestRemotenesses(FILE *stream, const Analysis *analysis) {
 
 void AnalysisPrintEverything(FILE *stream, const Analysis *analysis) {
     AnalysisPrintStatistics(stream, analysis);
+    fprintf(stream, "\n");
     AnalysisPrintSummary(stream, analysis);
     fprintf(stream, "\n");
     AnalysisPrintCanonicalSummary(stream, analysis);

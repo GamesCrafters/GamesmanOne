@@ -4,11 +4,13 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Regular Solver.
- * @details The Regular Solver is in fact the Tier Solver on a single tier in
- * disguise, and therefore, the Tier Solver Worker Module is used in this file.
+ * 
+ * @details The Regular Solver is implemented as a single-tier special case of
+ * the Tier Solver, which is why the Tier Solver Worker Module is used in this
+ * file.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.2.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,24 +40,28 @@
 #include <string.h>   // memset
 
 #include "core/analysis/stat_manager.h"
+#include "core/constants.h"
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
-#include "core/gamesman_types.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/types/gamesman_types.h"
 
 // Solver API functions.
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
-                             const void *solver_api);
+                             const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
 static int RegularSolverSolve(void *aux);
 static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
-static const SolverConfiguration *RegularSolverGetCurrentConfiguration(void);
+static const SolverConfig *RegularSolverGetCurrentConfig(void);
 static int RegularSolverSetOption(int option, int selection);
+static Value RegularSolverGetValue(TierPosition tier_position);
+static int RegularSolverGetRemoteness(TierPosition tier_position);
 
 /**
  * @brief The Regular Solver definition. Used externally.
@@ -70,8 +76,11 @@ const Solver kRegularSolver = {
     .Analyze = &RegularSolverAnalyze,
     .GetStatus = &RegularSolverGetStatus,
 
-    .GetCurrentConfiguration = &RegularSolverGetCurrentConfiguration,
+    .GetCurrentConfig = &RegularSolverGetCurrentConfig,
     .SetOption = &RegularSolverSetOption,
+
+    .GetValue = &RegularSolverGetValue,
+    .GetRemoteness = &RegularSolverGetRemoteness,
 };
 
 static ConstantReadOnlyString kChoices[] = {"On", "Off"};
@@ -99,7 +108,7 @@ static TierSolverApi default_api;
 static TierSolverApi current_api;
 
 // Solver settings for external use
-static SolverConfiguration current_config;
+static SolverConfig current_config;
 static int num_options;
 #define NUM_OPTIONS_MAX 3  // At most 2 options and 1 zero-terminator.
 static SolverOption current_options[NUM_OPTIONS_MAX];
@@ -120,8 +129,6 @@ static void ToggleRetrogradeAnalysis(bool on);
 static bool SetCurrentApi(const RegularSolverApi *api);
 
 // Converted Tier Solver API Variables and Functions
-
-static const Tier kDefaultTier = 0;
 
 static Tier GetInitialTier(void);
 static Position TierGetInitialPosition(void);
@@ -152,15 +159,15 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 // -----------------------------------------------------------------------------
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
-                             const void *solver_api) {
+                             const void *solver_api, ReadOnlyString data_path) {
     int ret = -1;
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, NULL);
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path, NULL);
     if (ret != 0) goto _bailout;
 
-    ret = StatManagerInit(game_name, variant);
+    ret = StatManagerInit(game_name, variant, data_path);
     if (ret != 0) goto _bailout;
 
     // Success.
@@ -183,27 +190,39 @@ static int RegularSolverFinalize(void) {
     memset(&current_options, 0, sizeof(current_options));
     memset(&current_selections, 0, sizeof(current_selections));
     num_options = 0;
-    return 0;
+
+    return kNoError;
 }
 
 static int RegularSolverSolve(void *aux) {
-    bool force = false;
-    if (aux != NULL) force = *((bool *)aux);
-
+    static const RegularSolverSolveOptions kDefaultSolveOptions = {
+        .force = false,
+        .verbose = 1,
+    };
+    const RegularSolverSolveOptions *options =
+        (const RegularSolverSolveOptions *)aux;
+    if (options == NULL) options = &kDefaultSolveOptions;
     TierWorkerInit(&current_api);
-    return TierWorkerSolve(kDefaultTier, force);
+    return TierWorkerSolve(kDefaultTier, options->force, NULL);
 }
 
 static int RegularSolverAnalyze(void *aux) {
-    bool force = (aux != NULL) && *((bool *)aux);
-    Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
-    if (analysis == NULL) return 1;
+    static const RegularSolverAnalyzeOptions kDefaultAnalyzeOptions = {
+        .force = false,
+        .verbose = 1,
+    };
 
+    Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
+    if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
+
     TierAnalyzerInit(&current_api);
-    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, force);
+    const RegularSolverAnalyzeOptions *options =
+        (const RegularSolverAnalyzeOptions *)aux;
+    if (options == NULL) options = &kDefaultAnalyzeOptions;
+    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, options->force);
     TierAnalyzerFinalize();
-    if (error == 0) {
+    if (error == 0 && options->verbose > 0) {
         printf("\n--- Game analyzed ---\n");
         AnalysisPrintEverything(stdout, analysis);
     } else {
@@ -215,11 +234,10 @@ static int RegularSolverAnalyze(void *aux) {
 }
 
 static int RegularSolverGetStatus(void) {
-    // TODO
-    return 0;
+    return DbManagerTierStatus(kDefaultTier);
 }
 
-static const SolverConfiguration *RegularSolverGetCurrentConfiguration(void) {
+static const SolverConfig *RegularSolverGetCurrentConfig(void) {
     return &current_config;
 }
 
@@ -228,13 +246,13 @@ static int RegularSolverSetOption(int option, int selection) {
         fprintf(stderr,
                 "RegularSolverSetOption: (BUG) option index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
     if (selection < 0 || selection > 1) {
         fprintf(stderr,
                 "RegularSolverSetOption: (BUG) selection index out of bounds. "
                 "Aborting...\n");
-        return 1;
+        return kIllegalSolverOptionError;
     }
 
     current_selections[option] = selection;
@@ -244,7 +262,41 @@ static int RegularSolverSetOption(int option, int selection) {
     } else {
         ToggleRetrogradeAnalysis(!selection);
     }
-    return 0;
+    return kNoError;
+}
+
+static Value RegularSolverGetValue(TierPosition tier_position) {
+    TierPosition canonical = {
+        .tier = kDefaultTier,
+        .position = current_api.GetCanonicalPosition(tier_position),
+    };
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    Value ret = DbManagerProbeValue(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
+}
+
+static int RegularSolverGetRemoteness(TierPosition tier_position) {
+    TierPosition canonical = {
+        .tier = kDefaultTier,
+        .position = current_api.GetCanonicalPosition(tier_position),
+    };
+    DbProbe probe;
+    int error = DbManagerProbeInit(&probe);
+    if (error != 0) {
+        NotReached(
+            "RegularSolverGetRemoteness: failed to initialize DbProbe, most "
+            "likely ran out of memory");
+    }
+    int ret = DbManagerProbeRemoteness(&probe, canonical);
+    DbManagerProbeDestroy(&probe);
+    return ret;
 }
 
 // -----------------------------------------------------------------------------

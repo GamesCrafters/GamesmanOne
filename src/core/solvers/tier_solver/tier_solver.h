@@ -6,10 +6,10 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Tier Solver API.
+ * @brief The Tier Solver API.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.2.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,7 +34,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief The Tier Solver. */
 extern const Solver kTierSolver;
@@ -263,12 +263,11 @@ typedef struct TierSolverApi {
      *
      * @note Assumes TIER is valid. Results in undefined behavior otherwise.
      *
-     * @note This function is REQUIRED. The solver system will panic if this
-     * function is not implemented.
-     *
-     * @todo Decide whether to make this function optional.. A reverse tier
-     * graph can be constructed while we perform topological sort on the tier
-     * graph, but will increase memory usage.
+     * @note This function is OPTIONAL, but is required for Tier Retrograde
+     * Analysis. If not implemented, Tier Retrograde Analysis will be disabled
+     * and a reverse tier graph will be built and stored in memory by performing
+     * a DFS on the tier graph implicitly defined by the initial tier and the
+     * GetChildTiers function.
      */
     TierArray (*GetParentTiers)(Tier tier);
 
@@ -289,5 +288,17 @@ typedef struct TierSolverApi {
      */
     Tier (*GetCanonicalTier)(Tier tier);
 } TierSolverApi;
+
+/** @brief Solver options of the Tier Solver. */
+typedef struct TierSolverSolveOptions {
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
+} TierSolverSolveOptions;
+
+/** @brief Analyzer options of the Tier Solver. */
+typedef struct TierSolverAnalyzeOptions {
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
+} TierSolverAnalyzeOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_

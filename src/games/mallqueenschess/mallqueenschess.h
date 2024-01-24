@@ -1,10 +1,11 @@
 /**
- * @file game_manager.h
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @file mallqueenschess.h
+ * @author Andrew Esteban: wrote the original version (mallqueenschess.c in
+ * GamesmanClassic.)
+ * @author Cameron Cheung (cameroncheung@berkeley.edu): adapted to the new system.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The Game Manager Module, which provides a list to all games in
- * GAMESMAN.
+ * @brief All Queens Chess
  *
  * @version 1.0
  * @date 2023-08-19
@@ -26,17 +27,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_GAMES_GAME_MANAGER_H_
-#define GAMESMANONE_GAMES_GAME_MANAGER_H_
+#ifndef GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_
+#define GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
-/**
- * @brief Returns a NULL-terminated read-only array of all games in GAMESMAN.
- */
-const Game *const *GameManagerGetAllGames(void);
+extern const Game kMallqueenschess;
 
-/** @brief Returns the total number of games in GAMESMAN. */
-int GameManagerNumGames(void);
-
-#endif  // GAMESMANONE_GAMES_GAME_MANAGER_H_
+#endif  // GAMESMANEXPERIMENT_GAMES_MALLQUEENSCHESS_MALLQUEENSCHESS_H_

@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN interactive mode.
- * @version 1.1
+ * @version 1.1.0
  * @date 2023-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -33,7 +33,7 @@
 #include <unistd.h>  // usleep
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
 
@@ -56,9 +56,9 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "                                                          (N)avigation      \n";
 
 void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(kDate);
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(kGamesmanDate);
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
-    sprintf(opening_credits, kOpeningCreditsFormat, kDate);
+    sprintf(opening_credits, kOpeningCreditsFormat, kGamesmanDate);
 
     int i = 0;
     while (opening_credits[i] != '\0') {
@@ -75,5 +75,6 @@ int GamesmanInteractiveMain(void) {
     printf("--- press <return> to continue ---");
     getchar();
     InteractiveMainMenu(NULL);
-    return 0;
+    
+    return kNoError;
 }

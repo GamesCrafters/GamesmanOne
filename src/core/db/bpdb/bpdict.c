@@ -9,7 +9,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of compression and decompression dictionaries for
  * Bit-Perfect Array.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -38,6 +38,8 @@
 #include <stdlib.h>  // realloc, free
 #include <string.h>  // memset
 
+#include "core/types/gamesman_types.h"
+
 static const int32_t kCompDictSizeMax = (INT32_MAX - 1) / 2 + 1;
 static const int32_t kDecompDictCapacityMax = (INT32_MAX - 1) / 2 + 1;
 
@@ -64,7 +66,7 @@ int BpDictInit(BpDict *dict) {
     dict->num_unique = 1;
     dict->comp_dict[0] = 0;
     dict->decomp_dict[0] = 0;
-    return 0;
+    return kNoError;
 }
 
 void BpDictDestroy(BpDict *dict) {
@@ -77,28 +79,28 @@ void BpDictDestroy(BpDict *dict) {
 int BpDictSet(BpDict *dict, int32_t key) {
     if (dict->comp_dict_size <= key) {
         int error = ExpandCompDict(dict, key);
-        if (error == 1) {
+        if (error == kMallocFailureError) {
             fprintf(stderr,
                     "BpDictSet: failed to realloc compression dictionary\n");
-            return 1;
-        } else if (error == 2) {
+            return error;
+        } else if (error == kMemoryOverflowError) {
             fprintf(stderr,
                     "BpDictSet: compression dictionary size exceeds limit\n");
-            return 2;
+            return error;
         }
     }
 
     if (dict->num_unique + 1 > dict->decomp_dict_capacity) {
         int error = ExpandDecompDict(dict);
-        if (error == 1) {
+        if (error == kMallocFailureError) {
             fprintf(stderr,
                     "BpDictSet: failed to realloc decompression dictionary\n");
-            return 1;
-        } else if (error == 2) {
+            return error;
+        } else if (error == kMemoryOverflowError) {
             fprintf(stderr,
                     "BpDictSet: decompression dictionary capacity exceeds "
                     "limit\n");
-            return 2;
+            return error;
         }
     }
 
@@ -106,7 +108,7 @@ int BpDictSet(BpDict *dict, int32_t key) {
     dict->comp_dict[key] = dict->num_unique;
     dict->decomp_dict[dict->num_unique++] = key;
 
-    return 0;
+    return kNoError;
 }
 
 int32_t BpDictGet(const BpDict *dict, int32_t key) {
@@ -126,13 +128,13 @@ static int ExpandCompDict(BpDict *dict, int32_t key) {
 
     if (dict->comp_dict_size == 0) new_size = 1;
     while (new_size <= key) {
-        if (new_size >= kCompDictSizeMax) return 2;
+        if (new_size >= kCompDictSizeMax) return kMemoryOverflowError;
         new_size *= 2;
     }
 
     int32_t *new_comp_dict =
         (int32_t *)realloc(dict->comp_dict, new_size * sizeof(int32_t));
-    if (new_comp_dict == NULL) return 1;
+    if (new_comp_dict == NULL) return kMallocFailureError;
 
     for (int32_t i = dict->comp_dict_size; i < new_size; ++i) {
         new_comp_dict[i] = -1;
@@ -140,20 +142,21 @@ static int ExpandCompDict(BpDict *dict, int32_t key) {
 
     dict->comp_dict = new_comp_dict;
     dict->comp_dict_size = new_size;
-    return 0;
+    return kNoError;
 }
 
 static int ExpandDecompDict(BpDict *dict) {
-    if (dict->decomp_dict_capacity >= kDecompDictCapacityMax) return 2;
+    if (dict->decomp_dict_capacity >= kDecompDictCapacityMax)
+        return kMemoryOverflowError;
 
     int32_t new_capacity = dict->decomp_dict_capacity * 2;
     if (dict->decomp_dict_capacity == 0) new_capacity = 1;
 
     int32_t *new_decomp_dict =
         (int32_t *)realloc(dict->decomp_dict, new_capacity * sizeof(int32_t));
-    if (new_decomp_dict == NULL) return 1;
+    if (new_decomp_dict == NULL) return kMallocFailureError;
 
     dict->decomp_dict = new_decomp_dict;
     dict->decomp_dict_capacity = new_capacity;
-    return 0;
+    return kNoError;
 }

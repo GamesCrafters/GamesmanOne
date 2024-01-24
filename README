@@ -1,23 +1,28 @@
 # GamesmanOne
 
-## Steps to Compile
+## Installing GamesmanOne
 
-1. `autoreconf --install` in the base directory.
-2. Configure the project using one of the following commands:
-    - `./configure 'CFLAGS=-g -O0' --disable-openmp` for debugging on a single thread, or
-    - `./configure 'CFLAGS=-g -O0'` for debugging with OpenMP multithreading enabled, or
-    - `./configure 'CFLAGS=-g -O3 -DNDEBUG' --disable-openmp` for solving on a single thread, or
-    - `./configure 'CFLAGS=-g -O3 -DNDEBUG'` for solving on multiple threads.
-3. `make`.
+1. Clone GamesmanOne
+    `git clone https://github.com/GamesCrafters/GamesmanOne.git`
+2. Run the installer script in the base directory
+    ```
+    cd GamesmanOne
+    bash ./gamesman_install.sh
+    ```
+   GamesmanOne will be automatically configured and installed. Run `bin/gamesman` to launch the system.
+
+## Configure Options
+1. The `configure` script can be run with different options. Here is a list of commonly used commands:
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O0' --disable-openmp` for debugging on a single thread.
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O0'` for debugging with OpenMP multithreading enabled.
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG' --disable-openmp` for solving on a single thread.
+    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG'` for solving on multiple threads.
+2. After running the `configure` script, run `make`.
 
 ## Steps to Add New Source Files
 
-1. Run `autoscan` in the base directory. This will generate a new file called `configure.scan`.
-2. Make the following changes to `configure.scan`:
-    - Modify the line that starts with `AC_INIT` with the proper package name, version, and bug report address.
-    - Add the following as a new line after the line that starts with `AC_INIT`: `AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])`. This initializes Automake with options that tell it to treat warnings as errors, enable compiling with subdirectory objects, and not complain about missing files required by the GNU standard.
-    - Modify the line that starts with `AC_CONFIG_SRCDIR` so that it points to an arbitrary file in `src/`.
-3. Rename `configure.scan` to `configure.ac`.
-4. Modify `Makefile.am` so that it includes the new sources that you added.
-5. Add any additional compiler flags and linker directives as necessary.
-6. Follow instructions from the Steps to Compile section.
+1. Run `autoscan` in the base directory. This will generate a new file called `configure.scan`. This step generates no output if the current `configure.ac` already covers all the necessary checks. If so, skip to step 3. Otherwise, proceed to step 2.
+2. Inspect `configure.scan` and compare with `configure.ac`. Add missing library and function checks to `configure.ac` and run `autoscan` again. The command should give no output if all checks are correctly implemented.
+3. Include new sources in `Makefile.am`.
+4. Add any additional compiler flags and linker directives as necessary.
+5. Modify `gamesman_install.sh` if necessary (e.g., linking new libraries as submodules.)

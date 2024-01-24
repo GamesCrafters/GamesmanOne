@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.1
+ * @version 1.1.0
  * @date 2023-10-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -36,7 +36,7 @@
 #include "core/analysis/stat_manager.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 

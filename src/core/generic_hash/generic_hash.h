@@ -12,8 +12,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash system for finite board games with fixed sets of pieces.
- * @version 1.01
- * @date 2023-09-27
+ * @version 1.0.1
+ * @date 2024-01-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief (Re)initializes the Generic Hash system, clearing all previously
@@ -68,8 +68,8 @@ void GenericHashReinitialize(void);
  * - The $-1$ is used to mark the end of the array.
  * E.g., set this to {'-', 0, 9, 'O', 0, 4, 'X', 0, 5, -1} for the game of
  * Tic-Tac-Toe. Explanation: there can be at least 0 or at most 9 blank slots,
- * there can be at least 0 or at most 4 O's on the board, and there can be at
- * least 0 or at most 5 X's on the board, assuming X always goes first.
+ * at least 0 or at most 4 O's on the board, and at least 0 or at most 5 X's on
+ * the board, assuming X always goes first.
  * @param IsValidConfiguration Pointer to a user-defined configuration
  * validation function which returns true if the given piece configuration is
  * valid based on game rules. The system will determine if configuration is

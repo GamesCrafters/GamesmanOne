@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tic-Tac-Toe
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,7 +31,7 @@
 #ifndef GAMESMANONE_GAMES_MTTT_MTTT_H_
 #define GAMESMANONE_GAMES_MTTT_MTTT_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Tic-Tac-Toe */
 extern const Game kMttt;

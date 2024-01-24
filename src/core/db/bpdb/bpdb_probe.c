@@ -8,7 +8,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the probe for the Bit-Perfect Database.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -40,7 +40,7 @@
 
 #include "core/constants.h"
 #include "core/db/bpdb/bpdb_file.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 
 static const int kBlocksPerBuffer = 2;
@@ -89,19 +89,19 @@ int BpdbProbeInit(DbProbe *probe) {
     int default_buffer_size =
         GetBufferSize(kDefaultDecompDictSize, kDefaultBitsPerEntry);
     probe->buffer = malloc(default_buffer_size);
-    if (probe->buffer == NULL) return 1;
+    if (probe->buffer == NULL) return kMallocFailureError;
 
     probe->tier = kIllegalTier;
     probe->begin = -1;
     probe->size = default_buffer_size;
 
-    return 0;
+    return kNoError;
 }
 
 int BpdbProbeDestroy(DbProbe *probe) {
     free(probe->buffer);
     memset(probe, 0, sizeof(*probe));
-    return 0;
+    return kNoError;
 }
 
 uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
@@ -138,12 +138,12 @@ static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry) {
 static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
                                         DbProbe *probe, Tier tier) {
     char *full_path = BpdbFileGetFullPath(sandbox_path, tier);
-    if (full_path == NULL) return 1;
+    if (full_path == NULL) return kMallocFailureError;
 
     FILE *db_file = GuardedFopen(full_path, "rb");
     free(full_path);
     full_path = NULL;
-    if (db_file == NULL) return 2;
+    if (db_file == NULL) return kFileSystemError;
 
     // Read header. Assumes probe->buffer has enough space to store the header.
     int error = GuardedFread(probe->buffer, kHeaderSize, 1, db_file);
@@ -236,9 +236,9 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
 
 static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
                                       DbProbe *probe, Position position) {
-    int ret = -1;
+    int ret = kRuntimeError;
     char *full_path = BpdbFileGetFullPath(sandbox_path, probe->tier);
-    if (full_path == NULL) return 1;
+    if (full_path == NULL) return kMallocFailureError;
 
     // Get offset into the compressed bit stream.
     int64_t compressed_offset =
@@ -246,7 +246,7 @@ static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
     if (compressed_offset == -1) goto _bailout;
 
     ret = ProbeRecordStep2_1HandleFile(probe, full_path, compressed_offset);
-    if (ret != 0) goto _bailout;
+    if (ret != kNoError) goto _bailout;
 
     // Set PROBE->begin
     int block_size = ProbeGetBlockSize(probe);
@@ -255,7 +255,7 @@ static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
     probe->begin = block_offset * block_size;
 
     // Success.
-    ret = 0;
+    ret = kNoError;
 
 _bailout:
     free(full_path);
@@ -286,7 +286,7 @@ static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
                                                       Position position,
                                                       const char *full_path) {
     FILE *db_file = GuardedFopen(full_path, "rb");
-    if (db_file == NULL) return -1;
+    if (db_file == NULL) return kFileSystemError;
 
     int bits_per_entry = ProbeGetBitsPerEntry(probe);
     int block_size = ProbeGetBlockSize(probe);
@@ -306,7 +306,7 @@ static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
 
     // Finalize.
     error = GuardedFclose(db_file);
-    if (error != 0) return -1;
+    if (error != 0) return kFileSystemError;
 
     int32_t lookup_table_size = ProbeGetLookupTableSize(probe);
     return compressed_offset + kHeaderSize + decomp_dict_size +

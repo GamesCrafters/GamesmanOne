@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,7 +29,7 @@
 
 #include <stdint.h>  // int64_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the database system and load the chosen DB module.
@@ -41,11 +41,13 @@
  * @param db DB to use.
  * @param game_name Internal name of the game.
  * @param variant Index of the game variant as an integer.
+ * @param data_path Absolute or relative path to the data directory if non-NULL.
+ * The default path "data" will be used if set to NULL.
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero otherwise.
  */
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
-                    void *aux);
+                    ReadOnlyString data_path, void *aux);
 
 /**
  * @brief Finalizes the database system, freeing all dynamically allocated
@@ -159,10 +161,16 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
  */
 int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
+/**
+ * @brief Returns the status of TIER.
+ * 
+ * @param tier Tier to check.
+ * @return kDbTierStatusSolved if solved,
+ * @return kDbTierStatusCorrupted if corrupted,
+ * @return kDbTierStatusMissing if not solved, or
+ * @return kDbTierStatusCheckError if an error occurred when checking the status
+ * of TIER.
+ */
 int DbManagerTierStatus(Tier tier);
-
-int DbManagerInitControlGroupDb(const Database *control,
-                                ReadOnlyString game_name, int variant,
-                                void *aux);
 
 #endif  // GAMESMANONE_CORE_DB_DB_MANAGER_H_

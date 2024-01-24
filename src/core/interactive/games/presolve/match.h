@@ -3,13 +3,7 @@
 
 #include <stdbool.h>  // bool
 
-#include "core/gamesman_types.h"
-
-typedef enum InteractiveMatchSetGameErrorCode {
-    kInteractiveMatchSetGameOk = 0,
-    kInteractiveMatchSetGameBasicApiIncomplete,
-    kInteractiveMatchSetGameRegularOrTierApiIncomplete,
-} InteractiveMatchSetGameErrorCode;
+#include "core/types/gamesman_types.h"
 
 int InteractiveMatchSetGame(const Game *game);
 const Game *InteractiveMatchGetCurrentGame(void);
@@ -18,7 +12,10 @@ bool InteractiveMatchRestart(void);
 void InteractiveMatchTogglePlayerType(int player);
 bool InteractiveMatchPlayerIsComputer(int player);
 
-int InteractiveMatchGetCurrentVariant(void);
+const GameVariant *InteractiveMatchGetVariant(void);
+int InteractiveMatchGetVariantIndex(void);
+int InteractiveMatchSetVariantOption(int option, int selection);
+
 TierPosition InteractiveMatchGetCurrentPosition(void);
 int InteractiveMatchGetTurn(void);
 MoveArray InteractiveMatchGenerateMoves(void);
@@ -27,7 +24,6 @@ bool InteractiveMatchCommitMove(Move move);
 Value InteractiveMatchPrimitive(void);
 bool InteractiveMatchUndo(void);
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer);
-TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position);
 
 void InteractiveMatchSetSolved(bool solved);
 bool InteractiveMatchSolved(void);

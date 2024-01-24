@@ -7,9 +7,10 @@
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // memset
 
+#include "core/constants.h"
 #include "core/data_structures/int64_array.h"
-#include "core/gamesman_types.h"
 #include "core/solvers/solver_manager.h"
+#include "core/types/gamesman_types.h"
 
 typedef struct Match {
     const Game *game;
@@ -23,70 +24,29 @@ typedef struct Match {
 
 static Match match;
 
+static void MatchDestroy(void);
+static bool ImplementsCommonGameplayApi(const GameplayApi *api);
+static bool ImplementsTierGameplayApi(const GameplayApi *api);
+static bool ImplementsRegularGameplayApi(const GameplayApi *api);
+
+// -----------------------------------------------------------------------------
+
 const Game *InteractiveMatchGetCurrentGame(void) { return match.game; }
-
-static void MatchDestroy(void) {
-    TierPositionArrayDestroy(&match.position_history);
-    MoveArrayDestroy(&match.move_history);
-    Int64ArrayDestroy(&match.turn_history);
-}
-
-static bool ImplementsBasicGameplayApi(const GameplayApi *api) {
-    if (api == NULL) return false;
-
-    // Common.
-    if (api->GetInitialPosition == NULL) return false;
-    if (api->GetInitialPosition() < 0) return false;
-    if (api->position_string_length_max <= 0) return false;
-
-    // "Move to string" related functions.
-    if (api->move_string_length_max <= 0) return false;
-    if (api->MoveToString == NULL) return false;
-
-    // "String to Move" related functions.
-    if (api->IsValidMoveString == NULL) return false;
-    if (api->StringToMove == NULL) return false;
-
-    return true;
-}
-
-static bool ImplementsTierGameplayApi(const GameplayApi *api) {
-    if (!ImplementsBasicGameplayApi(api)) return false;
-    if (api->GetInitialTier == NULL) return false;
-    if (api->GetInitialTier() < 0) return false;
-    if (api->TierPositionToString == NULL) return false;
-    if (api->TierGenerateMoves == NULL) return false;
-    if (api->TierDoMove == NULL) return false;
-    if (api->TierPrimitive == NULL) return false;
-
-    return true;
-}
-
-static bool ImplementsRegularGameplayApi(const GameplayApi *api) {
-    if (!ImplementsBasicGameplayApi(api)) return false;
-    if (api->PositionToString == NULL) return false;
-    if (api->GenerateMoves == NULL) return false;
-    if (api->DoMove == NULL) return false;
-    if (api->Primitive == NULL) return false;
-
-    return true;
-}
 
 int InteractiveMatchSetGame(const Game *game) {
     MatchDestroy();
     memset(&match, 0, sizeof(match));
     match.game = game;
-    game->Init(NULL);
-    if (!ImplementsBasicGameplayApi(game->gameplay_api)) {
-        return kInteractiveMatchSetGameBasicApiIncomplete;
+    if (!ImplementsCommonGameplayApi(game->gameplay_api)) {
+        return kIncompleteGameplayApiError;
     } else if (ImplementsRegularGameplayApi(game->gameplay_api)) {
         match.is_tier_game = false;
     } else if (ImplementsTierGameplayApi(game->gameplay_api)) {
         match.is_tier_game = true;
     } else {
-        return kInteractiveMatchSetGameRegularOrTierApiIncomplete;
+        return kIncompleteGameplayApiError;
     }
-    return kInteractiveMatchSetGameOk;
+    return kNoError;
 }
 
 bool InteractiveMatchRestart(void) {
@@ -99,12 +59,14 @@ bool InteractiveMatchRestart(void) {
 
     TierPosition initial_position;
     if (match.is_tier_game) {
-        initial_position.tier = match.game->gameplay_api->GetInitialTier();
+        initial_position.tier =
+            match.game->gameplay_api->tier->GetInitialTier();
     } else {
         // By convention, all non-tier games use 0 as the only tier index.
-        initial_position.tier = 0;
+        initial_position.tier = kDefaultTier;
     }
-    initial_position.position = match.game->gameplay_api->GetInitialPosition();
+    initial_position.position =
+        match.game->gameplay_api->common->GetInitialPosition();
     TierPositionArrayAppend(&match.position_history, initial_position);
     return true;
 }
@@ -117,13 +79,23 @@ bool InteractiveMatchPlayerIsComputer(int player) {
     return match.is_computer[player];
 }
 
-int InteractiveMatchGetCurrentVariant(void) {
+const GameVariant *InteractiveMatchGetVariant(void) {
+    if (match.game->GetCurrentVariant == NULL) return NULL;
+    return match.game->GetCurrentVariant();
+}
+
+int InteractiveMatchGetVariantIndex(void) {
     if (match.game->GetCurrentVariant == NULL) return 0;
 
     const GameVariant *variant = match.game->GetCurrentVariant();
     if (variant == NULL) return 0;
 
     return GameVariantToIndex(variant);
+}
+
+int InteractiveMatchSetVariantOption(int option, int selection) {
+    if (match.game->SetVariantOption == NULL) return -1;
+    return match.game->SetVariantOption(option, selection);
 }
 
 TierPosition InteractiveMatchGetCurrentPosition(void) {
@@ -138,19 +110,19 @@ int InteractiveMatchGetTurn(void) {
 MoveArray InteractiveMatchGenerateMoves(void) {
     TierPosition current = TierPositionArrayBack(&match.position_history);
     if (match.is_tier_game) {
-        return match.game->gameplay_api->TierGenerateMoves(current);
+        return match.game->gameplay_api->tier->GenerateMoves(current);
     }
-    return match.game->gameplay_api->GenerateMoves(current.position);
+    return match.game->gameplay_api->regular->GenerateMoves(current.position);
 }
 
 TierPosition InteractiveMatchDoMove(TierPosition tier_position, Move move) {
     if (match.is_tier_game) {
-        return match.game->gameplay_api->TierDoMove(tier_position, move);
+        return match.game->gameplay_api->tier->DoMove(tier_position, move);
     }
     return (TierPosition){
-        .tier = 0,
-        .position =
-            match.game->gameplay_api->DoMove(tier_position.position, move),
+        .tier = kDefaultTier,
+        .position = match.game->gameplay_api->regular->DoMove(
+            tier_position.position, move),
     };
 }
 
@@ -176,9 +148,9 @@ bool InteractiveMatchCommitMove(Move move) {
 Value InteractiveMatchPrimitive(void) {
     TierPosition current = TierPositionArrayBack(&match.position_history);
     if (match.is_tier_game) {
-        return match.game->gameplay_api->TierPrimitive(current);
+        return match.game->gameplay_api->tier->Primitive(current);
     }
-    return match.game->gameplay_api->Primitive(current.position);
+    return match.game->gameplay_api->regular->Primitive(current.position);
 }
 
 static int PreviousNonComputerMoveIndex(void) {
@@ -202,42 +174,65 @@ bool InteractiveMatchUndo(void) {
 
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer) {
     if (match.is_tier_game) {
-        return match.game->gameplay_api->TierPositionToString(tier_position,
-                                                              buffer);
+        return match.game->gameplay_api->tier->TierPositionToString(
+            tier_position, buffer);
     }
-    return match.game->gameplay_api->PositionToString(tier_position.position,
-                                                      buffer);
-}
-
-TierPosition InteractiveMatchGetCanonicalPosition(TierPosition tier_position) {
-    TierPosition canonical = tier_position;
-
-    // Convert to the tier position inside the canonical tier.
-    if (match.game->gameplay_api->GetCanonicalTier != NULL &&
-        match.game->gameplay_api->GetPositionInSymmetricTier != NULL) {
-        //
-        canonical.tier =
-            match.game->gameplay_api->GetCanonicalTier(tier_position.tier);
-        canonical.position =
-            match.game->gameplay_api->GetPositionInSymmetricTier(
-                tier_position, canonical.tier);
-    }
-
-    // Find the canonical position inside the canonical tier.
-    if (match.is_tier_game &&
-        match.game->gameplay_api->TierGetCanonicalPosition != NULL) {
-        //
-        canonical.position =
-            match.game->gameplay_api->TierGetCanonicalPosition(canonical);
-    } else if (!match.is_tier_game &&
-               match.game->gameplay_api->GetCanonicalPosition != NULL) {
-        canonical.position =
-            match.game->gameplay_api->GetCanonicalPosition(canonical.position);
-    }
-
-    return canonical;
+    return match.game->gameplay_api->regular->PositionToString(
+        tier_position.position, buffer);
 }
 
 void InteractiveMatchSetSolved(bool solved) { match.solved = solved; }
 
 bool InteractiveMatchSolved(void) { return match.solved; }
+
+// -----------------------------------------------------------------------------
+
+static void MatchDestroy(void) {
+    TierPositionArrayDestroy(&match.position_history);
+    MoveArrayDestroy(&match.move_history);
+    Int64ArrayDestroy(&match.turn_history);
+}
+
+static bool ImplementsCommonGameplayApi(const GameplayApi *api) {
+    if (api == NULL) return false;
+    if (api->common == NULL) return false;
+
+    // Common.
+    if (api->common->GetInitialPosition == NULL) return false;
+    if (api->common->GetInitialPosition() < 0) return false;
+    if (api->common->position_string_length_max <= 0) return false;
+
+    // "Move to string" related functions.
+    if (api->common->move_string_length_max <= 0) return false;
+    if (api->common->MoveToString == NULL) return false;
+
+    // "String to Move" related functions.
+    if (api->common->IsValidMoveString == NULL) return false;
+    if (api->common->StringToMove == NULL) return false;
+
+    return true;
+}
+
+static bool ImplementsTierGameplayApi(const GameplayApi *api) {
+    if (!ImplementsCommonGameplayApi(api)) return false;
+    if (api->tier == NULL) return false;
+    if (api->tier->GetInitialTier == NULL) return false;
+    if (api->tier->GetInitialTier() < 0) return false;
+    if (api->tier->TierPositionToString == NULL) return false;
+    if (api->tier->GenerateMoves == NULL) return false;
+    if (api->tier->DoMove == NULL) return false;
+    if (api->tier->Primitive == NULL) return false;
+
+    return true;
+}
+
+static bool ImplementsRegularGameplayApi(const GameplayApi *api) {
+    if (!ImplementsCommonGameplayApi(api)) return false;
+    if (api->regular == NULL) return false;
+    if (api->regular->PositionToString == NULL) return false;
+    if (api->regular->GenerateMoves == NULL) return false;
+    if (api->regular->DoMove == NULL) return false;
+    if (api->regular->Primitive == NULL) return false;
+
+    return true;
+}

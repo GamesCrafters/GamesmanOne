@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database file utilities.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -30,7 +30,7 @@
 #include <stdint.h>  // int64_t, int32_t
 
 #include "core/db/bpdb/bparray.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief Decompression dictionary metadata. */
 typedef struct DecompDictMeta {
@@ -86,13 +86,26 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
  * loaded from disk and buffered in a DbProbe obejct. To speed up sequential
  * access of the entire db file, a proper block size should be chosen so that
  * each block contains a whole number of entries to avoid repeated loading of
- * the same block when an entry lies on the boundary of two adjacent blocks.
+ * the same block when some entries are stored across the boundary of two
+ * adjacent blocks.
  *
  * @param bits_per_entry Number of bits used to store each entry.
  * @return Block size in bytes.
  */
 int BpdbFileGetBlockSize(int bits_per_entry);
 
+/**
+ * @brief Returns the status of TIER stored under the given SANDBOX_PATH for
+ * bpdb.
+ *
+ * @param sandbox_path Path to a sandbox directory for bpdb.
+ * @param tier The tier to get status of.
+ * @return kDbTierStatusSolved if solved,
+ * @return kDbTierStatusCorrupted if corrupted,
+ * @return kDbTierStatusMissing if not solved, or
+ * @return kDbTierStatusCheckError if an error occurred when checking the status
+ * of TIER.
+ */
 int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier);
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_BPDB_FILE_H_

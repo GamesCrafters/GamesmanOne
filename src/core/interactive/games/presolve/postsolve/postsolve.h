@@ -1,7 +1,7 @@
 #ifndef GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_POSTSOLVE_POSTSOLVE_H_
 #define GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_POSTSOLVE_POSTSOLVE_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 void InteractivePostSolve(ReadOnlyString key);
 

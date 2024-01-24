@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Bit-Perfect Database file utilities.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -34,7 +34,7 @@
 
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "libs/mgz/mgz.h"
 
@@ -88,7 +88,7 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
         fprintf(stderr,
                 "BpdbLiteFlushSolvingTier: failed to compress records using "
                 "mgz.\n");
-        return 1;
+        return kMallocFailureError;
     }
 
     // Write compressed data to file.
@@ -103,16 +103,16 @@ int BpdbFileGetBlockSize(int bits_per_entry) {
 
 int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier) {
     char *filename = BpdbFileGetFullPath(sandbox_path, tier);
-    if (filename == NULL) return kDbTierCheckError;
+    if (filename == NULL) return kDbTierStatusCheckError;
 
     FILE *db_file = fopen(filename, "rb");
     free(filename);
-    if (db_file == NULL) return kDbTierMissing;
+    if (db_file == NULL) return kDbTierStatusMissing;
 
     int error = GuardedFclose(db_file);
-    if (error != 0) return kDbTierCheckError;
+    if (error != 0) return kDbTierStatusCheckError;
 
-    return kDbTierSolved;
+    return kDbTierStatusSolved;
 }
 
 // -----------------------------------------------------------------------------
@@ -135,7 +135,7 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
                                  const int32_t *decomp_dict, mgz_res_t result) {
     // Write header to file.
     FILE *db_file = GuardedFopen(full_path, "wb");
-    if (db_file == NULL) return 2;
+    if (db_file == NULL) return kFileSystemError;
 
     int error = GuardedFwrite(header, sizeof(*header), 1, db_file);
     if (error != 0) return BailOutFclose(db_file, error);

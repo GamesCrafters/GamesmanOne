@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Main entry point of GAMESMAN.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -24,14 +24,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-
 #include "core/gamesman_headless.h"
 #include "core/gamesman_interactive.h"
 
 int main(int argc, char **argv) {
-    if (argc == 1) {
-        return GamesmanInteractiveMain();
-    }
+    if (argc == 1) return GamesmanInteractiveMain();
+    
     return GamesmanHeadlessMain(argc, argv);
 }

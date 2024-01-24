@@ -4,8 +4,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definitions of global constants.
- * @version 1.0
- * @date 2023-10-21
+ * 
+ * @version 1.1.1
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,8 +27,13 @@
 
 #include "core/constants.h"
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
+ConstantReadOnlyString kValueStrings[] = {
+    "undecided", "lose", "draw", "tie", "win",
+};
+
+const Tier kDefaultTier = 0;
 const Tier kIllegalTier = -1;
 const Position kIllegalPosition = -1;
 const TierPosition kIllegalTierPosition = {
@@ -35,6 +41,7 @@ const TierPosition kIllegalTierPosition = {
     .position = kIllegalPosition,
 };
 const int kIllegalRemoteness = -1;
+const int kIllegalVariantIndex = -1;
 
-ConstantReadOnlyString kDate = "2023.10.21";
-ConstantReadOnlyString kVersion = "0.41";
+ConstantReadOnlyString kGamesmanDate = "2024.01.24";
+ConstantReadOnlyString kGamesmanVersion = "0.5.0";

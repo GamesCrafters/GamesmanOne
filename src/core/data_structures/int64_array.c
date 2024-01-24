@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -85,6 +85,10 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
         if (array->array[i] == item) return true;
     }
     return false;
+}
+
+void Int64ArraySort(Int64Array *array, int (*comp)(const void *, const void *)) {
+    qsort(array->array, array->size, sizeof(int64_t), comp);
 }
 
 bool Int64ArrayResize(Int64Array *array, int64_t size) {

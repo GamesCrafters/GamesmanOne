@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -71,7 +71,7 @@ void Int64ArrayDestroy(Int64Array *array);
 /**
  * @brief Pushes a new ITEM to the back of the ARRAY.
  *
- * @param array Destiniation.
+ * @param array Destination.
  * @param item New item.
  * @return true on success,
  * @return false otherwise.
@@ -91,21 +91,33 @@ void Int64ArrayPopBack(Int64Array *array);
  * empty ARRAY results in undefined behavior.
  *
  * @param array Array to get the item from.
- * @return int64_t item popped.
+ * @return Item at the back of ARRAY.
  */
 int64_t Int64ArrayBack(const Int64Array *array);
 
-/**
- * @brief Returns true if the given ARRAY is empty, false otherwise.
- */
+/** @brief Returns true if the given ARRAY is empty, or false otherwise. */
 bool Int64ArrayEmpty(const Int64Array *array);
 
 /**
- * @brief Returns true if the given ARRAY contains the given ITEM, false
+ * @brief Returns true if the given ARRAY contains the given ITEM, or false
  * otherwise.
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
+/** @brief Sorts the given ARRAY according to the given comparison function. */
+void Int64ArraySort(Int64Array *array, int (*comp)(const void *, const void *));
+
+/**
+ * @brief Resizes ARRAY to have SIZE elements. If the current size of ARRAY is
+ * greater than SIZE, the content is reduced to its first SIZE elements. If the
+ * current size of ARRAY is less than SIZE, zeros shall be inserted to the back
+ * of the array.
+ *
+ * @param array Array to resize, assumed to be initialized.
+ * @param size New size of the array.
+ * @return true on success,
+ * @return false otherwise.
+ */
 bool Int64ArrayResize(Int64Array *array, int64_t size);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_

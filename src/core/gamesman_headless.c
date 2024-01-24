@@ -1,11 +1,70 @@
+/**
+ * @file gamesman_headless.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Implementation of GAMESMAN headless mode.
+ *
+ * @version 1.1.0
+ * @date 2024-01-05
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/gamesman_headless.h"
 
-#include <stdio.h>
+#include <stdbool.h>  // bool
+#include <stdlib.h>   // atoi
+
+#include "core/types/gamesman_types.h"
+#include "core/headless/hanalyze.h"
+#include "core/headless/hparser.h"
+#include "core/headless/hquery.h"
+#include "core/headless/hsolve.h"
+#include "core/headless/hutils.h"
+#include "core/misc.h"
 
 int GamesmanHeadlessMain(int argc, char **argv) {
-    // TODO
-    (void)argc;
-    (void)argv;
-    printf("GamesmanHeadlessMain: unimplemented\n");
-    return 1;
+    ArgpArguments arguments = HeadlessParseArguments(argc, argv);
+    char *game = arguments.game;
+    char *data_path = arguments.data_path;
+    bool force = arguments.force;
+    char *position = arguments.position;
+    int verbose = HeadlessGetVerbosity(arguments.verbose, arguments.quiet);
+    int variant_id =
+        arguments.variant_id != NULL ? atoi(arguments.variant_id) : -1;
+
+    int error = HeadlessRedirectOutput(arguments.output);
+    if (error != 0) return error;
+
+    switch (arguments.action) {
+        case kHeadlessSolve:
+            return HeadlessSolve(game, variant_id, data_path, force, verbose);
+        case kHeadlessAnalyze:
+            return HeadlessAnalyze(game, variant_id, data_path, force, verbose);
+        case kHeadlessQuery:
+            return HeadlessQuery(game, variant_id, data_path, position);
+        case kHeadlessGetStart:
+            return HeadlessGetStart(game, variant_id);
+        case kHeadlessGetRandom:
+            return HeadlessGetRandom(game, variant_id);
+        default:
+            NotReached("GamesmanHeadlessMain: unknown action\n");
+    }
+    // Not reached.
+    return kNotReachedError;
 }

@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,78 +34,20 @@
 #include <string.h>    // strlen
 
 #include "core/constants.h"
-#include "core/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static const Database *current_db;
 
-static bool IsValidDbName(ReadOnlyString name) {
-    bool terminates = false;
-    for (int i = 0; i < (int)kDbFormalNameLengthMax + 1; ++i) {
-        if (name[i] == '\0') {
-            terminates = true;
-            break;
-        }
-    }
-    if (!terminates) return false;      // Uninitialized name.
-    if (name[0] == '\0') return false;  // Empty name is not allowed.
-    return true;
-}
-
-static bool BasicDbApiImplemented(const Database *db) {
-    if (!IsValidDbName(db->formal_name)) {
-        fprintf(stderr,
-                "BasicDbApiImplemented: (BUG) A Database does not have its "
-                "name properly initialized. Aborting...\n");
-        exit(EXIT_FAILURE);
-    }
-    if (db->Init == NULL) return false;
-    if (db->FlushSolvingTier == NULL) return false;
-    if (db->Finalize == NULL) return false;
-    if (db->SetValue == NULL) return false;
-    if (db->SetRemoteness == NULL) return false;
-    if (db->GetValue == NULL) return false;
-    if (db->GetRemoteness == NULL) return false;
-
-    return true;
-}
-
-// Assumes current_db has been set.
+static bool BasicDbApiImplemented(const Database *db);
+static bool IsValidDbName(ReadOnlyString name);
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant) {
-    // path = "data/<game_name>/<variant>/<db_name>/"
-    static ConstantReadOnlyString kDataPath = "data";
-    char *path = NULL;
+                         int variant, ReadOnlyString data_path);
 
-    int path_length = strlen(kDataPath) + 1;  // +1 for '/'.
-    path_length += strlen(game_name) + 1;
-    path_length += kInt32Base10StringLengthMax + 1;
-    path_length += strlen(db->name) + 1;
-    path = (char *)calloc((path_length + 1), sizeof(char));
-    if (path == NULL) {
-        fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
-        return NULL;
-    }
-    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", kDataPath,
-                                 game_name, variant, db->name);
-    if (actual_length >= path_length) {
-        fprintf(stderr,
-                "SetupDbPath: (BUG) not enough space was allocated for path. "
-                "Please check the implementation of this function.\n");
-        free(path);
-        return NULL;
-    }
-    if (MkdirRecursive(path) != 0) {
-        fprintf(stderr,
-                "SetupDbPath: failed to create path in the file system.\n");
-        free(path);
-        return NULL;
-    }
-    return path;
-}
+// -----------------------------------------------------------------------------
 
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
-                    void *aux) {
+                    ReadOnlyString data_path, void *aux) {
     if (current_db != NULL) current_db->Finalize();
     current_db = NULL;
 
@@ -114,11 +56,11 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
                 "DbManagerInitDb: The %s does not have all the required "
                 "functions implemented and cannot be used.\n",
                 db->formal_name);
-        return -1;
+        return kNotImplementedError;
     }
     current_db = db;
 
-    char *path = SetupDbPath(current_db, game_name, variant);
+    char *path = SetupDbPath(current_db, game_name, variant, data_path);
     int error = current_db->Init(game_name, variant, path, aux);
     free(path);
 
@@ -126,7 +68,7 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
 }
 
 void DbManagerFinalizeDb(void) {
-    current_db->Finalize();
+    if (current_db) current_db->Finalize();
     current_db = NULL;
 }
 
@@ -171,3 +113,70 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 }
 
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
+
+// -----------------------------------------------------------------------------
+
+static bool BasicDbApiImplemented(const Database *db) {
+    if (!IsValidDbName(db->formal_name)) {
+        fprintf(stderr,
+                "BasicDbApiImplemented: (BUG) A Database does not have its "
+                "name properly initialized. Aborting...\n");
+        exit(EXIT_FAILURE);
+    }
+    if (db->Init == NULL) return false;
+    if (db->FlushSolvingTier == NULL) return false;
+    if (db->Finalize == NULL) return false;
+    if (db->SetValue == NULL) return false;
+    if (db->SetRemoteness == NULL) return false;
+    if (db->GetValue == NULL) return false;
+    if (db->GetRemoteness == NULL) return false;
+
+    return true;
+}
+
+static bool IsValidDbName(ReadOnlyString name) {
+    bool terminates = false;
+    for (int i = 0; i < (int)kDbFormalNameLengthMax + 1; ++i) {
+        if (name[i] == '\0') {
+            terminates = true;
+            break;
+        }
+    }
+    if (!terminates) return false;      // Uninitialized name.
+    if (name[0] == '\0') return false;  // Empty name is not allowed.
+    return true;
+}
+
+// Assumes current_db has been set.
+static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
+                         int variant, ReadOnlyString data_path) {
+    // path = "<data_path>/<game_name>/<variant>/<db_name>/"
+    if (data_path == NULL) data_path = "data";
+    char *path = NULL;
+
+    int path_length = strlen(data_path) + 1;  // +1 for '/'.
+    path_length += strlen(game_name) + 1;
+    path_length += kInt32Base10StringLengthMax + 1;
+    path_length += strlen(db->name) + 1;
+    path = (char *)calloc((path_length + 1), sizeof(char));
+    if (path == NULL) {
+        fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
+        return NULL;
+    }
+    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
+                                 game_name, variant, db->name);
+    if (actual_length >= path_length) {
+        fprintf(stderr,
+                "SetupDbPath: (BUG) not enough space was allocated for path. "
+                "Please check the implementation of this function.\n");
+        free(path);
+        return NULL;
+    }
+    if (MkdirRecursive(path) != 0) {
+        fprintf(stderr,
+                "SetupDbPath: failed to create path in the file system.\n");
+        free(path);
+        return NULL;
+    }
+    return path;
+}

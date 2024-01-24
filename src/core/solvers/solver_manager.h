@@ -13,8 +13,8 @@
  * loaded at the same time. This module handles the loading and deallocation
  * of THE ONE solver used by the current GAMESMAN instance.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,22 +36,24 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
 #define GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
- * @brief Initializes the Solver specified by GAME, finalizing any games/solvers
- * that were previously loaded.
+ * @brief Initializes the Solver specified by the current game loaded in the
+ * Game Manager Module, and finalizes the previous solver.
+ * @details Current implementation only supports loading one game at a time.
  *
- * @param game The one and only game that we are loading into GAMESMAN.
+ * @param data_path Absolute or relative path to the data directory if non-NULL.
+ * The default path "data" will be used if set to NULL.
  * @return 0 on success, non-zero error code otherwise.
  */
-int SolverManagerInitSolver(const Game *game);
+int SolverManagerInit(ReadOnlyString data_path);
 
 /**
  * @brief Returns the solver status of the current game.
  *
  * @note Assumes a game together with its solver have been loaded using the
- * SolverManagerInitSolver() function. Results in undefined behavior otherwise.
+ * SolverManagerInit() function. Results in undefined behavior otherwise.
  *
  * @return Status encoded as an int. The encoding is specific to each solver
  * module.
@@ -60,12 +62,42 @@ int SolverManagerGetSolverStatus(void);
 
 /**
  * @brief Solves the current game.
- * 
+ *
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero error code otherwise.
  */
 int SolverManagerSolve(void *aux);
 
+/**
+ * @brief Analyzes the current game.
+ *
+ * @param aux Auxiliary parameter.
+ * @return 0 on success, non-zero error code otherwise.
+ */
 int SolverManagerAnalyze(void *aux);
+
+/**
+ * @brief Probes and returns the value of the given TIER_POSITION.
+ *
+ * @note Assumes the solver manager is initialized with the SolverManagerInit
+ * function. Results in undefined behavior if called before the solver manager
+ * module is initialized.
+ *
+ * @param tier_position Tier position to probe.
+ * @return Value of the given TIER_POSITION.
+ */
+Value SolverManagerGetValue(TierPosition tier_position);
+
+/**
+ * @brief Probes and returns the remoteness of the given TIER_POSITION.
+ *
+ * @note Assumes the solver manager is initialized with the SolverManagerInit
+ * function. Results in undefined behavior if called before the solver manager
+ * module is initialized.
+ *
+ * @param tier_position Tier position to probe.
+ * @return Remoteness of the given TIER_POSITION.
+ */
+int SolverManagerGetRemoteness(TierPosition tier_position);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_SOLVER_MANAGER_H_

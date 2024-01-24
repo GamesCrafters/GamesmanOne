@@ -4,8 +4,9 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * @version 1.0
- * @date 2023-10-21
+ *
+ * @version 1.1.1
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -23,8 +24,13 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef GAMESMANONE_CORE_CONSTANTS_H_
+#define GAMESMANONE_CORE_CONSTANTS_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
+
+/** @brief String representations for all possible Values. */
+extern ConstantReadOnlyString kValueStrings[];
 
 /**
  * @brief Precalculated string length limits for integers of different types.
@@ -55,15 +61,45 @@ enum IntBase10StringLengthLimits {
     kUint64Base10StringLengthMax = 20,
 };
 
+/** @brief Constants that are used as common knowledge. */
 enum CommonConstants {
     kIllegalSize = -1, /**< Valid sizes are non-negative. */
     kBitsPerByte = 8,  /**< 8 bits per byte. */
 };
 
+/**
+ * @brief Largest supported remoteness.
+ *
+ * @note Increase the values here and recompile if the old limit is not large
+ * enough for a new game in the future.
+ */
+enum RemotenessLimits {
+    kRemotenessMax = 1023, /**< Maximum remoteness supported by GAMESMAN. */
+    kNumRemotenesses,      /**< Number of values a remoteness can take. */
+};
+
+/** @brief Default tier for games that are not implemented as tier games. */
+extern const Tier kDefaultTier;
+
+/** @brief Illegal tier which can be returned as an error. */
 extern const Tier kIllegalTier;
+
+/** @brief Illegal position which can be returned as an error. */
 extern const Position kIllegalPosition;
+
+/** @brief Illegal tier position which can be returned as an error. */
 extern const TierPosition kIllegalTierPosition;
+
+/** @brief Illegal remoteness which can be returned as an error. */
 extern const int kIllegalRemoteness;
 
-extern ConstantReadOnlyString kDate;
-extern ConstantReadOnlyString kVersion;
+/** @brief Illegal variant which can be returned as an error. */
+extern const int kIllegalVariantIndex;
+
+/** @brief Date of the current version of GAMESMAN. */
+extern ConstantReadOnlyString kGamesmanDate;
+
+/** @brief Current version of GAMESMAN. */
+extern ConstantReadOnlyString kGamesmanVersion;
+
+#endif  // GAMESMANONE_CORE_CONSTANTS_H_

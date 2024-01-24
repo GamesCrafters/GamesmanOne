@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief int64_t queue using dynamic array.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -54,35 +54,27 @@ typedef struct Int64Queue {
     int64_t capacity; /**< Current capacity of the queue. */
 } Int64Queue;
 
-/**
- * @brief Initializes QUEUE.
- */
+/** @brief Initializes QUEUE. */
 void Int64QueueInit(Int64Queue *queue);
 
-/**
- * @brief Deallocates QUEUE.
- */
+/** @brief Destroys QUEUE. */
 void Int64QueueDestroy(Int64Queue *queue);
 
-/**
- * @brief Returns true if QUEUE is empty, false otherwise.
- */
+/** @brief Returns true if QUEUE is empty, or false otherwise. */
 bool Int64QueueIsEmpty(const Int64Queue *queue);
 
-/**
- * @brief Returns the number of items in the queue.
- */
+/** @brief Returns the number of items in QUEUE. */
 int64_t Int64QueueSize(const Int64Queue *queue);
 
 /**
- * @brief Pushes ELEMENT to the back of the QUEUE and returns true. Returns
- * false on failure.
+ * @brief Pushes ELEMENT into the QUEUE.
+ * 
+ * @return true on success,
+ * @return false otherwise.
  */
 bool Int64QueuePush(Int64Queue *queue, int64_t item);
 
-/**
- * @brief Pops the item at the front of the QUEUE and returns it.
- */
+/** @brief Pops the item at the front of the QUEUE and returns it. */
 int64_t Int64QueuePop(Int64Queue *queue);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_

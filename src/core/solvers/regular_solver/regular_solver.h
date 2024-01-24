@@ -3,10 +3,10 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declaration of the Regular Solver API.
+ * @brief The Regular Solver API.
  *
- * @version 1.1
- * @date 2023-10-18
+ * @version 1.2.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,7 +31,7 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /** @brief The Regular Solver. */
 extern const Solver kRegularSolver;
@@ -193,5 +193,17 @@ typedef struct RegularSolverApi {
      */
     PositionArray (*GetCanonicalParentPositions)(Position position);
 } RegularSolverApi;
+
+/** @brief Solver options of the Regular Solver. */
+typedef struct RegularSolverSolveOptions {
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)solve the game. */
+} RegularSolverSolveOptions;
+
+/** @brief Analyzer options of the Regular Solver. */
+typedef struct RegularSolverAnalyzeOptions {
+    int verbose; /**< Level of details to output. */
+    bool force;  /**< Whether to force (re)analyze the game. */
+} RegularSolverAnalyzeOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_

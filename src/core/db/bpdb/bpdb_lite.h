@@ -9,7 +9,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database Lite.
  * @details
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-09-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -32,7 +32,7 @@
 #ifndef GAMESMANONE_CORE_DB_BPDB_BPDB_LITE_H_
 #define GAMESMANONE_CORE_DB_BPDB_BPDB_LITE_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief BPDB "Lite" version which only supports position values and

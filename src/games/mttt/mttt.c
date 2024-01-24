@@ -8,8 +8,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Toe.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.1
+ * @date 2024-01-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,10 +37,12 @@
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // atoi
 
-#include "core/gamesman_types.h"
+#include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/solvers/regular_solver/regular_solver.h"
+#include "core/types/gamesman_types.h"
 
-// Game, Solver, and Gameplay API Functions
+// Game, Solver, Gameplay, and UWAPI Functions
 
 static int MtttInit(void *aux);
 static int MtttFinalize(void);
@@ -63,8 +65,15 @@ static int MtttMoveToString(Move move, char *buffer);
 static bool MtttIsValidMoveString(ReadOnlyString move_string);
 static Move MtttStringToMove(ReadOnlyString move_string);
 
+static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position);
+static Position MtttFormalPositionToPosition(ReadOnlyString formal_position);
+static CString MtttPositionToFormalPosition(Position position);
+static CString MtttPositionToAutoGuiPosition(Position position);
+static CString MtttMoveToFormalMove(Position position, Move move);
+static CString MtttMoveToAutoGuiMove(Position position, Move move);
+
 // Solver API Setup
-static const RegularSolverApi kSolverApi = {
+static const RegularSolverApi kMtttSolverApi = {
     .GetNumPositions = &MtttGetNumPositions,
     .GetInitialPosition = &MtttGetInitialPosition,
 
@@ -78,31 +87,57 @@ static const RegularSolverApi kSolverApi = {
 };
 
 // Gameplay API Setup
-static const GameplayApi kGameplayApi = {
-    .GetInitialPosition = &MtttGetInitialPosition,
 
+static const GameplayApiCommon kMtttGameplayApiCommon = {
+    .GetInitialPosition = &MtttGetInitialPosition,
     .position_string_length_max = 120,
-    .PositionToString = &MtttPositionToString,
 
     .move_string_length_max = 1,
-    .MoveToString = MtttMoveToString,
+    .MoveToString = &MtttMoveToString,
 
-    .IsValidMoveString = MtttIsValidMoveString,
-    .StringToMove = MtttStringToMove,
+    .IsValidMoveString = &MtttIsValidMoveString,
+    .StringToMove = &MtttStringToMove,
+};
+
+static const GameplayApiRegular kMtttGameplayApiRegular = {
+    .PositionToString = &MtttPositionToString,
 
     .GenerateMoves = &MtttGenerateMoves,
     .DoMove = &MtttDoMove,
     .Primitive = &MtttPrimitive,
-
-    .GetCanonicalPosition = &MtttGetCanonicalPosition,
 };
+
+static const GameplayApi kMtttGameplayApi = {
+    .common = &kMtttGameplayApiCommon,
+    .regular = &kMtttGameplayApiRegular,
+};
+
+// UWAPI Setup
+
+static const UwapiRegular kMtttUwapiRegular = {
+    .GenerateMoves = &MtttGenerateMoves,
+    .DoMove = &MtttDoMove,
+    .IsLegalFormalPosition = &MtttIsLegalFormalPosition,
+    .FormalPositionToPosition = &MtttFormalPositionToPosition,
+    .PositionToFormalPosition = &MtttPositionToFormalPosition,
+    .PositionToAutoGuiPosition = &MtttPositionToAutoGuiPosition,
+    .MoveToFormalMove = &MtttMoveToFormalMove,
+    .MoveToAutoGuiMove = &MtttMoveToAutoGuiMove,
+    .GetInitialPosition = &MtttGetInitialPosition,
+    .GetRandomLegalPosition = NULL,
+};
+
+static const Uwapi kMtttUwapi = {.regular = &kMtttUwapiRegular};
+
+// -----------------------------------------------------------------------------
 
 const Game kMttt = {
     .name = "mttt",
     .formal_name = "Tic-Tac-Toe",
     .solver = &kRegularSolver,
-    .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .solver_api = (const void *)&kMtttSolverApi,
+    .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
+    .uwapi = (const Uwapi *)&kMtttUwapi,
 
     .Init = &MtttInit,
     .Finalize = &MtttFinalize,
@@ -110,6 +145,8 @@ const Game kMttt = {
     .GetCurrentVariant = &MtttGetCurrentVariant,
     .SetVariantOption = &MtttSetVariantOption,
 };
+
+// -----------------------------------------------------------------------------
 
 // Helper Types and Global Variables
 
@@ -162,12 +199,12 @@ static BlankOX WhoseTurn(BlankOX *board);
 static int MtttInit(void *aux) {
     (void)aux;  // Unused.
     InitSymmetryMatrix();
-    return 0;
+    return kNoError;
 }
 
 static int MtttFinalize(void) {
     // Nothing to deallocate.
-    return 0;
+    return kNoError;
 }
 
 static const GameVariant *MtttGetCurrentVariant(void) {
@@ -177,7 +214,7 @@ static const GameVariant *MtttGetCurrentVariant(void) {
 static int MtttSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return 0;  // Not implemented.
+    return kNotImplementedError;  // Not implemented.
 }
 
 static int64_t MtttGetNumPositions(void) {
@@ -296,31 +333,35 @@ static int MtttPositionToString(Position position, char *buffer) {
         "         ( 1 2 3 )           : %c %c %c\n"
         "LEGEND:  ( 4 5 6 )  TOTAL:   : %c %c %c\n"
         "         ( 7 8 9 )           : %c %c %c";
-    int actual_length =
-        snprintf(buffer, kGameplayApi.position_string_length_max + 1, kFormat,
-                 kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
-                 kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
-                 kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
-    if (actual_length >= kGameplayApi.position_string_length_max + 1) {
+    int actual_length = snprintf(
+        buffer, kMtttGameplayApiCommon.position_string_length_max + 1, kFormat,
+        kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
+        kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
+        kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
+    if (actual_length >=
+        kMtttGameplayApiCommon.position_string_length_max + 1) {
         fprintf(
             stderr,
             "MtttTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static int MtttMoveToString(Move move, char *buffer) {
-    int actual_length = snprintf(
-        buffer, kGameplayApi.move_string_length_max + 1, "%" PRId64, move + 1);
-    if (actual_length >= kGameplayApi.move_string_length_max + 1) {
+    int actual_length =
+        snprintf(buffer, kMtttGameplayApiCommon.move_string_length_max + 1,
+                 "%" PRId64, move + 1);
+    if (actual_length >= kMtttGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "MtttMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return 1;
+        return kMemoryOverflowError;
     }
-    return 0;
+
+    return kNoError;
 }
 
 static bool MtttIsValidMoveString(ReadOnlyString move_string) {
@@ -335,6 +376,90 @@ static bool MtttIsValidMoveString(ReadOnlyString move_string) {
 static Move MtttStringToMove(ReadOnlyString move_string) {
     assert(MtttIsValidMoveString(move_string));
     return (Move)atoi(move_string) - 1;
+}
+
+static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position) {
+    if (formal_position == NULL) return false;
+    for (int i = 0; i < 9; ++i) {
+        char curr = formal_position[i];
+        if (curr != '-' && curr != 'o' && curr != 'x') return false;
+    }
+    if (formal_position[9] != '\0') return false;
+
+    return true;
+}
+
+static Position MtttFormalPositionToPosition(ReadOnlyString formal_position) {
+    // Formal position string format: 9 characters '-', 'o', or 'x'.
+    BlankOX board[9] = {0};
+    for (int i = 0; i < 9; ++i) {
+        switch (formal_position[i]) {
+            case '-':
+                board[i] = kBlank;
+                break;
+            case 'o':
+                board[i] = kO;
+                break;
+            case 'x':
+                board[i] = kX;
+                break;
+            default:
+                fprintf(stderr,
+                        "MtttFormalPositionToPosition: illegal character "
+                        "encountered\n");
+                return kIllegalPosition;
+        }
+    }
+    return Hash(board);
+}
+
+static CString MtttPositionToFormalPosition(Position position) {
+    static const char kUwapiPieceMap[3] = {'-', 'o', 'x'};
+    BlankOX board[9] = {0};
+    Unhash(position, board);
+    CString ret;
+    if (!CStringInit(&ret, "---------")) return ret;
+
+    for (int i = 0; i < 9; ++i) {
+        ret.str[i] = kUwapiPieceMap[board[i]];
+    }
+    return ret;
+}
+
+static CString MtttPositionToAutoGuiPosition(Position position) {
+    static const char kUwapiPieceMap[3] = {'-', 'o', 'x'};
+    BlankOX board[9] = {0};
+    Unhash(position, board);
+    CString ret;
+    if (!CStringInit(&ret, "1_---------")) return ret;
+
+    BlankOX turn = WhoseTurn(board);
+    ret.str[0] = turn == kX ? '1' : '2';
+
+    for (int i = 0; i < 9; ++i) {
+        ret.str[i + 2] = kUwapiPieceMap[board[i]];
+    }
+    return ret;
+}
+
+static CString MtttMoveToFormalMove(Position position, Move move) {
+    (void)position;  // Unused.
+    CString ret;
+    if (!CStringInit(&ret, "0")) return ret;
+    ret.str[0] = '0' + move;
+    return ret;
+}
+
+static CString MtttMoveToAutoGuiMove(Position position, Move move) {
+    BlankOX board[9] = {0};
+    Unhash(position, board);
+    CString ret;
+    if (!CStringInit(&ret, "A_x_0")) return ret;
+
+    BlankOX turn = WhoseTurn(board);
+    ret.str[2] = turn == kX ? 'x' : 'o';
+    ret.str[4] = '0' + move;
+    return ret;
 }
 
 // Helper functions implementation

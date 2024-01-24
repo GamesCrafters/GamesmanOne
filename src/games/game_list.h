@@ -1,12 +1,11 @@
 /**
- * @file game_manager.c
+ * @file game_list.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the Game Manager Module.
- *
- * @version 1.0
- * @date 2023-08-19
+ * @brief List of all games.
+ * @version 1.0.0
+ * @date 2024-01-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,31 +24,15 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_manager.h"
+#ifndef GAMESMANONE_GAMES_GAME_LIST_H_
+#define GAMESMANONE_GAMES_GAME_LIST_H_
 
-#include <stddef.h>   // NULL
+#include "core/types/gamesman_types.h"
 
-// 1. To add a new game, include the game header here.
+/** 
+ * @brief A NULL-terminated array of pointers to all games implemented for
+ * GAMESMAN.
+ */
+extern const Game *const kAllGames[];
 
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-
-// 2. Then add the new game object to the end of the list.
-
-static const Game *const kAllGames[] = {
-    &kMtttier, &kMttt, NULL
-};
-
-const Game *const *GameManagerGetAllGames(void) {
-    return kAllGames;
-}
-
-int GameManagerNumGames(void) {
-    static int count = -1;
-    if (count >= 0) return count;
-    int i = 0;
-    while (kAllGames[i] != NULL) {
-        ++i;
-    }
-    return count = i;
-}
+#endif  // GAMESMANONE_GAMES_GAME_LIST_H_

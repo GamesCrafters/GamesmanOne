@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t to int64_t hash map.
- * @version 1.0
+ * @version 1.0.0
  * @date 2023-08-19
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -89,7 +89,7 @@ typedef struct Int64HashMapIterator {
  *
  * @param map Map to initialize.
  * @param max_load_factor Set maximum load factor of MAP to this value. The hash
- *  map will automatically expand in capacity if (double)size/capacity is
+ * map will automatically expand its capacity if (double)size/capacity is
  * greater than the max_load_factor. A small max_load_factor trades memory for
  * speed whereas a large max_load_factor trades speed for memory. This value is
  * restricted to be in the range [0.25, 0.75]. If the user passes a
@@ -99,15 +99,13 @@ typedef struct Int64HashMapIterator {
  */
 void Int64HashMapInit(Int64HashMap *map, double max_load_factor);
 
-/**
- * @brief Deallocates the given MAP.
- */
+/** @brief Deallocates the given MAP. */
 void Int64HashMapDestroy(Int64HashMap *map);
 
 /**
  * @brief Returns an iterator to the MAP entry containing the given KEY.
  * Returns an invalid iterator if KEY is not found in MAP. The user should
- * test if the iterator is valid using Int64HashMapIteratorIsValid().
+ * test if the iterator is valid using Int64HashMapIteratorIsValid.
  *
  * @param map Hash map to get the entry from.
  * @param key Key to the desired entry.
@@ -118,7 +116,7 @@ Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key);
 
 /**
  * @brief Sets the entry with KEY in MAP to the given VALUE and returns true.
- * Creates a new entry if KEY does not exist in MAP. If the operation fails for
+ * Creates a new entry if KEY does not exist in MAP. If the operation fails
  * for any reason, MAP remains unchanged and the function returns false.
  *
  * @param map Destination hash map.
@@ -131,7 +129,7 @@ bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value);
 
 /**
  * @brief Returns true if the given MAP contains an entry with the given KEY,
- * false otherwise.
+ * or false otherwise.
  */
 bool Int64HashMapContains(Int64HashMap *map, int64_t key);
 
@@ -139,8 +137,8 @@ bool Int64HashMapContains(Int64HashMap *map, int64_t key);
  * @brief Returns an invalid iterator to the entry before the first entry of
  * MAP.
  *
- * @note This function is designed to be used in combination with
- * Int64HashMapIteratorNext() to iterate through all entries in the hash map.
+ * @note This function is designed to be used in conjunction with
+ * Int64HashMapIteratorNext to iterate through all the entries in the hash map.
  *
  * @example
  * Int64HashMapIterator it = Int64HashMapBegin(map);
@@ -155,41 +153,40 @@ Int64HashMapIterator Int64HashMapBegin(Int64HashMap *map);
 
 /**
  * @brief Returns the key of the entry IT is pointing to. The user should
- * validate the iterator using Int64HashMapIteratorIsValid() before calling this
+ * validate the iterator using Int64HashMapIteratorIsValid before calling this
  * function. Calling this function on an invalid iterator results in undefined
  * behavior.
  *
  * @param it Int64HashMapIterator.
- * @return int64_t key of the entry.
+ * @return Key to the entry.
  */
 int64_t Int64HashMapIteratorKey(const Int64HashMapIterator *it);
 
 /**
  * @brief Returns the value of the entry IT is pointing to. The user should
- * validate the iterator using Int64HashMapIteratorIsValid() before calling this
+ * validate the iterator using Int64HashMapIteratorIsValid before calling this
  * function. Calling this function on an invalid iterator results in undefined
  * behavior.
  *
  * @param it Int64HashMapIterator.
- * @return int64_t value of the entry.
+ * @return Value of the entry.
  */
 int64_t Int64HashMapIteratorValue(const Int64HashMapIterator *it);
 
-/**
- * @brief Returns true if the given iterator is valid, false otherwise.
- */
+/** @brief Returns true if the given IT-erator is valid, or false otherwise. */
 bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it);
 
 /**
- * @brief Moves iterator IT to the next valid entry inside the it->map, sets KEY
- * and VALUE to the key and value of that next entry, and returns true. Sets IT
- * to an invalid state and returns false if no valid next entry exists.
+ * @brief Moves iterator IT to the next valid entry inside the hash map IT was
+ * initialized with, sets KEY and VALUE to the key and value of that next entry,
+ * and returns true. Sets IT to an invalid state and returns false if no valid
+ * next entry exists.
  *
- * @note This  function is designed to be used in combination with
- * Int64HashMapBegin() to iterate through all entries in the hash map. Calling
+ * @note This function is designed to be used in conjunction with
+ * Int64HashMapBegin to iterate through all entries in the hash map. Calling
  * this function on an uninitialized iterator results in undefined behavior.
  *
- * @param iterator Already initialized iterator.
+ * @param iterator Initialized iterator.
  * @param key Pointer to enough space to hold an int64_t object, or NULL if the
  * key to the next entry is not needed.
  * @param value Pointer to enough space to hold an int64_t object, or NULL if

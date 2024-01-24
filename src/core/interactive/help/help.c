@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>  // atoi
 
-#include "core/gamesman_types.h"
 #include "core/interactive/automenu.h"
+#include "core/types/gamesman_types.h"
 
 static ConstantReadOnlyString kHelpWhatIsGameValue =
     "A game VALUE is one of either WIN, LOSE, or TIE.  That is, if a game \n"
@@ -113,5 +113,6 @@ void InteractiveHelp(ReadOnlyString key) {
         &PrintGamesmanHelp,
         &PrintGamesmanHelp,
     };
-    AutoMenu(kTitle, sizeof(items) / sizeof(items[0]), items, keys, hooks);
+    int num_items = sizeof(items) / sizeof(items[0]);
+    AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
 }

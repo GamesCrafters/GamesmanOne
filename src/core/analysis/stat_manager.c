@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.0
- * @date 2023-10-18
+ * @version 1.1.0
+ * @date 2023-10-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,25 +38,29 @@
 
 #include "core/analysis/analysis.h"
 #include "core/constants.h"
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "libs/mgz/mgz.h"
 
 static char *sandbox_path;
 
-static char *SetupStatPath(ReadOnlyString game_name, int variant);
+static char *SetupStatPath(ReadOnlyString game_name, int variant,
+                           ReadOnlyString data_path);
 
 static char *GetPathToTierAnalysis(Tier tier);
 static char *GetPathToTierDiscoveryMap(Tier tier);
 static char *GetPathTo(Tier tier, ReadOnlyString extension);
 
-int StatManagerInit(ReadOnlyString game_name, int variant) {
+// -----------------------------------------------------------------------------
+
+int StatManagerInit(ReadOnlyString game_name, int variant,
+                    ReadOnlyString data_path) {
     if (sandbox_path != NULL) StatManagerFinalize();
 
-    sandbox_path = SetupStatPath(game_name, variant);
-    if (sandbox_path == NULL) return 1;
+    sandbox_path = SetupStatPath(game_name, variant, data_path);
+    if (sandbox_path == NULL) return kMallocFailureError;
 
-    return 0;
+    return kNoError;
 }
 
 void StatManagerFinalize(void) {
@@ -86,15 +90,15 @@ int StatManagerGetStatus(Tier tier) {
 int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
     if (sandbox_path == NULL) {
         fprintf(stderr, "StatManagerSaveAnalysis: StatManager uninitialized\n");
-        return -1;
+        return kUseBeforeInitializationError;
     }
 
     char *filename = GetPathToTierAnalysis(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
     mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;  // This sets permissions to 0777
     int stat_fd = open(filename, O_CREAT | O_WRONLY, mode);
     free(filename);
-    if (stat_fd < 0) return 2;
+    if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisWrite(analysis, stat_fd);
     if (error != 0) return error;
@@ -106,15 +110,15 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
 int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
     if (sandbox_path == NULL) {
         fprintf(stderr, "StatManagerLoadAnalysis: StatManager uninitialized\n");
-        return -1;
+        return kUseBeforeInitializationError;
     }
 
     char *filename = GetPathToTierAnalysis(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
 
     int stat_fd = GuardedOpen(filename, O_RDONLY);
     free(filename);
-    if (stat_fd < 0) return 2;
+    if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisRead(dest, stat_fd);
     if (error != 0) return error;
@@ -176,14 +180,14 @@ _bailout:
 int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
     mgz_res_t res =
         MgzParallelDeflate(stream->stream, stream->num_bytes, 9, 0, false);
-    if (res.out == NULL) return 1;
+    if (res.out == NULL) return kMallocFailureError;
 
     char *filename = GetPathToTierDiscoveryMap(tier);
-    if (filename == NULL) return 1;
+    if (filename == NULL) return kMallocFailureError;
 
     FILE *file = GuardedFopen(filename, "wb");
     free(filename);
-    if (file == NULL) return -1;
+    if (file == NULL) return kFileSystemError;
 
     int error = GuardedFwrite(&stream->size, sizeof(stream->size), 1, file);
     if (error != 0) return error;
@@ -196,16 +200,19 @@ int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
     error = GuardedFclose(file);
     if (error != 0) return error;
 
-    return 0;
+    return kNoError;
 }
 
-static char *SetupStatPath(ReadOnlyString game_name, int variant) {
-    // path = "data/<game_name>/<variant>/analysis/"
-    static ConstantReadOnlyString kDataPath = "data";
+// -----------------------------------------------------------------------------
+
+static char *SetupStatPath(ReadOnlyString game_name, int variant,
+                           ReadOnlyString data_path) {
+    // path = "<data_path>/<game_name>/<variant>/analysis/"
+    if (data_path == NULL) data_path = "data";
     static ConstantReadOnlyString kAnalysisDirName = "analysis";
     char *path = NULL;
 
-    int path_length = strlen(kDataPath) + 1;  // +1 for '/'.
+    int path_length = strlen(data_path) + 1;  // +1 for '/'.
     path_length += strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
     path_length += strlen(kAnalysisDirName) + 1;
@@ -214,7 +221,7 @@ static char *SetupStatPath(ReadOnlyString game_name, int variant) {
         fprintf(stderr, "SetupStatPath: failed to calloc path.\n");
         return NULL;
     }
-    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", kDataPath,
+    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
                                  game_name, variant, kAnalysisDirName);
     if (actual_length >= path_length) {
         fprintf(stderr,

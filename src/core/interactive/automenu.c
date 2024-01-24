@@ -28,8 +28,11 @@ static bool StringEqual(ReadOnlyString s1, ReadOnlyString s2, size_t n) {
 
 void AutoMenu(ReadOnlyString title, int num_items,
               ConstantReadOnlyString *items, ConstantReadOnlyString *keys,
-              const HookFunctionPointer *hooks) {
+              const HookFunctionPointer *hooks, void (*Update)(void)) {
     while (1) {
+        // Update menu contents if necessary.
+        if (Update != NULL) Update();
+        
         // Print menu.
         printf("\n\t----- %s -----\n\n", title);
         for (int i = 0; i < num_items; ++i) {

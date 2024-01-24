@@ -13,8 +13,8 @@
  * loaded at the same time. This module handles the loading and deallocation
  * of THE solver used by the current GAMESMAN instance.
  *
- * @version 1.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-01-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,21 +38,24 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
+#include "core/game_manager.h"
 
 static const Solver *current_solver;
 
-int SolverManagerInitSolver(const Game *game) {
-    if (game == NULL) return -1;
+int SolverManagerInit(ReadOnlyString data_path) {
+    const Game *game = GameManagerGetCurrentGame();
+    if (game == NULL) return kUseBeforeInitializationError;
 
     const GameVariant *variant = game->GetCurrentVariant();
-    int variant_index = GameVariantToIndex(variant);
+    int variant_id = GameVariantToIndex(variant);
 
     if (current_solver != NULL) {
         current_solver->Finalize();
     }
     current_solver = game->solver;
-    return current_solver->Init(game->name, variant_index, game->solver_api);
+    return current_solver->Init(game->name, variant_id, game->solver_api,
+                                data_path);
 }
 
 int SolverManagerGetSolverStatus(void) {
@@ -63,3 +66,11 @@ int SolverManagerGetSolverStatus(void) {
 int SolverManagerSolve(void *aux) { return current_solver->Solve(aux); }
 
 int SolverManagerAnalyze(void *aux) { return current_solver->Analyze(aux); }
+
+Value SolverManagerGetValue(TierPosition tier_position) {
+    return current_solver->GetValue(tier_position);
+}
+
+int SolverManagerGetRemoteness(TierPosition tier_position) {
+    return current_solver->GetRemoteness(tier_position);
+}

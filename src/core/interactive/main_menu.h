@@ -1,7 +1,7 @@
 #ifndef GAMESMANONE_CORE_INTERACTIVE_MAIN_MENU_H_
 #define GAMESMANONE_CORE_INTERACTIVE_MAIN_MENU_H_
 
-#include "core/gamesman_types.h"
+#include "core/types/gamesman_types.h"
 
 void InteractiveMainMenu(ReadOnlyString key);
 
