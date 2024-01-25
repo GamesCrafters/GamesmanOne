@@ -30,7 +30,7 @@
 #include "core/gamesman_interactive.h"
 
 int main(int argc, char **argv) {
-#ifdef MPI_VERSION
+#ifndef USE_MPI
     printf("MPI enabled\n");
 #else
     printf("MPI disabled\n");
