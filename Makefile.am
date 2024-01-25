@@ -6,10 +6,10 @@ RES_DIR = $(srcdir)/res
 AM_CFLAGS += -I$(RES_DIR)/include
 AM_LDFLAGS = -L$(RES_DIR)/lib
 AM_LDFLAGS += -L$(RES_DIR)/lib64
+AM_LDFLAGS += -Wl,-rpath,./res/lib -Wl,-rpath,./res/lib64
 
 # Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
-LD_FLAGS = -Wl,-rpath,./res/lib -Wl,-rpath,./res/lib64
 
 # Build GAMESMAN as a non-installable program.
 noinst_PROGRAMS = bin/gamesman
