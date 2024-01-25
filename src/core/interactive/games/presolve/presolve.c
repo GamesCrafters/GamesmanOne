@@ -13,6 +13,7 @@
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
+#include "core/savio/scriptgen.h"
 #include "core/solvers/solver_manager.h"
 #include "core/types/gamesman_types.h"
 
@@ -21,7 +22,11 @@ static char title[sizeof(title_format) + kGameFormalNameLengthMax +
                   kUint32Base10StringLengthMax];
 
 static int SetCurrentGame(ReadOnlyString key);
+#ifndef USE_MPI
 static void SolveAndStart(ReadOnlyString key);
+#else
+static void GenerateSlurmScript(ReadOnlyString key);
+#endif
 static void UpdateTitle(void);
 
 // -----------------------------------------------------------------------------
@@ -36,14 +41,22 @@ void InteractivePresolve(ReadOnlyString key) {
     }
 
     static ConstantReadOnlyString items[] = {
+#ifndef USE_MPI
         "Solve and start",
+#else
+        "Generate SLURM job script for Savio",
+#endif
         "Start without solving",
         "Game options",
         "Solver options",
     };
     static ConstantReadOnlyString keys[] = {"s", "w", "g", "o"};
     static const HookFunctionPointer hooks[] = {
+#ifndef USE_MPI
         &SolveAndStart,
+#else
+        &GenerateSlurmScript,
+#endif
         &InteractivePostSolve,
         &InteractiveGameOptions,
         &InteractiveSolverOptions,
@@ -69,11 +82,18 @@ static int SetCurrentGame(ReadOnlyString key) {
     return SolverManagerInit(NULL);
 }
 
+#ifndef USE_MPI
 static void SolveAndStart(ReadOnlyString key) {
     SolverManagerSolve(NULL);  // Auxiliary variable currently unused.
     InteractiveMatchSetSolved(true);
     InteractivePostSolve(key);
 }
+#else
+static void GenerateSlurmScript(ReadOnlyString key) {
+    (void)key;  // Unused.
+    int error = SavioScriptGeneratorGenerate();
+}
+#endif
 
 static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();

@@ -30,11 +30,6 @@
 #include "core/gamesman_interactive.h"
 
 int main(int argc, char **argv) {
-#ifdef USE_MPI
-    printf("MPI enabled\n");
-#else
-    printf("MPI disabled\n");
-#endif
     if (argc == 1) return GamesmanInteractiveMain();
 
     return GamesmanHeadlessMain(argc, argv);

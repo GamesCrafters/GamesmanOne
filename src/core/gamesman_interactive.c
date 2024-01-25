@@ -71,9 +71,14 @@ void PrintOpeningCredits(void) {
 }
 
 int GamesmanInteractiveMain(void) {
+#ifndef USE_MPI
     PrintOpeningCredits();
     printf("--- press <return> to continue ---");
     getchar();
+#else
+    // TODO: print help here.
+    printf("-------- GAMESMAN MPI ---------\n");
+#endif
     InteractiveMainMenu(NULL);
     
     return kNoError;
