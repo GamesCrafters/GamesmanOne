@@ -12,8 +12,9 @@ AM_CFLAGS += ${OPENMP_CFLAGS}
 noinst_PROGRAMS = bin/gamesman
 
 # Add linker directives.
-bin_gamesman_LDFLAGS = -Wl,-rpath,$(RES_DIR)/lib -Wl,-rpath,$(RES_DIR)/lib64
-bin_gamesman_LDADD = -L$(RES_DIR)/lib -L$(RES_DIR)/lib64 -ljson-c
+bin_gamesman_LDFLAGS = -L$(RES_DIR)/lib -L$(RES_DIR)/lib64
+bin_gamesman_LDFLAGS += -Wl,-rpath,$(RES_DIR)/lib -Wl,-rpath,$(RES_DIR)/lib64
+bin_gamesman_LDADD = -ljson-c
 
 # Source file containing the main() function. 
 bin_gamesman_SOURCES = src/core/main.c
