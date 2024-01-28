@@ -43,7 +43,7 @@ void InteractiveGameOptions(ReadOnlyString key) {
     char **keys = AllocateKeys(num_items);
     HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        snprintf(keys[i], kKeyLengthMax, "%d", i);
+        sprintf(keys[i], "%d", i);
         hooks[i] = &InteractiveGameOptionChoices;
     }
 

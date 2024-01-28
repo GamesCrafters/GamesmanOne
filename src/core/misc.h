@@ -65,6 +65,8 @@ void *SafeCalloc(size_t n, size_t size);
  */
 char *SafeStrncpy(char *dest, const char *src, size_t n);
 
+char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
+
 /**
  * @brief Adds the given byte OFFSET to the given generic pointer P. Return
  * value is equivalent to (void *)((uint8_t *)P + offset)).

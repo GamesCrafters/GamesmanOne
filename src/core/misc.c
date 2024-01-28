@@ -33,9 +33,9 @@
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
-#include <stdio.h>      // fprintf, stderr, FILE
+#include <stdio.h>      // fgets, fprintf, stderr, FILE
 #include <stdlib.h>     // exit, malloc, calloc, free
-#include <string.h>     // strlen, strncpy
+#include <string.h>     // strcspn, strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
@@ -89,13 +89,31 @@ char *SafeStrncpy(char *dest, const char *src, size_t n) {
     return ret;
 }
 
+char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
+    printf("%s => ", prompt);
+    if (fgets(buf, length_max + 2, stdin) == NULL) return NULL;
+
+    // Clear the stdin buffer if the input was too long
+    if (strchr(buf, '\n') == NULL) {
+        int ch = getchar();
+        while (ch != '\n' && ch != EOF) {
+            ch = getchar();
+        }
+    }
+
+    // Remove the trailing newline character, if it exists.
+    // Algorithm by Tim Čas,
+    // https://stackoverflow.com/a/28462221.
+    buf[strcspn(buf, "\r\n")] = '\0';
+
+    return buf;
+}
+
 void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
 
-double ClockToSeconds(clock_t n) {
-    return (double)n / CLOCKS_PER_SEC;
-}
+double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
 
 char *GetTimeStampString(void) {
     time_t rawtime = time(NULL);

@@ -5,7 +5,7 @@
 
 #include "core/types/gamesman_types.h"
 
-extern const size_t kKeyLengthMax;
+enum InteractiveAutoMenuConstants { kKeyLengthMax = 3 };
 
 typedef void (*HookFunctionPointer)(ReadOnlyString key);
 

@@ -54,7 +54,7 @@ void InteractiveGames(ReadOnlyString key) {
         SafeStrncpy(items[i], all_games[i]->formal_name,
                     kGameFormalNameLengthMax + 1);
         items[i][kGameFormalNameLengthMax] = '\0';
-        snprintf(keys[i], kKeyLengthMax, "%d", i);
+        sprintf(keys[i], "%d", i);
         hooks[i] = &InteractivePresolve;
     }
     AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,

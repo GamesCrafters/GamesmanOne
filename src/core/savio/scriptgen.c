@@ -5,109 +5,60 @@
 #include <stdio.h>    // FILE
 
 #include "core/misc.h"
+#include "core/savio/savio.h"
 #include "core/types/gamesman_types.h"
 
-typedef struct SavioPartition {
-    ConstantReadOnlyString name;
-    int nodes;
-    int num_cpu;
-    int mem_gb;
-    bool per_node;
-} SavioPartition;
+static int PrintSbatch(FILE *file);
+static int PrintStringOption(FILE *file, ReadOnlyString option_name,
+                             ReadOnlyString value);
+static int PrintIntegerOption(FILE *file, ReadOnlyString option_name,
+                              int value);
+static int PrintJobName(FILE *file, ReadOnlyString job_name);
+static int PrintAccount(FILE *file, ReadOnlyString account);
+static int PrintPartition(FILE *file, ReadOnlyString partition);
+static int PrintNodes(FILE *file, int num_nodes);
+static int PrintNtasksPerNode(FILE *file, int num_tasks_per_node);
+static int PrintCpusPerTask(FILE *file, int cpus_per_task);
+static int PrintTime(FILE *file, ReadOnlyString time_limit);
+static int PrintExclusive(FILE *file);
+static int Print512GbSavio4Request(FILE *file);
+static int PrintModuleLoad(FILE *file, bool use_savio4);
+static int PrintExportOmpNumThreads(FILE *file);
+static int PrintSolveCommand(FILE *file, ReadOnlyString game_name,
+                             int variant_id);
 
-enum SavioPartitions {
-    kSavio3_16c32t,
-    kSavio3_20c40t,
-    kSavio3_htc,
-    kSavio4_htc_256gb,
-    kSavio4_htc_512gb,
-    kNumSavioPartitions,
-};
+// -----------------------------------------------------------------------------
 
-static const SavioPartition kSavioPartitions[kNumSavioPartitions] = {
-    {.name = "savio3",
-     .nodes = 112,
-     .num_cpu = 32,
-     .mem_gb = 96,
-     .per_node = true},
-
-    {.name = "savio3",
-     .nodes = 80,
-     .num_cpu = 40,
-     .mem_gb = 96,
-     .per_node = true},
-
-    {.name = "savio3_htc",
-     .nodes = 24,
-     .num_cpu = 40,
-     .mem_gb = 384,
-     .per_node = false},
-
-    {.name = "savio4_htc",
-     .nodes = 24,
-     .num_cpu = 56,
-     .mem_gb = 512,
-     .per_node = false},
-
-    {.name = "savio4_htc",
-     .nodes = 84,
-     .num_cpu = 56,
-     .mem_gb = 256,
-     .per_node = false},
-};
-
-ConstantReadOnlyString kDefaultAccount = "fc_gamecrafters";
-
-const int kDefaultPartition = kSavio4_htc_256gb;
-const int kMaxRegularNumNodes = 1;
-const int kMaxTierNumNodes = 24;
-const int kDefaultTasksPerNode = 1;
-ConstantReadOnlyString kDefaultTimeLimit = "72:00:00";
-
-typedef struct SavioSolverScript {
-    char game_name[kGameNameLengthMax + 1];
-    int game_variant_id;
-    char job_name[kJobNameLengthMax + 1];
-    char account[kAccountNameLengthMax + 1];
-    int partition;
-    int num_nodes;
-    int ntasks_per_node;
-    char time_limit[kTimeLimitLengthMax + 1];
-} SavioSolverScript;
-
-int SavioScriptGeneratorGenerate(void) {
-    /* Parameters */
-    ReadOnlyString game_name;
-}
-
-static int SavioScriptGeneratorWrite(const SavioSolverScript *script) {
+int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     static const char extension[] = ".sh";
-    char file_name[kJobNameLengthMax + sizeof(extension) + 1];
-    sprintf(file_name, "%s%s", script->job_name, extension);
+    char file_name[kSavioJobNameLengthMax + sizeof(extension) + 1];
+    sprintf(file_name, "%s%s", settings->job_name, extension);
     FILE *file = GuardedFopen(file_name, "w");
     if (file == NULL) return kFileSystemError;
 
-    const SavioPartition *partition = &kSavioPartitions[script->partition];
-    PrintJobName(file, script->job_name);
-    PrintAccount(file, script->account);
+    const SavioPartition *partition = &kSavioPartitions[settings->partition_id];
+    PrintJobName(file, settings->job_name);
+    PrintAccount(file, settings->account);
     PrintPartition(file, partition->name);
-    PrintNodes(file, script->num_nodes);
-    PrintNtasksPerNode(file, script->ntasks_per_node);
-    PrintCpusPerTask(file, partition->num_cpu / script->ntasks_per_node);
-    PrintTime(file, script->time_limit);
-    if (!partition->per_node) PrintExclusive(file);
-    if (script->partition == kSavio4_htc_512gb) Print512GbSavio4Request(file);
-    bool use_savio4 = script->partition == kSavio4_htc_256gb ||
-                      script->partition == kSavio4_htc_512gb;
+    PrintNodes(file, settings->num_nodes);
+    PrintNtasksPerNode(file, settings->ntasks_per_node);
+    PrintCpusPerTask(file, partition->num_cpu / settings->ntasks_per_node);
+    PrintTime(file, settings->time_limit);
+    if (!partition->per_node_allocation) PrintExclusive(file);
+    if (settings->partition_id == kSavio4_htc_512gb) Print512GbSavio4Request(file);
+    bool use_savio4 = settings->partition_id == kSavio4_htc_256gb ||
+                      settings->partition_id == kSavio4_htc_512gb;
     PrintModuleLoad(file, use_savio4);
     PrintExportOmpNumThreads(file);
-    PrintSolveCommand(file, script->game_name, script->game_variant_id);
+    PrintSolveCommand(file, settings->game_name, settings->game_variant_id);
 
     int error = GuardedFclose(file);
     if (error) return kFileSystemError;
 
     return kNoError;
 }
+
+// -----------------------------------------------------------------------------
 
 static int PrintSbatch(FILE *file) { return fprintf(file, "#SBATCH "); }
 
@@ -171,13 +122,18 @@ static int PrintExclusive(FILE *file) {
 }
 
 static int Print512GbSavio4Request(FILE *file) {
-    return fprintf(file, "#SBATCH -C savio4_m512\n");
+    return fprintf(file,
+                   "\n# Explicitly request a 512 GB memory savio4_htc node\n"
+                   "#SBATCH -C savio4_m512\n");
 }
 
 static int PrintModuleLoad(FILE *file, bool use_savio4) {
     if (use_savio4) {
-        return fprintf(file,
-                       "module load gcc/11.3.0 ucx/1.14.0 openmpi/5.0.0-ucx\n");
+        return fprintf(
+            file,
+            "\n# 2024-01-26: Current savio4_htc configuration requires "
+            "using the following non-default modules\n"
+            "module load gcc/11.3.0 ucx/1.14.0 openmpi/5.0.0-ucx\n");
     }
     return fprintf(file, "module load gcc openmpi\n");
 }

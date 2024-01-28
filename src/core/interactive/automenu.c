@@ -3,23 +3,17 @@
 #include <ctype.h>    // tolower
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fgets,
+#include <stdio.h>    // printf, fgets, getchar
 #include <stdlib.h>   // exit, EXIT_SUCCESS
-#include <string.h>   // strcspn, strncmp
+#include <string.h>   // strncmp, strchr
 
 #include "core/misc.h"  // SafeMalloc, GamesmanExit
-
-const size_t kKeyLengthMax = 3;
 
 static void FormatInput(char *input) {
     // Convert all characters to lowercase.
     for (int i = 0; input[i] != '\0'; ++i) {
         input[i] = tolower(input[i]);
     }
-    // Remove the trailing newline character, if it exists.
-    // Algorithm by Tim Čas,
-    // https://stackoverflow.com/a/28462221.
-    input[strcspn(input, "\r\n")] = '\0';
 }
 
 static bool StringEqual(ReadOnlyString s1, ReadOnlyString s2, size_t n) {
@@ -32,22 +26,20 @@ void AutoMenu(ReadOnlyString title, int num_items,
     while (1) {
         // Update menu contents if necessary.
         if (Update != NULL) Update();
-        
+
         // Print menu.
         printf("\n\t----- %s -----\n\n", title);
         for (int i = 0; i < num_items; ++i) {
             printf("\t%s) %s\n", keys[i], items[i]);
         }
-        printf("\n\t(b) Go back\n");
-        printf("\t(q) Quit\n\n");
+        printf("\n\tb) Go back\n");
+        printf("\tq) Quit\n\n");
 
         // Prompt for input.
         bool accepted = false;
         do {
-            printf("=>");
-            char *input =
-                (char *)SafeMalloc((kKeyLengthMax + 1) * sizeof(char));
-            if (fgets(input, kKeyLengthMax + 2, stdin) == NULL) return;
+            static char input[kKeyLengthMax + 2];
+            PromptForInput("", input, kKeyLengthMax);
             FormatInput(input);
             if (StringEqual(input, "b", kKeyLengthMax)) return;
             if (StringEqual(input, "q", kKeyLengthMax)) GamesmanExit();

@@ -1,16 +1,9 @@
 #ifndef GAMESMANONE_CORE_SAVIO_SCRIPTGEN_H_
 #define GAMESMANONE_CORE_SAVIO_SCRIPTGEN_H_
 
+#include "core/savio/savio.h"
 #include "core/types/gamesman_types.h"
 
-enum SavioScriptConstants {
-    kJobNameLengthMax = 31,
-    kAccountNameLengthMax = 31,
-
-    // Time limit must be of the format "hh:mm:ss".
-    kTimeLimitLengthMax = 8,  
-};
-
-int SavioScriptGeneratorGenerate(void);
+int SavioScriptGeneratorWrite(const SavioJobSettings *settings);
 
 #endif  // GAMESMANONE_CORE_SAVIO_SCRIPTGEN_H_

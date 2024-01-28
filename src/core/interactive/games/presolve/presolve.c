@@ -12,6 +12,7 @@
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
+#include "core/interactive/games/presolve/savio/partition_select.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
 #include "core/savio/scriptgen.h"
 #include "core/solvers/solver_manager.h"
@@ -24,8 +25,6 @@ static char title[sizeof(title_format) + kGameFormalNameLengthMax +
 static int SetCurrentGame(ReadOnlyString key);
 #ifndef USE_MPI
 static void SolveAndStart(ReadOnlyString key);
-#else
-static void GenerateSlurmScript(ReadOnlyString key);
 #endif
 static void UpdateTitle(void);
 
@@ -55,7 +54,7 @@ void InteractivePresolve(ReadOnlyString key) {
 #ifndef USE_MPI
         &SolveAndStart,
 #else
-        &GenerateSlurmScript,
+        &InteractiveSavioPartitionSelect,
 #endif
         &InteractivePostSolve,
         &InteractiveGameOptions,
@@ -87,11 +86,6 @@ static void SolveAndStart(ReadOnlyString key) {
     SolverManagerSolve(NULL);  // Auxiliary variable currently unused.
     InteractiveMatchSetSolved(true);
     InteractivePostSolve(key);
-}
-#else
-static void GenerateSlurmScript(ReadOnlyString key) {
-    (void)key;  // Unused.
-    int error = SavioScriptGeneratorGenerate();
 }
 #endif
 

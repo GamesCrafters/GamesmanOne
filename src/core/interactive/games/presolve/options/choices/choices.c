@@ -1,7 +1,7 @@
 #include "core/interactive/games/presolve/options/choices/choices.h"
 
 #include <stddef.h>  // NULL
-#include <stdio.h>   // sprintf, snprintf, fprintf, stderr
+#include <stdio.h>   // sprintf, fprintf, stderr
 #include <stdlib.h>  // atoi
 
 #include "core/types/gamesman_types.h"
@@ -35,7 +35,7 @@ void InteractiveGameOptionChoices(ReadOnlyString key) {
 
     for (int i = 0; i < num_items; ++i) {
         items[i] = variant->options[option_index].choices[i];
-        snprintf(keys[i], kKeyLengthMax, "%d", i);
+        sprintf(keys[i], "%d", i);
         hooks[i] = &MakeSelection;
     }
     AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
