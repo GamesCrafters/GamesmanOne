@@ -10,8 +10,10 @@
 #include "core/savio/savio.h"
 #include "core/types/gamesman_types.h"
 
-static char items[kNumSavioPartitions][kSavioPartitionNameLengthMax + 1];
+static char items[kNumSavioPartitions][kSavioPartitionDescLengthMax + 1];
+static ReadOnlyString items_p[kNumSavioPartitions];
 static char keys[kNumSavioPartitions][kKeyLengthMax + 1];
+static ReadOnlyString keys_p[kNumSavioPartitions];
 static HookFunctionPointer hooks[kNumSavioPartitions];
 
 static void InitItems(void);
@@ -25,7 +27,7 @@ int InteractiveSavioPartitionSelect(ReadOnlyString key) {
     InitKeys();
     InitHooks();
 
-    return AutoMenu(title, kNumSavioPartitions, items, keys, hooks, NULL);
+    return AutoMenu(title, kNumSavioPartitions, items_p, keys_p, hooks, NULL);
 }
 
 static void InitItems(void) {
@@ -33,7 +35,8 @@ static void InitItems(void) {
     if (initialized) return;
 
     for (int i = 0; i < kNumSavioPartitions; ++i) {
-        strcpy(items[i], kSavioPartitions[i].name);
+        strcpy(items[i], kSavioPartitions[i].desc);
+        items_p[i] = (ReadOnlyString)&items[i];
     }
     initialized = true;
 }
@@ -44,6 +47,7 @@ static void InitKeys(void) {
 
     for (int i = 0; i < kNumSavioPartitions; ++i) {
         sprintf(keys[i], "%d", i);
+        keys_p[i] = (ReadOnlyString)&keys[i];
     }
     initialized = true;
 }

@@ -90,8 +90,8 @@ char *SafeStrncpy(char *dest, const char *src, size_t n) {
 }
 
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
-    printf("%s => ", prompt);
-    if (fgets(buf, length_max + 2, stdin) == NULL) return NULL;
+    printf("%s\n=> ", prompt);
+    if (fgets(buf, length_max + 1, stdin) == NULL) return NULL;
 
     // Clear the stdin buffer if the input was too long
     if (strchr(buf, '\n') == NULL) {

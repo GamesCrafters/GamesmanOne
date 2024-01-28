@@ -2,7 +2,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // NULL
-#include <stdio.h>    // FILE
+#include <stdio.h>    // FILE, printf
 
 #include "core/misc.h"
 #include "core/savio/savio.h"
@@ -45,7 +45,8 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     PrintCpusPerTask(file, partition->num_cpu / settings->ntasks_per_node);
     PrintTime(file, settings->time_limit);
     if (!partition->per_node_allocation) PrintExclusive(file);
-    if (settings->partition_id == kSavio4_htc_512gb) Print512GbSavio4Request(file);
+    if (settings->partition_id == kSavio4_htc_512gb)
+        Print512GbSavio4Request(file);
     bool use_savio4 = settings->partition_id == kSavio4_htc_256gb ||
                       settings->partition_id == kSavio4_htc_512gb;
     PrintModuleLoad(file, use_savio4);
@@ -54,6 +55,10 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
 
     int error = GuardedFclose(file);
     if (error) return kFileSystemError;
+
+    printf(
+        "Successfully written to %s\nRun \"sbatch %s\" to submit the job.\n\n",
+        file_name, file_name);
 
     return kNoError;
 }
@@ -147,29 +152,3 @@ static int PrintSolveCommand(FILE *file, ReadOnlyString game_name,
     return fprintf(file, "mpirun bin/gamesman mpisolve %s %d\n", game_name,
                    variant_id);
 }
-
-/*
-#!/bin/bash
-#SBATCH --job-name=<job_name>
-#SBATCH --account=<account_name>
-#SBATCH --partition=<partition_name>
-#SBATCH --nodes=<num_nodes>
-#SBATCH --ntasks-per-node=<ntasks_per_node>
-#SBATCH --cpus-per-task=<num_cpu / ntasks_per_node>
-#SBATCH --time=<time_limit>
-
-# To request for all memory on a per-core node
-#SBATCH --exclusive
-
-# To request 512GB savio4_htc
-#SBATCH -C savio4_m512
-
-# If using savio4_htc, load ucx for optimal MPI performance
-module load gcc/11.3.0 ucx/1.14.0 openmpi/5.0.0-ucx
-
-# On other nodes, use the following
-# module load gcc openmpi
-
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-mpirun bin/gamesman mpisolve <game_name> <variant_id>
-*/

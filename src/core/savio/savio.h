@@ -5,6 +5,7 @@
 
 enum SavioSettingsConstants {
     kSavioPartitionNameLengthMax = 31,
+    kSavioPartitionDescLengthMax = 31,
     kSavioJobNameLengthMax = 31,
     kSavioAccountNameLengthMax = 31,
 
@@ -14,6 +15,7 @@ enum SavioSettingsConstants {
 
 typedef struct SavioPartition {
     ConstantReadOnlyString name;
+    ConstantReadOnlyString desc;
     int num_nodes;
     int num_cpu;
     int mem_gb;
@@ -49,5 +51,6 @@ extern const int kSavioDefaultNumTasksPerNode;
 extern ConstantReadOnlyString kSavioDefaultTimeLimit;
 
 int SavioGetNumCpuPerTask(int num_cpu, int num_tasks_per_node);
+int SavioGetNumTasksPerNode(int num_cpu, int cpus_per_task);
 
 #endif  // GAMESMANONE_CORE_SAVIO_SAVIO_H_

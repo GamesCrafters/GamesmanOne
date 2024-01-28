@@ -19,12 +19,16 @@ static int ToggleFirstPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(false);
     PrintPlayerConfiguration();
+
+    return 0;
 }
 
 static int ToggleSecondPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(true);
     PrintPlayerConfiguration();
+
+    return 0;
 }
 
 int InteractivePostSolveConfigure(ReadOnlyString key) {

@@ -18,7 +18,13 @@
 #include "core/solvers/solver_manager.h"
 #include "core/types/gamesman_types.h"
 
+#ifndef USE_MPI
 static const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";
+#else   // USE_MPI is defined
+static const char title_format[] =
+    "Main (MPI Pre-Solved) Menu for %s (variant %d)";
+#endif  // USE_MPI
+
 static char title[sizeof(title_format) + kGameFormalNameLengthMax +
                   kUint32Base10StringLengthMax];
 
@@ -61,7 +67,7 @@ int InteractivePresolve(ReadOnlyString key) {
         &InteractiveSolverOptions,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    
+
     return AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
 }
 
@@ -90,7 +96,7 @@ static int SolveAndStart(ReadOnlyString key) {
         fprintf(stderr, "Solver manager failed to solve game\n");
         return 0;  // Go back to previous menu.
     }
-    
+
     InteractiveMatchSetSolved(true);
 
     return InteractivePostSolve(key);

@@ -60,6 +60,8 @@ bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/configure/
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/help/game_help.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/play/play.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/postsolve.c
+bin_gamesman_SOURCES += src/core/interactive/games/presolve/savio/partition_select.c
+bin_gamesman_SOURCES += src/core/interactive/games/presolve/savio/script_setup.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/solver_options/solver_options.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/match.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/presolve.c
@@ -67,6 +69,10 @@ bin_gamesman_SOURCES += src/core/interactive/games/games.c
 bin_gamesman_SOURCES += src/core/interactive/help/help.c
 bin_gamesman_SOURCES += src/core/interactive/automenu.c
 bin_gamesman_SOURCES += src/core/interactive/main_menu.c
+
+# src/core/savio
+bin_gamesman_SOURCES += src/core/savio/savio.c
+bin_gamesman_SOURCES += src/core/savio/scriptgen.c
 
 # src/core/solvers
 bin_gamesman_SOURCES += src/core/solvers/regular_solver/regular_solver.c
