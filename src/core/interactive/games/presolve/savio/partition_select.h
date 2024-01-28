@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveSavioPartitionSelect(ReadOnlyString key);
+int InteractiveSavioPartitionSelect(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_SAVIO_PARTITION_SELECT_H_

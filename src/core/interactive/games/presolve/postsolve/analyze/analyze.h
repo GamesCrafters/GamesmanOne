@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveAnalyze(ReadOnlyString key);
+int InteractiveAnalyze(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_POSTSOLVE_ANALYZE_ANALYZE_H_

@@ -15,19 +15,19 @@ static void PrintPlayerConfiguration(void) {
            second_player_is_computer ? "computer" : "human");
 }
 
-static void ToggleFirstPlayerType(ReadOnlyString key) {
+static int ToggleFirstPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(false);
     PrintPlayerConfiguration();
 }
 
-static void ToggleSecondPlayerType(ReadOnlyString key) {
+static int ToggleSecondPlayerType(ReadOnlyString key) {
     (void)key;  // Unused.
     InteractiveMatchTogglePlayerType(true);
     PrintPlayerConfiguration();
 }
 
-void InteractivePostSolveConfigure(ReadOnlyString key) {
+int InteractivePostSolveConfigure(ReadOnlyString key) {
     (void)key;  // Unused.
     PrintPlayerConfiguration();
     static ConstantReadOnlyString kTitle = "Configuration Menu";
@@ -41,5 +41,6 @@ void InteractivePostSolveConfigure(ReadOnlyString key) {
         &ToggleSecondPlayerType,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
+
+    return AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
 }

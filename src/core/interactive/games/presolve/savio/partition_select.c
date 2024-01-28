@@ -18,13 +18,14 @@ static void InitItems(void);
 static void InitKeys(void);
 static void InitHooks(void);
 
-void InteractiveSavioPartitionSelect(ReadOnlyString key) {
+int InteractiveSavioPartitionSelect(ReadOnlyString key) {
     (void)key;  // Unused
     static ConstantReadOnlyString title = "Select a Savio Partition";
     InitItems();
     InitKeys();
     InitHooks();
-    AutoMenu(title, kNumSavioPartitions, items, keys, hooks, NULL);
+
+    return AutoMenu(title, kNumSavioPartitions, items, keys, hooks, NULL);
 }
 
 static void InitItems(void) {

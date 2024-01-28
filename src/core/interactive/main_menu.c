@@ -5,7 +5,7 @@
 #include "core/interactive/games/games.h"
 #include "core/interactive/help/help.h"
 
-void InteractiveMainMenu(ReadOnlyString key) {
+int InteractiveMainMenu(ReadOnlyString key) {
     (void)key;  // Unused.
     static ConstantReadOnlyString kTitle = "GAMESMAN Main Menu";
     static ConstantReadOnlyString items[] = {
@@ -20,5 +20,5 @@ void InteractiveMainMenu(ReadOnlyString key) {
         &InteractiveCredits,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
+    return AutoMenu(kTitle, num_items, items, keys, hooks, NULL);
 }

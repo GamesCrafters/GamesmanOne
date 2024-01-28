@@ -4,10 +4,10 @@
 #include <stdio.h>   // sprintf, fprintf, stderr
 #include <stdlib.h>  // atoi
 
-#include "core/types/gamesman_types.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static int option_index = -1;
 // Hard-coded size based on the title definition in UpdateTitle.
@@ -20,12 +20,12 @@ static HookFunctionPointer *AllocateHooks(int num_items);
 
 static void UpdateTitle(void);
 
-static void MakeSelection(ReadOnlyString key);
+static int MakeSelection(ReadOnlyString key);
 
 static void FreeAll(int num_items, ReadOnlyString *items, char **keys,
                     HookFunctionPointer *hooks);
 
-void InteractiveGameOptionChoices(ReadOnlyString key) {
+int InteractiveGameOptionChoices(ReadOnlyString key) {
     option_index = atoi(key);
     const GameVariant *variant = InteractiveMatchGetVariant();
     int num_items = variant->options[option_index].num_choices;
@@ -38,9 +38,11 @@ void InteractiveGameOptionChoices(ReadOnlyString key) {
         sprintf(keys[i], "%d", i);
         hooks[i] = &MakeSelection;
     }
-    AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
-             (ConstantReadOnlyString *)keys, hooks, &UpdateTitle);
+    int ret = AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
+                       (ConstantReadOnlyString *)keys, hooks, &UpdateTitle);
     FreeAll(num_items, items, keys, hooks);
+
+    return ret;
 }
 
 static ReadOnlyString *AllocateItems(int num_items) {
@@ -60,13 +62,15 @@ static HookFunctionPointer *AllocateHooks(int num_items) {
                                              sizeof(HookFunctionPointer));
 }
 
-static void MakeSelection(ReadOnlyString key) {
+static int MakeSelection(ReadOnlyString key) {
     int selection = atoi(key);
     int error = InteractiveMatchSetVariantOption(option_index, selection);
     if (error != 0) {
         fprintf(stderr, "MakeSelection: set variant option failed with code %d",
                 error);
     }
+
+    return 0;
 }
 
 static void UpdateTitle(void) {

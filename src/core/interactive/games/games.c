@@ -41,7 +41,7 @@ static void FreeAll(int num_items, char **items, char **keys,
     free(hooks);
 }
 
-void InteractiveGames(ReadOnlyString key) {
+int InteractiveGames(ReadOnlyString key) {
     (void)key;  // Unused.
 
     const Game *const *all_games = GameManagerGetAllGames();
@@ -57,8 +57,10 @@ void InteractiveGames(ReadOnlyString key) {
         sprintf(keys[i], "%d", i);
         hooks[i] = &InteractivePresolve;
     }
-    AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,
-             (ConstantReadOnlyString *)keys,
-             (const HookFunctionPointer *)hooks, NULL);
+    int ret = AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,
+                       (ConstantReadOnlyString *)keys,
+                       (const HookFunctionPointer *)hooks, NULL);
     FreeAll(num_items, items, keys, hooks);
+    
+    return ret;
 }

@@ -24,19 +24,19 @@ static char title[sizeof(title_format) + kGameFormalNameLengthMax +
 
 static int SetCurrentGame(ReadOnlyString key);
 #ifndef USE_MPI
-static void SolveAndStart(ReadOnlyString key);
+static int SolveAndStart(ReadOnlyString key);
 #endif
 static void UpdateTitle(void);
 
 // -----------------------------------------------------------------------------
 
-void InteractivePresolve(ReadOnlyString key) {
+int InteractivePresolve(ReadOnlyString key) {
     int error = SetCurrentGame(key);
     if (error != 0) {
         fprintf(stderr,
                 "InteractivePresolve: failed to set game. Error code %d\n",
                 error);
-        return;
+        return 0;
     }
 
     static ConstantReadOnlyString items[] = {
@@ -61,7 +61,8 @@ void InteractivePresolve(ReadOnlyString key) {
         &InteractiveSolverOptions,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
+    
+    return AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
 }
 
 // -----------------------------------------------------------------------------
@@ -82,10 +83,17 @@ static int SetCurrentGame(ReadOnlyString key) {
 }
 
 #ifndef USE_MPI
-static void SolveAndStart(ReadOnlyString key) {
-    SolverManagerSolve(NULL);  // Auxiliary variable currently unused.
+static int SolveAndStart(ReadOnlyString key) {
+    // Auxiliary variable currently unused.
+    int error = SolverManagerSolve(NULL);
+    if (error != kNoError) {
+        fprintf(stderr, "Solver manager failed to solve game\n");
+        return 0;  // Go back to previous menu.
+    }
+    
     InteractiveMatchSetSolved(true);
-    InteractivePostSolve(key);
+
+    return InteractivePostSolve(key);
 }
 #endif
 

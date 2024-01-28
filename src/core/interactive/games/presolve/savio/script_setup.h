@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveSavioScriptSetup(ReadOnlyString key);
+int InteractiveSavioScriptSetup(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_SAVIO_SCRIPT_SETUP_H_

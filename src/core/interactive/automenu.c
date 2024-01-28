@@ -20,9 +20,9 @@ static bool StringEqual(ReadOnlyString s1, ReadOnlyString s2, size_t n) {
     return (strncmp(s1, s2, n) == 0);
 }
 
-void AutoMenu(ReadOnlyString title, int num_items,
-              ConstantReadOnlyString *items, ConstantReadOnlyString *keys,
-              const HookFunctionPointer *hooks, void (*Update)(void)) {
+int AutoMenu(ReadOnlyString title, int num_items, ConstantReadOnlyString *items,
+             ConstantReadOnlyString *keys, const HookFunctionPointer *hooks,
+             void (*Update)(void)) {
     while (1) {
         // Update menu contents if necessary.
         if (Update != NULL) Update();
@@ -41,17 +41,20 @@ void AutoMenu(ReadOnlyString title, int num_items,
             static char input[kKeyLengthMax + 2];
             PromptForInput("", input, kKeyLengthMax);
             FormatInput(input);
-            if (StringEqual(input, "b", kKeyLengthMax)) return;
+            if (StringEqual(input, "b", kKeyLengthMax)) return 0;
             if (StringEqual(input, "q", kKeyLengthMax)) GamesmanExit();
 
             for (int i = 0; i < num_items; ++i) {
                 if (StringEqual(input, keys[i], kKeyLengthMax)) {
                     accepted = true;
-                    hooks[i](input);
+                    int ret = hooks[i](input);
+                    if (ret > 0) return ret - 1;
                     break;
                 }
             }
             if (!accepted) printf("Invalid key. Please enter again.\n");
         } while (!accepted);
     }
+
+    return 0;
 }

@@ -28,23 +28,24 @@ static void UpdateItems(void);
 static void InitKeys(void);
 static void InitHooks(void);
 
-static void ConfirmSettings(ReadOnlyString key);
-static void PromptForJobName(ReadOnlyString key);
-static void PromptForAccount(ReadOnlyString key);
-static void PromptForNumNodes(ReadOnlyString key);
-static void PromptForNumTasksPerNode(ReadOnlyString key);
-static void PromptForNumCpuPerTask(ReadOnlyString key);
-static void PromptForTimeLimit(ReadOnlyString key);
+static int ConfirmSettings(ReadOnlyString key);
+static int PromptForJobName(ReadOnlyString key);
+static int PromptForAccount(ReadOnlyString key);
+static int PromptForNumNodes(ReadOnlyString key);
+static int PromptForNumTasksPerNode(ReadOnlyString key);
+static int PromptForNumCpuPerTask(ReadOnlyString key);
+static int PromptForTimeLimit(ReadOnlyString key);
 
 static int IntMin2(int x, int y);
 
-void InteractiveSavioScriptSetup(ReadOnlyString key) {
+int InteractiveSavioScriptSetup(ReadOnlyString key) {
     InitGlobalVariables(key);
     static ConstantReadOnlyString title = "Adjust Savio Settings";
     UpdateItems();
     InitKeys();
     InitHooks();
-    AutoMenu(title, NUM_ITEMS, items, keys, hooks, &UpdateItems);
+
+    return AutoMenu(title, NUM_ITEMS, items, keys, hooks, &UpdateItems);
 }
 
 static void InitGlobalVariables(ReadOnlyString key) {
@@ -97,32 +98,32 @@ static void InitHooks(void) {
     hooks[6] = &PromptForTimeLimit;
 }
 
-static void ConfirmSettings(ReadOnlyString key) {
+static int ConfirmSettings(ReadOnlyString key) {
     // TODO
     (void)key;
 }
 
-static void PromptForJobName(ReadOnlyString key) {
+static int PromptForJobName(ReadOnlyString key) {
     // TODO
 }
 
-static void PromptForAccount(ReadOnlyString key) {
+static int PromptForAccount(ReadOnlyString key) {
     // TODO
 }
 
-static void PromptForNumNodes(ReadOnlyString key) {
+static int PromptForNumNodes(ReadOnlyString key) {
     // TODO
 }
 
-static void PromptForNumTasksPerNode(ReadOnlyString key) {
+static int PromptForNumTasksPerNode(ReadOnlyString key) {
     // TODO
 }
 
-static void PromptForNumCpuPerTask(ReadOnlyString key) {
+static int PromptForNumCpuPerTask(ReadOnlyString key) {
     // TODO
 }
 
-static void PromptForTimeLimit(ReadOnlyString key) {
+static int PromptForTimeLimit(ReadOnlyString key) {
     // TODO
 }
 
