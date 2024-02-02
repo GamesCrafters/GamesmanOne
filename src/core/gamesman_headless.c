@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN headless mode.
- *
- * @version 1.1.0
- * @date 2024-01-05
+ * @version 1.1.1
+ * @date 2024-02-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,7 +38,7 @@
 #include "core/misc.h"
 
 int GamesmanHeadlessMain(int argc, char **argv) {
-    ArgpArguments arguments = HeadlessParseArguments(argc, argv);
+    HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
     char *data_path = arguments.data_path;
     bool force = arguments.force;
