@@ -39,7 +39,7 @@
 #include "core/misc.h"
 
 int GamesmanHeadlessMain(int argc, char **argv) {
-    ArgpArguments arguments = HeadlessParseArguments(argc, argv);
+    HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
     char *data_path = arguments.data_path;
     bool force = arguments.force;

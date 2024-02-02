@@ -46,6 +46,7 @@ enum GamesmanError {
     kIncompleteGameplayApiError,    /**< Gameplay API not fully implemented. */
     kGameInitFailureError,          /**< Game initialization failed. */
     kUseBeforeInitializationError,  /**< Module used before initialization. */
+    kHeadlessError,                 /**< Headless command parsing error. */
     kRuntimeError,                  /**< Generic runtime error. */
 };
 
