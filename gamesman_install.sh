@@ -31,40 +31,53 @@ install_macos() {
     brew install git autoconf automake cmake zlib
 }
 
+# Check if running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Not running as root. Will skip steps that require root access."
+    ROOT_ACCESS=false
+else
+    ROOT_ACCESS=true
+fi
+
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-# Install dependencies based on OS
-case "$OS" in
-Linux*)
-    # Detect if using Debian/Ubuntu or RHEL/CentOS
-    if [ -f /etc/debian_version ]; then
-        install_debian || error_exit "Failed to install dependencies on Debian/Ubuntu."
-    elif [ -f /etc/redhat-release ]; then
-        install_rhel || error_exit "Failed to install dependencies on RHEL/CentOS."
-    else
-        error_exit "Unsupported Linux distribution."
-    fi
-    ;;
-Darwin*)
-    install_macos || error_exit "Failed to install dependencies on MacOS."
-    ;;
-*)
-    error_exit "Unsupported operating system."
-    ;;
-esac
+# Install dependencies based on OS only if has root access.
+if [ "$ROOT_ACCESS" = true ]; then
+    case "$OS" in
+    Linux*)
+        # Detect if using Debian/Ubuntu or RHEL/CentOS
+        if [ -f /etc/debian_version ]; then
+            install_debian || error_exit "Failed to install dependencies on Debian/Ubuntu."
+        elif [ -f /etc/redhat-release ]; then
+            install_rhel || error_exit "Failed to install dependencies on RHEL/CentOS."
+        else
+            error_exit "Unsupported Linux distribution."
+        fi
+        ;;
+    Darwin*)
+        install_macos || error_exit "Failed to install dependencies on MacOS."
+        ;;
+    *)
+        error_exit "Unsupported operating system."
+        ;;
+    esac
+else
+    echo "Skipping installation of dependencies due to lack of root privileges."
+fi
 
 # Check for required commands
 for cmd in git autoconf automake autoreconf cmake; do
-    command_exists "$cmd" || error_exit "$cmd is not installed."
+    command_exists "$cmd" || error_exit "command $cmd not found."
 done
 
 # Begin project setup
 git submodule update --init || error_exit "Failed to update git submodules."
 
 cd lib/json-c/ || error_exit "Failed to change directory to lib/json-c."
-mkdir build && cd build || error_exit "Failed to create or change to the build directory."
+mkdir build
+cd build || error_exit "Failed to create or change to the build directory."
 
 CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../../res -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
 cmake $CMAKE_FLAGS ../ || error_exit "Failed to configure json-c using cmake."
