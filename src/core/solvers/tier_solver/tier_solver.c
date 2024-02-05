@@ -34,6 +34,8 @@
 #include <stddef.h>  // NULL
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
+#ifdef USE_MPI
+#endif  // USE_MPI
 
 #include "core/analysis/stat_manager.h"
 #include "core/db/bpdb/bpdb_lite.h"
@@ -56,11 +58,10 @@ static int TierSolverSetOption(int option, int selection);
 static Value TierSolverGetValue(TierPosition tier_position);
 static int TierSolverGetRemoteness(TierPosition tier_position);
 
-/**
- * @brief The Tier Solver definition. Used externally.
- */
+/** @brief Tier Solver definition. */
 const Solver kTierSolver = {
     .name = "Tier Solver",
+    .supports_mpi = 1,
 
     .Init = &TierSolverInit,
     .Finalize = &TierSolverFinalize,

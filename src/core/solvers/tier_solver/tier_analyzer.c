@@ -36,9 +36,9 @@
 #include "core/analysis/stat_manager.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_types.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -56,7 +56,7 @@
 #define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_PARALLEL_FOR
 #define PRAGMA_OMP_CRITICAL(name)
-#endif
+#endif  // _OPENMP
 
 static const TierSolverApi *current_api;
 
@@ -71,7 +71,7 @@ static BitStream this_tier_map;
 static BitStream *child_tier_maps;
 #ifdef _OPENMP
 static omp_lock_t *child_tier_map_locks;
-#endif
+#endif  // _OPENMP
 
 static PositionArray fringe;      // Discovered but unprocessed positions.
 static PositionArray discovered;  // Newly discovered positions.
@@ -164,7 +164,7 @@ static bool Step0Initialize(Analysis *dest) {
     child_tier_maps = NULL;
 #ifdef _OPENMP
     child_tier_map_locks = NULL;
-#endif
+#endif  // _OPENMP
 
     AnalysisInit(dest);
     AnalysisSetHashSize(dest, this_tier_size);
@@ -205,7 +205,7 @@ static bool Step1LoadDiscoveryMaps(void) {
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         omp_init_lock(&child_tier_map_locks[i]);
     }
-#endif
+#endif  // _OPENMP
 
     this_tier_map = LoadDiscoveryMap(this_tier);
     for (int64_t i = 0; i < child_tiers.size; ++i) {
@@ -250,7 +250,7 @@ static bool Step2LoadFringe(void) {
             if (!append_success) success = false;
         }
     }
-  
+
     return success;
 }
 
@@ -342,11 +342,11 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
     BitStream *target_map = &child_tier_maps[child_tier_index];
 #ifdef _OPENMP
     omp_set_lock(&child_tier_map_locks[child_tier_index]);
-#endif
+#endif  // _OPENMP
     int error = BitStreamSet(target_map, child.position);
 #ifdef _OPENMP
     omp_unset_lock(&child_tier_map_locks[child_tier_index]);
-#endif
+#endif  // _OPENMP
 
     return error == 0;
 }
@@ -390,7 +390,7 @@ static bool Step4SaveChildMaps(void) {
         BitStreamDestroy(&child_tier_maps[i]);
 #ifdef _OPENMP
         omp_destroy_lock(&child_tier_map_locks[i]);
-#endif
+#endif  // _OPENMP
     }
 
     free(child_tier_maps);
@@ -398,7 +398,7 @@ static bool Step4SaveChildMaps(void) {
 #ifdef _OPENMP
     free(child_tier_map_locks);
     child_tier_map_locks = NULL;
-#endif
+#endif  // _OPENMP
 
     return true;
 }
@@ -436,7 +436,7 @@ static bool Step5Analyze(Analysis *dest) {
             success = false;
         }
     }
-  
+
     BitStreamDestroy(&this_tier_map);
     return success;
 }
@@ -453,14 +453,14 @@ static void Step7CleanUp(void) {
         BitStreamDestroy(&child_tier_maps[i]);
 #ifdef _OPENMP
         omp_destroy_lock(&child_tier_map_locks[i]);
-#endif
+#endif  // _OPENMP
     }
     free(child_tier_maps);
     child_tier_maps = NULL;
 #ifdef _OPENMP
     free(child_tier_map_locks);
     child_tier_map_locks = NULL;
-#endif
+#endif  // _OPENMP
     PositionArrayDestroy(&fringe);
     PositionArrayDestroy(&discovered);
 }

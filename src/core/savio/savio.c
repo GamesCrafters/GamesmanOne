@@ -50,8 +50,7 @@ const SavioPartition kSavioPartitions[kNumSavioPartitions] = {
 
 ConstantReadOnlyString kSavioDefaultAccount = "fc_gamecrafters";
 const int kSavioDefaultPartition = kSavio4_htc_256gb;
-const int kSavioRegularNumNodesMax = 1;
-const int kSavioTierNumNodesMax = 24;
+const int kSavioNumNodesMax = 24;
 const int kSavioDefaultNumTasksPerNode = 1;
 ConstantReadOnlyString kSavioDefaultTimeLimit = "72:00:00";
 

@@ -64,7 +64,7 @@
 #define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_PARALLEL_FOR
 #define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var)
-#endif
+#endif  // _OPENMP
 
 // Note on multithreading:
 //   Be careful that "if (!condition) success = false;" is not equivalent to
@@ -100,7 +100,7 @@ static uint8_t *num_undecided_children = NULL;
 #ifdef _OPENMP
 // Lock for the array above.
 static omp_lock_t num_undecided_children_lock;
-#endif
+#endif  // _OPENMP
 
 // Cached reverse position graph of the current tier.
 ReverseGraph reverse_graph;
@@ -194,7 +194,7 @@ static bool Step0Initialize(Tier tier) {
     this_tier_size = current_api.GetTierSize(tier);
 #ifdef _OPENMP
     omp_init_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
     return true;
 }
 
@@ -477,12 +477,12 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
         omp_set_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
         uint8_t child_remaining = num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
 #ifdef _OPENMP
         omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
@@ -512,19 +512,19 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
         omp_set_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
         if (num_undecided_children[parents.array[i]] == 0) {
             // This parent has been solved already.
 #ifdef _OPENMP
             omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
             continue;
         }
         // Must perform the above check before decrementing to prevent overflow.
         uint8_t child_remaining = --num_undecided_children[parents.array[i]];
 #ifdef _OPENMP
         omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
 
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
@@ -593,7 +593,7 @@ static void Step7Cleanup(void) {
     }
 #ifdef _OPENMP
     omp_destroy_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
 }
 
 static void DestroyFrontiers(void) {

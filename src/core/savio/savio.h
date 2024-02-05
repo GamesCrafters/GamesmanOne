@@ -45,8 +45,7 @@ typedef struct SavioJobSettings {
 
 extern const SavioPartition kSavioPartitions[kNumSavioPartitions];
 extern ConstantReadOnlyString kSavioDefaultAccount;
-extern const int kSavioRegularNumNodesMax;
-extern const int kSavioTierNumNodesMax;
+extern const int kSavioNumNodesMax;
 extern const int kSavioDefaultNumTasksPerNode;
 extern ConstantReadOnlyString kSavioDefaultTimeLimit;
 

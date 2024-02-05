@@ -43,7 +43,7 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#endif
+#endif  // _OPENMP
 
 static bool InitOffsetMap(ReverseGraph *graph, const TierArray *child_tiers,
                           Tier this_tier, int64_t (*GetTierSize)(Tier tier)) {
@@ -92,7 +92,7 @@ static bool InitLocks(ReverseGraph *graph) {
     }
     return true;
 }
-#endif
+#endif  // _OPENMP
 
 // Assumes GetTierSize() has been set up correctly.
 bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
@@ -111,7 +111,7 @@ bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
         TierHashMapDestroy(&graph->offset_map);
         return false;
     }
-#endif
+#endif  // _OPENMP
     return true;
 }
 
@@ -121,17 +121,17 @@ void ReverseGraphDestroy(ReverseGraph *graph) {
             PositionArrayDestroy(&graph->parents_of[i]);
 #ifdef _OPENMP
             omp_destroy_lock(&graph->locks[i]);
-#endif
+#endif  // _OPENMP
         }
         free(graph->parents_of);
 #ifdef _OPENMP
         free(graph->locks);
-#endif
+#endif  // _OPENMP
     }
     graph->parents_of = NULL;
 #ifdef _OPENMP
     graph->locks = NULL;
-#endif
+#endif  // _OPENMP
     graph->size = 0;
     TierHashMapDestroy(&graph->offset_map);
 }
@@ -173,10 +173,10 @@ bool ReverseGraphAdd(ReverseGraph *graph, TierPosition child, Position parent) {
     int64_t index = ReverseGraphGetIndex(graph, child);
 #ifdef _OPENMP
     omp_set_lock(&graph->locks[index]);
-#endif
+#endif  // _OPENMP
     bool success = PositionArrayAppend(&graph->parents_of[index], parent);
 #ifdef _OPENMP
     omp_unset_lock(&graph->locks[index]);
-#endif
+#endif  // _OPENMP
     return success;
 }

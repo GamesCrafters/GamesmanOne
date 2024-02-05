@@ -73,7 +73,7 @@ static void RestoreDefaultSettings(void) {
     sprintf(settings.account, "%s", kSavioDefaultAccount);
     settings.partition_id = partition_id;
     // Change game interface and specify tier vs regular
-    settings.num_nodes = IntMin2(kSavioTierNumNodesMax, partition->num_nodes);
+    settings.num_nodes = IntMin2(kSavioNumNodesMax, partition->num_nodes);
     settings.ntasks_per_node = kSavioDefaultNumTasksPerNode;
     sprintf(settings.time_limit, "%s", kSavioDefaultTimeLimit);
 }
@@ -164,7 +164,7 @@ static int PromptForNumNodes(ReadOnlyString key) {
     (void)key;  // Unused
     char buf[kInt32Base10StringLengthMax + 1];
     int nodes_min = 1;
-    int nodes_max = kSavioTierNumNodesMax;  // TODO
+    int nodes_max = game->solver->supports_mpi ? kSavioNumNodesMax : 1;
     printf(
         "Number of compute nodes to use in the chosen partition (%s). Savio "
         "enforces that a maximum of %d compute nodes can be allocated per "
@@ -173,7 +173,7 @@ static int PromptForNumNodes(ReadOnlyString key) {
         "game.\n\n"
         "Please enter the number of nodes to use for this job (%d-%d) or 'b' "
         "to discard changes and return to the previous menu%s",
-        partition->name, kSavioTierNumNodesMax, nodes_min, nodes_max, "");
+        partition->name, kSavioNumNodesMax, nodes_min, nodes_max, "");
     PromptForInput("", buf, kInt32Base10StringLengthMax);
     if (strcmp(buf, "b") == 0) return 0;
     int parsed = atoi(buf);

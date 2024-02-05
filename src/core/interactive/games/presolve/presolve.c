@@ -31,7 +31,7 @@ static char title[sizeof(title_format) + kGameFormalNameLengthMax +
 static int SetCurrentGame(ReadOnlyString key);
 #ifndef USE_MPI
 static int SolveAndStart(ReadOnlyString key);
-#endif
+#endif  // USE_MPI
 static void UpdateTitle(void);
 
 // -----------------------------------------------------------------------------
@@ -50,7 +50,7 @@ int InteractivePresolve(ReadOnlyString key) {
         "Solve and start",
 #else
         "Generate SLURM job script for Savio",
-#endif
+#endif  // USE_MPI
         "Start without solving",
         "Game options",
         "Solver options",
@@ -61,7 +61,7 @@ int InteractivePresolve(ReadOnlyString key) {
         &SolveAndStart,
 #else
         &InteractiveSavioPartitionSelect,
-#endif
+#endif  // USE_MPI
         &InteractivePostSolve,
         &InteractiveGameOptions,
         &InteractiveSolverOptions,
@@ -101,7 +101,7 @@ static int SolveAndStart(ReadOnlyString key) {
 
     return InteractivePostSolve(key);
 }
-#endif
+#endif  // USE_MPI
 
 static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();

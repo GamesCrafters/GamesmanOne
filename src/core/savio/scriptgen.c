@@ -57,7 +57,8 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     if (error) return kFileSystemError;
 
     printf(
-        "Successfully written to %s\nRun \"sbatch %s\" to submit the job.\n\n",
+        "Successfully written to %s\nRun \"sbatch %s\" in a different terminal "
+        "to submit the job.\n\n",
         file_name, file_name);
 
     return kNoError;
@@ -137,7 +138,7 @@ static int PrintModuleLoad(FILE *file, bool use_savio4) {
         return fprintf(
             file,
             "\n# 2024-01-26: Current savio4_htc configuration requires "
-            "using the following non-default modules\n"
+            "using the following non-default modules for best performance\n"
             "module load gcc/11.3.0 ucx/1.14.0 openmpi/5.0.0-ucx\n");
     }
     return fprintf(file, "module load gcc openmpi\n");
@@ -149,6 +150,6 @@ static int PrintExportOmpNumThreads(FILE *file) {
 
 static int PrintSolveCommand(FILE *file, ReadOnlyString game_name,
                              int variant_id) {
-    return fprintf(file, "mpirun bin/gamesman mpisolve %s %d\n", game_name,
+    return fprintf(file, "mpirun bin/gamesman solve %s %d\n", game_name,
                    variant_id);
 }

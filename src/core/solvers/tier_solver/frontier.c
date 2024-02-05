@@ -51,7 +51,7 @@
 #define PRAGMA
 #define PRAGMA_OMP_ATOMIC
 #define PRAGMA_OMP_PARALLEL_FOR
-#endif
+#endif  // _OPENMP
 
 static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
     frontier->buckets = (PositionArray *)calloc(size, sizeof(PositionArray));
@@ -90,14 +90,14 @@ static bool FrontierAllocateLocks(Frontier *frontier, int size) {
     }
     return true;
 }
-#endif
+#endif  // _OPENMP
 
 static void FrontierInitAllFields(Frontier *frontier) {
     for (int i = 0; i < frontier->size; ++i) {
         PositionArrayInit(&frontier->buckets[i]);
 #ifdef _OPENMP
         omp_init_lock(&frontier->locks[i]);
-#endif
+#endif  // _OPENMP
     }
 }
 
@@ -108,7 +108,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
     success &= FrontierAllocateDividers(frontier, frontier_size, dividers_size);
 #ifdef _OPENMP
     success &= FrontierAllocateLocks(frontier, frontier_size);
-#endif
+#endif  // _OPENMP
 
     if (success) {
         // Initialize fields after all memory
@@ -128,7 +128,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
         }
 #ifdef _OPENMP
         free(frontier->locks);
-#endif
+#endif  // _OPENMP
         // Set all member pointers to NULL and all fields to 0.
         memset(frontier, 0, sizeof(*frontier));
     }
@@ -160,7 +160,7 @@ void FrontierDestroy(Frontier *frontier) {
         }
         free(frontier->locks);
     }
-#endif
+#endif  // _OPENMP
 
     // Set all member pointers to NULL and all fields to 0.
     memset(frontier, 0, sizeof(*frontier));
@@ -183,12 +183,12 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
     // Push position into frontier.
 #ifdef _OPENMP
     omp_set_lock(&frontier->locks[remoteness]);
-#endif
+#endif  // _OPENMP
     bool success =
         PositionArrayAppend(&frontier->buckets[remoteness], position);
 #ifdef _OPENMP
     omp_unset_lock(&frontier->locks[remoteness]);
-#endif
+#endif  // _OPENMP
     if (!success) return false;
 
     // Update divider.

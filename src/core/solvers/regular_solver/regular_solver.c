@@ -63,11 +63,10 @@ static int RegularSolverSetOption(int option, int selection);
 static Value RegularSolverGetValue(TierPosition tier_position);
 static int RegularSolverGetRemoteness(TierPosition tier_position);
 
-/**
- * @brief The Regular Solver definition. Used externally.
- */
+/** @brief Regular Solver definition. */
 const Solver kRegularSolver = {
     .name = "Regular Solver",
+    .supports_mpi = 0,
 
     .Init = &RegularSolverInit,
     .Finalize = &RegularSolverFinalize,

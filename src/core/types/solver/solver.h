@@ -50,6 +50,9 @@ typedef struct Solver {
     /** Human-readable name of the solver. */
     char name[kSolverNameLengthMax + 1];
 
+    /** Whether the solver supports MPI. */
+    int supports_mpi;
+
     /**
      * @brief Initializes the Solver.
      *
