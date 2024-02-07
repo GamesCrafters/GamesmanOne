@@ -97,7 +97,7 @@ static int PrintIntegerOption(FILE *file, ReadOnlyString option_name,
     return count1 + count2;
 }
 
-static int PrintShebang(FILE *file) { return fprintf(file, "#!/bin/sh"); }
+static int PrintShebang(FILE *file) { return fprintf(file, "#!/bin/sh\n"); }
 
 static int PrintJobName(FILE *file, ReadOnlyString job_name) {
     return PrintStringOption(file, "job-name", job_name);
