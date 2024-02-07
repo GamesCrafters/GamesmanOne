@@ -50,4 +50,17 @@ void TierArrayDestroy(TierArray *array);
  */
 bool TierArrayAppend(TierArray *array, Tier tier);
 
+/**
+ * @brief Removes the first occurrence of TIER from ARRAY if it exists.
+ * 
+ * @param array Tier array.
+ * @param tier Tier to remove.
+ * @return true if TIER exists in ARRAY, or
+ * @return false otherwise.
+ */
+bool TierArrayRemove(TierArray *array, Tier tier);
+
+/** @brief Returns true if ARRAY is empty, or false otherwise. */
+bool TierArrayEmpty(const TierArray *array);
+
 #endif  // GAMESMANONE_CORE_TYPES_TIER_ARRAY_H

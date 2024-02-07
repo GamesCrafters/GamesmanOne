@@ -41,7 +41,7 @@ void TierQueueInit(TierQueue *queue);
 void TierQueueDestroy(TierQueue *queue);
 
 /** @brief Returns true if QUEUE is empty, or false otherwise. */
-bool TierQueueIsEmpty(const TierQueue *queue);
+bool TierQueueEmpty(const TierQueue *queue);
 
 /** @brief Returns the number of items in QUEUE. */
 int64_t TierQueueSize(const TierQueue *queue);
@@ -56,5 +56,8 @@ bool TierQueuePush(TierQueue *queue, Tier tier);
 
 /** @brief Pops the item at the front of the QUEUE and returns it. */
 Tier TierQueuePop(TierQueue *queue);
+
+/** @brief Returns the tier at the front of the QUEUE without popping it. */
+Tier TierQueueFront(const TierQueue *queue);
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_QUEUE_H

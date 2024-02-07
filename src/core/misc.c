@@ -41,6 +41,9 @@
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
 #include <unistd.h>     // close
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
+#ifdef USE_MPI
+#include <mpi.h>
+#endif  // USE_MPI
 
 #include "core/types/gamesman_types.h"
 #include "libs/mgz/gz64.h"
@@ -504,3 +507,61 @@ int64_t NChooseR(int n, int r) {
 #undef CACHE_COLS
 
 int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
+
+#ifdef USE_MPI
+void SafeMpiInit(int *argc, char ***argv) {
+    int error = MPI_Init(argc, argv);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiInit: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+void SafeMpiFinalize(void) {
+    int error = MPI_Finalize();
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiFinalize: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+int SafeMpiCommSize(MPI_Comm comm) {
+    int ret;
+    int error = MPI_Comm_size(comm, &ret);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiCommSize: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+
+    return ret;
+}
+
+int SafeMpiCommRank(MPI_Comm comm) {
+    int ret;
+    int error = MPI_Comm_rank(comm, &ret);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiCommRank: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+
+    return ret;
+}
+
+void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
+                 MPI_Comm comm) {
+    int error = MPI_Send(buf, count, datatype, dest, tag, comm);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiSend: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
+                 int tag, MPI_Comm comm, MPI_Status *status) {
+    int error = MPI_Recv(buf, count, datatype, source, tag, comm, status);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiRecv: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+#endif  // USE_MPI

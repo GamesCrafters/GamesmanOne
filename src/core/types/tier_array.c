@@ -37,3 +37,9 @@ void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
 bool TierArrayAppend(TierArray *array, Tier tier) {
     return Int64ArrayPushBack(array, tier);
 }
+
+bool TierArrayRemove(TierArray *array, Tier tier) {
+    return Int64ArrayRemove(array, tier);
+}
+
+bool TierArrayEmpty(const TierArray *array) { return Int64ArrayEmpty(array); }
