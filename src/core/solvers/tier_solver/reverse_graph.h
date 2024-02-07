@@ -40,7 +40,7 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#endif
+#endif  // _OPENMP
 
 /**
  * @brief Reverse Position graph generated from the Position graph of the game.
@@ -63,7 +63,7 @@ typedef struct ReverseGraph {
 #ifdef _OPENMP
     /** An array of locks for each parents_of array. */
     omp_lock_t *locks;
-#endif
+#endif  // _OPENMP
 
     /** Size (first dimension) of the parents_of array. This is typically set to
      * the number of positions in the solving tier plus the total number of

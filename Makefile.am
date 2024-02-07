@@ -4,8 +4,6 @@ AM_CFLAGS = -I$(srcdir)/src
 # Local resources directory.
 RES_DIR = $(srcdir)/res
 AM_CFLAGS += -I$(RES_DIR)/include
-AM_LDFLAGS = -L$(RES_DIR)/lib
-AM_LDFLAGS += -L$(RES_DIR)/lib64
 
 # Configure OpenMP.
 AM_CFLAGS += ${OPENMP_CFLAGS}
@@ -14,6 +12,7 @@ AM_CFLAGS += ${OPENMP_CFLAGS}
 noinst_PROGRAMS = bin/gamesman
 
 # Add linker directives.
+bin_gamesman_LDFLAGS = -L$(RES_DIR)/lib -L$(RES_DIR)/lib64
 bin_gamesman_LDADD = -ljson-c
 
 # Source file containing the main() function. 
@@ -60,6 +59,8 @@ bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/configure/
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/help/game_help.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/play/play.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/postsolve/postsolve.c
+bin_gamesman_SOURCES += src/core/interactive/games/presolve/savio/partition_select.c
+bin_gamesman_SOURCES += src/core/interactive/games/presolve/savio/script_setup.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/solver_options/solver_options.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/match.c
 bin_gamesman_SOURCES += src/core/interactive/games/presolve/presolve.c
@@ -68,6 +69,10 @@ bin_gamesman_SOURCES += src/core/interactive/help/help.c
 bin_gamesman_SOURCES += src/core/interactive/automenu.c
 bin_gamesman_SOURCES += src/core/interactive/main_menu.c
 
+# src/core/savio
+bin_gamesman_SOURCES += src/core/savio/savio.c
+bin_gamesman_SOURCES += src/core/savio/scriptgen.c
+
 # src/core/solvers
 bin_gamesman_SOURCES += src/core/solvers/regular_solver/regular_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/frontier.c
@@ -75,6 +80,7 @@ bin_gamesman_SOURCES += src/core/solvers/tier_solver/reverse_graph.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/reverse_tier_graph.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_analyzer.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_manager.c
+bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_mpi.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_solver.c
 bin_gamesman_SOURCES += src/core/solvers/tier_solver/tier_worker.c
 bin_gamesman_SOURCES += src/core/solvers/solver_manager.c

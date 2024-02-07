@@ -38,7 +38,7 @@
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
-#endif
+#endif  // _OPENMP
 
 /** @brief Bit-Perfect Array metadata. */
 typedef struct BpArrayMeta {

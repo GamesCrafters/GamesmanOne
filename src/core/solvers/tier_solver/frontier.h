@@ -41,7 +41,7 @@
 
 #ifdef _OPENMP
 #include <omp.h>  // omp_lock_t
-#endif
+#endif  // _OPENMP
 
 /**
  * @brief A Frontier is a dynamic 2D Position array which stores solved
@@ -88,7 +88,7 @@ typedef struct Frontier {
 #ifdef _OPENMP
     /** An array of locks for each bucket (PositionArray). */
     omp_lock_t *locks;
-#endif
+#endif  // _OPENMP
 
     /** Number of frontier arrays. */
     int size;

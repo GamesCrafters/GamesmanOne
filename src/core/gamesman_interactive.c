@@ -44,7 +44,7 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "| |  _ / _` | '_ ` _ \\ / _ \\/ __| '_ ` _ \\ / _` | '_ \\  : game generator.  More\n"
     "| |_| | (_| | | | | | |  __/\\__ \\ | | | | | (_| | | | | : information?  Contact\n"
     " \\____|\\__,_|_| |_| |_|\\___||___/_| |_| |_|\\__,_|_| |_| : ddgarcia@berkeley.edu\n"
-    "...............................................................................\n"
+    "..........................%s.............................\n"
     "\n"
     "Welcome to GAMESMAN, version %s. Originally       (G)ame-independent\n"
     "written by Dan Garcia, it has undergone a series of       (A)utomatic       \n"
@@ -55,10 +55,24 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "perform analysis, & provide an interface to play it.      (A)nd             \n"
     "                                                          (N)avigation      \n";
 
-void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(kGamesmanDate);
+static const int kOpeningCreditsMessageSize = 24;
+#ifndef USE_MPI
+static ConstantReadOnlyString kOpeningCreditsNoMessage = "........................";
+#else  // USE_MPI defined.
+static ConstantReadOnlyString kOpeningCreditsMpiMessage = " Compiled with Open MPI ";
+#endif  // USE_MPI
+
+static void PrintOpeningCredits(void) {
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(kGamesmanDate) + 
+                    kOpeningCreditsMessageSize;
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
-    sprintf(opening_credits, kOpeningCreditsFormat, kGamesmanDate);
+#ifndef USE_MPI
+    sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
+            kGamesmanDate);
+#else  // USE_MPI defined.
+    sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
+            kGamesmanDate);
+#endif  // USE_MPI
 
     int i = 0;
     while (opening_credits[i] != '\0') {

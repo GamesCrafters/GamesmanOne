@@ -23,7 +23,7 @@ static HookFunctionPointer *AllocateHooks(int num_items);
 
 static void FreeAll(int num_items, char **keys, HookFunctionPointer *hooks);
 
-void InteractiveGameOptions(ReadOnlyString key) {
+int InteractiveGameOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     const Game *current_game = InteractiveMatchGetCurrentGame();
     const GameVariant *variant = InteractiveMatchGetVariant();
@@ -31,7 +31,7 @@ void InteractiveGameOptions(ReadOnlyString key) {
         printf(
             "The game has only one variant and therefore no options are "
             "available.\n");
-        return;
+        return 0;
     }
 
     // Hard-coded size based on the title definition below.
@@ -43,12 +43,12 @@ void InteractiveGameOptions(ReadOnlyString key) {
     char **keys = AllocateKeys(num_items);
     HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        snprintf(keys[i], kKeyLengthMax, "%d", i);
+        sprintf(keys[i], "%d", i);
         hooks[i] = &InteractiveGameOptionChoices;
     }
 
-    AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
-             (ConstantReadOnlyString *)keys, hooks, &UpdateItems);
+    int ret = AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
+                       (ConstantReadOnlyString *)keys, hooks, &UpdateItems);
     FreeAll(num_items, keys, hooks);
 
     // Reinitialize the solver.
@@ -56,6 +56,8 @@ void InteractiveGameOptions(ReadOnlyString key) {
     if (error != kNoError) {
         NotReached("failed to initialize solver for the current game variant");
     }
+
+    return ret;
 }
 
 static int GetNumOptions(const GameVariant *variant) {

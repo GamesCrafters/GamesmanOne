@@ -4,8 +4,10 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveSolverOptions(ReadOnlyString key) {
+int InteractiveSolverOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveSolverOptions: unimplemented\n");
+
+    return 0;
 }

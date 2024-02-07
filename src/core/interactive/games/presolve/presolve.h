@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractivePresolve(ReadOnlyString key);
+int InteractivePresolve(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_PRESOLVE_H_

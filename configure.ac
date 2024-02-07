@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([GamesmanOne], [0.5], [robertyishi@berkeley.edu])
+AC_INIT([GamesmanOne], [0.6.0], [robertyishi@berkeley.edu])
 
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AC_CONFIG_SRCDIR([src/core/main.c])
@@ -10,11 +10,14 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_AWK
-AC_PROG_CXX
 AC_PROG_CC
+AM_PROG_CC_C_O
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+
+AS_IF([test "x$CC" = "xmpicc"], [CFLAGS="$CFLAGS -DUSE_MPI"])
 
 # Enables OpenMP if possible.
 # Pass "--disable-openmp" to configure to force disable.

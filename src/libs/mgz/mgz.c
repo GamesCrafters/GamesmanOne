@@ -48,7 +48,7 @@
 #else
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL_FOR
-#endif
+#endif  // _OPENMP
 
 const uInt kChunkSize = 1 << 14;  // 16 KiB
 const uInt kIllegalChunkSize = kChunkSize + 1;

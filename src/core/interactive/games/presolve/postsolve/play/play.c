@@ -352,7 +352,7 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
     }
 }
 
-void InteractivePlay(ReadOnlyString key) {
+int InteractivePlay(ReadOnlyString key) {
     (void)key;  // Unused.
 
     if (!InteractiveMatchRestart()) {
@@ -383,4 +383,6 @@ void InteractivePlay(ReadOnlyString key) {
         game_over = (primitive_value != kUndecided);
     }
     PrintGameResult(game->formal_name);
+
+    return 0;
 }

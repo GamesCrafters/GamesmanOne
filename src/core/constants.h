@@ -78,6 +78,13 @@ enum RemotenessLimits {
     kNumRemotenesses,      /**< Number of values a remoteness can take. */
 };
 
+enum MpiLimits {
+    /** 
+     * The Savio cluster currently support at most 24 nodes allocated per job.
+     */
+    kMpiNumNodesMax = 24,
+};
+
 /** @brief Default tier for games that are not implemented as tier games. */
 extern const Tier kDefaultTier;
 

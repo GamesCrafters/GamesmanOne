@@ -87,8 +87,19 @@ int64_t Int64QueuePop(Int64Queue *queue) {
         fprintf(stderr, "Int64QueuePop: popping from an empty queue.\n");
         return 0;
     }
+
     int64_t element = queue->array[queue->front];
     queue->front = (queue->front + 1) % queue->capacity;
     --queue->size;
+
     return element;
+}
+
+int64_t Int64QueueFront(const Int64Queue *queue) {
+    if (Int64QueueIsEmpty(queue)) {
+        fprintf(stderr, "Int64QueueFront: peaking into an empty queue.\n");
+        return 0;
+    }
+
+    return queue->array[queue->front];
 }

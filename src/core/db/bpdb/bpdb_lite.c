@@ -55,7 +55,7 @@
 #else
 #define PRAGMA
 #define PRAGMA_OMP_CRITICAL(name)
-#endif
+#endif  // _OPENMP
 
 // Database API.
 

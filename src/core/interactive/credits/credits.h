@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveCredits(ReadOnlyString key);
+int InteractiveCredits(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_CREDITS_CREDITS_H_

@@ -28,16 +28,22 @@
 
 #include <stdbool.h>  // bool
 #include <stdlib.h>   // atoi
+#ifdef USE_MPI
+#include <mpi.h>
+#endif  // USE_MPI
 
-#include "core/types/gamesman_types.h"
 #include "core/headless/hanalyze.h"
 #include "core/headless/hparser.h"
 #include "core/headless/hquery.h"
 #include "core/headless/hsolve.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 int GamesmanHeadlessMain(int argc, char **argv) {
+#ifdef USE_MPI
+    SafeMpiInit(&argc, &argv);
+#endif  // USE_MPI
     HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
     char *data_path = arguments.data_path;
@@ -52,18 +58,27 @@ int GamesmanHeadlessMain(int argc, char **argv) {
 
     switch (arguments.action) {
         case kHeadlessSolve:
-            return HeadlessSolve(game, variant_id, data_path, force, verbose);
+            error = HeadlessSolve(game, variant_id, data_path, force, verbose);
+            break;
         case kHeadlessAnalyze:
-            return HeadlessAnalyze(game, variant_id, data_path, force, verbose);
+            error = HeadlessAnalyze(game, variant_id, data_path, force, verbose);
+            break;
         case kHeadlessQuery:
-            return HeadlessQuery(game, variant_id, data_path, position);
+            error = HeadlessQuery(game, variant_id, data_path, position);
+            break;
         case kHeadlessGetStart:
-            return HeadlessGetStart(game, variant_id);
+            error = HeadlessGetStart(game, variant_id);
+            break;
         case kHeadlessGetRandom:
-            return HeadlessGetRandom(game, variant_id);
+            error = HeadlessGetRandom(game, variant_id);
+            break;
         default:
-            NotReached("GamesmanHeadlessMain: unknown action\n");
+            fprintf(stderr, "GamesmanHeadlessMain: unknown action\n");
+            error = kNotReachedError;
     }
-    // Not reached.
-    return kNotReachedError;
+#ifdef USE_MPI
+    SafeMpiFinalize();
+#endif  // USE_MPI
+
+    return error;
 }

@@ -54,6 +54,12 @@
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
 
+#ifdef USE_MPI
+#include <mpi.h>
+
+#include "core/solvers/tier_solver/tier_mpi.h"
+#endif  // USE_MPI
+
 enum TierManagementType {
     kTierSolving,
     kTierAnalyzing,
@@ -109,7 +115,14 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
 static int EnqueuePrimitiveTiers(void);
 static void CreateTierTreePrintError(int error);
 
+#ifndef USE_MPI
 static int SolveTierTree(bool force, int verbose);
+#else   // USE_MPI
+static int SolveTierTreeMpi(bool force, int verbose);
+static void SolveTierTreeMpiTerminateWorkers(void);
+static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
+                                     int verbose);
+#endif  // USE_MPI
 static void SolveUpdateTierTree(Tier solved_tier);
 static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
                                    bool solved, bool verbose);
@@ -147,7 +160,12 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
                 error);
         return error;
     }
+
+#ifndef USE_MPI
     int ret = SolveTierTree(force, verbose);
+#else   // USE_MPI
+    int ret = SolveTierTreeMpi(force, verbose);
+#endif  // USE_MPI
     DestroyGlobalVariables();
 
     time_t end = time(NULL);
@@ -312,7 +330,7 @@ static int EnqueuePrimitiveTiers(void) {
         }
     }
 
-    if (TierQueueIsEmpty(&pending_tiers)) {
+    if (TierQueueEmpty(&pending_tiers)) {
         fprintf(stderr,
                 "EnqueuePrimitiveTiers: (BUG) The tier graph contains no "
                 "primitive tiers.\n");
@@ -337,15 +355,16 @@ static void CreateTierTreePrintError(int error) {
     }
 }
 
+#ifndef USE_MPI
 static int SolveTierTree(bool force, int verbose) {
     double time_elapsed = 0.0;
-    TierWorkerInit(&current_api);
     if (verbose > 0) {
-        printf("Begin solving all tiers of total remaining size %" PRId64
+        printf("Begin solving all tiers of total size %" PRId64
                " (positions)\n",
                total_size);
     }
-    while (!TierQueueIsEmpty(&pending_tiers)) {
+
+    while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
         if (IsCanonicalTier(tier)) {  // Only solve canonical tiers.
             time_t begin = time(NULL);
@@ -372,6 +391,92 @@ static int SolveTierTree(bool force, int verbose) {
     return kNoError;
 }
 
+#else  // USE_MPI
+
+static int SolveTierTreeMpi(bool force, int verbose) {
+    if (verbose > 0) {
+        printf("Begin solving all tiers of total size %" PRId64
+               " (positions)\n",
+               total_size);
+    }
+
+    time_t begin_time = time(NULL);
+    SolveTierTreeMpiSolveAll(begin_time, force, verbose);
+    SolveTierTreeMpiTerminateWorkers();
+    double time_elapsed = difftime(time(NULL), begin_time);
+    if (verbose > 0) PrintSolverResult(time_elapsed);
+
+    return kNoError;
+}
+
+static void SolveTierTreeMpiTerminateWorkers(void) {
+    int num_workers = SafeMpiCommSize(MPI_COMM_WORLD) - 1, num_terminated = 0;
+
+    while (num_terminated < num_workers) {
+        TierMpiWorkerMessage worker_msg;
+        int worker_rank;
+        TierMpiManagerRecvAnySource(&worker_msg, &worker_rank);
+        TierMpiManagerSendTerminate(worker_rank);
+        ++num_terminated;
+    }
+}
+
+static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
+                                     int verbose) {
+    static Tier job_list[kMpiNumNodesMax];
+    static TierArray solving_tiers;
+    TierArrayInit(&solving_tiers);
+
+    while (!TierQueueEmpty(&pending_tiers) || !TierArrayEmpty(&solving_tiers)) {
+        TierMpiWorkerMessage worker_msg;
+        int worker_rank;
+        TierMpiManagerRecvAnySource(&worker_msg, &worker_rank);
+        if (worker_msg.request != kTierMpiRequestCheck) {  // Not just checking.
+            bool solved = (worker_msg.request == kTierMpiRequestReportSolved);
+            Tier tier = job_list[worker_rank];
+            if (worker_msg.request == kTierMpiRequestReportError) {  // Failed.
+                printf("Failed to solve tier %" PRId64 ", code %d\n", tier,
+                       worker_msg.error);
+                ++failed_tiers;
+            } else {  // Successfully solved or loaded.
+                SolveUpdateTierTree(tier);
+                ++processed_tiers;
+            }
+            TierArrayRemove(&solving_tiers, tier);
+
+            double time_elapsed = difftime(time(NULL), begin_time);
+            SolveTierTreePrintTime(tier, time_elapsed, solved, verbose);
+        }
+        // The worker node that we received a message from is now idle.
+
+        // Keep popping off non-nanonical tiers from the front of the pending
+        // tier queue until we see the first canonical one or the list becomes
+        // empty.
+        while (!TierQueueEmpty(&pending_tiers) &&
+               !IsCanonicalTier(TierQueueFront(&pending_tiers))) {
+            ++skipped_tiers;
+            TierQueuePop(&pending_tiers);
+        }
+        if (!TierQueueEmpty(&pending_tiers)) {
+            // A solvable tier is available, dispatch it to the worker node.
+            Tier tier = TierQueuePop(&pending_tiers);
+            printf("Dispatching tier %" PRId64 " to worker %d.\n", tier,
+                   worker_rank);
+            job_list[worker_rank] = tier;
+            TierMpiManagerSendSolve(worker_rank, tier, force);
+            TierArrayAppend(&solving_tiers, tier);
+        } else {
+            // No solvable tiers available, let the worker node go to sleep.
+            printf("Sending worker %d to sleep\n", worker_rank);
+            TierMpiManagerSendSleep(worker_rank);
+        }
+    }
+
+    TierArrayDestroy(&solving_tiers);
+}
+
+#endif  // USE_MPI
+
 static void SolveUpdateTierTree(Tier solved_tier) {
     TierArray parent_tiers = current_api.GetParentTiers(solved_tier);
     TierHashSet canonical_parents;
@@ -392,8 +497,9 @@ static void SolveUpdateTierTree(Tier solved_tier) {
             TierTreeSetNumTiers(canonical, num_unsolved_child_tiers - 1);
         assert(success);
         (void)success;
-        if (num_unsolved_child_tiers == 1)
+        if (num_unsolved_child_tiers == 1) {
             TierQueuePush(&pending_tiers, canonical);
+        }
     }
     TierHashSetDestroy(&canonical_parents);
     TierArrayDestroy(&parent_tiers);
@@ -504,7 +610,7 @@ static bool IsCanonicalTier(Tier tier) {
 
 static int DiscoverTierTree(bool force, int verbose) {
     TierAnalyzerInit(&current_api);
-    while (!TierQueueIsEmpty(&pending_tiers)) {
+    while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
         Tier canonical = current_api.GetCanonicalTier(tier);
 

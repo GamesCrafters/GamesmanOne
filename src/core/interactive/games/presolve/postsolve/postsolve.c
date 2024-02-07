@@ -22,7 +22,7 @@ static void UpdateVariantId(void) {
     sprintf(title, title_format, current_game->formal_name, variant_index);
 }
 
-void InteractivePostSolve(ReadOnlyString key) {
+int InteractivePostSolve(ReadOnlyString key) {
     (void)key;  // Unused.
     static ConstantReadOnlyString items[] = {
         "Play new game",
@@ -38,5 +38,6 @@ void InteractivePostSolve(ReadOnlyString key) {
         &InteractiveGameHelp,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    AutoMenu(title, num_items, items, keys, hooks, &UpdateVariantId);
+    
+    return AutoMenu(title, num_items, items, keys, hooks, &UpdateVariantId);
 }

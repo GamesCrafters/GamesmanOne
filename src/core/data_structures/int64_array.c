@@ -31,7 +31,7 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdlib.h>   // free, realloc
-#include <string.h>   // memset
+#include <string.h>   // memset, memmove
 
 void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;
@@ -111,4 +111,25 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
 
     array->size = size;
     return true;
+}
+
+bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index) {
+    if (index < 0 || index >= array->size) return false;
+
+    int64_t move_size = (array->size - index - 1) * sizeof(int64_t);
+    memmove(&array->array[index], &array->array[index + 1], move_size);
+    --array->size;
+
+    return true;
+}
+
+bool Int64ArrayRemove(Int64Array *array, int64_t item) {
+    for (int64_t i = 0; i < array->size; ++i) {
+        if (array->array[i] == item) {
+            return Int64ArrayRemoveIndex(array, i);
+        }
+    }
+
+    // Item does not exist.
+    return false;
 }

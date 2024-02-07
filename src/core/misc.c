@@ -33,14 +33,17 @@
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
-#include <stdio.h>      // fprintf, stderr, FILE
+#include <stdio.h>      // fgets, fprintf, stderr, FILE
 #include <stdlib.h>     // exit, malloc, calloc, free
-#include <string.h>     // strlen, strncpy
+#include <string.h>     // strcspn, strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
 #include <unistd.h>     // close
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
+#ifdef USE_MPI
+#include <mpi.h>
+#endif  // USE_MPI
 
 #include "core/types/gamesman_types.h"
 #include "libs/mgz/gz64.h"
@@ -89,13 +92,31 @@ char *SafeStrncpy(char *dest, const char *src, size_t n) {
     return ret;
 }
 
+char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
+    printf("%s\n=> ", prompt);
+    if (fgets(buf, length_max + 1, stdin) == NULL) return NULL;
+
+    // Clear the stdin buffer if the input was too long
+    if (strchr(buf, '\n') == NULL) {
+        int ch = getchar();
+        while (ch != '\n' && ch != EOF) {
+            ch = getchar();
+        }
+    }
+
+    // Remove the trailing newline character, if it exists.
+    // Algorithm by Tim Čas,
+    // https://stackoverflow.com/a/28462221.
+    buf[strcspn(buf, "\r\n")] = '\0';
+
+    return buf;
+}
+
 void *GenericPointerAdd(const void *p, int64_t offset) {
     return (void *)((uint8_t *)p + offset);
 }
 
-double ClockToSeconds(clock_t n) {
-    return (double)n / CLOCKS_PER_SEC;
-}
+double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
 
 char *GetTimeStampString(void) {
     time_t rawtime = time(NULL);
@@ -486,3 +507,61 @@ int64_t NChooseR(int n, int r) {
 #undef CACHE_COLS
 
 int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
+
+#ifdef USE_MPI
+void SafeMpiInit(int *argc, char ***argv) {
+    int error = MPI_Init(argc, argv);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiInit: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+void SafeMpiFinalize(void) {
+    int error = MPI_Finalize();
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiFinalize: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+int SafeMpiCommSize(MPI_Comm comm) {
+    int ret;
+    int error = MPI_Comm_size(comm, &ret);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiCommSize: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+
+    return ret;
+}
+
+int SafeMpiCommRank(MPI_Comm comm) {
+    int ret;
+    int error = MPI_Comm_rank(comm, &ret);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiCommRank: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+
+    return ret;
+}
+
+void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
+                 MPI_Comm comm) {
+    int error = MPI_Send(buf, count, datatype, dest, tag, comm);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiSend: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
+void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
+                 int tag, MPI_Comm comm, MPI_Status *status) {
+    int error = MPI_Recv(buf, count, datatype, source, tag, comm, status);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiRecv: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+#endif  // USE_MPI

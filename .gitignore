@@ -1,3 +1,7 @@
+# Automatic directories
+bin
+data
+
 # Prerequisites
 *.d
 

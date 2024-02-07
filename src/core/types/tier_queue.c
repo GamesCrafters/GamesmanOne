@@ -34,7 +34,7 @@ void TierQueueInit(TierQueue *queue) { Int64QueueInit(queue); }
 
 void TierQueueDestroy(TierQueue *queue) { Int64QueueDestroy(queue); }
 
-bool TierQueueIsEmpty(const TierQueue *queue) {
+bool TierQueueEmpty(const TierQueue *queue) {
     return Int64QueueIsEmpty(queue);
 }
 
@@ -45,3 +45,5 @@ bool TierQueuePush(TierQueue *queue, Tier tier) {
 }
 
 Tier TierQueuePop(TierQueue *queue) { return Int64QueuePop(queue); }
+
+Tier TierQueueFront(const TierQueue *queue) { return Int64QueueFront(queue); }

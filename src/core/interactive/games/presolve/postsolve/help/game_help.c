@@ -4,8 +4,10 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveGameHelp(ReadOnlyString key) {
+int InteractiveGameHelp(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO
     fprintf(stderr, "InteractiveGameHelp: unimplemented\n");
+
+    return 0;
 }

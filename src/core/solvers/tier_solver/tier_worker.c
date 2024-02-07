@@ -8,7 +8,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * 
+ *
  * @version 1.0.1
  * @date 2024-01-13
  *
@@ -42,10 +42,10 @@
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
-#include "core/types/gamesman_types.h"
 #include "core/solvers/tier_solver/frontier.h"
 #include "core/solvers/tier_solver/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_types.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -64,7 +64,13 @@
 #define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_PARALLEL_FOR
 #define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var)
-#endif
+#endif  // _OPENMP
+
+#ifdef USE_MPI
+#include <unistd.h>  // sleep
+
+#include "core/solvers/tier_solver/tier_mpi.h"
+#endif  // USE_MPI
 
 // Note on multithreading:
 //   Be careful that "if (!condition) success = false;" is not equivalent to
@@ -100,7 +106,7 @@ static uint8_t *num_undecided_children = NULL;
 #ifdef _OPENMP
 // Lock for the array above.
 static omp_lock_t num_undecided_children_lock;
-#endif
+#endif  // _OPENMP
 
 // Cached reverse position graph of the current tier.
 ReverseGraph reverse_graph;
@@ -170,6 +176,37 @@ _bailout:
     return ret;
 }
 
+#ifdef USE_MPI
+int TierWorkerMpiServe(void) {
+    TierMpiWorkerSendCheck();
+    while (true) {
+        TierMpiManagerMessage msg;
+        TierMpiWorkerRecv(&msg);
+
+        if (msg.command == kTierMpiCommandSleep) {
+            // No work to do. Wait for one second and check again.
+            sleep(1);
+            TierMpiWorkerSendCheck();
+        } else if (msg.command == kTierMpiCommandTerminate) {
+            break;
+        } else {
+            bool force = (msg.command == kTierMpiCommandForceSolve);
+            bool solved;
+            int error = TierWorkerSolve(msg.tier, force, &solved);
+            if (error != kNoError) {
+                TierMpiWorkerSendReportError(error);
+            } else if (solved) {
+                TierMpiWorkerSendReportSolved();
+            } else {
+                TierMpiWorkerSendReportLoaded();
+            }
+        }
+    }
+
+    return kNoError;
+}
+#endif  // USE_MPI
+
 // -----------------------------------------------------------------------------
 
 static bool Step0Initialize(Tier tier) {
@@ -194,7 +231,7 @@ static bool Step0Initialize(Tier tier) {
     this_tier_size = current_api.GetTierSize(tier);
 #ifdef _OPENMP
     omp_init_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
     return true;
 }
 
@@ -477,12 +514,12 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
         omp_set_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
         uint8_t child_remaining = num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
 #ifdef _OPENMP
         omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif                                       // _OPENMP
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
@@ -512,19 +549,19 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
         omp_set_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
         if (num_undecided_children[parents.array[i]] == 0) {
             // This parent has been solved already.
 #ifdef _OPENMP
             omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
             continue;
         }
         // Must perform the above check before decrementing to prevent overflow.
         uint8_t child_remaining = --num_undecided_children[parents.array[i]];
 #ifdef _OPENMP
         omp_unset_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
 
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
@@ -593,7 +630,7 @@ static void Step7Cleanup(void) {
     }
 #ifdef _OPENMP
     omp_destroy_lock(&num_undecided_children_lock);
-#endif
+#endif  // _OPENMP
 }
 
 static void DestroyFrontiers(void) {

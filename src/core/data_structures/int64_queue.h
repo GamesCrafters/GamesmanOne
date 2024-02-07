@@ -77,4 +77,7 @@ bool Int64QueuePush(Int64Queue *queue, int64_t item);
 /** @brief Pops the item at the front of the QUEUE and returns it. */
 int64_t Int64QueuePop(Int64Queue *queue);
 
+/** @brief Returns the item at the front of the QUEUE without popping it. */
+int64_t Int64QueueFront(const Int64Queue *queue);
+
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_

@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractiveMainMenu(ReadOnlyString key);
+int InteractiveMainMenu(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_MAIN_MENU_H_

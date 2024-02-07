@@ -33,6 +33,9 @@
 #include <stdio.h>    // FILE
 #include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
+#ifdef USE_MPI
+#include <mpi.h>
+#endif  // USE_MPI
 
 #include "core/types/gamesman_types.h"
 
@@ -64,6 +67,8 @@ void *SafeCalloc(size_t n, size_t size);
  * @return DEST.
  */
 char *SafeStrncpy(char *dest, const char *src, size_t n);
+
+char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
 /**
  * @brief Adds the given byte OFFSET to the given generic pointer P. Return
@@ -335,5 +340,21 @@ int64_t NChooseR(int n, int r);
  * @warning D must not be 0.
  */
 int64_t RoundUpDivide(int64_t n, int64_t d);
+
+#ifdef USE_MPI
+void SafeMpiInit(int *argc, char ***argv);
+
+void SafeMpiFinalize(void);
+
+int SafeMpiCommSize(MPI_Comm comm);
+
+int SafeMpiCommRank(MPI_Comm comm);
+
+void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
+                 MPI_Comm comm);
+
+void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
+                 int tag, MPI_Comm comm, MPI_Status *status);
+#endif  // USE_MPI
 
 #endif  // GAMESMANONE_CORE_MISC_H_

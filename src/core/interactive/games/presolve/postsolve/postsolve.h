@@ -3,6 +3,6 @@
 
 #include "core/types/gamesman_types.h"
 
-void InteractivePostSolve(ReadOnlyString key);
+int InteractivePostSolve(ReadOnlyString key);
 
 #endif  // GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_POSTSOLVE_POSTSOLVE_H_

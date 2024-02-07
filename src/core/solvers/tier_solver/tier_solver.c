@@ -34,6 +34,9 @@
 #include <stddef.h>  // NULL
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
+#ifdef USE_MPI
+#include <mpi.h>
+#endif  // USE_MPI
 
 #include "core/analysis/stat_manager.h"
 #include "core/db/bpdb/bpdb_lite.h"
@@ -41,6 +44,7 @@
 #include "core/db/naivedb/naivedb.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
+#include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
 
 // Solver API functions.
@@ -56,11 +60,10 @@ static int TierSolverSetOption(int option, int selection);
 static Value TierSolverGetValue(TierPosition tier_position);
 static int TierSolverGetRemoteness(TierPosition tier_position);
 
-/**
- * @brief The Tier Solver definition. Used externally.
- */
+/** @brief Tier Solver definition. */
 const Solver kTierSolver = {
     .name = "Tier Solver",
+    .supports_mpi = 1,
 
     .Init = &TierSolverInit,
     .Finalize = &TierSolverFinalize,
@@ -182,7 +185,31 @@ static int TierSolverSolve(void *aux) {
     };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
+#ifndef USE_MPI
+    TierWorkerInit(&current_api);
     return TierManagerSolve(&current_api, options->force, options->verbose);
+#else
+    // Assumes MPI_Init has been called.
+    int process_id, cluster_size;
+    cluster_size = SafeMpiCommSize(MPI_COMM_WORLD);
+    process_id = SafeMpiCommRank(MPI_COMM_WORLD);
+    if (cluster_size < 1) {
+        NotReached("TierSolverSolve: cluster size smaller than 1");
+    } else if (cluster_size == 1) {  // Only one node is allocated.
+        TierWorkerInit(&current_api);
+        return TierManagerSolve(&current_api, options->force, options->verbose);
+    } else {                    // cluster_size > 1
+        if (process_id == 0) {  // This is the manager node.
+            return TierManagerSolve(&current_api, options->force,
+                                    options->verbose);
+        } else {  // This is a worker node.
+            TierWorkerInit(&current_api);
+            return TierWorkerMpiServe();
+        }
+    }
+
+    return kNotReachedError;
+#endif  // USE_MPI
 }
 
 static int TierSolverAnalyze(void *aux) {
