@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Command line parsing module for headless mode.
- * @version 1.0.0
- * @date 2024-01-20
+ * @version 1.1.0
+ * @date 2024-02-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,8 +26,6 @@
 
 #ifndef GAMESMANONE_CORE_HEADLESS_HPARSER_H_
 #define GAMESMANONE_CORE_HEADLESS_HPARSER_H_
-
-#include <stdbool.h>  // bool
 
 /*
  * Headless Commands:
@@ -60,10 +58,8 @@ enum HeadlessAction {
     kNumHeadlessActions,         /**< Number of all valid actions. */
 };
 
-/**
- * @brief Collection of all arguments used by argp for command line parsing.
- */
-typedef struct ArgpArguments {
+/** @brief Collection of all arguments used for command line parsing. */
+typedef struct HeadlessArguments {
     char *command;    /**< User command. See Headless Commands for details. */
     char *game;       /**< Game name. */
     char *variant_id; /**< Variant index. */
@@ -71,11 +67,11 @@ typedef struct ArgpArguments {
     char *data_path;  /**< Path to the "data" directory, NULL for default. */
     char *output;     /**< Path to output file, defaults to stdout if NULL. */
     int action;       /**< Action to take. */
-    bool force;       /**< Whether to force solve/analyze. */
-    bool verbose;     /**< Whether to print additional output. */
-    bool quiet;       /**< Whether to give no output. */
-} ArgpArguments;
+    int force;        /**< Whether to force solve/analyze. */
+    int verbose;      /**< Whether to print additional output. */
+    int quiet;        /**< Whether to give no output. */
+} HeadlessArguments;
 
-ArgpArguments HeadlessParseArguments(int argc, char **argv);
+HeadlessArguments HeadlessParseArguments(int argc, char **argv);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HPARSER_H_
