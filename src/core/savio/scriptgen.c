@@ -13,6 +13,7 @@ static int PrintStringOption(FILE *file, ReadOnlyString option_name,
                              ReadOnlyString value);
 static int PrintIntegerOption(FILE *file, ReadOnlyString option_name,
                               int value);
+static int PrintShebang(FILE *file);
 static int PrintJobName(FILE *file, ReadOnlyString job_name);
 static int PrintAccount(FILE *file, ReadOnlyString account);
 static int PrintPartition(FILE *file, ReadOnlyString partition);
@@ -37,6 +38,7 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     if (file == NULL) return kFileSystemError;
 
     const SavioPartition *partition = &kSavioPartitions[settings->partition_id];
+    PrintShebang(file);
     PrintJobName(file, settings->job_name);
     PrintAccount(file, settings->account);
     PrintPartition(file, partition->name);
@@ -94,6 +96,8 @@ static int PrintIntegerOption(FILE *file, ReadOnlyString option_name,
 
     return count1 + count2;
 }
+
+static int PrintShebang(FILE *file) { return fprintf(file, "#!/bin/sh"); }
 
 static int PrintJobName(FILE *file, ReadOnlyString job_name) {
     return PrintStringOption(file, "job-name", job_name);
