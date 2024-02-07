@@ -178,14 +178,15 @@ _bailout:
 
 #ifdef USE_MPI
 int TierWorkerMpiServe(void) {
+    TierMpiWorkerSendCheck();
     while (true) {
         TierMpiManagerMessage msg;
-        TierMpiWorkerSendCheck();
         TierMpiWorkerRecv(&msg);
 
         if (msg.command == kTierMpiCommandSleep) {
             // No work to do. Wait for one second and check again.
             sleep(1);
+            TierMpiWorkerSendCheck();
         } else if (msg.command == kTierMpiCommandTerminate) {
             break;
         } else {

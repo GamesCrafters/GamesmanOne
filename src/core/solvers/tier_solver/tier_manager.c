@@ -496,8 +496,9 @@ static void SolveUpdateTierTree(Tier solved_tier) {
             TierTreeSetNumTiers(canonical, num_unsolved_child_tiers - 1);
         assert(success);
         (void)success;
-        if (num_unsolved_child_tiers == 1)
+        if (num_unsolved_child_tiers == 1) {
             TierQueuePush(&pending_tiers, canonical);
+        }
     }
     TierHashSetDestroy(&canonical_parents);
     TierArrayDestroy(&parent_tiers);
