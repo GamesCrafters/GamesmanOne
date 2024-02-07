@@ -203,6 +203,7 @@ static int TierSolverSolve(void *aux) {
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
+            TierWorkerInit(&current_api);
             return TierWorkerMpiServe();
         }
     }

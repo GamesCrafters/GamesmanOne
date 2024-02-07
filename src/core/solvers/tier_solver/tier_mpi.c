@@ -64,7 +64,7 @@ void TierMpiWorkerSendReportError(int error) {
 }
 
 void TierMpiWorkerRecv(TierMpiManagerMessage *dest) {
-    SafeMpiRecv(dest, sizeof(*dest), MPI_UINT8_T, MPI_ANY_SOURCE,
+    SafeMpiRecv(dest, sizeof(*dest), MPI_UINT8_T, kMpiManagerRank,
                 kMpiDefaultTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
