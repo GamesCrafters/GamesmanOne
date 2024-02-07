@@ -45,7 +45,7 @@ void TierMpiWorkerSendCheck(void);
 void TierMpiWorkerSendReportSolved(void);
 void TierMpiWorkerSendReportLoaded(void);
 void TierMpiWorkerSendReportError(int error);
-void TierMpiWorkerRecv(TierMpiWorkerMessage *dest);
+void TierMpiWorkerRecv(TierMpiManagerMessage *dest);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
 

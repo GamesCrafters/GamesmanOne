@@ -206,6 +206,8 @@ static int TierSolverSolve(void *aux) {
             return TierWorkerMpiServe();
         }
     }
+
+    return kNotReachedError;
 #endif  // USE_MPI
 }
 
