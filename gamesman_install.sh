@@ -16,35 +16,45 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git autoconf automake cmake zlib1g zlib1g-dev
+    apt update && apt install -y git autoconf automake cmake zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git autoconf automake cmake zlib zlib-devel
+    dnf update && dnf install -y git autoconf automake cmake zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
-    xcode-select --install || error_exit "Failed to install the Xcode Command Line Tools"
+    xcode-select --install
     brew install git autoconf automake cmake zlib
 }
-
-# Check if running as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Not running as root. Will skip steps that require root access."
-    ROOT_ACCESS=false
-else
-    ROOT_ACCESS=true
-fi
 
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
+# Check if running as root
+if [ "$(id -u)" -ne 0 ]; then
+    case "$OS" in
+    Linux*)
+        echo "Not running as root. Will skip steps that require root access."
+        INSTALL_DEPENDENCIES=false
+        ;;
+    Darwin*)
+        INSTALL_DEPENDENCIES=true
+        ;;
+    *)
+        error_exit "Unsupported operating system."
+        ;;
+    esac
+else
+    INSTALL_DEPENDENCIES=true
+fi
+
 # Install dependencies based on OS only if has root access.
-if [ "$ROOT_ACCESS" = true ]; then
+if [ "$INSTALL_DEPENDENCIES" = true ]; then
     case "$OS" in
     Linux*)
         # Detect if using Debian/Ubuntu or RHEL/CentOS
