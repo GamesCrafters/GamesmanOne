@@ -410,7 +410,7 @@ static int SolveTierTreeMpi(bool force, int verbose) {
 }
 
 static void SolveTierTreeMpiTerminateWorkers(void) {
-    int num_workers = SafeMpiCommSize() - 1, num_terminated = 0;
+    int num_workers = SafeMpiCommSize(MPI_COMM_WORLD) - 1, num_terminated = 0;
 
     while (num_terminated < num_workers) {
         TierMpiWorkerMessage worker_msg;
