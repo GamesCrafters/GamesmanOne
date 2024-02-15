@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 1.2.0
+ * @version 1.2.1
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -26,7 +26,6 @@
 
 #include "core/db/db_manager.h"
 
-#include <inttypes.h>  // PRId64
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr

@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 1.2.0
+ * @version 1.2.1
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

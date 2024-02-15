@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- *
- * @version 1.0.1
- * @date 2024-01-13
+ * @version 1.0.2
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,7 +31,6 @@
 #include "core/solvers/tier_solver/tier_worker.h"
 
 #include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
@@ -604,14 +602,14 @@ static void Step6SaveValues(void) {
     if (DbManagerFlushSolvingTier(NULL) != 0) {
         fprintf(stderr,
                 "Step6SaveValues: an error has occurred while flushing of the "
-                "current tier. The database file for tier %" PRId64
+                "current tier. The database file for tier %" PRITier
                 " may be corrupt.\n",
                 this_tier);
     }
     if (DbManagerFreeSolvingTier() != 0) {
         fprintf(stderr,
                 "Step6SaveValues: an error has occurred while freeing of the "
-                "current tier's in-memory database. Tier: %" PRId64 "\n",
+                "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
 }

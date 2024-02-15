@@ -13,9 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- *
- * @version 1.1.0
- * @date 2023-10-18
+ * @version 1.1.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -375,7 +374,7 @@ static int SolveTierTree(bool force, int verbose) {
                 SolveUpdateTierTree(tier);
                 ++processed_tiers;
             } else {
-                printf("Failed to solve tier %" PRId64 ", code %d\n", tier,
+                printf("Failed to solve tier %" PRITier ", code %d\n", tier,
                        error);
                 ++failed_tiers;
             }
@@ -435,7 +434,7 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
             bool solved = (worker_msg.request == kTierMpiRequestReportSolved);
             Tier tier = job_list[worker_rank];
             if (worker_msg.request == kTierMpiRequestReportError) {  // Failed.
-                printf("Failed to solve tier %" PRId64 ", code %d\n", tier,
+                printf("Failed to solve tier %" PRITier ", code %d\n", tier,
                        worker_msg.error);
                 ++failed_tiers;
             } else {  // Successfully solved or loaded.
@@ -460,7 +459,7 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
         if (!TierQueueEmpty(&pending_tiers)) {
             // A solvable tier is available, dispatch it to the worker node.
             Tier tier = TierQueuePop(&pending_tiers);
-            printf("Dispatching tier %" PRId64 " to worker %d.\n", tier,
+            printf("Dispatching tier %" PRITier " to worker %d.\n", tier,
                    worker_rank);
             job_list[worker_rank] = tier;
             TierMpiManagerSendSolve(worker_rank, tier, force);
@@ -518,7 +517,7 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
         operation = "checking";
     }
     if (verbose > 0) {
-        printf("Finished %s tier %" PRId64 " ", operation, tier);
+        printf("Finished %s tier %" PRITier " ", operation, tier);
         printf("of size %" PRId64 ", ", tier_size);
 
         int64_t remaining_size = total_size - processed_size;
@@ -635,7 +634,7 @@ static int DiscoverTierTree(bool force, int verbose) {
             if (tier != canonical) AnalysisConvertToNoncanonical(tier_analysis);
             AnalysisAggregate(&game_analysis, tier_analysis);
         } else {
-            printf("Failed to analyze tier %" PRId64 ", code %d\n", tier,
+            printf("Failed to analyze tier %" PRITier ", code %d\n", tier,
                    error);
             ++failed_tiers;
         }
@@ -648,7 +647,7 @@ static int DiscoverTierTree(bool force, int verbose) {
 }
 
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
-    if (verbose > 0) printf("\n--- Tier %" PRId64 " analyzed ---\n", tier);
+    if (verbose > 0) printf("\n--- Tier %" PRITier " analyzed ---\n", tier);
     if (verbose > 1) {
         AnalysisPrintEverything(stdout, analysis);
     } else if (verbose > 0) {

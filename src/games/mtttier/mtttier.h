@@ -8,7 +8,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tic-Tac-Tier - Tiered Tic-Tac-Toe.
- * @version 1.0.3
+ * @version 1.0.4
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

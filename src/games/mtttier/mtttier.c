@@ -8,7 +8,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
- * @version 1.0.3
+ * @version 1.0.4
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -347,7 +347,7 @@ static TierArray MtttierGetChildTiers(Tier tier) {
 }
 
 static int MtttierGetTierName(char *dest, Tier tier) {
-    return sprintf(dest, "%" PRId64 "p", tier);
+    return sprintf(dest, "%" PRITier "p", tier);
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
@@ -516,7 +516,7 @@ static bool InitGenericHash(void) {
         if (!success) {
             fprintf(stderr,
                     "MtttierInit: failed to initialize generic hash context "
-                    "for tier %" PRId64 ". Aborting...\n",
+                    "for tier %" PRITier ". Aborting...\n",
                     tier);
             GenericHashReinitialize();
             return false;

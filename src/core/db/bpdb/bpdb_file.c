@@ -4,7 +4,7 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Bit-Perfect Database file utilities.
- * @version 1.1.0
+ * @version 1.1.1
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -26,7 +26,6 @@
 
 #include "core/db/bpdb/bpdb_file.h"
 
-#include <inttypes.h>  // PRId64
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // calloc, free
@@ -66,7 +65,7 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
     if (GetTierName != NULL) {
         GetTierName(full_path + count, tier);
     } else {
-        sprintf(full_path + count, "%" PRId64, tier);
+        sprintf(full_path + count, "%" PRITier, tier);
     }
     strcat(full_path, kBpdbExtension);
 

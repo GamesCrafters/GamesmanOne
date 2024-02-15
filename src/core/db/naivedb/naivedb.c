@@ -5,7 +5,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.1.0
+ * @version 1.1.1
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -28,7 +28,6 @@
 #include "core/db/naivedb/naivedb.h"
 
 #include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // malloc, calloc, free
@@ -126,7 +125,7 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     if (GetTierName != NULL) {
         GetTierName(full_path + count, tier);
     } else {
-        sprintf(full_path + count, "%" PRId64, tier);
+        sprintf(full_path + count, "%" PRITier, tier);
     }
 
     return full_path;
