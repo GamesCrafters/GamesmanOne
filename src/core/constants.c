@@ -40,8 +40,6 @@ const TierPosition kIllegalTierPosition = {
     .tier = kIllegalTier,
     .position = kIllegalPosition,
 };
-const int kIllegalRemoteness = -1;
-const int kIllegalVariantIndex = -1;
 
 ConstantReadOnlyString kGamesmanDate = "2024.01.24";
 ConstantReadOnlyString kGamesmanVersion = "0.6.0";

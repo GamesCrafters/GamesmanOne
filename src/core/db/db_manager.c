@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 1.1.0
- * @date 2023-10-22
+ * @version 1.2.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -47,7 +47,8 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
 // -----------------------------------------------------------------------------
 
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
-                    ReadOnlyString data_path, void *aux) {
+                    ReadOnlyString data_path, GetTierNameFunc GetTierName,
+                    void *aux) {
     if (current_db != NULL) current_db->Finalize();
     current_db = NULL;
 
@@ -61,7 +62,7 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
     current_db = db;
 
     char *path = SetupDbPath(current_db, game_name, variant, data_path);
-    int error = current_db->Init(game_name, variant, path, aux);
+    int error = current_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 
     return error;

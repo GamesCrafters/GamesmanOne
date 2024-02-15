@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
- *
- * @version 1.0.2
- * @date 2024-01-12
+ * @version 1.0.3
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,7 +36,7 @@
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // atoi
 
 #include "core/generic_hash/generic_hash.h"
@@ -64,6 +63,8 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position);
 static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
+
+static int MtttierGetTierName(char *dest, Tier tier);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
@@ -95,6 +96,8 @@ static const TierSolverApi kSolverApi = {
     .GetChildTiers = &MtttierGetChildTiers,
     .GetParentTiers = NULL,
     .GetCanonicalTier = NULL,
+
+    .GetTierName = &MtttierGetTierName,
 };
 
 // Gameplay API Setup
@@ -341,6 +344,10 @@ static TierArray MtttierGetChildTiers(Tier tier) {
     TierArrayInit(&children);
     if (tier < 9) TierArrayAppend(&children, tier + 1);
     return children;
+}
+
+static int MtttierGetTierName(char *dest, Tier tier) {
+    return sprintf(dest, "%" PRId64 "p", tier);
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {

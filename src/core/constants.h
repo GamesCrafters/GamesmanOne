@@ -67,6 +67,14 @@ enum CommonConstants {
     kBitsPerByte = 8,  /**< 8 bits per byte. */
 };
 
+/** @brief Gamesman constants. */
+enum GamesmanConstants {
+    /** Illegal remoteness which can be returned as an error. */
+    kIllegalRemoteness = -1,
+    /** Illegal variant which can be returned as an error. */
+    kIllegalVariantIndex = -1,
+};
+
 /**
  * @brief Largest supported remoteness.
  *
@@ -79,7 +87,7 @@ enum RemotenessLimits {
 };
 
 enum MpiLimits {
-    /** 
+    /**
      * The Savio cluster currently support at most 24 nodes allocated per job.
      */
     kMpiNumNodesMax = 24,
@@ -96,12 +104,6 @@ extern const Position kIllegalPosition;
 
 /** @brief Illegal tier position which can be returned as an error. */
 extern const TierPosition kIllegalTierPosition;
-
-/** @brief Illegal remoteness which can be returned as an error. */
-extern const int kIllegalRemoteness;
-
-/** @brief Illegal variant which can be returned as an error. */
-extern const int kIllegalVariantIndex;
 
 /** @brief Date of the current version of GAMESMAN. */
 extern ConstantReadOnlyString kGamesmanDate;

@@ -7,9 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Tier Solver API.
- *
- * @version 1.2.0
- * @date 2024-01-08
+ * @version 1.3.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -287,6 +286,20 @@ typedef struct TierSolverApi {
      * disabled and all tiers will be treated as canonical.
      */
     Tier (*GetCanonicalTier)(Tier tier);
+
+    /**
+     * @brief Converts TIER to its name, which is then used as the file name
+     * for the tier database. Writes the result to NAME, assuming it has enough
+     * space.
+     *
+     * @note It is the game developer's responsibility to make sure that the
+     * name of any tier is no longer than kDbFileNameLengthMax bytes (not
+     * including the file extension.)
+     *
+     * @note This function is OPTIONAL. If set to NULL, the tier database files
+     * will use the TIER value as their file names.
+     */
+    int (*GetTierName)(char *name, Tier tier);
 } TierSolverApi;
 
 /** @brief Solver options of the Tier Solver. */

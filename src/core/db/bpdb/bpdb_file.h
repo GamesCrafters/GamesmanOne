@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database file utilities.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -56,15 +56,19 @@ typedef struct BpdbFileHeader {
 
 /**
  * @brief Returns the full path to the bpdb file for the given TIER given the
- * SANDBOX_PATH for bpdb. The user is responsible for free()ing the pointer
- * returned by this function.
+ * SANDBOX_PATH for bpdb and an optional function which converts TIER to its
+ * file name. The user is responsible for free()ing the pointer returned by this
+ * function.
  *
  * @param sandbox_path Path to a sandbox directory for bpdb.
  * @param tier Get path to the db file of this TIER.
+ * @param GetTierName Function that converts a tier to its name. If set to
+ * NULL, a fallback method will be used instead.
  * @return Full path to the bpdb file on success, or
  * @return NULL on failure.
  */
-char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier);
+char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
+                          GetTierNameFunc GetTierName);
 
 /**
  * @brief Flushes the RECORDS to a bpdb file under FULL_PATH.
@@ -100,12 +104,15 @@ int BpdbFileGetBlockSize(int bits_per_entry);
  *
  * @param sandbox_path Path to a sandbox directory for bpdb.
  * @param tier The tier to get status of.
+ * @param GetTierName Function that converts a tier to its name. If set to
+ * NULL, a fallback method will be used instead.
  * @return kDbTierStatusSolved if solved,
  * @return kDbTierStatusCorrupted if corrupted,
  * @return kDbTierStatusMissing if not solved, or
  * @return kDbTierStatusCheckError if an error occurred when checking the status
  * of TIER.
  */
-int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier);
+int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier,
+                          GetTierNameFunc GetTierName);
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_BPDB_FILE_H_

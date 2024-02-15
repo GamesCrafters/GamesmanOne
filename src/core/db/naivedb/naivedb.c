@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,7 +41,8 @@
 // Database API.
 
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
-                       ReadOnlyString path, void *aux);
+                       ReadOnlyString path, GetTierNameFunc GetTierName,
+                       void *aux);
 static void NaiveDbFinalize(void);
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size);
@@ -101,6 +102,7 @@ static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
+static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
@@ -111,25 +113,27 @@ static NaiveDbEntry *records;
  * responsible for free()ing the pointer returned by this function. Returns
  * NULL on failure.
  */
-static char *GetFullPathToFile(Tier tier) {
-    // Full path: "<path>/<tier>", +2 for '/' and '\0'.
+static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
+    // Full path: "<path>/<file_name>", +2 for '/' and '\0'.
     char *full_path = (char *)calloc(
-        (strlen(sandbox_path) + kInt64Base10StringLengthMax + 2), sizeof(char));
+        (strlen(sandbox_path) + kDbFileNameLengthMax + 2), sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
     }
 
-    char file_name[kInt64Base10StringLengthMax + 2];
-    snprintf(file_name, kInt64Base10StringLengthMax, "/%" PRId64, tier);
+    int count = sprintf(full_path, "%s/", sandbox_path);
+    if (GetTierName != NULL) {
+        GetTierName(full_path + count, tier);
+    } else {
+        sprintf(full_path + count, "%" PRId64, tier);
+    }
 
-    strcat(full_path, sandbox_path);
-    strcat(full_path, file_name);
     return full_path;
 }
 
 static int ReadFromFile(TierPosition tier_position, void *buffer) {
-    char *full_path = GetFullPathToFile(tier_position.tier);
+    char *full_path = GetFullPathToFile(tier_position.tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;  // OOM.
 
     FILE *file = fopen(full_path, "rb");
@@ -163,7 +167,8 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
 }
 
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
-                       ReadOnlyString path, void *aux) {
+                       ReadOnlyString path, GetTierNameFunc GetTierName,
+                       void *aux) {
     (void)aux;  // Unused.
     assert(sandbox_path == NULL);
 
@@ -177,6 +182,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
+    CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
     assert(records == NULL);
@@ -209,7 +215,7 @@ static int NaiveDbFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
     // Create a file <tier> at the given path
-    char *full_path = GetFullPathToFile(current_tier);
+    char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
     FILE *file = fopen(full_path, "wb");
@@ -320,7 +326,7 @@ static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 }
 
 static int NaiveDbTierStatus(Tier tier) {
-    char *full_path = GetFullPathToFile(tier);
+    char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
     if (full_path == NULL) return kDbTierStatusCheckError;
 
     FILE *db_file = fopen(full_path, "rb");

@@ -57,7 +57,7 @@ static void IndexToConfig(GenericHashContext *context, int64_t index,
 static void InitStep0MemsetToDefaultValues(GenericHashContext *context);
 static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
                                                 const int *pieces_init_array);
-static bool IsValidConfig(GenericHashContext *context, int *config);
+static bool IsValidConfigWrapper(GenericHashContext *context, int *config);
 static bool InitStep2SetValidConfigs(GenericHashContext *context);
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context);
 static void InitStep2_1CountNumValidConfigs(GenericHashContext *context,
@@ -231,6 +231,7 @@ static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
     context->maxs = (int *)malloc(context->num_pieces * sizeof(int));
     if (context->pieces == NULL || context->mins == NULL ||
         context->maxs == NULL) {
+        // Successfully malloc'ed spaces will be freed by caller.
         return false;
     }
     // Setup values.
@@ -257,7 +258,7 @@ static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
     return true;
 }
 
-static bool IsValidConfig(GenericHashContext *context, int *config) {
+static bool IsValidConfigWrapper(GenericHashContext *context, int *config) {
     // Check if all pieces add up to context->board_size.
     int pieces = 0;
     for (int i = 0; i < context->num_pieces; ++i) {
@@ -304,7 +305,8 @@ static void InitStep2_1CountNumValidConfigs(GenericHashContext *context,
         IndexToConfig(context, i, this_config);
 
         // Increment if and only if this_config is valid.
-        context->num_valid_configs += IsValidConfig(context, this_config);
+        context->num_valid_configs +=
+            IsValidConfigWrapper(context, this_config);
     }
 }
 
@@ -328,7 +330,7 @@ static bool InitStep2_3CalculateSizes(GenericHashContext *context,
     int this_config[STACK_CONFIG_SIZE];
     for (int64_t i = 0; i < num_configs; ++i) {
         IndexToConfig(context, i, this_config);
-        if (IsValidConfig(context, this_config)) {
+        if (IsValidConfigWrapper(context, this_config)) {
             context->valid_config_indices[j] = i;
             context->config_hash_offsets[j] = context->num_positions;
             context->num_positions = SafeAddNonNegativeInt64(
