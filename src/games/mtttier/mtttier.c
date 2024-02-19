@@ -252,7 +252,7 @@ static TierPosition MtttierDoMove(TierPosition tier_position, Move move) {
     board[move] = turn;
     TierPosition ret;
     ret.tier = tier_position.tier + 1;
-    ret.position = GenericHashHashLabel(tier_position.tier, board, 1);
+    ret.position = GenericHashHashLabel(ret.tier, board, 1);
     return ret;
 }
 

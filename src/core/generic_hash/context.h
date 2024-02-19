@@ -86,7 +86,7 @@ typedef struct GenericHashContext {
 
     /**
      * @brief Maps a piece character to an index into the PIECES array. Supports
-     * up to 128 different pieces. A piece can be of any value between 0 to 127,
+     * up to 128 different pieces. A piece can be of any value from 0 to 127
      * which is then mapped to its index.
      */
     char piece_index_mapping[128];
@@ -102,7 +102,7 @@ typedef struct GenericHashContext {
 
     /**
      * @brief Number of positions in the current context. Equals
-     * max_hash_value + 1, similar to global_num_positions.
+     * max_hash_value + 1.
      */
     Position num_positions;
 
@@ -110,7 +110,7 @@ typedef struct GenericHashContext {
     int64_t num_valid_configs;
 
     /**
-     * @brief Array of all valid configuration indices. Its length equals
+     * @brief Array of all valid configuration indices. Its length is equal to
      * num_valid_configs.
      */
     int64_t *valid_config_indices;
@@ -119,9 +119,17 @@ typedef struct GenericHashContext {
      * @brief The position hash offsets for each valid configuration aligned to
      * the valid_config_indices array. I.e., config_hash_offsets[i] represents
      * the total number of positions in all valid configurations with an index
-     * smaller than i. Its length equals num_valid_configs.
+     * smaller than i. Its length is equal to num_valid_configs.
      */
     Position *config_hash_offsets;
+
+    int64_t num_configs;
+
+    int64_t *config_index_to_valid_index;
+
+    int64_t *max_piece_mult_scan;
+
+    int64_t *rearranger_cache;
 } GenericHashContext;
 
 /**

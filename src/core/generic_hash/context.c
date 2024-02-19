@@ -43,14 +43,17 @@
 
 static int64_t FindLargestSmallerEqual(int64_t *array, int64_t size,
                                        int64_t target);
-static int64_t Rearrange(GenericHashContext *context, int *config);
+static int64_t Rearrange(GenericHashContext *context, const int *config,
+                         int rearrangement);
+static int64_t SafeRearrange(GenericHashContext *context, const int *config);
 
 static int PieceToIndex(GenericHashContext *context, char piece);
-static int ContextGetNumPossiblePieceNumbers(const GenericHashContext *context,
-                                             int piece_index);
+static int GetNumPossiblePieceNumbers(const GenericHashContext *context,
+                                      int piece_index);
 static int64_t ConfigToIndex(GenericHashContext *context, int *config);
 static void IndexToConfig(GenericHashContext *context, int64_t index,
                           int *config);
+static int64_t ConfigToRearrangement(GenericHashContext *context, int *config);
 
 // Helper functions for GenericHashContextInit().
 
@@ -60,17 +63,19 @@ static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
 static bool IsValidConfigWrapper(GenericHashContext *context, int *config);
 static bool InitStep2SetValidConfigs(GenericHashContext *context);
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context);
-static void InitStep2_1CountNumValidConfigs(GenericHashContext *context,
-                                            int64_t num_configs);
-static bool InitStep2_2AllocateSpaces(GenericHashContext *context);
-static bool InitStep2_3CalculateSizes(GenericHashContext *context,
+static int64_t InitStep2_1CountNumRearrangements(GenericHashContext *context);
+static void InitStep2_2CountNumConfigs(GenericHashContext *context,
+                                       int64_t num_configs);
+static bool InitStep2_3InitSpaces(GenericHashContext *context,
+                                  int64_t num_rearrangements);
+static bool InitStep2_4CalculateSizes(GenericHashContext *context,
                                       int64_t num_configs);
 
 // Helper functions for GenericHashContextHash().
 
 static bool HashStep0Initialize(GenericHashContext *context,
                                 ReadOnlyString board, int *config);
-static int64_t HashStep1FindHashOffsetForConfig(GenericHashContext *context,
+static int64_t HashStep1FindIndexInValidConfigs(GenericHashContext *context,
                                                 int *config);
 static Position HashStep2HashCruncher(GenericHashContext *context,
                                       ReadOnlyString board, int *config);
@@ -88,7 +93,8 @@ bool GenericHashContextInit(GenericHashContext *context, int board_size,
     if (player < 0 || player > 2) return false;
 
     // Throughout the whole initialization process, all pointers should remain
-    // NULL if they are unset.
+    // NULL if they are not allocated yet. Then, on failure, we can safely call
+    // GenericHashContextDestroy to destroy to context.
     InitStep0MemsetToDefaultValues(context);
 
     context->board_size = board_size;
@@ -101,8 +107,9 @@ bool GenericHashContextInit(GenericHashContext *context, int board_size,
     }
     context->IsValidConfig = IsValidConfig;
 
-    // This sets up num_positions, num_valid_configs,
-    // valid_config_indices, and config_hash_offsets.
+    // This sets up num_positions, num_valid_configs, valid_config_indices,
+    // config_hash_offsets, num_configs, config_index_to_valid_index, and
+    // rearranger_cache.
     if (!InitStep2SetValidConfigs(context)) {
         GenericHashContextDestroy(context);
         return false;
@@ -116,7 +123,10 @@ void GenericHashContextDestroy(GenericHashContext *context) {
     free(context->mins);
     free(context->maxs);
     free(context->valid_config_indices);
+    free(context->config_index_to_valid_index);
     free(context->config_hash_offsets);
+    free(context->max_piece_mult_scan);
+    free(context->rearranger_cache);
     InitStep0MemsetToDefaultValues(context);
 }
 
@@ -126,14 +136,14 @@ Position GenericHashContextNumPositions(const GenericHashContext *context) {
 
 Position GenericHashContextHash(GenericHashContext *context,
                                 ReadOnlyString board, int turn) {
-    int this_config[STACK_CONFIG_SIZE];
-    if (!HashStep0Initialize(context, board, this_config)) return -1;
-    int64_t index = HashStep1FindHashOffsetForConfig(context, this_config);
+    int config[STACK_CONFIG_SIZE];
+    if (!HashStep0Initialize(context, board, config)) return -1;
+    int64_t index = HashStep1FindIndexInValidConfigs(context, config);
     if (index < 0) return -1;
 
     // hash_without_turn = offset_for_config + hash(board)
     Position hash = context->config_hash_offsets[index];
-    hash += HashStep2HashCruncher(context, board, this_config);
+    hash += HashStep2HashCruncher(context, board, config);
 
     // The final hash contains no turn bit if there is only one player.
     if (context->player != 0) return hash;
@@ -157,12 +167,12 @@ bool GenericHashContextUnhash(GenericHashContext *context, Position hash,
 
     int64_t config_index =
         context->valid_config_indices[index_in_valid_configs];
-    int this_config[STACK_CONFIG_SIZE];
-    IndexToConfig(context, config_index, this_config);
+    int config[STACK_CONFIG_SIZE];
+    IndexToConfig(context, config_index, config);
 
     // hash(board) = hash_without_turn - offset_for_config
     hash -= context->config_hash_offsets[index_in_valid_configs];
-    UnhashStep0HashUncruncher(context, hash, this_config, board);
+    UnhashStep0HashUncruncher(context, hash, config, board);
     return true;
 }
 
@@ -199,15 +209,15 @@ static int PieceToIndex(GenericHashContext *context, char piece) {
     return context->piece_index_mapping[(int)piece];
 }
 
-static int ContextGetNumPossiblePieceNumbers(const GenericHashContext *context,
-                                             int piece_index) {
+static int GetNumPossiblePieceNumbers(const GenericHashContext *context,
+                                      int piece_index) {
     return context->maxs[piece_index] - context->mins[piece_index] + 1;
 }
 
 static int64_t ConfigToIndex(GenericHashContext *context, int *config) {
     int64_t index = 0;
     for (int i = context->num_pieces - 1; i >= 0; --i) {
-        index *= ContextGetNumPossiblePieceNumbers(context, i);
+        index *= GetNumPossiblePieceNumbers(context, i);
         index += config[i] - context->mins[i];
     }
     return index;
@@ -275,31 +285,41 @@ static bool IsValidConfigWrapper(GenericHashContext *context, int *config) {
 
 static bool InitStep2SetValidConfigs(GenericHashContext *context) {
     int64_t num_configs = InitStep2_0CountNumConfigs(context);
-    if (num_configs < 0) {
+    int64_t num_rearrangements = InitStep2_1CountNumRearrangements(context);
+    if (num_configs < 0 || num_rearrangements < 0) {
         fprintf(stderr,
                 "GenericHashContextInit: too many possible piece "
-                "configurations to be represented by the current integer type. "
-                "Aborting...\n");
+                "rearrangements for the current integer type. Aborting...\n");
         return false;
     }
-    InitStep2_1CountNumValidConfigs(context, num_configs);
-    if (!InitStep2_2AllocateSpaces(context)) return false;
-    return InitStep2_3CalculateSizes(context, num_configs);
+
+    InitStep2_2CountNumConfigs(context, num_configs);
+    if (!InitStep2_3InitSpaces(context, num_rearrangements)) return false;
+    return InitStep2_4CalculateSizes(context, num_configs);
 }
 
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context) {
-    int64_t num_configs = 1;
+    int64_t ret = 1;
     for (int i = 0; i < context->num_pieces; ++i) {
         int64_t num_possible_piece_numbers =
-            ContextGetNumPossiblePieceNumbers(context, i);
-        num_configs = SafeMultiplyNonNegativeInt64(num_configs,
-                                                   num_possible_piece_numbers);
+            GetNumPossiblePieceNumbers(context, i);
+        ret = SafeMultiplyNonNegativeInt64(ret, num_possible_piece_numbers);
     }
-    return num_configs;
+    return ret;
 }
 
-static void InitStep2_1CountNumValidConfigs(GenericHashContext *context,
-                                            int64_t num_configs) {
+static int64_t InitStep2_1CountNumRearrangements(GenericHashContext *context) {
+    int64_t ret = 1;
+    for (int i = 0; i < context->num_pieces; ++i) {
+        ret = SafeMultiplyNonNegativeInt64(ret, context->maxs[i] + 1);
+    }
+    return ret;
+}
+
+static void InitStep2_2CountNumConfigs(GenericHashContext *context,
+                                       int64_t num_configs) {
+    context->num_configs = num_configs;
+
     int this_config[STACK_CONFIG_SIZE];
     for (int64_t i = 0; i < num_configs; ++i) {
         IndexToConfig(context, i, this_config);
@@ -310,21 +330,42 @@ static void InitStep2_1CountNumValidConfigs(GenericHashContext *context,
     }
 }
 
-static bool InitStep2_2AllocateSpaces(GenericHashContext *context) {
+static bool InitStep2_3InitSpaces(GenericHashContext *context,
+                                  int64_t num_rearrangements) {
     context->valid_config_indices =
         (int64_t *)malloc(context->num_valid_configs * sizeof(int64_t));
     if (context->valid_config_indices == NULL) return false;
 
+    context->config_index_to_valid_index =
+        (int64_t *)malloc(context->num_configs * sizeof(int64_t));
+    if (context->config_index_to_valid_index == NULL) return false;
+
     context->config_hash_offsets =
         (Position *)malloc(context->num_valid_configs * sizeof(Position));
     if (context->config_hash_offsets == NULL) return false;
+
+    context->max_piece_mult_scan =
+        (int64_t *)malloc(context->num_pieces * sizeof(int64_t));
+    if (context->max_piece_mult_scan == NULL) return false;
+    context->max_piece_mult_scan[0] = 1;
+    for (int i = 1; i < context->num_pieces; ++i) {
+        context->max_piece_mult_scan[i] =
+            context->max_piece_mult_scan[i - 1] * (context->maxs[i - 1] + 1);
+    }
+
+    context->rearranger_cache =
+        (int64_t *)malloc(num_rearrangements * sizeof(int64_t));
+    if (context->rearranger_cache == NULL) return false;
+    for (int64_t i = 0; i < num_rearrangements; ++i) {
+        context->rearranger_cache[i] = -1;
+    }
 
     return true;
 }
 
 // Calculates the size of each valid configuration and add them up to get
 // num_positions.
-static bool InitStep2_3CalculateSizes(GenericHashContext *context,
+static bool InitStep2_4CalculateSizes(GenericHashContext *context,
                                       int64_t num_configs) {
     int64_t j = 0;
     int this_config[STACK_CONFIG_SIZE];
@@ -332,36 +373,49 @@ static bool InitStep2_3CalculateSizes(GenericHashContext *context,
         IndexToConfig(context, i, this_config);
         if (IsValidConfigWrapper(context, this_config)) {
             context->valid_config_indices[j] = i;
+            context->config_index_to_valid_index[i] = j;
             context->config_hash_offsets[j] = context->num_positions;
             context->num_positions = SafeAddNonNegativeInt64(
-                context->num_positions, Rearrange(context, this_config));
+                context->num_positions, SafeRearrange(context, this_config));
             ++j;
+        } else {
+            context->config_index_to_valid_index[i] = -1;
         }
     }
     assert(j == context->num_valid_configs);
 
+    // Add the turn bit if there are two players.
     if (context->player == 0) {
-        // Add the turn bit if there are two players.
         context->num_positions =
             SafeMultiplyNonNegativeInt64(context->num_positions, 2);
     }
+
     if (context->num_positions < 0) {
         fprintf(stderr,
                 "GenericHashContextInit: too many positions to be represented "
-                "by the current Position type. Aborting...\n");
+                "using the current Position type. Aborting...\n");
         return false;
     }
+
     return true;
 }
 
 static void IndexToConfig(GenericHashContext *context, int64_t index,
                           int *config) {
     for (int i = 0; i < context->num_pieces; ++i) {
-        int num_possible_piece_numbers =
-            ContextGetNumPossiblePieceNumbers(context, i);
+        int num_possible_piece_numbers = GetNumPossiblePieceNumbers(context, i);
         config[i] = context->mins[i] + (index % num_possible_piece_numbers);
         index /= num_possible_piece_numbers;
     }
+}
+
+static int64_t ConfigToRearrangement(GenericHashContext *context, int *config) {
+    int64_t ret = 0;
+    for (int i = 0; i < context->num_pieces; ++i) {
+        ret += context->max_piece_mult_scan[i] * config[i];
+    }
+
+    return ret;
 }
 
 static bool HashStep0Initialize(GenericHashContext *context,
@@ -371,10 +425,10 @@ static bool HashStep0Initialize(GenericHashContext *context,
     for (int i = 0; i < context->board_size; ++i) {
         int piece_index = PieceToIndex(context, board[i]);
         if (piece_index < 0) {
-            fprintf(stderr,
-                    "GenericHashContextHash: invalid piece '%c'(%x) at "
-                    "board[%d]\n",
-                    board[i], board[i], i);
+            fprintf(
+                stderr,
+                "HashStep0Initialize: invalid piece '%c'(%x) at board[%d]\n",
+                board[i], board[i], i);
             return false;
         }
         assert(piece_index < context->num_pieces);
@@ -383,22 +437,48 @@ static bool HashStep0Initialize(GenericHashContext *context,
     return true;
 }
 
-static int64_t HashStep1FindHashOffsetForConfig(GenericHashContext *context,
+static int64_t HashStep1FindIndexInValidConfigs(GenericHashContext *context,
                                                 int *config) {
     // Validate the given config and find its hash offset.
     int64_t config_index = ConfigToIndex(context, config);
-    int64_t index_in_valid_configs =
-        FindLargestSmallerEqual(context->valid_config_indices,
-                                context->num_valid_configs, config_index);
-    if (config_index != context->valid_config_indices[index_in_valid_configs]) {
-        fprintf(stderr,
-                "GenericHashContextHash: invalid piece configuration\n");
+    if (config_index < 0 || config_index >= context->num_configs) {
+        fprintf(
+            stderr,
+            "HashStep1FindIndexInValidConfigs: invalid piece configuration\n");
         return -1;
     }
+
+    int64_t index_in_valid_configs =
+        context->config_index_to_valid_index[config_index];
+    if (index_in_valid_configs < 0) {
+        fprintf(
+            stderr,
+            "HashStep1FindIndexInValidConfigs: invalid piece configuration\n");
+        return -1;
+    }
+
     return index_in_valid_configs;
 }
 
-static int64_t Rearrange(GenericHashContext *context, int *config) {
+static int64_t Rearrange(GenericHashContext *context, const int *config,
+                         int rearrangement) {
+    if (context->rearranger_cache[rearrangement] < 0) {
+        int64_t pieces_rearranged = 0, result = 1;
+        for (int piece_index = 0; piece_index < context->num_pieces - 1;
+             ++piece_index) {
+            pieces_rearranged += config[piece_index];
+            int64_t more_pieces = config[piece_index + 1];
+            int64_t combinations =
+                NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
+            result *= combinations;
+        }
+        context->rearranger_cache[rearrangement] = result;
+    }
+
+    return context->rearranger_cache[rearrangement];
+}
+
+static int64_t SafeRearrange(GenericHashContext *context, const int *config) {
     int64_t pieces_rearranged = 0, result = 1;
     for (int piece_index = 0; piece_index < context->num_pieces - 1;
          ++piece_index) {
@@ -414,6 +494,7 @@ static int64_t Rearrange(GenericHashContext *context, int *config) {
 static Position HashStep2HashCruncher(GenericHashContext *context,
                                       ReadOnlyString board, int *config) {
     Position final_hash = 0;
+    int64_t rearrangement = ConfigToRearrangement(context, config);
 
     // The loop ends with i == 0 because there will be
     // only one way to place the last piece.
@@ -429,7 +510,10 @@ static Position HashStep2HashCruncher(GenericHashContext *context,
                 // the remaining slots on the board. Add the number of
                 // rearrangements to our final hash.
                 --config[j];
-                int64_t num_rearrangements = Rearrange(context, config);
+                int64_t new_rearrangement =
+                    rearrangement - context->max_piece_mult_scan[j];
+                int64_t num_rearrangements =
+                    Rearrange(context, config, new_rearrangement);
                 assert(num_rearrangements >= 0);
                 final_hash += num_rearrangements;
                 ++config[j];
@@ -438,12 +522,16 @@ static Position HashStep2HashCruncher(GenericHashContext *context,
         // Finished analyzing the current piece. "Recursively" hash the rest of
         // the pieces on board.
         --config[piece_index];
+        rearrangement -= context->max_piece_mult_scan[piece_index];
     }
+
     return final_hash;
 }
 
 static void UnhashStep0HashUncruncher(GenericHashContext *context,
                                       Position hash, int *config, char *board) {
+    int64_t rearrangement = ConfigToRearrangement(context, config);
+
     // Assuming hash is within context->num_positions. Therefore,
     // integer overflow should not occur.
     for (int i = context->board_size - 1; i >= 0; --i) {
@@ -455,11 +543,14 @@ static void UnhashStep0HashUncruncher(GenericHashContext *context,
             if (config[j] == 0) continue;
             prev_offset = curr_offset;
             --config[j];
-            curr_offset += Rearrange(context, config);
+            int new_rearrangement =
+                rearrangement - context->max_piece_mult_scan[j];
+            curr_offset += Rearrange(context, config, new_rearrangement);
             ++config[j];
             index_of_piece_to_place = j;
         }
         --config[index_of_piece_to_place];
+        rearrangement -= context->max_piece_mult_scan[index_of_piece_to_place];
         board[i] = context->pieces[index_of_piece_to_place];
         hash -= prev_offset;
     }
