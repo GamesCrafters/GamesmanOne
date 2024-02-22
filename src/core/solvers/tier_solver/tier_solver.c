@@ -189,7 +189,7 @@ static int TierSolverSolve(void *aux) {
     TierWorkerInit(&current_api);
     return TierManagerSolve(&current_api, options->force, options->verbose);
 #else
-    // Assumes MPI_Init has been called.
+    // Assumes MPI_Init or MPI_Init_thread has been called.
     int process_id, cluster_size;
     cluster_size = SafeMpiCommSize(MPI_COMM_WORLD);
     process_id = SafeMpiCommRank(MPI_COMM_WORLD);
