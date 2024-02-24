@@ -99,21 +99,22 @@ static Frontier win_frontier;   // Solved but unprocessed winning positions.
 static Frontier lose_frontier;  // Solved but unprocessed losing positions.
 static Frontier tie_frontier;   // Solved but unprocessed tying positions.
 
-// Number of undecided child positions array (heap). Note that we are assuming
-// the number of children of ANY position is no more than 254. This allows us to
-// use uint8_t to save memory. If this assumption is no longer true for any new
+// Number of undecided child positions array (malloc'ed and owned by the
+// TierWorkerSolve function). Note that we are assuming the number of children
+// of ANY position is no more than 254. This allows us to use an unsigned 8-bit
+// integer to save memory. If this assumption is no longer true for any new
 // games in the future, the programmer should change this type to a wider
 // integer type such as int16_t.
-
 #ifdef _OPENMP
 static atomic_uchar *num_undecided_children = NULL;
 #else
 static uint8_t *num_undecided_children = NULL;
 #endif
 
-// Cached reverse position graph of the current tier.
+// Cached reverse position graph of the current tier. This is only initialized
+// if the game does not implement Retrograde Analysis.
 ReverseGraph reverse_graph;
-// The reverse graph is used if the Undo Move Optimization is turned off.
+// The reverse graph is used if the Retrograde Analysis is turned off.
 static bool use_reverse_graph = false;
 
 static bool Step0Initialize(Tier tier);
@@ -518,6 +519,8 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     Frontier *frontier = processing_lose ? &win_frontier : &tie_frontier;
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
+        // Atomically fetch num_undecided_children[parents.array[i]] into
+        // child_remaining and set it to zero.
         unsigned char child_remaining = atomic_exchange_explicit(
             &num_undecided_children[parents.array[i]], 0, memory_order_relaxed);
 #else
@@ -550,6 +553,8 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
  * If multiple threads call this function on the same OBJ at the same time, the
  * value returned is guaranteed to be unique for each thread if no threads are
  * performing other operations on OBJ.
+ * 
+ * @note This is a helper function that is only used by ProcessWinPosition.
  *
  * @param obj Atomic unsigned char object to be decremented.
  * @return Original value of OBJ.
@@ -558,10 +563,17 @@ static unsigned char DecrementIfNonZero(atomic_uchar *obj) {
     unsigned char current_value =
         atomic_load_explicit(obj, memory_order_relaxed);
     while (current_value != 0) {
+        // This function will set OBJ to current_value - 1 if OBJ is still equal
+        // to current_value. Otherwise, it updates current_value to the new
+        // value of OBJ and returns false.
         bool success = atomic_compare_exchange_strong_explicit(
             obj, &current_value, current_value - 1, memory_order_relaxed,
             memory_order_relaxed);
+        // If decrement was successful, quit and return the original value of
+        // OBJ that was swapped out.
         if (success) return current_value;
+        // Otherwise, we keep looping until either a decrement was successfully
+        // completed, or OBJ is decremented to zero by some other thread.
     }
 
     return 0;
