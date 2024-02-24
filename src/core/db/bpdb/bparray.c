@@ -252,6 +252,7 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
 
     static const int kEntriesPerChunk = 8;
     int64_t num_chunks = size / kEntriesPerChunk;
+#pragma omp parallel for
     for (int64_t chunk = 0; chunk < num_chunks; ++chunk) {
         for (int i = 0; i < kEntriesPerChunk; ++i) {
             CopyEntry(new_stream, array, chunk * kEntriesPerChunk + i);
