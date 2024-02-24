@@ -27,7 +27,7 @@ AC_OPENMP
 AC_CHECK_LIB([z], [deflate], [], [AC_MSG_ERROR([zlib library not found])])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h inttypes.h stdint.h strings.h sys/param.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h float.h inttypes.h limits.h locale.h stddef.h stdint.h stdlib.h string.h strings.h sys/param.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
