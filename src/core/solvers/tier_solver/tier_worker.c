@@ -107,9 +107,9 @@ static Frontier tie_frontier;   // Solved but unprocessed tying positions.
 // integer type such as int16_t.
 #ifdef _OPENMP
 static atomic_uchar *num_undecided_children = NULL;
-#else
+#else  // _OPENMP not defined
 static uint8_t *num_undecided_children = NULL;
-#endif
+#endif  // _OPENMP
 
 // Cached reverse position graph of the current tier. This is only initialized
 // if the game does not implement Retrograde Analysis.
@@ -378,9 +378,9 @@ static bool Step2SetupSolverArrays(void) {
 #ifdef _OPENMP
     num_undecided_children =
         (atomic_uchar *)calloc(this_tier_size, sizeof(atomic_uchar));
-#else
+#else  // _OPENMP not defined
     num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
-#endif
+#endif  // _OPENMP
     return (num_undecided_children != NULL);
 }
 
@@ -523,10 +523,10 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
         // child_remaining and set it to zero.
         unsigned char child_remaining = atomic_exchange_explicit(
             &num_undecided_children[parents.array[i]], 0, memory_order_relaxed);
-#else
+#else  // _OPENMP not defined
         uint8_t child_remaining = num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
-#endif
+#endif // _OPENMP
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
@@ -578,7 +578,7 @@ static unsigned char DecrementIfNonZero(atomic_uchar *obj) {
 
     return 0;
 }
-#endif
+#endif  // _OPENMP
 
 static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     PositionArray parents =
@@ -591,12 +591,12 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
 #ifdef _OPENMP
         unsigned char child_remaining =
             DecrementIfNonZero(&num_undecided_children[parents.array[i]]);
-#else
+#else  // _OPENMP not defined
         // If this parent has been solved already, skip it.
         if (num_undecided_children[parents.array[i]] == 0) continue;
         // Must perform the above check before decrementing to prevent overflow.
         uint8_t child_remaining = num_undecided_children[parents.array[i]]--;
-#endif
+#endif  // _OPENMP
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
         if (child_remaining == 1) {

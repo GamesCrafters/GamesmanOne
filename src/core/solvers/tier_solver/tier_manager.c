@@ -545,12 +545,12 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
 
 static void PrintSolverResult(double time_elapsed) {
     printf(
-        "Finished solving all tiers in %f second(s).\n"
+        "Finished solving all tiers in %d second(s).\n"
         "Number of canonical tiers solved: %" PRId64
         "\nNumber of non-canonical tiers skipped: %" PRId64
         "\nNumber of tiers failed due to OOM: %" PRId64
         "\nTotal tiers scanned: %" PRId64 "\n",
-        time_elapsed, processed_tiers, skipped_tiers, failed_tiers,
+        (int)time_elapsed, processed_tiers, skipped_tiers, failed_tiers,
         processed_tiers + skipped_tiers + failed_tiers);
     printf("\n");
 }
