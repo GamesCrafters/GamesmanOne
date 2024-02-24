@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.0.2
- * @date 2024-02-15
+ * @version 1.1.0
+ * @date 2024-02-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,13 +30,13 @@
 
 #include "core/solvers/tier_solver/tier_worker.h"
 
-#include <assert.h>    // assert
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // memcpy
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t, uint8_t, UINT8_MAX
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // calloc, free
+#include <string.h>   // memcpy
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
@@ -47,7 +47,9 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>
+#include <limits.h>     // UCHAR_MAX
+#include <omp.h>        // OpenMP pragmas
+#include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR PRAGMA(omp for)
@@ -55,8 +57,7 @@
 #define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var) \
     PRAGMA(omp parallel for firstprivate(var))
 
-// Otherwise, the following macros do nothing.
-#else
+#else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR
@@ -84,7 +85,11 @@ static const int kFrontierSize = kRemotenessMax + 1;
 
 // Illegal positions are marked with this value, which should be chosen based on
 // the integer type of the num_undecided_children array.
+#ifdef _OPENMP
+static const unsigned char kIllegalNumChildren = UCHAR_MAX;
+#else   // _OPENMP not defined.
 static const uint8_t kIllegalNumChildren = UINT8_MAX;
+#endif  // _OPENMP
 
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
@@ -99,12 +104,12 @@ static Frontier tie_frontier;   // Solved but unprocessed tying positions.
 // use uint8_t to save memory. If this assumption is no longer true for any new
 // games in the future, the programmer should change this type to a wider
 // integer type such as int16_t.
-static uint8_t *num_undecided_children = NULL;
 
 #ifdef _OPENMP
-// Lock for the array above.
-static omp_lock_t num_undecided_children_lock;
-#endif  // _OPENMP
+static atomic_uchar *num_undecided_children = NULL;
+#else
+static uint8_t *num_undecided_children = NULL;
+#endif
 
 // Cached reverse position graph of the current tier.
 ReverseGraph reverse_graph;
@@ -227,9 +232,6 @@ static bool Step0Initialize(Tier tier) {
 
     // Non-memory-allocating initializations.
     this_tier_size = current_api.GetTierSize(tier);
-#ifdef _OPENMP
-    omp_init_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
     return true;
 }
 
@@ -372,7 +374,12 @@ static bool Step2SetupSolverArrays(void) {
                                            current_api.GetTierSize(this_tier));
     if (error != 0) return false;
 
+#ifdef _OPENMP
+    num_undecided_children =
+        (atomic_uchar *)calloc(this_tier_size, sizeof(atomic_uchar));
+#else
     num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
+#endif
     return (num_undecided_children != NULL);
 }
 
@@ -511,13 +518,12 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     Frontier *frontier = processing_lose ? &win_frontier : &tie_frontier;
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
-        omp_set_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
+        unsigned char child_remaining = atomic_exchange_explicit(
+            &num_undecided_children[parents.array[i]], 0, memory_order_relaxed);
+#else
         uint8_t child_remaining = num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
-#ifdef _OPENMP
-        omp_unset_lock(&num_undecided_children_lock);
-#endif                                       // _OPENMP
+#endif
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
@@ -537,6 +543,31 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
     return ProcessLoseOrTiePosition(remoteness, tier_position, true);
 }
 
+#ifdef _OPENMP
+/**
+ * @brief Atomically decrements the content of OBJ, which is of type unsigned
+ * char, if and only if it was greater than 0, and returns the original value.
+ * If multiple threads call this function on the same OBJ at the same time, the
+ * value returned is guaranteed to be unique for each thread if no threads are
+ * performing other operations on OBJ.
+ *
+ * @param obj Atomic unsigned char object to be decremented.
+ * @return Original value of OBJ.
+ */
+static unsigned char DecrementIfNonZero(atomic_uchar *obj) {
+    unsigned char current_value =
+        atomic_load_explicit(obj, memory_order_relaxed);
+    while (current_value != 0) {
+        bool success = atomic_compare_exchange_strong_explicit(
+            obj, &current_value, current_value - 1, memory_order_relaxed,
+            memory_order_relaxed);
+        if (success) return current_value;
+    }
+
+    return 0;
+}
+#endif
+
 static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     PositionArray parents =
         current_api.GetCanonicalParentPositions(tier_position, this_tier);
@@ -546,24 +577,17 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     }
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
-        omp_set_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-        if (num_undecided_children[parents.array[i]] == 0) {
-            // This parent has been solved already.
-#ifdef _OPENMP
-            omp_unset_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-            continue;
-        }
+        unsigned char child_remaining =
+            DecrementIfNonZero(&num_undecided_children[parents.array[i]]);
+#else
+        // If this parent has been solved already, skip it.
+        if (num_undecided_children[parents.array[i]] == 0) continue;
         // Must perform the above check before decrementing to prevent overflow.
-        uint8_t child_remaining = --num_undecided_children[parents.array[i]];
-#ifdef _OPENMP
-        omp_unset_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-
+        uint8_t child_remaining = num_undecided_children[parents.array[i]]--;
+#endif
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
-        if (child_remaining == 0) {
+        if (child_remaining == 1) {
             DbManagerSetValue(parents.array[i], kLose);
             DbManagerSetRemoteness(parents.array[i], remoteness + 1);
             if (!FrontierAdd(&lose_frontier, parents.array[i], remoteness + 1,
@@ -626,9 +650,6 @@ static void Step7Cleanup(void) {
         // Unset the local function pointer.
         current_api.GetCanonicalParentPositions = NULL;
     }
-#ifdef _OPENMP
-    omp_destroy_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
 }
 
 static void DestroyFrontiers(void) {
