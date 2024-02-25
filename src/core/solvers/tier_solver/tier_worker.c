@@ -128,7 +128,7 @@ static bool IsCanonicalTier(Tier tier);
 static bool Step1_0LoadCanonicalTier(int child_index);
 static bool Step1_1LoadNonCanonicalTier(int child_index);
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
-                                 int remoteness);
+                                 int remoteness, int tid);
 
 static bool Step2SetupSolverArrays(void);
 
@@ -309,6 +309,11 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
+#ifdef _OPENMP
+        int tid = omp_get_thread_num();
+#else   // _OPENMP not defined
+        int tid = 0;
+#endif  // _OPENMP
 
         PRAGMA_OMP_FOR
         for (Position position = 0; position < child_tier_size; ++position) {
@@ -316,8 +321,8 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
             Value value = DbManagerProbeValue(&probe, child_tier_position);
             int remoteness =
                 DbManagerProbeRemoteness(&probe, child_tier_position);
-            if (!CheckAndLoadFrontier(child_index, position, value,
-                                      remoteness)) {
+            if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
+                                      tid)) {
                 success = false;
             }
         }
@@ -339,6 +344,11 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition canonical_tier_position = {.tier = canonical_tier};
+#ifdef _OPENMP
+        int tid = omp_get_thread_num();
+#else   // _OPENMP not defined
+        int tid = 0;
+#endif  // _OPENMP
 
         PRAGMA_OMP_FOR
         for (int64_t position = 0; position < child_tier_size; ++position) {
@@ -354,7 +364,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
                 current_api.GetPositionInSymmetricTier(canonical_tier_position,
                                                        original_tier);
             if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
-                                      remoteness)) {
+                                      remoteness, tid)) {
                 success = false;
             }
         }
@@ -364,7 +374,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
 }
 
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
-                                 int remoteness) {
+                                 int remoteness, int tid) {
     if (remoteness < 0) return false;  // Error probing remoteness.
     if (value == kUndecided || value == kDraw) return true;
     Frontier *dest = NULL;
@@ -374,27 +384,15 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
             return true;
 
         case kWin:
-#ifdef _OPENMP
-            dest = &win_frontiers[omp_get_thread_num()];
-#else   // _OPENMP not defined.
-            dest = &win_frontiers[0];
-#endif  // _OPENMP
+            dest = &win_frontiers[tid];
             break;
 
         case kLose:
-#ifdef _OPENMP
-            dest = &lose_frontiers[omp_get_thread_num()];
-#else   // _OPENMP not defined.
-            dest = &lose_frontiers[0];
-#endif  // _OPENMP
+            dest = &lose_frontiers[tid];
             break;
 
         case kTie:
-#ifdef _OPENMP
-            dest = &tie_frontiers[omp_get_thread_num()];
-#else   // _OPENMP not defined.
-            dest = &tie_frontiers[0];
-#endif  // _OPENMP
+            dest = &tie_frontiers[tid];
             break;
 
         default:
@@ -427,32 +425,42 @@ static bool Step2SetupSolverArrays(void) {
 static bool Step3ScanTier(void) {
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
-    for (Position position = 0; position < this_tier_size; ++position) {
-        TierPosition tier_position = {.tier = this_tier, .position = position};
+    PRAGMA_OMP_PARALLEL {
+#ifdef _OPENMP
+        int tid = omp_get_thread_num();
+#else   // _OPENMP not defined
+        int tid = 0;
+#endif  // _OPENMP
+        PRAGMA_OMP_FOR
+        for (Position position = 0; position < this_tier_size; ++position) {
+            TierPosition tier_position = {.tier = this_tier,
+                                          .position = position};
 
-        // Skip illegal positions and non-canonical positions.
-        if (!current_api.IsLegalPosition(tier_position) ||
-            !IsCanonicalPosition(position)) {
-            num_undecided_children[position] = kIllegalNumChildren;
-            continue;
-        }
-
-        Value value = current_api.Primitive(tier_position);
-        if (value != kUndecided) {  // If tier_position is primitive...
-            // Set its value immediately and push it into the frontier.
-            DbManagerSetValue(position, value);
-            DbManagerSetRemoteness(position, 0);
-            int this_tier_index = child_tiers.size - 1;
-            if (!CheckAndLoadFrontier(this_tier_index, position, value, 0)) {
-                success = false;
+            // Skip illegal positions and non-canonical positions.
+            if (!current_api.IsLegalPosition(tier_position) ||
+                !IsCanonicalPosition(position)) {
+                num_undecided_children[position] = kIllegalNumChildren;
+                continue;
             }
-            num_undecided_children[position] = 0;
-            continue;
-        }  // Execute the following lines if tier_position is not primitive.
-        int num_children = Step3_0CountChildren(position);
-        if (num_children <= 0) success = false;  // Either OOM or no children.
-        num_undecided_children[position] = num_children;
+
+            Value value = current_api.Primitive(tier_position);
+            if (value != kUndecided) {  // If tier_position is primitive...
+                // Set its value immediately and push it into the frontier.
+                DbManagerSetValue(position, value);
+                DbManagerSetRemoteness(position, 0);
+                int this_tier_index = child_tiers.size - 1;
+                if (!CheckAndLoadFrontier(this_tier_index, position, value, 0,
+                                          tid)) {
+                    success = false;
+                }
+                num_undecided_children[position] = 0;
+                continue;
+            }  // Execute the following lines if tier_position is not primitive.
+            int num_children = Step3_0CountChildren(position);
+            if (num_children <= 0)
+                success = false;  // Either OOM or no children.
+            num_undecided_children[position] = num_children;
+        }
     }
 
     for (int i = 0; i < num_threads; ++i) {
@@ -518,13 +526,13 @@ static bool Step4PushFrontierUp(void) {
 
 static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
     int64_t *frontier_offsets =
-        (int64_t *)malloc(num_threads * sizeof(int64_t));
+        (int64_t *)malloc((num_threads + 1) * sizeof(int64_t));
     if (frontier_offsets == NULL) return NULL;
 
-    frontier_offsets[0] = frontiers[0].buckets[remoteness].size;
-    for (int i = 1; i < num_threads; ++i) {
+    frontier_offsets[0] = 0;
+    for (int i = 1; i <= num_threads; ++i) {
         frontier_offsets[i] =
-            frontier_offsets[i - 1] + frontiers[i].buckets[remoteness].size;
+            frontier_offsets[i - 1] + frontiers[i - 1].buckets[remoteness].size;
     }
 
     return frontier_offsets;
@@ -534,7 +542,7 @@ static void GetFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
                                        int *frontier_id, int *child_tier_id,
                                        int remoteness,
                                        const int64_t *frontier_offsets) {
-    while (i >= frontier_offsets[*frontier_id]) {
+    while (i >= frontier_offsets[*frontier_id + 1]) {
         ++(*frontier_id);
         *child_tier_id = 0;
     }
@@ -556,11 +564,11 @@ static bool PushFrontierHelper(
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_tier_id = 0;
         PRAGMA_OMP_FOR
-        for (int64_t i = 0; i < frontier_offsets[num_threads - 1]; ++i) {
+        for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             GetFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                        &child_tier_id, remoteness,
                                        frontier_offsets);
-            int64_t index_in_frontier = i - frontier_offsets[child_tier_id];
+            int64_t index_in_frontier = i - frontier_offsets[frontier_id];
             TierPosition tier_position = {
                 .tier = child_tiers.array[child_tier_id],
                 .position = FrontierGetPosition(&frontiers[frontier_id],
@@ -570,7 +578,7 @@ static bool PushFrontierHelper(
         }
     }
 
-    // Free current remoteness of all frontiers.
+    // Free current remoteness from all frontiers.
     for (int i = 0; i < num_threads; ++i) {
         FrontierFreeRemoteness(&frontiers[i], remoteness);
     }

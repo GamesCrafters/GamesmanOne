@@ -38,6 +38,15 @@
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
+#ifdef _OPENMP
+#include <omp.h>
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#else
+#define PRAGMA
+#define PRAGMA_OMP_PARALLEL_FOR
+#endif  // _OPENMP
+
 #include "core/constants.h"
 #include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
@@ -252,7 +261,7 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
 
     static const int kEntriesPerChunk = 8;
     int64_t num_chunks = size / kEntriesPerChunk;
-#pragma omp parallel for
+    PRAGMA_OMP_PARALLEL_FOR
     for (int64_t chunk = 0; chunk < num_chunks; ++chunk) {
         for (int i = 0; i < kEntriesPerChunk; ++i) {
             CopyEntry(new_stream, array, chunk * kEntriesPerChunk + i);
@@ -269,3 +278,6 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
     array->meta.stream_length = new_stream_length;
     return kNoError;
 }
+
+#undef PRAGMA
+#undef PRAGMA_OMP_PARALLEL_FOR
