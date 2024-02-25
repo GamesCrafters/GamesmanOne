@@ -10,9 +10,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic 2D Position array which stores solved positions that have not
  * been used to deduce the values of their parents.
- *
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 2.0.0
+ * @date 2024-02-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,10 +38,6 @@
 
 #include "core/types/gamesman_types.h"  // PositionArray
 
-#ifdef _OPENMP
-#include <omp.h>  // omp_lock_t
-#endif  // _OPENMP
-
 /**
  * @brief A Frontier is a dynamic 2D Position array which stores solved
  * positions that have not been used to deduce the values of their parents.
@@ -65,9 +60,9 @@ typedef struct Frontier {
      * A 2-dimensional integer array storing the "divider" values. Both
      * dimensions are fixed and set to the frontier_size and dividers_size
      * passed to the FrontierInit() function respectively. The frontier_size
-     * is usually set to the maximum remoteness supported by GAMESMAN plus one.
+     * is usually set to the number of remoteness values supported by GAMESMAN.
      * The dividers_size should be set to the number of child tiers of the
-     * current solving tier.
+     * current solving tier plus one.
      *
      * Before FrontierAccumulateDividers() is called on the Frontier
      * object, dividers[i] stores the NUMBERS of positions of remoteness i
@@ -84,11 +79,6 @@ typedef struct Frontier {
      * to store TierPosition arrays instead, which would cost more memory.
      */
     int64_t **dividers;
-
-#ifdef _OPENMP
-    /** An array of locks for each bucket (PositionArray). */
-    omp_lock_t *locks;
-#endif  // _OPENMP
 
     /** Number of frontier arrays. */
     int size;
@@ -137,6 +127,9 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
  * multiple times renders the divider values unusable.
  */
 void FrontierAccumulateDividers(Frontier *frontier);
+
+Position FrontierGetPosition(const Frontier *frontier, int remoteness,
+                             int64_t i);
 
 /**
  * @brief Deallocates the bucket and divider array for remoteness REMOTENESS in

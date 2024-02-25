@@ -1,5 +1,5 @@
 /**
- * @file frontier.C
+ * @file frontier.c
  * @author Max Delgadillo: designed and implemented the original version
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Extracted the frontier
@@ -9,9 +9,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Frontier type.
- *
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 2.0.0
+ * @date 2024-02-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -45,11 +44,9 @@
 #ifdef _OPENMP
 #include <omp.h>
 #define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_ATOMIC PRAGMA(omp atomic)
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 #else
 #define PRAGMA
-#define PRAGMA_OMP_ATOMIC
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
@@ -81,23 +78,9 @@ _bailout:
     return success;
 }
 
-#ifdef _OPENMP
-static bool FrontierAllocateLocks(Frontier *frontier, int size) {
-    frontier->locks = (omp_lock_t *)calloc(size, sizeof(omp_lock_t));
-    if (frontier->locks == NULL) {
-        fprintf(stderr, "FrontierInit: failed to calloc locks.\n");
-        return false;
-    }
-    return true;
-}
-#endif  // _OPENMP
-
 static void FrontierInitAllFields(Frontier *frontier) {
     for (int i = 0; i < frontier->size; ++i) {
         PositionArrayInit(&frontier->buckets[i]);
-#ifdef _OPENMP
-        omp_init_lock(&frontier->locks[i]);
-#endif  // _OPENMP
     }
 }
 
@@ -106,9 +89,6 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
     memset(frontier, 0, sizeof(*frontier));
     success &= FrontierAllocateBuckets(frontier, frontier_size);
     success &= FrontierAllocateDividers(frontier, frontier_size, dividers_size);
-#ifdef _OPENMP
-    success &= FrontierAllocateLocks(frontier, frontier_size);
-#endif  // _OPENMP
 
     if (success) {
         // Initialize fields after all memory
@@ -126,9 +106,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
             }
             free(frontier->dividers);
         }
-#ifdef _OPENMP
-        free(frontier->locks);
-#endif  // _OPENMP
+
         // Set all member pointers to NULL and all fields to 0.
         memset(frontier, 0, sizeof(*frontier));
     }
@@ -152,16 +130,6 @@ void FrontierDestroy(Frontier *frontier) {
         free(frontier->dividers);
     }
 
-#ifdef _OPENMP
-    // Locks.
-    if (frontier->locks) {
-        for (int i = 0; i < frontier->size; ++i) {
-            omp_destroy_lock(&frontier->locks[i]);
-        }
-        free(frontier->locks);
-    }
-#endif  // _OPENMP
-
     // Set all member pointers to NULL and all fields to 0.
     memset(frontier, 0, sizeof(*frontier));
 }
@@ -181,18 +149,11 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
     }
 
     // Push position into frontier.
-#ifdef _OPENMP
-    omp_set_lock(&frontier->locks[remoteness]);
-#endif  // _OPENMP
     bool success =
         PositionArrayAppend(&frontier->buckets[remoteness], position);
-#ifdef _OPENMP
-    omp_unset_lock(&frontier->locks[remoteness]);
-#endif  // _OPENMP
     if (!success) return false;
 
     // Update divider.
-    PRAGMA_OMP_ATOMIC
     ++frontier->dividers[remoteness][child_tier_index];
     return true;
 }
@@ -208,6 +169,11 @@ void FrontierAccumulateDividers(Frontier *frontier) {
     }
 }
 
+Position FrontierGetPosition(const Frontier *frontier, int remoteness,
+                             int64_t i) {
+    return frontier->buckets[remoteness].array[i];
+}
+
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
     PositionArrayDestroy(&frontier->buckets[remoteness]);
     free(frontier->dividers[remoteness]);
@@ -215,5 +181,4 @@ void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
 }
 
 #undef PRAGMA
-#undef PRAGMA_OMP_ATOMIC
 #undef PRAGMA_OMP_PARALLEL_FOR
