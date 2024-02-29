@@ -77,6 +77,10 @@ const Game *GameManagerInitGameIndex(int index, void *aux) {
 
 const Game *GameManagerGetCurrentGame(void) { return current_game; }
 
+int GameManagerCurrentGameSupportsMpi(void) {
+    return current_game->solver->supports_mpi;
+}
+
 int GameManagerSetVariant(int variant_id) {
     const GameVariant *variant = current_game->GetCurrentVariant();
     if (variant == NULL) {

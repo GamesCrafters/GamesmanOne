@@ -66,6 +66,8 @@ const Game *GameManagerInitGameIndex(int index, void *aux);
  */
 const Game *GameManagerGetCurrentGame(void);
 
+int GameManagerCurrentGameSupportsMpi(void);
+
 /**
  * @brief Set the variant of the current loaded game to the variant of index
  * VARIANT_ID.
