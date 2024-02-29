@@ -33,17 +33,17 @@
 /** @brief Tier as a 64-bit integer. */
 typedef int64_t Tier;
 
-#define PRITier PRId64  // Print format macro for Tier type.
+#define PRITier PRId64  // Print format macro for the Tier type.
 
 /** @brief Game position as a 64-bit integer hash. */
 typedef int64_t Position;
 
-#define PRIPos PRId64  // Print format macro for Position type.
+#define PRIPos PRId64  // Print format macro for the Position type.
 
 /** @brief Game move as a 64-bit integer. */
 typedef int64_t Move;
 
-#define PRIMove PRId64;  // Print format macro for Move type.
+#define PRIMove PRId64;  // Print format macro for the Move type.
 
 /**
  * @brief Tier and Position. In Tier games, a position is uniquely identified by
