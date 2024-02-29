@@ -5,8 +5,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash Context module.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-02-18
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -64,8 +64,8 @@ static bool IsValidConfigWrapper(GenericHashContext *context, int *config);
 static bool InitStep2SetValidConfigs(GenericHashContext *context);
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context);
 static int64_t InitStep2_1CountNumRearrangements(GenericHashContext *context);
-static void InitStep2_2CountNumConfigs(GenericHashContext *context,
-                                       int64_t num_configs);
+static void InitStep2_2CountNumValidConfigs(GenericHashContext *context,
+                                            int64_t num_configs);
 static bool InitStep2_3InitSpaces(GenericHashContext *context,
                                   int64_t num_rearrangements);
 static bool InitStep2_4CalculateSizes(GenericHashContext *context,
@@ -293,7 +293,8 @@ static bool InitStep2SetValidConfigs(GenericHashContext *context) {
         return false;
     }
 
-    InitStep2_2CountNumConfigs(context, num_configs);
+    context->num_configs = num_configs;
+    InitStep2_2CountNumValidConfigs(context, num_configs);
     if (!InitStep2_3InitSpaces(context, num_rearrangements)) return false;
     return InitStep2_4CalculateSizes(context, num_configs);
 }
@@ -316,10 +317,8 @@ static int64_t InitStep2_1CountNumRearrangements(GenericHashContext *context) {
     return ret;
 }
 
-static void InitStep2_2CountNumConfigs(GenericHashContext *context,
-                                       int64_t num_configs) {
-    context->num_configs = num_configs;
-
+static void InitStep2_2CountNumValidConfigs(GenericHashContext *context,
+                                            int64_t num_configs) {
     int this_config[STACK_CONFIG_SIZE];
     for (int64_t i = 0; i < num_configs; ++i) {
         IndexToConfig(context, i, this_config);
@@ -460,6 +459,25 @@ static int64_t HashStep1FindIndexInValidConfigs(GenericHashContext *context,
     return index_in_valid_configs;
 }
 
+/**
+ * @details 2024-02-18: this new version added in a new parameter REARRANGEMENT, which
+ * is an integer that corresponds to the index of the piece configuration in an
+ * array of configurations that disregards the lower bound for each type of
+ * piece. This new variable is defined to allow return values from this function
+ * to be cached inside the CONTEXT.
+ *
+ * The rearrangement variable is defined in the way described above because
+ * during hashing/unhashing, pieces are removed/placed one by one from/onto the
+ * board, which results in piece configurations with some types of pieces having
+ * fewer than minimum allowed number of pieces on an effectively smaller board
+ * (the unprocessed region of the original board). So to safely cache return
+ * values from this function, we need to make sure that we allocate space for
+ * these new "piece configurations". To avoid confusion, these new
+ * "configurations" are hashed and stored as "rearrangement" values which are
+ * 64-bit integers. Another justification is that it's more expensive to use the
+ * piece configurations as keys to the cache map. It makes sense to use these
+ * rearrangement values as keys to the mapping array.
+ */
 static int64_t Rearrange(GenericHashContext *context, const int *config,
                          int rearrangement) {
     if (context->rearranger_cache[rearrangement] < 0) {

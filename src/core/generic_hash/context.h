@@ -5,8 +5,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-02-18
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -123,12 +123,30 @@ typedef struct GenericHashContext {
      */
     Position *config_hash_offsets;
 
+    /** @brief Number of piece configurations, including invalid ones. */
     int64_t num_configs;
 
+    /**
+     * @brief An array that maps indices of piece configurations to indices of
+     * valid piece configurations.
+     */
     int64_t *config_index_to_valid_index;
 
+    /**
+     * @brief An exclusive multiplicative scan of the GenericHashContext::maxs
+     * array with each entry incremented by 1. That is, the value at index 0 is
+     * 1, and the value at any other index i is the product of the value at i-1
+     * and (GenericHashContext::maxs[i-1] + 1).
+     *
+     * @details This is cached for generating rearrangement values in constant
+     * time.
+     */
     int64_t *max_piece_mult_scan;
 
+    /**
+     * @brief Rearrangement-indexed cache for the Rearrange function. See
+     * definition of Rearrange for details in context.c.
+     */
     int64_t *rearranger_cache;
 } GenericHashContext;
 
