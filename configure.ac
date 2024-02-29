@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([GamesmanOne], [0.6.0], [robertyishi@berkeley.edu])
+AC_INIT([GamesmanOne], [0.6.1], [robertyishi@berkeley.edu])
 
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AC_CONFIG_SRCDIR([src/core/main.c])
