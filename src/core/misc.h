@@ -344,6 +344,8 @@ int64_t RoundUpDivide(int64_t n, int64_t d);
 #ifdef USE_MPI
 void SafeMpiInit(int *argc, char ***argv);
 
+void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided);
+
 void SafeMpiFinalize(void);
 
 int SafeMpiCommSize(MPI_Comm comm);

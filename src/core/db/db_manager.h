@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 1.1.0
- * @date 2023-10-22
+ * @version 1.2.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -43,11 +43,14 @@
  * @param variant Index of the game variant as an integer.
  * @param data_path Absolute or relative path to the data directory if non-NULL.
  * The default path "data" will be used if set to NULL.
+ * @param GetTierName Function that converts a tier to its name. If set to
+ * NULL, a fallback method will be used instead.
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero otherwise.
  */
 int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
-                    ReadOnlyString data_path, void *aux);
+                    ReadOnlyString data_path, GetTierNameFunc GetTierName,
+                    void *aux);
 
 /**
  * @brief Finalizes the database system, freeing all dynamically allocated
@@ -163,7 +166,7 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 /**
  * @brief Returns the status of TIER.
- * 
+ *
  * @param tier Tier to check.
  * @return kDbTierStatusSolved if solved,
  * @return kDbTierStatusCorrupted if corrupted,

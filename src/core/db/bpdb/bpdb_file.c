@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Bit-Perfect Database file utilities.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.1.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,16 +26,15 @@
 
 #include "core/db/bpdb/bpdb_file.h"
 
-#include <inttypes.h>  // PRId64
 #include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // calloc, free
-#include <string.h>    // strlen
+#include <string.h>    // strlen, strcat
 
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 #include "libs/mgz/mgz.h"
 
 static const int kMgzMinBlockSize = 1 << 14;  // 16 KiB as specified by mgz.
@@ -50,28 +49,26 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
 
 // -----------------------------------------------------------------------------
 
-/**
- * @brief Returns the full path to the DB file for the given tier. The user is
- * responsible for free()ing the pointer returned by this function. Returns
- * NULL on failure.
- */
-char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier) {
-    // Full path: "<path>/<tier>.bpdb".
+char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
+                          GetTierNameFunc GetTierName) {
+    // Full path: "<path>/<file_name>.bpdb".
     static ConstantReadOnlyString kBpdbExtension = ".bpdb";
-    int path_length = strlen(sandbox_path) + 1 + kInt64Base10StringLengthMax +
+    int path_length = strlen(sandbox_path) + 1 + kDbFileNameLengthMax +
                       strlen(kBpdbExtension) + 1;
-    char *full_path = (char *)calloc(path_length, sizeof(char));
+    char *full_path = (char *)malloc(path_length * sizeof(char));
     if (full_path == NULL) {
-        fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
+        fprintf(stderr, "GetFullPathToFile: failed to malloc full_path.\n");
         return NULL;
     }
 
-    char
-        file_name[1 + kInt64Base10StringLengthMax + strlen(kBpdbExtension) + 1];
-    snprintf(file_name, kInt64Base10StringLengthMax, "/%" PRId64 "%s", tier,
-             kBpdbExtension);
-    strcat(full_path, sandbox_path);
-    strcat(full_path, file_name);
+    int count = sprintf(full_path, "%s/", sandbox_path);
+    if (GetTierName != NULL) {
+        GetTierName(full_path + count, tier);
+    } else {
+        sprintf(full_path + count, "%" PRITier, tier);
+    }
+    strcat(full_path, kBpdbExtension);
+
     return full_path;
 }
 
@@ -101,8 +98,9 @@ int BpdbFileGetBlockSize(int bits_per_entry) {
     return NextMultiple(kMgzMinBlockSize, bits_per_entry * sizeof(uint64_t));
 }
 
-int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier) {
-    char *filename = BpdbFileGetFullPath(sandbox_path, tier);
+int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier,
+                          GetTierNameFunc GetTierName) {
+    char *filename = BpdbFileGetFullPath(sandbox_path, tier, GetTierName);
     if (filename == NULL) return kDbTierStatusCheckError;
 
     FILE *db_file = fopen(filename, "rb");

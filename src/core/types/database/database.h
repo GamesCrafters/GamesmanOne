@@ -7,8 +7,8 @@
  * @details A Database is an abstract type of a database. To implement a new
  * Database, fully implement all member functions and set function pointers.
  * All member functions are required unless otherwise noted.
- * @version 1.0.0
- * @date 2024-01-19
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,6 +39,8 @@
 enum DatabaseConstants {
     kDbNameLengthMax = 31,       /**< Maximum length of a DB's internal name. */
     kDbFormalNameLengthMax = 63, /**< Max length of a DB's formal name. */
+    /** Max length of a DB file's name not including the extension. */
+    kDbFileNameLengthMax = 63, 
 };
 
 /** @brief Enumeration of all possible statuses of a tier's database file. */
@@ -48,6 +50,8 @@ enum DatabaseTierStatus {
     kDbTierStatusMissing,    /**< DB file not found. */
     kDbTierStatusCheckError, /**< Error encountered. */
 };
+
+typedef int (*GetTierNameFunc)(char *dest, Tier tier);
 
 /**
  * @brief Generic Tier Database type.
@@ -73,12 +77,14 @@ typedef struct Database {
      * @param path Path to the directory to which the Database have full access.
      * The Database may choose to store files directly inside this directory or
      * make sub-directories as the DB designer sees fit.
+     * @param GetTierName Function that converts a Tier to its name. If set to
+     * NULL, a fallback method will be used instead.
      * @param aux Auxiliary parameter.
      *
      * @return 0 on success, non-zero error code otherwise.
      */
     int (*Init)(ReadOnlyString game_name, int variant, ReadOnlyString path,
-                void *aux);
+                GetTierNameFunc GetTierName, void *aux);
 
     /** @brief Finalizes the Database, freeing all allocated space. */
     void (*Finalize)(void);

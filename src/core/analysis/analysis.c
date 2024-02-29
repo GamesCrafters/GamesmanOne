@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 1.0.0
- * @date 2023-10-18
+ * @version 1.0.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -393,7 +393,7 @@ void AnalysisPrintStatistics(FILE *stream, const Analysis *analysis) {
 void AnalysisPrintPositionWithMostMoves(FILE *stream,
                                         const Analysis *analysis) {
     fprintf(stream,
-            "Position %" PRId64 " in tier %" PRId64
+            "Position %" PRIPos " in tier %" PRITier
             " has the largest number of available moves: %d\n",
             analysis->position_with_most_moves.position,
             analysis->position_with_most_moves.tier, analysis->max_num_moves);
@@ -401,7 +401,7 @@ void AnalysisPrintPositionWithMostMoves(FILE *stream,
 
 void AnalysisPrintLargestRemotenesses(FILE *stream, const Analysis *analysis) {
     static ConstantReadOnlyString longest_position_format =
-        "One longest %s starts from position %" PRId64 " in tier %" PRId64
+        "One longest %s starts from position %" PRIPos " in tier %" PRITier
         ", which has remoteness %d\n";
     static ConstantReadOnlyString not_available_format =
         "No %s positions were found\n";

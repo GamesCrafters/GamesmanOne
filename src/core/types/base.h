@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief GAMESMAN base types.
- *
- * @version 1.0.0
- * @date 2024-01-23
+ * @version 1.0.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,16 +27,23 @@
 #ifndef GAMESMANONE_CORE_TYPES_BASE_H
 #define GAMESMANONE_CORE_TYPES_BASE_H
 
-#include <stdint.h>  // int64_t
+#include <inttypes.h>  // PRId64
+#include <stdint.h>    // int64_t
 
 /** @brief Tier as a 64-bit integer. */
 typedef int64_t Tier;
 
+#define PRITier PRId64  // Print format macro for the Tier type.
+
 /** @brief Game position as a 64-bit integer hash. */
 typedef int64_t Position;
 
+#define PRIPos PRId64  // Print format macro for the Position type.
+
 /** @brief Game move as a 64-bit integer. */
 typedef int64_t Move;
+
+#define PRIMove PRId64;  // Print format macro for the Move type.
 
 /**
  * @brief Tier and Position. In Tier games, a position is uniquely identified by

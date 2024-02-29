@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Probe for the Bit-Perfect Database.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,7 +37,7 @@
 
 /**
  * @brief Initializes PROBE.
- * 
+ *
  * @return 0 on success, or
  * @return kMallocFailureError on malloc failure.
  */
@@ -45,20 +45,24 @@ int BpdbProbeInit(DbProbe *probe);
 
 /**
  * @brief Destroys PROBE and frees allocated memory.
- * 
+ *
  * @return 0 always.
  */
 int BpdbProbeDestroy(DbProbe *probe);
 
 /**
- * @brief Probes the record for TIER_POSITION using the given PROBE and returns it.
- * 
+ * @brief Probes the record for TIER_POSITION using the given PROBE and returns
+ * it.
+ *
  * @param sandbox_path Path to the sandbox directory provided to BPDB.
  * @param probe Initialized database probe to use.
  * @param tier_position Tier position to query.
+ * @param GetTierName Function that converts a tier to its name. If set to
+ * NULL, a fallback method will be used instead.
  * @return Record encoded as an unsigned integer.
  */
 uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
-                         TierPosition tier_position);
+                         TierPosition tier_position,
+                         GetTierNameFunc GetTierName);
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_BPDB_PROBE_H_

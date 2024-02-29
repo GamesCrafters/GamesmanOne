@@ -5,8 +5,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.1.0
+ * @date 2024-02-18
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -86,7 +86,7 @@ typedef struct GenericHashContext {
 
     /**
      * @brief Maps a piece character to an index into the PIECES array. Supports
-     * up to 128 different pieces. A piece can be of any value between 0 to 127,
+     * up to 128 different pieces. A piece can be of any value from 0 to 127
      * which is then mapped to its index.
      */
     char piece_index_mapping[128];
@@ -102,7 +102,7 @@ typedef struct GenericHashContext {
 
     /**
      * @brief Number of positions in the current context. Equals
-     * max_hash_value + 1, similar to global_num_positions.
+     * max_hash_value + 1.
      */
     Position num_positions;
 
@@ -110,7 +110,7 @@ typedef struct GenericHashContext {
     int64_t num_valid_configs;
 
     /**
-     * @brief Array of all valid configuration indices. Its length equals
+     * @brief Array of all valid configuration indices. Its length is equal to
      * num_valid_configs.
      */
     int64_t *valid_config_indices;
@@ -119,9 +119,35 @@ typedef struct GenericHashContext {
      * @brief The position hash offsets for each valid configuration aligned to
      * the valid_config_indices array. I.e., config_hash_offsets[i] represents
      * the total number of positions in all valid configurations with an index
-     * smaller than i. Its length equals num_valid_configs.
+     * smaller than i. Its length is equal to num_valid_configs.
      */
     Position *config_hash_offsets;
+
+    /** @brief Number of piece configurations, including invalid ones. */
+    int64_t num_configs;
+
+    /**
+     * @brief An array that maps indices of piece configurations to indices of
+     * valid piece configurations.
+     */
+    int64_t *config_index_to_valid_index;
+
+    /**
+     * @brief An exclusive multiplicative scan of the GenericHashContext::maxs
+     * array with each entry incremented by 1. That is, the value at index 0 is
+     * 1, and the value at any other index i is the product of the value at i-1
+     * and (GenericHashContext::maxs[i-1] + 1).
+     *
+     * @details This is cached for generating rearrangement values in constant
+     * time.
+     */
+    int64_t *max_piece_mult_scan;
+
+    /**
+     * @brief Rearrangement-indexed cache for the Rearrange function. See
+     * definition of Rearrange for details in context.c.
+     */
+    int64_t *rearranger_cache;
 } GenericHashContext;
 
 /**

@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- *
- * @version 1.0.1
- * @date 2024-01-13
+ * @version 1.2.1
+ * @date 2024-02-29
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,14 +30,14 @@
 
 #include "core/solvers/tier_solver/tier_worker.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t, uint8_t, UINT8_MAX
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // memcpy
+#include <assert.h>   // assert
+#include <limits.h>   // UCHAR_MAX
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // calloc, free
+#include <string.h>   // memcpy
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
@@ -49,21 +48,18 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>
+#include <omp.h>        // OpenMP pragmas
+#include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR PRAGMA(omp for)
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var) \
-    PRAGMA(omp parallel for firstprivate(var))
 
-// Otherwise, the following macros do nothing.
-#else
+#else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_PARALLEL_FOR
-#define PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(var)
 #endif  // _OPENMP
 
 #ifdef USE_MPI
@@ -86,35 +82,41 @@ static const int kFrontierSize = kRemotenessMax + 1;
 
 // Illegal positions are marked with this value, which should be chosen based on
 // the integer type of the num_undecided_children array.
-static const uint8_t kIllegalNumChildren = UINT8_MAX;
+static const unsigned char kIllegalNumChildren = UCHAR_MAX;
 
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
-static TierArray child_tiers;   // Array of child tiers.
+// Array of child tiers with this_tier appended to the back.
+static TierArray child_tiers;
 
-static Frontier win_frontier;   // Solved but unprocessed winning positions.
-static Frontier lose_frontier;  // Solved but unprocessed losing positions.
-static Frontier tie_frontier;   // Solved but unprocessed tying positions.
+// A frontier contains solved but unprocessed positions.
+static Frontier *win_frontiers;   // Winning frontiers for each thread.
+static Frontier *lose_frontiers;  // Losing frontiers for each thread.
+static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 
-// Number of undecided child positions array (heap). Note that we are assuming
-// the number of children of ANY position is no more than 254. This allows us to
-// use uint8_t to save memory. If this assumption is no longer true for any new
+// Number of undecided child positions array (malloc'ed and owned by the
+// TierWorkerSolve function). Note that we are assuming the number of children
+// of ANY position is no more than 254. This allows us to use an unsigned 8-bit
+// integer to save memory. If this assumption no longer holds for any new
 // games in the future, the programmer should change this type to a wider
 // integer type such as int16_t.
-static uint8_t *num_undecided_children = NULL;
-
 #ifdef _OPENMP
-// Lock for the array above.
-static omp_lock_t num_undecided_children_lock;
+static atomic_uchar *num_undecided_children = NULL;
+#else   // _OPENMP not defined
+static unsigned char *num_undecided_children = NULL;
 #endif  // _OPENMP
 
-// Cached reverse position graph of the current tier.
+// Cached reverse position graph of the current tier. This is only initialized
+// if the game does not implement Retrograde Analysis.
 ReverseGraph reverse_graph;
-// The reverse graph is used if the Undo Move Optimization is turned off.
+// The reverse graph is used if the Retrograde Analysis is turned off.
 static bool use_reverse_graph = false;
+
+static int num_threads;  // Number of threads available.
 
 static bool Step0Initialize(Tier tier);
 static bool Step0_0InitFrontiers(int dividers_size);
+static int GetThreadId(void);
 static PositionArray TierGetCanonicalParentPositionsFromReverseGraph(
     TierPosition child, Tier parent_tier);
 
@@ -123,7 +125,7 @@ static bool IsCanonicalTier(Tier tier);
 static bool Step1_0LoadCanonicalTier(int child_index);
 static bool Step1_1LoadNonCanonicalTier(int child_index);
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
-                                 int remoteness);
+                                 int remoteness, int tid);
 
 static bool Step2SetupSolverArrays(void);
 
@@ -133,10 +135,14 @@ static int Step3_0CountChildren(Position position);
 
 static bool Step4PushFrontierUp(void);
 static bool PushFrontierHelper(
-    Frontier *frontier, int remoteness,
+    Frontier *frontiers, int remoteness,
     bool (*ProcessPosition)(int remoteness, TierPosition tier_position));
-static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
-                            int i);
+static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness);
+static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
+                                          int *frontier_id, int *child_index,
+                                          int remoteness,
+                                          const int64_t *frontier_offsets);
+
 static bool ProcessLosePosition(int remoteness, TierPosition tier_position);
 static bool ProcessWinPosition(int remoteness, TierPosition tier_position);
 static bool ProcessTiePosition(int remoteness, TierPosition tier_position);
@@ -215,6 +221,7 @@ static bool Step0Initialize(Tier tier) {
     child_tiers = current_api.GetChildTiers(this_tier);
     if (child_tiers.size == kIllegalSize) return false;
 
+    // Initialize reverse graph without this_tier in the child_tiers array.
     use_reverse_graph = (current_api.GetCanonicalParentPositions == NULL);
     if (use_reverse_graph) {
         bool success = ReverseGraphInit(&reverse_graph, &child_tiers, this_tier,
@@ -224,22 +231,49 @@ static bool Step0Initialize(Tier tier) {
             &TierGetCanonicalParentPositionsFromReverseGraph;
     }
 
+    // From this point on, child_tiers will also contain this_tier.
+    TierArrayAppend(&child_tiers, this_tier);
+
     // Initialize frontiers with size to hold all child tiers and this tier.
-    if (!Step0_0InitFrontiers(child_tiers.size + 1)) return false;
+    if (!Step0_0InitFrontiers(child_tiers.size)) return false;
 
     // Non-memory-allocating initializations.
     this_tier_size = current_api.GetTierSize(tier);
-#ifdef _OPENMP
-    omp_init_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
     return true;
 }
 
 static bool Step0_0InitFrontiers(int dividers_size) {
-    bool success = FrontierInit(&win_frontier, kFrontierSize, dividers_size);
-    success &= FrontierInit(&lose_frontier, kFrontierSize, dividers_size);
-    success &= FrontierInit(&tie_frontier, kFrontierSize, dividers_size);
+#ifdef _OPENMP
+    num_threads = omp_get_max_threads();
+#else   // _OPENMP not defined.
+    num_threads = 1;
+#endif  // _OPENMP
+    win_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
+    lose_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
+    tie_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
+    if (!win_frontiers || !lose_frontiers || !tie_frontiers) {
+        return false;
+    }
+
+    bool success = true;
+    for (int i = 0; i < num_threads; ++i) {
+        success &=
+            FrontierInit(&win_frontiers[i], kFrontierSize, dividers_size);
+        success &=
+            FrontierInit(&lose_frontiers[i], kFrontierSize, dividers_size);
+        success &=
+            FrontierInit(&tie_frontiers[i], kFrontierSize, dividers_size);
+    }
+
     return success;
+}
+
+static int GetThreadId(void) {
+#ifdef _OPENMP
+    return omp_get_thread_num();
+#else   // _OPENMP not defined, thread 0 is the only available thread.
+    return 0;
+#endif  // _OPENMP
 }
 
 static PositionArray TierGetCanonicalParentPositionsFromReverseGraph(
@@ -255,7 +289,8 @@ static PositionArray TierGetCanonicalParentPositionsFromReverseGraph(
 static bool Step1LoadChildren(void) {
     // Child tiers must be processed sequentially, otherwise the frontier
     // dividers wouldn't work.
-    for (int child_index = 0; child_index < child_tiers.size; ++child_index) {
+    int num_child_tiers = child_tiers.size - 1;
+    for (int child_index = 0; child_index < num_child_tiers; ++child_index) {
         // Load child tier from disk.
         bool childIsCanonical = IsCanonicalTier(child_tiers.array[child_index]);
         bool success;
@@ -284,6 +319,7 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
+        int tid = GetThreadId();
 
         PRAGMA_OMP_FOR
         for (Position position = 0; position < child_tier_size; ++position) {
@@ -291,8 +327,8 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
             Value value = DbManagerProbeValue(&probe, child_tier_position);
             int remoteness =
                 DbManagerProbeRemoteness(&probe, child_tier_position);
-            if (!CheckAndLoadFrontier(child_index, position, value,
-                                      remoteness)) {
+            if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
+                                      tid)) {
                 success = false;
             }
         }
@@ -314,6 +350,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition canonical_tier_position = {.tier = canonical_tier};
+        int tid = GetThreadId();
 
         PRAGMA_OMP_FOR
         for (int64_t position = 0; position < child_tier_size; ++position) {
@@ -329,7 +366,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
                 current_api.GetPositionInSymmetricTier(canonical_tier_position,
                                                        original_tier);
             if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
-                                      remoteness)) {
+                                      remoteness, tid)) {
                 success = false;
             }
         }
@@ -339,7 +376,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
 }
 
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
-                                 int remoteness) {
+                                 int remoteness, int tid) {
     if (remoteness < 0) return false;  // Error probing remoteness.
     if (value == kUndecided || value == kDraw) return true;
     Frontier *dest = NULL;
@@ -349,15 +386,15 @@ static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
             return true;
 
         case kWin:
-            dest = &win_frontier;
+            dest = &win_frontiers[tid];
             break;
 
         case kLose:
-            dest = &lose_frontier;
+            dest = &lose_frontiers[tid];
             break;
 
         case kTie:
-            dest = &tie_frontier;
+            dest = &tie_frontiers[tid];
             break;
 
         default:
@@ -374,7 +411,13 @@ static bool Step2SetupSolverArrays(void) {
                                            current_api.GetTierSize(this_tier));
     if (error != 0) return false;
 
-    num_undecided_children = (uint8_t *)calloc(this_tier_size, sizeof(uint8_t));
+#ifdef _OPENMP
+    num_undecided_children =
+        (atomic_uchar *)calloc(this_tier_size, sizeof(atomic_uchar));
+#else   // _OPENMP not defined
+    num_undecided_children =
+        (unsigned char *)calloc(this_tier_size, sizeof(unsigned char));
+#endif  // _OPENMP
     return (num_undecided_children != NULL);
 }
 
@@ -385,36 +428,46 @@ static bool Step2SetupSolverArrays(void) {
 static bool Step3ScanTier(void) {
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
-    for (Position position = 0; position < this_tier_size; ++position) {
-        TierPosition tier_position = {.tier = this_tier, .position = position};
+    PRAGMA_OMP_PARALLEL {
+        int tid = GetThreadId();
+        PRAGMA_OMP_FOR
+        for (Position position = 0; position < this_tier_size; ++position) {
+            TierPosition tier_position = {.tier = this_tier,
+                                          .position = position};
 
-        // Skip illegal positions and non-canonical positions.
-        if (!current_api.IsLegalPosition(tier_position) ||
-            !IsCanonicalPosition(position)) {
-            num_undecided_children[position] = kIllegalNumChildren;
-            continue;
-        }
-
-        Value value = current_api.Primitive(tier_position);
-        if (value != kUndecided) {  // If tier_position is primitive...
-            // Set its value immediately and push it into the frontier.
-            DbManagerSetValue(position, value);
-            DbManagerSetRemoteness(position, 0);
-            if (!CheckAndLoadFrontier(child_tiers.size, position, value, 0)) {
-                success = false;
+            // Skip illegal positions and non-canonical positions.
+            if (!current_api.IsLegalPosition(tier_position) ||
+                !IsCanonicalPosition(position)) {
+                num_undecided_children[position] = kIllegalNumChildren;
+                continue;
             }
-            num_undecided_children[position] = 0;
-            continue;
-        }  // Execute the following lines if tier_position is not primitive.
-        int num_children = Step3_0CountChildren(position);
-        if (num_children <= 0) success = false;  // Either OOM or no children.
-        num_undecided_children[position] = num_children;
+
+            Value value = current_api.Primitive(tier_position);
+            if (value != kUndecided) {  // If tier_position is primitive...
+                // Set its value immediately and push it into the frontier.
+                DbManagerSetValue(position, value);
+                DbManagerSetRemoteness(position, 0);
+                int this_tier_index = child_tiers.size - 1;
+                if (!CheckAndLoadFrontier(this_tier_index, position, value, 0,
+                                          tid)) {
+                    success = false;
+                }
+                num_undecided_children[position] = 0;
+                continue;
+            }  // Execute the following lines if tier_position is not primitive.
+            int num_children = Step3_0CountChildren(position);
+            if (num_children <= 0)
+                success = false;  // Either OOM or no children.
+            num_undecided_children[position] = num_children;
+        }
     }
 
-    FrontierAccumulateDividers(&win_frontier);
-    FrontierAccumulateDividers(&lose_frontier);
-    FrontierAccumulateDividers(&tie_frontier);
+    for (int i = 0; i < num_threads; ++i) {
+        FrontierAccumulateDividers(&win_frontiers[i]);
+        FrontierAccumulateDividers(&lose_frontiers[i]);
+        FrontierAccumulateDividers(&tie_frontiers[i]);
+    }
+
     return success;
 }
 
@@ -450,10 +503,10 @@ static bool Step4PushFrontierUp(void) {
     // Process winning and losing positions first.
     // Remotenesses must be processed sequentially.
     for (int remoteness = 0; remoteness < kFrontierSize; ++remoteness) {
-        if (!PushFrontierHelper(&lose_frontier, remoteness,
+        if (!PushFrontierHelper(lose_frontiers, remoteness,
                                 &ProcessLosePosition)) {
             return false;
-        } else if (!PushFrontierHelper(&win_frontier, remoteness,
+        } else if (!PushFrontierHelper(win_frontiers, remoteness,
                                        &ProcessWinPosition)) {
             return false;
         }
@@ -461,7 +514,7 @@ static bool Step4PushFrontierUp(void) {
 
     // Then move on to tying positions.
     for (int remoteness = 0; remoteness < kFrontierSize; ++remoteness) {
-        if (!PushFrontierHelper(&tie_frontier, remoteness, &ProcessTiePosition))
+        if (!PushFrontierHelper(tie_frontiers, remoteness, &ProcessTiePosition))
             return false;
     }
     DestroyFrontiers();
@@ -470,37 +523,94 @@ static bool Step4PushFrontierUp(void) {
     return true;
 }
 
+/**
+ * @details The algorithm is as follows: first count the total number N of
+ * positions that need to be processed and then run a parallel for loop that
+ * ranges from 0 to N-1 to process each position. In order for threads to figure
+ * out which tier a position belongs to, it must first figure out which frontier
+ * that position was taken from, and then use the corresponding "dividers" array
+ * together with the child_tiers array to figure out which tier that position
+ * is from.
+ *
+ * This function first inspects all positions in the frontier (multiple
+ * Frontier instances if multithreading) at the given remoteness that needs to
+ * be processed, and creates an array of offsets that allows us to determine
+ * which Frontier instance a position belongs to. Then it uses the helper
+ * function UpdateFrontierAndChildTierIds to figure out which frontier and which
+ * child tier a position was from. The helper function is designed to take in
+ * the old values of frontier_id and child_index as hints on where to begin
+ * searching. This allows us to not start the search at index 0 for every
+ * position. However, it also means that we are assuming an order of processing
+ * within each tier. If the order is random, the hints will not work correctly.
+ */
 static bool PushFrontierHelper(
-    Frontier *frontier, int remoteness,
+    Frontier *frontiers, int remoteness,
     bool (*ProcessPosition)(int remoteness, TierPosition tier_position)) {
     //
-    bool success = true;
-    int child_index = 0;
+    int64_t *frontier_offsets = MakeFrontierOffsets(frontiers, remoteness);
+    if (!frontier_offsets) return false;
 
-    PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE(child_index)
-    for (int64_t i = 0; i < frontier->buckets[remoteness].size; ++i) {
-        child_index = UpdateChildIndex(child_index, frontier, remoteness, i);
-        TierPosition tier_position;
-        tier_position.position = frontier->buckets[remoteness].array[i];
-        if (child_index < child_tiers.size) {
-            tier_position.tier = child_tiers.array[child_index];
-        } else {
-            tier_position.tier = this_tier;
+    bool success = true;
+    PRAGMA_OMP_PARALLEL {
+        int frontier_id = 0, child_index = 0;
+        PRAGMA_OMP_FOR
+        for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
+            UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
+                                          &child_index, remoteness,
+                                          frontier_offsets);
+            int64_t index_in_frontier = i - frontier_offsets[frontier_id];
+            TierPosition tier_position = {
+                .tier = child_tiers.array[child_index],
+                .position = FrontierGetPosition(&frontiers[frontier_id],
+                                                remoteness, index_in_frontier),
+            };
+            if (!ProcessPosition(remoteness, tier_position)) success = false;
         }
-        if (!ProcessPosition(remoteness, tier_position)) success = false;
     }
-    FrontierFreeRemoteness(frontier, remoteness);
+
+    // Free current remoteness from all frontiers.
+    for (int i = 0; i < num_threads; ++i) {
+        FrontierFreeRemoteness(&frontiers[i], remoteness);
+    }
+    free(frontier_offsets);
+    frontier_offsets = NULL;
+
     return success;
 }
 
-static int UpdateChildIndex(int child_index, Frontier *frontier, int remoteness,
-                            int i) {
-    while (i >= frontier->dividers[remoteness][child_index]) {
-        ++child_index;
+static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
+    int64_t *frontier_offsets =
+        (int64_t *)malloc((num_threads + 1) * sizeof(int64_t));
+    if (frontier_offsets == NULL) return NULL;
+
+    frontier_offsets[0] = 0;
+    for (int i = 1; i <= num_threads; ++i) {
+        frontier_offsets[i] =
+            frontier_offsets[i - 1] + frontiers[i - 1].buckets[remoteness].size;
     }
-    return child_index;
+
+    return frontier_offsets;
 }
 
+// This function assumes frontier_id and child_index passed in corresponds to
+// a chunk of positions that either contains the i-th position in the array of
+// all positions, or corresponds to a chunk that comes later in the array.
+static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
+                                          int *frontier_id, int *child_index,
+                                          int remoteness,
+                                          const int64_t *frontier_offsets) {
+    while (i >= frontier_offsets[*frontier_id + 1]) {
+        ++(*frontier_id);
+        *child_index = 0;
+    }
+    int64_t index_in_frontier = i - frontier_offsets[*frontier_id];
+    while (index_in_frontier >=
+           frontiers[*frontier_id].dividers[remoteness][*child_index]) {
+        ++(*child_index);
+    }
+}
+
+// This function is called within a OpenMP parallel region.
 static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
                                      bool processing_lose) {
     PositionArray parents =
@@ -509,24 +619,31 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
         TierArrayDestroy(&parents);
         return false;
     }
+
+    int tid = GetThreadId();
     Value value = processing_lose ? kWin : kTie;
-    Frontier *frontier = processing_lose ? &win_frontier : &tie_frontier;
+    Frontier *frontier =
+        processing_lose ? &win_frontiers[tid] : &tie_frontiers[tid];
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
-        omp_set_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-        uint8_t child_remaining = num_undecided_children[parents.array[i]];
+        // Atomically fetch num_undecided_children[parents.array[i]] into
+        // child_remaining and set it to zero.
+        unsigned char child_remaining = atomic_exchange_explicit(
+            &num_undecided_children[parents.array[i]], 0, memory_order_relaxed);
+#else                                        // _OPENMP not defined
+        unsigned char child_remaining =
+            num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
-#ifdef _OPENMP
-        omp_unset_lock(&num_undecided_children_lock);
 #endif                                       // _OPENMP
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
         DbManagerSetValue(parents.array[i], value);
         DbManagerSetRemoteness(parents.array[i], remoteness + 1);
-        if (!FrontierAdd(frontier, parents.array[i], remoteness + 1,
-                         child_tiers.size)) {  // OOM.
+        int this_tier_index = child_tiers.size - 1;
+        bool success = FrontierAdd(frontier, parents.array[i], remoteness + 1,
+                                   this_tier_index);
+        if (!success) {  // OOM.
             TierArrayDestroy(&parents);
             return false;
         }
@@ -539,6 +656,41 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
     return ProcessLoseOrTiePosition(remoteness, tier_position, true);
 }
 
+#ifdef _OPENMP
+/**
+ * @brief Atomically decrements the content of OBJ, which is of type unsigned
+ * char, if and only if it was greater than 0, and returns the original value.
+ * If multiple threads call this function on the same OBJ at the same time, the
+ * value returned is guaranteed to be unique for each thread if no threads are
+ * performing other operations on OBJ.
+ *
+ * @note This is a helper function that is only used by ProcessWinPosition.
+ *
+ * @param obj Atomic unsigned char object to be decremented.
+ * @return Original value of OBJ.
+ */
+static unsigned char DecrementIfNonZero(atomic_uchar *obj) {
+    unsigned char current_value =
+        atomic_load_explicit(obj, memory_order_relaxed);
+    while (current_value != 0) {
+        // This function will set OBJ to current_value - 1 if OBJ is still equal
+        // to current_value. Otherwise, it updates current_value to the new
+        // value of OBJ and returns false.
+        bool success = atomic_compare_exchange_strong_explicit(
+            obj, &current_value, current_value - 1, memory_order_relaxed,
+            memory_order_relaxed);
+        // If decrement was successful, quit and return the original value of
+        // OBJ that was swapped out.
+        if (success) return current_value;
+        // Otherwise, we keep looping until either a decrement was successfully
+        // completed, or OBJ is decremented to zero by some other thread.
+    }
+
+    return 0;
+}
+#endif  // _OPENMP
+
+// This function is called within a OpenMP parallel region.
 static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     PositionArray parents =
         current_api.GetCanonicalParentPositions(tier_position, this_tier);
@@ -546,30 +698,28 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
         PositionArrayDestroy(&parents);
         return false;
     }
+
+    int tid = GetThreadId();
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
-        omp_set_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-        if (num_undecided_children[parents.array[i]] == 0) {
-            // This parent has been solved already.
-#ifdef _OPENMP
-            omp_unset_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
-            continue;
-        }
+        unsigned char child_remaining =
+            DecrementIfNonZero(&num_undecided_children[parents.array[i]]);
+#else   // _OPENMP not defined
+        // If this parent has been solved already, skip it.
+        if (num_undecided_children[parents.array[i]] == 0) continue;
         // Must perform the above check before decrementing to prevent overflow.
-        uint8_t child_remaining = --num_undecided_children[parents.array[i]];
-#ifdef _OPENMP
-        omp_unset_lock(&num_undecided_children_lock);
+        unsigned char child_remaining =
+            num_undecided_children[parents.array[i]]--;
 #endif  // _OPENMP
-
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
-        if (child_remaining == 0) {
+        if (child_remaining == 1) {
             DbManagerSetValue(parents.array[i], kLose);
             DbManagerSetRemoteness(parents.array[i], remoteness + 1);
-            if (!FrontierAdd(&lose_frontier, parents.array[i], remoteness + 1,
-                             child_tiers.size)) {  // OOM.
+            int this_tier_index = child_tiers.size - 1;
+            bool success = FrontierAdd(&lose_frontiers[tid], parents.array[i],
+                                       remoteness + 1, this_tier_index);
+            if (!success) {  // OOM.
                 PositionArrayDestroy(&parents);
                 return false;
             }
@@ -604,14 +754,14 @@ static void Step6SaveValues(void) {
     if (DbManagerFlushSolvingTier(NULL) != 0) {
         fprintf(stderr,
                 "Step6SaveValues: an error has occurred while flushing of the "
-                "current tier. The database file for tier %" PRId64
+                "current tier. The database file for tier %" PRITier
                 " may be corrupt.\n",
                 this_tier);
     }
     if (DbManagerFreeSolvingTier() != 0) {
         fprintf(stderr,
                 "Step6SaveValues: an error has occurred while freeing of the "
-                "current tier's in-memory database. Tier: %" PRId64 "\n",
+                "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
 }
@@ -628,19 +778,18 @@ static void Step7Cleanup(void) {
         // Unset the local function pointer.
         current_api.GetCanonicalParentPositions = NULL;
     }
-#ifdef _OPENMP
-    omp_destroy_lock(&num_undecided_children_lock);
-#endif  // _OPENMP
+    num_threads = 0;
 }
 
 static void DestroyFrontiers(void) {
-    FrontierDestroy(&win_frontier);
-    FrontierDestroy(&lose_frontier);
-    FrontierDestroy(&tie_frontier);
+    for (int i = 0; i < num_threads; ++i) {
+        FrontierDestroy(&win_frontiers[i]);
+        FrontierDestroy(&lose_frontiers[i]);
+        FrontierDestroy(&tie_frontiers[i]);
+    }
 }
 
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
 #undef PRAGMA_OMP_FOR
 #undef PRAGMA_OMP_PARALLEL_FOR
-#undef PRAGMA_OMP_PARALLEL_FOR_FIRSTPRIVATE
