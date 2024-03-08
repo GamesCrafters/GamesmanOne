@@ -143,6 +143,7 @@ bool GenericHashUnhash(Position hash, char *board);
  * only context was initialized with a single player, this function will always
  * return the predefined turn value passed into GenericHashAddContext().
  */
+// TODO: fix the comments in this file.
 int GenericHashGetTurn(Position hash);
 
 // ------------------------- Multi-context functions. -------------------------

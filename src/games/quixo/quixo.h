@@ -5,7 +5,7 @@
  *         Benji Xu
  *         Angela He
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Tic-Tac-Tier - Tiered Tic-Tac-Toe.
+ * @brief Quixo - the board game designed by Thierry Chapeau.
  * @version 0.1.0
  * @date 2024-02-28
  *

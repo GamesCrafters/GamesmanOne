@@ -123,6 +123,8 @@ Position GenericHashNumPositionsLabel(int64_t context_label) {
     return GenericHashContextNumPositions(&manager.contexts[context_index]);
 }
 
+// TODO: consider changing board to a const char[] since it doesn't need to
+// be null terminated.
 Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
                               int turn) {
     int64_t context_index = ManagerGetContextIndex(context_label);
