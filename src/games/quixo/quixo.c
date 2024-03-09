@@ -67,22 +67,46 @@ const Game kQuixo = {
 
 // -----------------------------------------------------------------------------
 
+enum QuixoPieces { kBlank = '-', kX = 'X', kO = 'O' };
+
 enum QuixoConstants {
     kBoardRowsMax = 6,
     kBoardColsMax = 6,
     kBoardSizeMax = kBoardRowsMax * kBoardColsMax,
 };
 
-static int board_rows;  // Number of rows on the board (default 5).
-static int board_cols;  // Number of columns on the board (default 5).
-static int k_in_a_row;  // Number of pieces in a row a player needs to win.
+static const char kPlayerPiece[3] = {kBlank, kX, kO};  // Cached turn-to-piece
+                                                       // mapping.
+static int board_rows;  // (option) Number of rows on the board (default 5).
+static int board_cols;  // (option) Number of columns on the board (default 5).
+static int k_in_a_row;  // (option) Number of pieces in a row a player needs
+                        // to win.
+static int num_edge_slots;  // (calculated) Number of edge slots on the board.
+static int edge_indices[kBoardSizeMax];  // (calculated) Indices of edge slots.
 
+// Helper functions for tier initialization.
+static void UpdateEdgeSlots(void);
 static int GetBoardSize(void);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
+
+// Helper functions for QuixoGenerateMoves
+static int OpponentsTurn(int turn);
+static Move ConstructMove(int src, int dest, bool flip);
+static int GetMoveDestinations(int *dests, int src);
+static int BoardRowColToIndex(int row, int col);
+static void BoardIndexToRowCol(int index, int *row, int *col);
+
+// Helper functions for QuixoPrimitive
+static bool HasKInARow(const char *board, char piece);
+static bool CheckDirection(const char *board, char piece, int i, int j,
+                           int dir_i, int dir_j);
+
 
 static int QuixoInit(void *aux) {
     (void)aux;                    // Unused.
     board_rows = board_cols = 5;  // TODO: add variants.
+    k_in_a_row = 5;
+    UpdateEdgeSlots();
     return InitGenericHash();
 }
 
@@ -95,7 +119,7 @@ static int InitGenericHash(void) {
     int board_size = GetBoardSize();
     // These values are just place holders. The actual values are generated
     // in the for loop below.
-    int pieces_init_array[10] = {'-', 0, 0, 'X', 0, 0, 'O', 0, 0, -1};
+    int pieces_init_array[10] = {kBlank, 0, 0, kX, 0, 0, kO, 0, 0, -1};
 
     bool success;
     for (int num_blanks = 0; num_blanks <= board_size; ++num_blanks) {
@@ -153,7 +177,7 @@ static Tier QuixoGetInitialTier(void) {
 
 static Position QuixoGetInitialPosition(void) {
     char board[kBoardSizeMax];
-    memset(board, '-', GetBoardSize());
+    memset(board, kBlank, GetBoardSize());
     return GenericHashHashLabel(QuixoGetInitialTier(), board, 1);
 }
 
@@ -162,52 +186,48 @@ static int64_t QuixoGetTierSize(Tier tier) {
 }
 
 static MoveArray QuixoGenerateMoves(TierPosition tier_position) {
-    // TODO
-    //
-}
-
-static bool CheckDirection(const char *board, char piece, int i, int j,
-                           int dir_i, int dir_j) {
-    int count = 0;
-    while (i >= 0 && i < board_rows && j >= 0 && j < board_cols) {
-        if (board[i * board_cols + j]) {
-            if (++count == k_in_a_row) return true;
-        } else {
-            return false;
-        }
-        i += dir_i;
-        j += dir_j;
+    MoveArray moves;
+    MoveArrayInit(&moves);
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) {
+        moves.size = -1;
+        return moves;
     }
 
-    return false;
-}
+    int turn = GenericHashGetTurnLabel(tier, position);
+    char piece_to_move = kPlayerPiece[turn];
+    // Find all blank or friendly pieces on 4 edges and 4 corners of the board.
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int edge_index = edge_indices[i];
+        char piece = board[edge_index];
+        // Skip opponent pieces, which cannot be moved.
+        if (piece != kBlank && piece != piece_to_move) continue;
 
-/** @brief Returns whether there is a k_in_a_row of PIECEs on BOARD. */
-static bool HasKInARow(const char *board, char piece) {
-    for (int i = 0; i < board_rows; ++i) {
-        for (int j = 0; j < board_cols; ++j) {
-            // For each slot in BOARD, check 4 directions: right, down-right,
-            // down, down-left.
-            if (CheckDirection(board, piece, i, j, 0, 1)) return true;
-            if (CheckDirection(board, piece, i, j, 1, 1)) return true;
-            if (CheckDirection(board, piece, i, j, 1, 0)) return true;
-            if (CheckDirection(board, piece, i, j, 1, -1)) return true;
+        // Blank pieces must be flipped and then moved, whereas friendly pieces
+        // must only be moved without flipping.
+        bool flip = (piece == kBlank);
+        int dests[3];
+        int num_dests = GetMoveDestinations(dests, edge_index);
+        for (int j = 0; j < num_dests; ++j) {
+            MoveArrayAppend(&moves, ConstructMove(edge_index, dests[j], flip));
         }
     }
 
-    return false;
+    return moves;
 }
 
 static Value QuixoPrimitive(TierPosition tier_position) {
     char board[kBoardSizeMax];
     int turn = GenericHashGetTurn(tier_position.position);
     assert(turn == 1 || turn == 2);
-    char my_piece = (turn == 1) ? 'X' : 'O';
-    char opponent_piece = (turn == 1) ? 'O' : 'X';
+    char my_piece = kPlayerPiece[turn];
+    char opponent_piece = kPlayerPiece[OpponentsTurn(turn)];
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);
-    assert(success);
-    (void)success;
+    if (!success) return kErrorValue;
 
     if (HasKInARow(board, my_piece)) {
         // The current player wins if there is a k in a row of the current
@@ -245,9 +265,108 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     // TODO
 }
 
+static void UpdateEdgeSlots(void) {
+    num_edge_slots = 0;
+    // Loop through all indices and append the indices of the ones on an edge.
+    for (int i = 0; i < GetBoardSize(); ++i) {
+        int row, col;
+        BoardIndexToRowCol(i, &row, &col);
+        if (row == 0 || col == 0 || row == board_rows - 1 ||
+            col == board_cols - 1) {
+            edge_indices[num_edge_slots++] = i;
+        }
+    }
+}
+
 static int GetBoardSize(void) { return board_rows * board_cols; }
 
 static Tier HashTier(int num_blanks, int num_x, int num_o) {
     int board_size = GetBoardSize();
     return num_o * board_size * board_size + num_x * board_size + num_blanks;
+}
+
+/**
+ * @brief Returns 2 if TURN is 1, or 1 if TURN is 2. Assumes TURN is either 1
+ * or 2.
+ */
+static int OpponentsTurn(int turn) { return !(turn - 1) + 1; }
+
+static Move ConstructMove(int src, int dest, bool flip) {
+    int board_size = GetBoardSize();
+
+    // Equivalent to ((0 * board_size + src) * board_size + dest) * 2 + flip,
+    // where board_size is the number of possible values SRC and DEST can take,
+    // and 2 is the number of values FLIP can take (0 or 1).
+    return ((src * board_size + dest) << 1) | flip;
+}
+
+// Assumes DESTS has enough space.
+static int GetMoveDestinations(int *dests, int src) {
+    int row, col;
+    BoardIndexToRowCol(src, &row, &col);
+    int num_dests = 0;
+
+    // Can move left if not at the left-most column.
+    if (col > 0) {
+        dests[num_dests++] = BoardRowColToIndex(row, 0);
+    }
+    
+    // Can move right if not at the right-most column.
+    if (col < board_cols - 1) {
+        dests[num_dests++] = BoardRowColToIndex(row, board_cols - 1);
+    }
+    
+    // Can move up if not at the top-most row.
+    if (row > 0) {
+        dests[num_dests++] = BoardRowColToIndex(0, col);
+    }
+    
+    // Can move down if not at the bottom-most row.
+    if (row < board_rows - 1) {
+        dests[num_dests++] = BoardRowColToIndex(board_rows - 1, col);
+    }
+
+    assert(num_dests == 3 || num_dests == 2);
+    return num_dests;
+}
+
+static int BoardRowColToIndex(int row, int col) {
+    return row * board_cols + col;
+}
+
+static void BoardIndexToRowCol(int index, int *row, int *col) {
+    row = index / board_cols;
+    col = index % board_cols;
+}
+
+/** @brief Returns whether there is a k_in_a_row of PIECEs on BOARD. */
+static bool HasKInARow(const char *board, char piece) {
+    for (int i = 0; i < board_rows; ++i) {
+        for (int j = 0; j < board_cols; ++j) {
+            // For each slot in BOARD, check 4 directions: right, down-right,
+            // down, down-left.
+            if (CheckDirection(board, piece, i, j, 0, 1)) return true;
+            if (CheckDirection(board, piece, i, j, 1, 1)) return true;
+            if (CheckDirection(board, piece, i, j, 1, 0)) return true;
+            if (CheckDirection(board, piece, i, j, 1, -1)) return true;
+        }
+    }
+
+    return false;
+}
+
+static bool CheckDirection(const char *board, char piece, int i, int j,
+                           int dir_i, int dir_j) {
+    int count = 0;
+    while (i >= 0 && i < board_rows && j >= 0 && j < board_cols) {
+        if (board[i * board_cols + j]) {
+            if (++count == k_in_a_row) return true;
+        } else {
+            return false;
+        }
+        i += dir_i;
+        j += dir_j;
+    }
+
+    return false;
 }
