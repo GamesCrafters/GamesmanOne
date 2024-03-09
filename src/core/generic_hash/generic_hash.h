@@ -12,8 +12,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash system for finite board games with fixed sets of pieces.
- * @version 1.0.1
- * @date 2024-01-03
+ * @version 1.0.2
+ * @date 2024-03-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -97,7 +97,7 @@ bool GenericHashAddContext(
  *
  * @return The number of positions in the only context defined if exactly one
  * Generic Hash Context has been created since the last reinitialization. -1
- * if zero or more than one Generic Hash Context exists.
+ * if no Generic Hash Context or more than one contexts has been initialized.
  */
 Position GenericHashNumPositions(void);
 
@@ -113,7 +113,7 @@ Position GenericHashNumPositions(void);
  * Hash Context exists, the BOARD contains an invalid piece, TURN is not in the
  * range [1, 2], or if any other errors such as malloc failure occurred.
  */
-Position GenericHashHash(ReadOnlyString board, int turn);
+Position GenericHashHash(const char *board, int turn);
 
 /**
  * @brief Unhashes the given HASH to fill the given BOARD with pieces using the
@@ -128,8 +128,9 @@ Position GenericHashHash(ReadOnlyString board, int turn);
  * @param board Game board as a char array with enough space to hold board_size
  * bytes as specified when the only Generic Hash Context was initialized.
  * @return true on success,
- * @return false if zero or more than one Generic Hash Context exists, or the
- * given hash is out of the Position range of the only Generic Hash Context.
+ * @return false if no Generic Hash Context or more than one contexts has been
+ * initialized, or the given hash is outside of the range of Position hash of
+ * the only Generic Hash Context.
  */
 bool GenericHashUnhash(Position hash, char *board);
 
@@ -139,11 +140,11 @@ bool GenericHashUnhash(Position hash, char *board);
  *
  * @param hash Hash of the position.
  * @return 1 if the HASHed position is player 1's turn, 2 if player 2's turn, or
- * -1 if zero or more than one Generic Hash Context exists. Note that if the
- * only context was initialized with a single player, this function will always
- * return the predefined turn value passed into GenericHashAddContext().
+ * -1 if no Generic Hash Context or more than one contexts has been initialized.
+ * Note that if the only context was initialized with a single player, this
+ * function will always return the predefined turn value passed into
+ * GenericHashAddContext().
  */
-// TODO: fix the comments in this file.
 int GenericHashGetTurn(Position hash);
 
 // ------------------------- Multi-context functions. -------------------------
@@ -153,8 +154,8 @@ int GenericHashGetTurn(Position hash);
  * CONTEXT_LABEL.
  *
  * @param context_label Label of the Context.
- * @return Number of positions in the Context, or -1 if the given LABEL is
- * invalid.
+ * @return Number of positions in the Context, or -1 if the given CONTEXT_LABEL
+ * is invalid.
  */
 Position GenericHashNumPositionsLabel(int64_t context_label);
 
@@ -171,7 +172,7 @@ Position GenericHashNumPositionsLabel(int64_t context_label);
  * BOARD contains an invalid piece, TURN is not in the range [1, 2], or if any
  * other errors such as malloc failure occurred.
  */
-Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
+Position GenericHashHashLabel(int64_t context_label, const char *board,
                               int turn);
 
 /**
@@ -183,8 +184,8 @@ Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
  * @param board Game board as a char array with enough space to hold board_size
  * bytes as specified when the selected Generic Hash Context was initialized.
  * @return true on success,
- * @return false if CONTEXT_LABEL is invalid, the given hash is out of the
- * Position range of the Generic Hash Context selected.
+ * @return false if CONTEXT_LABEL is invalid, the given hash is outside of the
+ * range of Position hash of the Generic Hash Context selected.
  */
 bool GenericHashUnhashLabel(int64_t context_label, Position hash, char *board);
 

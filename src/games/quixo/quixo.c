@@ -182,7 +182,7 @@ static bool CheckDirection(const char *board, char piece, int i, int j,
     return false;
 }
 
-/** @brief Returns whether there is a k_in_a_row of PIECEs in BOARD. */
+/** @brief Returns whether there is a k_in_a_row of PIECEs on BOARD. */
 static bool HasKInARow(const char *board, char piece) {
     for (int i = 0; i < board_rows; ++i) {
         for (int j = 0; j < board_cols; ++j) {
