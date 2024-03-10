@@ -249,7 +249,35 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
 }
 
 static bool QuixoIsLegalPosition(TierPosition tier_position) {
-    // TODO
+    // Returns if a pos is legal, but not strictly according to game definition
+    // In X's turn, return illegal is no border Os, and vice versa
+    // Will not misidentify legal as illegal, but might misidentify illegal as legal
+
+    Tier tier = tier_position.tier; // get tier
+    Position position = tier_position.position; // get pos 
+
+    char board[kBoardSizeMax];
+
+    int turn = GenericHashGetTurnLabel(tier, position);
+    char piece_to_move = kPlayerPiece[turn];
+    int blanks = 0;
+
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int edge_index = edge_indices[i];
+        char piece = board[edge_index];
+        if (piece == kBlank) { // special case for a blank board
+            blanks++;
+        }
+        if (piece != piece_to_move && piece != kBlank) {
+            return true; 
+        }
+        if (blanks == num_edge_slots) { // special case for a blank board
+            return true;
+        }
+    }
+
+    return false; 
+
 }
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
