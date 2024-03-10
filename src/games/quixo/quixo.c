@@ -244,13 +244,92 @@ static Value QuixoPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
+
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     // TODO
+    int flip = move % 2;
+    move / 2;
+    int dest = move % 4;
+    move / 4;
+    int src = move % 4;
+        
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    int turn = GenericHashGetTurnLabel(tier, position);
+    
+    char board[kBoardSizeMax];
+    GenericHashUnhashLabel(tier, position, board);
+    //1. figure out if row or col move by calculating the |dest - src|
+    //2. figure out if left/right or up/down by comparing src dest
+    // dest < src --> blocks move left or down
+    //dest > src --> blocks move right or up
+    if (abs(dest - src) < 5) {
+        // Row move
+        if (dest < src) {
+            // Insert piece on the left (taken care of further down).
+            // Slide everything 1 right.
+            for (int i = src; i > dest; i--){
+                board[i] = board[i - 1];
+            }
+        } else {
+            // Insert piece on the right. Slide everything 1 left.
+            for (int i = src; i < dest; i++){
+                board[i] = board[i + 1];
+            }
+        }
+    } else {
+        // Column move
+        if (dest < src) {
+            // Insert piece to the top. Slide column down
+            for (int i = src; i < dest; i -= 5) {
+                board[i] = board[i - 5];
+            }
+        } else {
+            // Insert piece to the bottom. Slide column up
+            for (int i = src; i > dest; i += 5) {
+                board[i] = board[i + 5];
+            }
+        }
+    }
+    
+    char piece_to_move = kPlayerPiece[turn];
+    board[dest] = piece_to_move;
+
+    TierPosition ret;
+    ret.tier = tier_position.tier + 1;
+    //TODO: 3rd param --> turn or oponent's turn
+    ret.position = GenericHashHashLabel(tier_position.tier, board, OpponentsTurn(turn));
+    return ret;
 }
 
+
 static bool QuixoIsLegalPosition(TierPosition tier_position) {
-    // TODO
+    // Returns if a pos is legal, but not strictly according to game definition
+    // In X's turn, return illegal is no border Os, and vice versa
+    // Will not misidentify legal as illegal, but might misidentify illegal as legal
+    Tier tier = tier_position.tier; // get tier
+    Position position = tier_position.position; // get pos
+    char board[kBoardSizeMax];
+    int turn = GenericHashGetTurnLabel(tier, position);
+    char piece_to_move = kPlayerPiece[turn];
+    int blanks = 0;
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int edge_index = edge_indices[i];
+        char piece = board[edge_index];
+        if (piece == kBlank) { // special case for a blank board
+            blanks++;
+        }
+        if (piece != piece_to_move && piece != kBlank) {
+            return true;
+        }
+        if (blanks == num_edge_slots) { // special case for a blank board
+            return true;
+        }
+    }
+    return false;
 }
+
+
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     // TODO
