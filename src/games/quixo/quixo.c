@@ -80,6 +80,8 @@ enum QuixoConstants {
 
 static const char kPlayerPiece[3] = {kBlank, kX, kO};  // Cached turn-to-piece
                                                        // mapping.
+static Tier initial_tier;
+static Position initial_position;
 static int board_rows;  // (option) Number of rows on the board (default 5).
 static int board_cols;  // (option) Number of columns on the board (default 5).
 static int k_in_a_row;  // (option) Number of pieces in a row a player needs
@@ -90,6 +92,8 @@ static int edge_indices[kBoardSizeMax];  // (calculated) Indices of edge slots.
 // Helper functions for tier initialization.
 static void UpdateEdgeSlots(void);
 static int GetBoardSize(void);
+static Tier QuixoSetInitialTier(void);
+static Position QuixoSetInitialPosition(void);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
 static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o);
 
@@ -110,7 +114,13 @@ static int QuixoInit(void *aux) {
     board_rows = board_cols = 5;  // TODO: add variants.
     k_in_a_row = 5;
     UpdateEdgeSlots();
-    return InitGenericHash();
+    int ret = InitGenericHash();
+    if (ret != kNoError) return ret;
+
+    QuixoSetInitialTier();
+    QuixoSetInitialPosition();
+
+    return kNoError;
 }
 
 static int InitGenericHash(void) {
@@ -173,16 +183,9 @@ static int QuixoFinalize(void) {
     return kNoError;
 }
 
-static Tier QuixoGetInitialTier(void) {
-    int num_blanks = GetBoardSize(), num_x = 0, num_o = 0;
-    return HashTier(num_blanks, num_x, num_o);
-}
+static Tier QuixoGetInitialTier(void) { return initial_tier; }
 
-static Position QuixoGetInitialPosition(void) {
-    char board[kBoardSizeMax];
-    memset(board, kBlank, GetBoardSize());
-    return GenericHashHashLabel(QuixoGetInitialTier(), board, 1);
-}
+static Position QuixoGetInitialPosition(void) { return initial_position; }
 
 static int64_t QuixoGetTierSize(Tier tier) {
     return GenericHashNumPositionsLabel(tier);
@@ -249,36 +252,35 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     // TODO
 }
 
+// Returns if a pos is legal, but not strictly according to game definition.
+// In X's turn, returns illegal if no border Os, and vice versa
+// Will not misidentify legal as illegal, but might misidentify illegal as
+// legal.
 static bool QuixoIsLegalPosition(TierPosition tier_position) {
-    // Returns if a pos is legal, but not strictly according to game definition
-    // In X's turn, return illegal is no border Os, and vice versa
-    // Will not misidentify legal as illegal, but might misidentify illegal as legal
-
-    Tier tier = tier_position.tier; // get tier
-    Position position = tier_position.position; // get pos 
+    Tier tier = tier_position.tier;              // get tier
+    Position position = tier_position.position;  // get pos
+    if (tier == initial_tier && position == initial_position) {
+        // The initial position is always legal but does not follow the rules
+        // below.
+        return true;
+    }
 
     char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) {
+        fprintf(stderr, "QuixoIsLegalPosition: GenericHashUnhashLabel error\n");
+        return false;
+    }
 
     int turn = GenericHashGetTurnLabel(tier, position);
-    char piece_to_move = kPlayerPiece[turn];
-    int blanks = 0;
-
+    char opponent_piece = kPlayerPiece[OpponentsTurn(turn)];
     for (int i = 0; i < num_edge_slots; ++i) {
         int edge_index = edge_indices[i];
         char piece = board[edge_index];
-        if (piece == kBlank) { // special case for a blank board
-            blanks++;
-        }
-        if (piece != piece_to_move && piece != kBlank) {
-            return true; 
-        }
-        if (blanks == num_edge_slots) { // special case for a blank board
-            return true;
-        }
+        if (piece == opponent_piece) return true;
     }
 
-    return false; 
-
+    return false;
 }
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
@@ -365,6 +367,20 @@ static void UpdateEdgeSlots(void) {
 }
 
 static int GetBoardSize(void) { return board_rows * board_cols; }
+
+static Tier QuixoSetInitialTier(void) {
+    int num_blanks = GetBoardSize(), num_x = 0, num_o = 0;
+    initial_tier = HashTier(num_blanks, num_x, num_o);
+    return initial_tier;
+}
+
+// Assumes Generic Hash has been initialized.
+static Position QuixoSetInitialPosition(void) {
+    char board[kBoardSizeMax];
+    memset(board, kBlank, GetBoardSize());
+    initial_position = GenericHashHashLabel(QuixoGetInitialTier(), board, 1);
+    return initial_position;
+}
 
 static Tier HashTier(int num_blanks, int num_x, int num_o) {
     int board_size = GetBoardSize();
