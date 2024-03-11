@@ -28,7 +28,10 @@ static bool QuixoIsLegalPosition(TierPosition tier_position);
 static Position QuixoGetCanonicalPosition(TierPosition tier_position);
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
+static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
+                                                Tier symmetric);
 static TierArray QuixoGetChildTiers(Tier tier);
+static Tier QuixoGetCanonicalTier(Tier tier);
 
 static const TierSolverApi kQuixoSolverApi = {
     .GetInitialTier = &QuixoGetInitialTier,
@@ -42,10 +45,10 @@ static const TierSolverApi kQuixoSolverApi = {
     .GetCanonicalPosition = &QuixoGetCanonicalPosition,
     .GetCanonicalChildPositions = NULL,
     .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
-    .GetPositionInSymmetricTier = NULL,
+    .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
     .GetChildTiers = &QuixoGetChildTiers,
     .GetParentTiers = NULL,
-    .GetCanonicalTier = NULL,
+    .GetCanonicalTier = &QuixoGetCanonicalTier,
 };
 
 // -----------------------------------------------------------------------------
@@ -88,10 +91,11 @@ static int edge_indices[kBoardSizeMax];  // (calculated) Indices of edge slots.
 static void UpdateEdgeSlots(void);
 static int GetBoardSize(void);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
+static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o);
 
 // Helper functions for QuixoGenerateMoves
 static int OpponentsTurn(int turn);
-static Move ConstructMove(int src, int dest, bool flip);
+static Move ConstructMove(int src, int dest);
 static int GetMoveDestinations(int *dests, int src);
 static int BoardRowColToIndex(int row, int col);
 static void BoardIndexToRowCol(int index, int *row, int *col);
@@ -100,7 +104,6 @@ static void BoardIndexToRowCol(int index, int *row, int *col);
 static bool HasKInARow(const char *board, char piece);
 static bool CheckDirection(const char *board, char piece, int i, int j,
                            int dir_i, int dir_j);
-
 
 static int QuixoInit(void *aux) {
     (void)aux;                    // Unused.
@@ -206,13 +209,10 @@ static MoveArray QuixoGenerateMoves(TierPosition tier_position) {
         // Skip opponent pieces, which cannot be moved.
         if (piece != kBlank && piece != piece_to_move) continue;
 
-        // Blank pieces must be flipped and then moved, whereas friendly pieces
-        // must only be moved without flipping.
-        bool flip = (piece == kBlank);
         int dests[3];
         int num_dests = GetMoveDestinations(dests, edge_index);
         for (int j = 0; j < num_dests; ++j) {
-            MoveArrayAppend(&moves, ConstructMove(edge_index, dests[j], flip));
+            MoveArrayAppend(&moves, ConstructMove(edge_index, dests[j]));
         }
     }
 
@@ -220,13 +220,14 @@ static MoveArray QuixoGenerateMoves(TierPosition tier_position) {
 }
 
 static Value QuixoPrimitive(TierPosition tier_position) {
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
     char board[kBoardSizeMax];
-    int turn = GenericHashGetTurn(tier_position.position);
+    int turn = GenericHashGetTurnLabel(tier, position);
     assert(turn == 1 || turn == 2);
     char my_piece = kPlayerPiece[turn];
     char opponent_piece = kPlayerPiece[OpponentsTurn(turn)];
-    bool success = GenericHashUnhashLabel(tier_position.tier,
-                                          tier_position.position, board);
+    bool success = GenericHashUnhashLabel(tier, position, board);
     if (!success) return kErrorValue;
 
     if (HasKInARow(board, my_piece)) {
@@ -261,8 +262,65 @@ static PositionArray QuixoGetCanonicalParentPositions(
     // TODO
 }
 
+static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
+                                                Tier symmetric) {
+    Tier this_tier = tier_position.tier;
+    Position this_position = tier_position.position;
+    assert(QuixoGetCanonicalTier(symmetric) ==
+           QuixoGetCanonicalTier(this_tier));
+
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(this_tier, this_position, board);
+    if (!success) return -1;  // TODO: merge and replace with kIllegalPosition
+
+    // Swap all 'X' and 'O' pieces on the board.
+    for (int i = 0; i < GetBoardSize(); ++i) {
+        if (board[i] == kX) {
+            board[i] = kO;
+        } else if (board[i] == kO) {
+            board[i] = kX;
+        }
+    }
+
+    int turn = GenericHashGetTurnLabel(this_tier, this_position);
+    int opponents_turn = OpponentsTurn(turn);
+
+    return GenericHashHashLabel(symmetric, board, opponents_turn);
+}
+
 static TierArray QuixoGetChildTiers(Tier tier) {
-    // TODO
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+    int board_size = GetBoardSize();
+    assert(num_blanks + num_x + num_o == board_size);
+    assert(num_blanks >= 0 && num_x >= 0 && num_o >= 0);
+    TierArray children;
+    TierPositionArrayInit(&children);
+    if (num_blanks == board_size) {
+        Tier next = HashTier(num_blanks - 1, 1, 0);
+        TierArrayAppend(&children, next);
+    } else if (num_blanks == board_size - 1) {
+        Tier next = HashTier(num_blanks - 1, 1, 1);
+        TierArrayAppend(&children, next);
+    } else {
+        Tier x_flipped = HashTier(num_blanks - 1, num_x + 1, num_o);
+        Tier o_flipped = HashTier(num_blanks - 1, num_x, num_o + 1);
+        TierArrayAppend(&children, x_flipped);
+        TierArrayAppend(&children, o_flipped);
+    }
+
+    return children;
+}
+
+static Tier QuixoGetCanonicalTier(Tier tier) {
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+
+    // Swap the number of Xs and Os.
+    Tier symm = HashTier(num_blanks, num_o, num_x);
+
+    // Return the smaller of the two.
+    return (tier < symm) ? tier : symm;
 }
 
 static void UpdateEdgeSlots(void) {
@@ -285,19 +343,23 @@ static Tier HashTier(int num_blanks, int num_x, int num_o) {
     return num_o * board_size * board_size + num_x * board_size + num_blanks;
 }
 
+static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o) {
+    int board_size = GetBoardSize();
+    *num_blanks = tier % board_size;
+    tier /= board_size;
+    *num_x = tier % board_size;
+    tier /= board_size;
+    *num_o = tier;
+}
+
 /**
  * @brief Returns 2 if TURN is 1, or 1 if TURN is 2. Assumes TURN is either 1
  * or 2.
  */
 static int OpponentsTurn(int turn) { return !(turn - 1) + 1; }
 
-static Move ConstructMove(int src, int dest, bool flip) {
-    int board_size = GetBoardSize();
-
-    // Equivalent to ((0 * board_size + src) * board_size + dest) * 2 + flip,
-    // where board_size is the number of possible values SRC and DEST can take,
-    // and 2 is the number of values FLIP can take (0 or 1).
-    return ((src * board_size + dest) << 1) | flip;
+static Move ConstructMove(int src, int dest) {
+    return src * GetBoardSize() + dest;
 }
 
 // Assumes DESTS has enough space.
@@ -310,17 +372,17 @@ static int GetMoveDestinations(int *dests, int src) {
     if (col > 0) {
         dests[num_dests++] = BoardRowColToIndex(row, 0);
     }
-    
+
     // Can move right if not at the right-most column.
     if (col < board_cols - 1) {
         dests[num_dests++] = BoardRowColToIndex(row, board_cols - 1);
     }
-    
+
     // Can move up if not at the top-most row.
     if (row > 0) {
         dests[num_dests++] = BoardRowColToIndex(0, col);
     }
-    
+
     // Can move down if not at the bottom-most row.
     if (row < board_rows - 1) {
         dests[num_dests++] = BoardRowColToIndex(board_rows - 1, col);
