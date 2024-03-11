@@ -100,6 +100,7 @@ static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o);
 // Helper functions for QuixoGenerateMoves
 static int OpponentsTurn(int turn);
 static Move ConstructMove(int src, int dest);
+static void UnpackMove(Move move, int *src, int *dest);
 static int GetMoveDestinations(int *dests, int src);
 static int BoardRowColToIndex(int row, int col);
 static void BoardIndexToRowCol(int index, int *row, int *col);
@@ -226,12 +227,13 @@ static Value QuixoPrimitive(TierPosition tier_position) {
     Tier tier = tier_position.tier;
     Position position = tier_position.position;
     char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) return kErrorValue;
+
     int turn = GenericHashGetTurnLabel(tier, position);
     assert(turn == 1 || turn == 2);
     char my_piece = kPlayerPiece[turn];
     char opponent_piece = kPlayerPiece[OpponentsTurn(turn)];
-    bool success = GenericHashUnhashLabel(tier, position, board);
-    if (!success) return kErrorValue;
 
     if (HasKInARow(board, my_piece)) {
         // The current player wins if there is a k in a row of the current
@@ -248,8 +250,123 @@ static Value QuixoPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
+/*
+    int flip = move % 2;
+    move / 2;
+    int dest = move % 4;
+    move / 4;
+    int src = move % 4;
+
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    int turn = GenericHashGetTurnLabel(tier, position);
+
+    char board[kBoardSizeMax];
+    GenericHashUnhashLabel(tier, position, board);
+    //1. figure out if row or col move by calculating the |dest - src|
+    //2. figure out if left/right or up/down by comparing src dest
+    // dest < src --> blocks move left or down
+    //dest > src --> blocks move right or up
+    if (abs(dest - src) < 5) {
+        // Row move
+        if (dest < src) {
+            // Insert piece on the left (taken care of further down).
+            // Slide everything 1 right.
+            for (int i = src; i > dest; i--){
+                board[i] = board[i - 1];
+            }
+        } else {
+            // Insert piece on the right. Slide everything 1 left.
+            for (int i = src; i < dest; i++){
+                board[i] = board[i + 1];
+            }
+        }
+    } else {
+        // Column move
+        if (dest < src) {
+            // Insert piece to the top. Slide column down
+            for (int i = src; i < dest; i -= 5) {
+                board[i] = board[i - 5];
+            }
+        } else {
+            // Insert piece to the bottom. Slide column up
+            for (int i = src; i > dest; i += 5) {
+                board[i] = board[i + 5];
+            }
+        }
+    }
+
+    char piece_to_move = kPlayerPiece[turn];
+    board[dest] = piece_to_move;
+
+    TierPosition ret;
+    ret.tier = tier_position.tier + 1;
+    //TODO: 3rd param --> turn or oponent's turn
+    ret.position = GenericHashHashLabel(tier_position.tier, board,
+   OpponentsTurn(turn)); return ret;
+*/
+
+static int Abs(int n) { return n >= 0 ? n : -n; }
+
+// TODO for Robert: clean up this function.
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
-    // TODO
+    TierPosition ret;
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) return (TierPosition){-1, -1};  // TODO: merge and replace.
+
+    // Get turn and piece for current player.
+    int turn = GenericHashGetTurnLabel(tier, position);
+    assert(turn == 1 || turn == 2);
+    char piece_to_move = kPlayerPiece[turn];
+
+    // Unpack move.
+    int src, dest;
+    UnpackMove(move, &src, &dest);
+    assert(src >= 0 && src < GetBoardSize());
+    assert(dest >= 0 && dest < GetBoardSize());
+    assert(src != dest);
+
+    // Update tier.
+    ret.tier = tier;
+    if (board[src] == kBlank) {
+        int num_blanks, num_x, num_o;
+        UnhashTier(tier, &num_blanks, &num_x, &num_o);
+        --num_blanks;
+        num_x += (kPlayerPiece[turn] == kX);
+        num_o += (kPlayerPiece[turn] == kO);
+        ret.tier = HashTier(num_blanks, num_x, num_o);
+    }
+
+    // Move and shift pieces.
+    int offset;
+    if (Abs(dest - src) < board_cols) {  // Row move
+        if (dest < src) {
+            // Insert piece on the left. Slide everything 1 right.
+            offset = -1;
+        } else {
+            // Insert piece on the right. Slide everything 1 left.
+            offset = 1;
+        }
+    } else {  // Column move
+        if (dest < src) {
+            // Insert piece to the top. Slide column down
+            offset = -board_cols;
+        } else {
+            // Insert piece to the bottom. Slide column up
+            offset = board_cols;
+        }
+    }
+    assert(Abs(src - dest) % Abs(offset) == 0);
+    for (int i = src; i != dest; i += offset) {
+        board[i] = board[i + offset];
+    }
+    board[dest] = piece_to_move;
+    ret.position = GenericHashHashLabel(ret.tier, board, OpponentsTurn(turn));
+
+    return ret;
 }
 
 // Returns if a pos is legal, but not strictly according to game definition.
@@ -404,6 +521,12 @@ static int OpponentsTurn(int turn) { return !(turn - 1) + 1; }
 
 static Move ConstructMove(int src, int dest) {
     return src * GetBoardSize() + dest;
+}
+
+static void UnpackMove(Move move, int *src, int *dest) {
+    int board_size = GetBoardSize();
+    *dest = move % board_size;
+    *src = move / board_size;
 }
 
 // Assumes DESTS has enough space.
