@@ -88,6 +88,7 @@ static int k_in_a_row;  // (option) Number of pieces in a row a player needs
                         // to win.
 static int num_edge_slots;  // (calculated) Number of edge slots on the board.
 static int edge_indices[kBoardSizeMax];  // (calculated) Indices of edge slots.
+static int symmetry_matrix[8][kBoardSizeMax];
 
 // Helper functions for tier initialization.
 static void UpdateEdgeSlots(void);
@@ -96,6 +97,7 @@ static Tier QuixoSetInitialTier(void);
 static Position QuixoSetInitialPosition(void);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
 static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o);
+static void QuixoInitSymmMatrix();
 
 // Helper functions for QuixoGenerateMoves
 static int OpponentsTurn(int turn);
@@ -120,6 +122,7 @@ static int QuixoInit(void *aux) {
 
     QuixoSetInitialTier();
     QuixoSetInitialPosition();
+    QuixoInitSymmMatrix();
 
     return kNoError;
 }
@@ -344,8 +347,36 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return false;
 }
 
+static int NumSymmetries(void) { return (board_rows == board_cols) ? 8 : 4; }
+
+static Position QuixoDoSymmetry(Tier tier, const char *original_board,
+                                int symmetry) {
+    char symmetry_board[kBoardSizeMax];
+
+    // Copy from the symmetry matrix.
+    for (int i = 0; i < GetBoardSize(); ++i) {
+        symmetry_board[i] = original_board[symmetry_matrix[symmetry][i]];
+    }
+
+    return GenericHashHashLabel(tier, symmetry_board, 1);
+}
+
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
-    // TODO
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) return -1;  // TODO: merge and replace with illeagl position.
+
+    Position canonical_position = position;
+    for (int i = 0; i < NumSymmetries(); ++i) {
+        Position new_position = QuixoDoSymmetry(tier, board, i);
+        if (new_position < canonical_position) {
+            canonical_position = new_position;
+        }
+    }
+
+    return canonical_position;
 }
 
 static PositionArray QuixoGetCanonicalParentPositions(
@@ -455,6 +486,34 @@ static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o) {
     *num_x = tier % board_size;
     tier /= board_size;
     *num_o = tier;
+}
+
+static void QuixoInitSymmMatrix() {
+    int board_size = GetBoardSize();
+    assert(board_size <= kBoardSizeMax);
+
+    // Manually generate the original board index layout.
+    for (int i = 0; i < board_size; ++i) {
+        symmetry_matrix[0][i] = i;
+    }
+
+    // Fill in the symmetric index layouts
+    if (board_rows == board_cols) {  // Square has 8 symmetries
+        Rotate90(symmetry_matrix[1], symmetry_matrix[0]);  // Rotate 90
+        Rotate90(symmetry_matrix[2], symmetry_matrix[1]);  // Rotate 180
+        Rotate90(symmetry_matrix[3], symmetry_matrix[2]);  // Rotate 270
+        Mirror(symmetry_matrix[4], symmetry_matrix[0]);    // Mirror
+        Rotate90(symmetry_matrix[5], symmetry_matrix[4]);  // Rotate mirror 90
+        Rotate90(symmetry_matrix[6], symmetry_matrix[5]);  // Rotate mirror 180
+        Rotate90(symmetry_matrix[7], symmetry_matrix[6]);  // Rotate mirror 270
+    } else {  // Rectangle has 4 symmetries
+        int tmp[kBoardSizeMax];
+        Rotate90(tmp, symmetry_matrix[0]);
+        Rotate90(symmetry_matrix[1], tmp);               // Rotate 180
+        Mirror(symmetry_matrix[2], symmetry_matrix[0]);  // Mirror
+        Rotate90(tmp, symmetry_matrix[2]);
+        Rotate90(symmetry_matrix[3], tmp);  // Rotate mirror 180
+    }
 }
 
 /**
