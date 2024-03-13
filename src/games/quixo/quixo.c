@@ -344,6 +344,30 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return false;
 }
 
+static void Rotate90(int* dest, int* src) {
+    /* Rotate the board 90 degrees clockwise, 
+       and store resulting board in dest */
+    for (int r = 0; r < kBoardRowsMax; r++) {
+        for (int c = 0; c < kBoardColsMax; c++) {
+            int newr = c;
+            int newc = kBoardRowsMax - r - 1;
+            dest[newr * kBoardRowsMax + newc] = src[r * kBoardColsMax + c];
+        }
+    }
+}
+
+static void Mirror(int* dest, int* src) {
+    /* Reflect the board across the middle column.
+       and store resulting board in dest */
+    for (int r = 0; r < kBoardRowsMax; r++) {
+        for (int c = 0; c < kBoardColsMax; c++) {
+            int newr = r;
+            int newc = kBoardColsMax - c - 1;
+            dest[newr * kBoardColsMax + newc] = src[r * kBoardColsMax + c];
+        }
+    }
+}
+
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     // TODO
 }
