@@ -250,62 +250,6 @@ static Value QuixoPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
-/*
-    int flip = move % 2;
-    move / 2;
-    int dest = move % 4;
-    move / 4;
-    int src = move % 4;
-
-    Tier tier = tier_position.tier;
-    Position position = tier_position.position;
-    int turn = GenericHashGetTurnLabel(tier, position);
-
-    char board[kBoardSizeMax];
-    GenericHashUnhashLabel(tier, position, board);
-    //1. figure out if row or col move by calculating the |dest - src|
-    //2. figure out if left/right or up/down by comparing src dest
-    // dest < src --> blocks move left or down
-    //dest > src --> blocks move right or up
-    if (abs(dest - src) < 5) {
-        // Row move
-        if (dest < src) {
-            // Insert piece on the left (taken care of further down).
-            // Slide everything 1 right.
-            for (int i = src; i > dest; i--){
-                board[i] = board[i - 1];
-            }
-        } else {
-            // Insert piece on the right. Slide everything 1 left.
-            for (int i = src; i < dest; i++){
-                board[i] = board[i + 1];
-            }
-        }
-    } else {
-        // Column move
-        if (dest < src) {
-            // Insert piece to the top. Slide column down
-            for (int i = src; i < dest; i -= 5) {
-                board[i] = board[i - 5];
-            }
-        } else {
-            // Insert piece to the bottom. Slide column up
-            for (int i = src; i > dest; i += 5) {
-                board[i] = board[i + 5];
-            }
-        }
-    }
-
-    char piece_to_move = kPlayerPiece[turn];
-    board[dest] = piece_to_move;
-
-    TierPosition ret;
-    ret.tier = tier_position.tier + 1;
-    //TODO: 3rd param --> turn or oponent's turn
-    ret.position = GenericHashHashLabel(tier_position.tier, board,
-   OpponentsTurn(turn)); return ret;
-*/
-
 static int Abs(int n) { return n >= 0 ? n : -n; }
 
 // TODO for Robert: clean up this function.
