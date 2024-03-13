@@ -488,6 +488,30 @@ static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o) {
     *num_o = tier;
 }
 
+/* Rotates the SRC board 90 degrees clockwise and stores resulting board in
+ * DEST, assuming both are of dimensions board_rows by board_cols. */
+static void Rotate90(int *dest, int *src) {
+    for (int r = 0; r < board_rows; r++) {
+        for (int c = 0; c < board_cols; c++) {
+            int new_r = c;
+            int new_c = board_rows - r - 1;
+            dest[new_r * board_rows + new_c] = src[r * board_cols + c];
+        }
+    }
+}
+
+/* Reflects the SRC board across the middle column and stores resulting board in
+ * DEST, assuming both are of dimensions board_rows by board_cols. */
+static void Mirror(int *dest, int *src) {
+    for (int r = 0; r < board_rows; r++) {
+        for (int c = 0; c < board_cols; c++) {
+            int new_r = r;
+            int new_c = board_cols - c - 1;
+            dest[new_r * board_cols + new_c] = src[r * board_cols + c];
+        }
+    }
+}
+
 static void QuixoInitSymmMatrix() {
     int board_size = GetBoardSize();
     assert(board_size <= kBoardSizeMax);
