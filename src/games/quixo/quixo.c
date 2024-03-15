@@ -110,6 +110,11 @@ static bool HasKInARow(const char *board, char piece);
 static bool CheckDirection(const char *board, char piece, int i, int j,
                            int dir_i, int dir_j);
 
+// Symmetry transformation functions
+static void Rotate90(int* dest, int* src);
+static void Mirror(int* dest, int* src);
+
+
 static int QuixoInit(void *aux) {
     (void)aux;                    // Unused.
     board_rows = board_cols = 5;  // TODO: add variants.
@@ -285,6 +290,18 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     }
 
     // Move and shift pieces.
+    int offset = GetShiftOffset(src, dest);
+    for (int i = src; i != dest; i += offset) {
+        board[i] = board[i + offset];
+    }
+    board[dest] = piece_to_move;
+    ret.position = GenericHashHashLabel(ret.tier, board, OpponentsTurn(turn));
+
+    return ret;
+}
+
+// Helper function for shifting a row or column.
+static int GetShiftOffset(int src, int dest) {
     int offset;
     if (Abs(dest - src) < board_cols) {  // Row move
         if (dest < src) {
@@ -304,13 +321,7 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
         }
     }
     assert(Abs(src - dest) % Abs(offset) == 0);
-    for (int i = src; i != dest; i += offset) {
-        board[i] = board[i + offset];
-    }
-    board[dest] = piece_to_move;
-    ret.position = GenericHashHashLabel(ret.tier, board, OpponentsTurn(turn));
-
-    return ret;
+    return offset;
 }
 
 // Returns if a pos is legal, but not strictly according to game definition.
@@ -344,10 +355,10 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return false;
 }
 
+// Rotate the board 90 degrees clockwise, 
+// and store resulting board in dest.
 static void Rotate90(int* dest, int* src) {
-    /* Rotate the board 90 degrees clockwise, 
-       and store resulting board in dest */
-    for (int r = 0; r < kBoardRowsMax; r++) {
+    for (int r = 0; r < board_rows; r++) {
         for (int c = 0; c < kBoardColsMax; c++) {
             int newr = c;
             int newc = kBoardRowsMax - r - 1;
@@ -356,9 +367,9 @@ static void Rotate90(int* dest, int* src) {
     }
 }
 
+// Reflect the board across the middle column,
+// and store resulting board in dest.
 static void Mirror(int* dest, int* src) {
-    /* Reflect the board across the middle column.
-       and store resulting board in dest */
     for (int r = 0; r < kBoardRowsMax; r++) {
         for (int c = 0; c < kBoardColsMax; c++) {
             int newr = r;
@@ -374,7 +385,111 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
 
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier) {
-    // TODO
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+
+    PositionArray parents;
+    PositionArrayInit(&parents);
+    PositionHashSet deduplication_set;
+    PositionHashSetInit(&deduplication_set, 0.5);
+
+    // Find what the prior turn was -- who made the last move?
+    int turn = GenericHashGetTurnLabel(tier, position);
+    assert(turn == 1 || turn == 2);
+    int prior_turn = OpponentsTurn(turn);
+    char piece_to_move = kPlayerPiece[prior_turn];
+
+    // If the current num_blanks is less than the parent's num_blanks, we must
+    // have flipped the block we moved, i.e. block we moved used to be blank.
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+    int parent_num_blanks, parent_num_x, parent_num_o;
+    UnhashTier(parent_tier, &parent_num_blanks, &parent_num_x, &parent_num_o);
+
+    bool flipped = num_blanks < parent_num_blanks;
+
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) {
+        fprintf(stderr, "QuixoGetCanonicalParentPositions: GenericHashUnhashLabel error\n");
+        return parents;
+    }
+
+    // For each block along the edge, if it's a block with the player's 
+    // symbol, it is a contender for the block moved.
+    // We calculate where the block came from originally, i.e. the index on the opposite row/col.
+    // This is where we should move the block back to, i.e. its dest,
+    // which we store in an array.
+
+    int board_size = GetBoardSize();
+    // Used further down when getting all the Parents
+    int dests[kBoardSizeMax];
+
+    for (int i = 0; i < board_cols; i++) { // Top Row
+        if (board[i] == piece_to_move) {
+            // Move to bottom row
+            int dest = BoardRowColToIndex(board_rows, i % board_cols);
+            dests[i] = dest;
+        }
+    }
+    for (int i = board_size - board_cols; i < board_size; i++) { // Bottom Row
+        if (board[i] == piece_to_move) {
+            // Move to top row
+            int dest = BoardRowColToIndex(0, i % board_cols);
+            dests[i] = dest;
+        }
+    }
+    for (int i = 0; i < board_size - board_cols; i += 5) { // Left Column
+        if (board[i] == piece_to_move) {
+            // Move to right column
+            int dest = BoardRowColToIndex(i / board_cols, board_cols);
+            dests[i] = dest;
+        }
+    }
+    for (int i = board_cols - 1; i < board_size; i += 5) { // Right Column
+        if (board[i] == piece_to_move) {
+            // Move to left column
+            int dest = BoardRowColToIndex(i / board_cols, 0);
+            dests[i] = dest;
+        }
+    }
+
+    for (int n = 0; n < num_edge_slots; n++) {
+        int i = edge_indices[n];
+
+        // Shift
+        int dest = dests[i];
+        int offset = GetShiftOffset(i, dest);
+        for (int j = i; j != dest; j += offset) {
+            board[j] = board[j + offset];
+        }
+        board[dest] = flipped ? kBlank : piece_to_move;
+
+        TierPosition parent = {
+            .tier = parent_tier,
+            .position = GenericHashHashLabel(parent_tier, board, turn),
+        };
+        
+        // Shift back
+        int offset = GetShiftOffset(dest, i);
+        for (int j = dest; j != i; j += offset) {
+            board[j] = board[j + offset];
+        }
+        board[i] = piece_to_move;
+
+        // Necessary?
+        if (!MtttierIsLegalPosition(parent)) {
+            continue;  // Illegal.
+        }
+        parent.position = MtttierGetCanonicalPosition(parent);
+        if (PositionHashSetContains(&deduplication_set, parent.position)) {
+            continue;  // Already included.
+        }
+        PositionHashSetAdd(&deduplication_set, parent.position);
+        PositionArrayAppend(&parents, parent.position);
+    }
+
+    return parents;
 }
 
 static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
