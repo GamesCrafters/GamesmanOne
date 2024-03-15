@@ -478,19 +478,21 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         board[i] = ConvertBlankToken(board[i]);
     }
 
+    //TODO: hardcoding 5X5, change later!
+
     static ConstantReadOnlyString kFormat =
-        "         ( 1 2 3 4 5 6 )                 : %c %c %c %c %c %c\n"
-        "LEGEND:  ( 7 8 9 10 11 12 )     TOTAL:   : %c %c %c %c %c %c\n"
-        "         ( 13 14 15 16 17 18 )           : %c %c %c %c %c %c\n"
-        "         ( 19 20 21 22 23 24 )           : %c %c %c %c %c %c\n"
-        "         ( 25 26 27 28 29 30 )           : %c %c %c %c %c %c\n"
-        "         ( 31 32 33 34 35 36 )           : %c %c %c %c %c %c\n";
+        "         ( 1 2 3 4 5)                : %c %c %c %c %c\n"
+        "LEGEND:  ( 6 7 8 9 10)     TOTAL:    : %c %c %c %c %c\n"
+        "         ( 11 12 13 14 15)           : %c %c %c %c %c\n"
+        "         ( 16 17 18 19 20)           : %c %c %c %c %c\n"
+        "         ( 21 22 23 24 25)           : %c %c %c %c %c\n";
     
     int actual_length = snprintf(buffer, QuixoGameplayApiCommon.position_string_length_max + 1, kFormat, 
     board[0], board[1], board[2], board[3], board[4], board[5], board[6], board[7], board[8], board[9],
     board[10], board[11], board[12], board[13], board[14], board[15], board[16], board[17], board[18], board[19],
-    board[20], board[21], board[22], board[23], board[24], board[25], board[26], board[27], board[28], board[29],
-    board[30], board[31], board[32], board[33], board[34], board[35]);
+    board[20], board[21], board[22], board[23], board[24]);
+
+    
 
    if (actual_length >=
         QuixoGameplayApiCommon.position_string_length_max + 1) {
@@ -506,7 +508,7 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
 static int QuixoMoveToString(Move move, char *buffer) {
     int actual_length =
         snprintf(buffer, QuixoGameplayApiCommon.move_string_length_max + 1,
-                 "%" PRId64, move + 1);
+                 "%d %d", src, dest);
     if (actual_length >= QuixoGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "QuixoMoveToString: (BUG) not enough space was allocated "
@@ -547,6 +549,7 @@ static Move QuixoStringToMove(ReadOnlyString move_string) {
 //
 
 //Uwapi
+/*
 static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
     
 }
@@ -570,7 +573,8 @@ static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
 static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     
 }
-/////
+*/
+
 
 static Tier QuixoGetCanonicalTier(Tier tier) {
     int num_blanks, num_x, num_o;
