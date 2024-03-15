@@ -33,6 +33,23 @@ static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
 static TierArray QuixoGetChildTiers(Tier tier);
 static Tier QuixoGetCanonicalTier(Tier tier);
 
+//Gameplay 
+static int QuixoTierPositionToString(TierPosition tier_position, char *buffer);
+static int QuixoMoveToString(Move move, char *buffer);
+static bool QuixoIsValidMoveString(ReadOnlyString move_string);
+static Move QuixoStringToMove(ReadOnlyString move_string);
+
+//UWAPI
+static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position);
+static TierPosition QuixoFormalPositionToTierPosition(ReadOnlyString formal_position);
+static CString QuixoTierPositionToFormalPosition(TierPosition tier_position);
+static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position);
+static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move);
+static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move);
+
+
+
+//Solver API Setup
 static const TierSolverApi kQuixoSolverApi = {
     .GetInitialTier = &QuixoGetInitialTier,
     .GetInitialPosition = &QuixoGetInitialPosition,
@@ -52,13 +69,60 @@ static const TierSolverApi kQuixoSolverApi = {
 };
 
 // -----------------------------------------------------------------------------
+//Gameplay API Setup
+
+static const GameplayApiCommon QuixoGameplayApiCommon = {
+    .GetInitialPosition = &QuixoGetInitialPosition,
+    .position_string_length_max = 1000,
+
+    .move_string_length_max = 6,
+    .MoveToString = &QuixoMoveToString,
+
+    .IsValidMoveString = &QuixoIsValidMoveString,
+    .StringToMove = &QuixoStringToMove,
+};
+
+static const GameplayApiTier QuixoGameplayApiTier = {
+    .GetInitialTier = &QuixoGetInitialTier,
+
+    .TierPositionToString = &QuixoTierPositionToString,
+
+    .GenerateMoves = &QuixoGenerateMoves,
+    .DoMove = &QuixoDoMove,
+    .Primitive = &QuixoPrimitive,
+};
+
+static const GameplayApi QuixoGameplayApi = {
+    .common = &QuixoGameplayApiCommon,
+    .tier = &QuixoGameplayApiTier,
+};
+// -----------------------------------------------------------------------------
+// UWAPI Setup
+
+static const UwapiTier kQuixoUwapiTier = {
+    .GenerateMoves = &QuixoGenerateMoves,
+    .DoMove = &QuixoDoMove,
+    .IsLegalFormalPosition = &QuixoIsLegalFormalPosition,
+    .FormalPositionToTierPosition = &QuixoFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = &QuixoTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = &QuixoTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = &QuixoMoveToFormalMove,
+    .MoveToAutoGuiMove = &QuixoMoveToAutoGuiMove,
+    .GetInitialTier = &QuixoGetInitialTier,
+    .GetInitialPosition = &QuixoGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+};
+
+static const Uwapi QuixoUwapi = {.tier = &kQuixoUwapiTier};
+// -----------------------------------------------------------------------------
+
 
 const Game kQuixo = {
     .name = "quixo",
     .formal_name = "Quixo",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kQuixoSolverApi,
-    .gameplay_api = (const GameplayApi *)NULL,  // TODO
+    .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,  // TODO
     .uwapi = NULL,                              // TODO
 
     .Init = &QuixoInit,
@@ -402,6 +466,111 @@ static TierArray QuixoGetChildTiers(Tier tier) {
 
     return children;
 }
+
+///Gameplay
+static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
+    char board[kBoardSizeMax] = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier,
+                                          tier_position.position, board);
+    if (!success) return kRuntimeError;
+
+    for (int i = 0; i < kBoardSizeMax; ++i) {
+        board[i] = ConvertBlankToken(board[i]);
+    }
+
+    static ConstantReadOnlyString kFormat =
+        "         ( 1 2 3 4 5 6 )                 : %c %c %c %c %c %c\n"
+        "LEGEND:  ( 7 8 9 10 11 12 )     TOTAL:   : %c %c %c %c %c %c\n"
+        "         ( 13 14 15 16 17 18 )           : %c %c %c %c %c %c\n"
+        "         ( 19 20 21 22 23 24 )           : %c %c %c %c %c %c\n"
+        "         ( 25 26 27 28 29 30 )           : %c %c %c %c %c %c\n"
+        "         ( 31 32 33 34 35 36 )           : %c %c %c %c %c %c\n";
+    
+    int actual_length = snprintf(buffer, QuixoGameplayApiCommon.position_string_length_max + 1, kFormat, 
+    board[0], board[1], board[2], board[3], board[4], board[5], board[6], board[7], board[8], board[9],
+    board[10], board[11], board[12], board[13], board[14], board[15], board[16], board[17], board[18], board[19],
+    board[20], board[21], board[22], board[23], board[24], board[25], board[26], board[27], board[28], board[29],
+    board[30], board[31], board[32], board[33], board[34], board[35]);
+
+   if (actual_length >=
+        QuixoGameplayApiCommon.position_string_length_max + 1) {
+        fprintf(
+            stderr,
+            "QuixoTierPositionToString: (BUG) not enough space was allocated "
+            "to buffer. Please increase position_string_length_max.\n");
+        return kMemoryOverflowError;
+    }
+    return kNoError;
+}
+
+static int QuixoMoveToString(Move move, char *buffer) {
+    int actual_length =
+        snprintf(buffer, QuixoGameplayApiCommon.move_string_length_max + 1,
+                 "%" PRId64, move + 1);
+    if (actual_length >= QuixoGameplayApiCommon.move_string_length_max + 1) {
+        fprintf(stderr,
+                "QuixoMoveToString: (BUG) not enough space was allocated "
+                "to buffer. Please increase move_string_length_max.\n");
+        return kMemoryOverflowError;
+    }
+
+    //UnpackMove(move, int *src, int *dest); 
+
+    return kNoError;
+}
+
+static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
+    //Strings of format "source destination" where src and dest are 2-digit nums
+    //Ex: "06 10" 
+    // Only "01" - "36" are valid move strings for both source and dest.
+    int src = atoi(move_string[0])*10 + atoi(move_string[1]);
+    int dest = atoi(move_string[3])*10 + atoi(move_string[4]);
+
+    if (src < 1) return false;
+    if (src > kBoardSizeMax) return false;
+    if (move_string[2] != ' ') return false;
+    if (dest < 1) return false;
+    if (dest > kBoardSizeMax) return false;
+    if (move_string[5] != '\0') return false;
+
+    return true;
+}
+
+static Move QuixoStringToMove(ReadOnlyString move_string) {
+    assert(QuixoIsValidMoveString(move_string));
+    //move string = "06 10"
+    int src = atoi(move_string[0])*10 + atoi(move_string[1]) - 1;
+    int dest = atoi(move_string[3])*10 + atoi(move_string[4]) - 1;
+    return ConstructMove(src, dest);
+}
+
+//
+
+//Uwapi
+static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
+    
+}
+
+static TierPosition QuixoFormalPositionToTierPosition(ReadOnlyString formal_position) {
+    
+}
+
+static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
+    
+}
+
+static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
+    
+}
+
+static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
+  
+}
+
+static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    
+}
+/////
 
 static Tier QuixoGetCanonicalTier(Tier tier) {
     int num_blanks, num_x, num_o;
