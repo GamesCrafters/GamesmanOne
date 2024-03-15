@@ -114,6 +114,9 @@ static bool CheckDirection(const char *board, char piece, int i, int j,
 static void Rotate90(int* dest, int* src);
 static void Mirror(int* dest, int* src);
 
+// Helper functions for QuixoDoMove and QuixoGetCanonicalParentPositions
+static int GetShiftOffset(int src, int dest);
+
 
 static int QuixoInit(void *aux) {
     (void)aux;                    // Unused.
@@ -478,10 +481,10 @@ static PositionArray QuixoGetCanonicalParentPositions(
         board[i] = piece_to_move;
 
         // Necessary?
-        if (!MtttierIsLegalPosition(parent)) {
+        if (!QuixoIsLegalPosition(parent)) {
             continue;  // Illegal.
         }
-        parent.position = MtttierGetCanonicalPosition(parent);
+        parent.position = QuixoGetCanonicalPosition(parent);
         if (PositionHashSetContains(&deduplication_set, parent.position)) {
             continue;  // Already included.
         }
