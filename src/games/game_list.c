@@ -36,10 +36,11 @@
 #include "games/mallqueenschess/mallqueenschess.h"
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
+#include "games/quixo/quixo.h"
 
 // 2. Then add the new game object to the list. Note that the list must be
 // NULL-terminated.
 
 const Game *const kAllGames[] = {
-    &kFsvp, &kMtttier, &kMttt, &kMallqueenschess, NULL,
+    &kQuixo, &kFsvp, &kMtttier, &kMttt, &kMallqueenschess, NULL,
 };
