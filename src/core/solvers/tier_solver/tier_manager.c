@@ -144,6 +144,8 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierTree(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
+static int TestTierTree(int seed);
+
 // -----------------------------------------------------------------------------
 
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
@@ -181,12 +183,28 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
                 error);
         return error;
     }
+
     int ret = DiscoverTierTree(force, verbose);
     DestroyGlobalVariables();
+
     return ret;
 }
 
-int TierManagerTestAll(const TierSolverApi *api) {}
+int TierManagerTestAll(const TierSolverApi *api) {
+    memcpy(&current_api, api, sizeof(current_api));
+    int error = InitGlobalVariables(kTierSolving);
+    if (error != 0) {
+        fprintf(stderr,
+                "TierManagerTestAll: initialization failed with code %d.\n",
+                error);
+        return error;
+    }
+
+    int ret = TestTierTree(0);  // TODO: Implement seed.
+    DestroyGlobalVariables();
+
+    return ret;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -683,4 +701,35 @@ static void PrintAnalyzerResult(void) {
     }
 
     AnalysisPrintEverything(stdout, &game_analysis);
+}
+
+static int TestTierTree(int seed) {
+    double time_elapsed = 0.0;
+    printf("Begin random sanity testing of all tiers\n");
+
+    while (!TierQueueEmpty(&pending_tiers)) {
+        Tier tier = TierQueuePop(&pending_tiers);
+        if (IsCanonicalTier(tier)) {  // Only test canonical tiers.
+            time_t begin = time(NULL);
+            int error = TierWorkerTest(tier, seed);
+            if (error == 0) {
+                // Test passed.
+                SolveUpdateTierTree(tier);
+                ++processed_tiers;
+            } else {
+                printf("Failed to solve tier %" PRITier ", code %d\n", tier,
+                       error);
+                ++failed_tiers;
+            }
+            time_t end = time(NULL);
+            time_elapsed += difftime(end, begin);
+            // TODO: print time estimation
+        } else {
+            ++skipped_tiers;
+            printf("Skipping non-canonical tier %" PRITier "\n");
+        }
+    }
+    // TODO: print tier statistics
+
+    return kNoError;
 }
