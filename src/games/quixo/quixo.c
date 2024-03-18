@@ -505,10 +505,25 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
     return kNoError;
 }
 
+/*
+static Move ConstructMove(int src, int dest) {
+    return src * GetBoardSize() + dest;
+}
+
+static void UnpackMove(Move move, int *src, int *dest) {
+    int board_size = GetBoardSize();
+    *dest = move % board_size;
+    *src = move / board_size;
+}
+*/
 static int QuixoMoveToString(Move move, char *buffer) {
+    int src;
+    int dest;
+    UnpackMove(move, src, dest);  //updates the above src and dest w/ info from passed in move
+
     int actual_length =
         snprintf(buffer, QuixoGameplayApiCommon.move_string_length_max + 1,
-                 "%d %d", src, dest);
+                 "%d %d", src+1, dest+1); //add 1 to src and dest for user representation
     if (actual_length >= QuixoGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "QuixoMoveToString: (BUG) not enough space was allocated "
@@ -522,18 +537,28 @@ static int QuixoMoveToString(Move move, char *buffer) {
 }
 
 static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
-    //Strings of format "source destination" where src and dest are 2-digit nums
-    //Ex: "06 10" 
-    // Only "01" - "36" are valid move strings for both source and dest.
-    int src = atoi(move_string[0])*10 + atoi(move_string[1]);
-    int dest = atoi(move_string[3])*10 + atoi(move_string[4]);
+    //Strings of format "source destination" where src and dest (no longer )
+    //Ex: "6 10" 
+    // Only "1" - "36" are valid move strings for both source and dest.
+
+    //use a copy of move_string bc strtok mutates the original move_string
+    char copy_string[10];
+    strcpy(copy_string, move_string);
+    const char delimeter[] = " ";
+    char *token;
+    token = strtok(copy_string, delimeter);
+
+    int src = atoi(token);
+    int dest = atoi(strtok(NULL, delimeter));
+
 
     if (src < 1) return false;
     if (src > kBoardSizeMax) return false;
-    if (move_string[2] != ' ') return false;
     if (dest < 1) return false;
     if (dest > kBoardSizeMax) return false;
-    if (move_string[5] != '\0') return false;
+    if (move_string[1] != ' ' && move_string[2] != ' ') return false;
+    if (move_string[4] != '\0' && move_string[5] != '\0') return false;
+
 
     return true;
 }
