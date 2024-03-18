@@ -38,8 +38,8 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 
-#include "core/types/gamesman_types.h"
 #include "core/game_manager.h"
+#include "core/types/gamesman_types.h"
 
 static const Solver *current_solver;
 
@@ -47,7 +47,8 @@ int SolverManagerInit(ReadOnlyString data_path) {
     const Game *game = GameManagerGetCurrentGame();
     if (game == NULL) return kUseBeforeInitializationError;
 
-    const GameVariant *variant = game->GetCurrentVariant();
+    const GameVariant *variant = NULL;
+    if (game->GetCurrentVariant != NULL) variant = game->GetCurrentVariant();
     int variant_id = GameVariantToIndex(variant);
 
     if (current_solver != NULL) {
