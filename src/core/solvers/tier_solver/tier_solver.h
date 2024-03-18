@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Tier Solver API.
- * @version 1.3.0
- * @date 2024-02-15
+ * @version 1.4.0
+ * @date 2024-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -252,23 +252,6 @@ typedef struct TierSolverApi {
      * function is not implemented.
      */
     TierArray (*GetChildTiers)(Tier tier);
-
-    /**
-     * @brief Returns an array of parent tiers of the given TIER.
-     *
-     * @details A parent tier is a tier that has at least one position from
-     * which a position within the child tier can be reached by making a single
-     * move.
-     *
-     * @note Assumes TIER is valid. Results in undefined behavior otherwise.
-     *
-     * @note This function is OPTIONAL, but is required for Tier Retrograde
-     * Analysis. If not implemented, Tier Retrograde Analysis will be disabled
-     * and a reverse tier graph will be built and stored in memory by performing
-     * a DFS on the tier graph implicitly defined by the initial tier and the
-     * GetChildTiers function.
-     */
-    TierArray (*GetParentTiers)(Tier tier);
 
     /**
      * @brief Returns the canonical tier symmetric to the given TIER. Returns

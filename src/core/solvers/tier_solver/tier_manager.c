@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -90,9 +90,6 @@ static TierQueue pending_tiers;  // Tiers ready to be solved/analyzed.
 
 // Cached reverse tier graph of the game.
 static ReverseTierGraph reverse_tier_graph;
-// The reverse tier graph is used if the GetParentTiers function is not
-// provided.
-static bool use_reverse_tier_graph;
 
 static int64_t total_size;
 static int64_t processed_size;
@@ -105,7 +102,7 @@ static Analysis game_analysis;
 // Helper functions.
 
 static int InitGlobalVariables(int type);
-static TierArray GetParentTiersFromReverseTierGraph(Tier child);
+static TierArray GetParentTiers(Tier child);
 static void DestroyGlobalVariables(void);
 
 static int BuildTierTree(int type);
@@ -189,6 +186,8 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
     return ret;
 }
 
+int TierManagerTestAll(const TierSolverApi *api) {}
+
 // -----------------------------------------------------------------------------
 
 static int InitGlobalVariables(int type) {
@@ -199,20 +198,16 @@ static int InitGlobalVariables(int type) {
     failed_tiers = 0;
     TierQueueInit(&pending_tiers);
     TierHashMapInit(&tier_tree, 0.5);
-    if (type == kTierSolving) {
-        if (current_api.GetParentTiers == NULL) {
-            current_api.GetParentTiers = &GetParentTiersFromReverseTierGraph;
-            use_reverse_tier_graph = true;
-            ReverseTierGraphInit(&reverse_tier_graph);
-        }
-    } else if (type == kTierAnalyzing) {
+    ReverseTierGraphInit(&reverse_tier_graph);
+    if (type == kTierAnalyzing) {
         AnalysisInit(&game_analysis);
         AnalysisSetHashSize(&game_analysis, 0);
     }
+
     return BuildTierTree(type);
 }
 
-static TierArray GetParentTiersFromReverseTierGraph(Tier child) {
+static TierArray GetParentTiers(Tier child) {
     return ReverseTierGraphPopParentsOf(&reverse_tier_graph, child);
 }
 
@@ -477,7 +472,7 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
 #endif  // USE_MPI
 
 static void SolveUpdateTierTree(Tier solved_tier) {
-    TierArray parent_tiers = current_api.GetParentTiers(solved_tier);
+    TierArray parent_tiers = GetParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {

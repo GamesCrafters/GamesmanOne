@@ -8,7 +8,7 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.3.0
+ * @version 1.3.1
  * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -146,7 +146,6 @@ static TierPositionArray TierGetCanonicalChildPositions(
 static PositionArray TierGetCanonicalParentPositions(TierPosition tier_position,
                                                      Tier parent_tier);
 static TierArray GetChildTiers(Tier tier);
-static TierArray GetParentTiers(Tier tier);
 static Tier GetCanonicalTier(Tier tier);
 
 // Default API Functions.
@@ -371,7 +370,6 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
 
     tier->GetPositionInSymmetricTier = NULL;
     tier->GetChildTiers = &GetChildTiers;
-    tier->GetParentTiers = &GetParentTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
 }
 
@@ -472,13 +470,6 @@ static PositionArray TierGetCanonicalParentPositions(TierPosition tier_position,
 }
 
 static TierArray GetChildTiers(Tier tier) {
-    (void)tier;  // Unused;
-    TierArray ret;
-    Int64ArrayInit(&ret);
-    return ret;
-}
-
-static TierArray GetParentTiers(Tier tier) {
     (void)tier;  // Unused;
     TierArray ret;
     Int64ArrayInit(&ret);
