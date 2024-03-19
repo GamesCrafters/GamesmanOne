@@ -65,7 +65,6 @@ static const TierSolverApi kQuixoSolverApi = {
     .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
     .GetChildTiers = &QuixoGetChildTiers,
-    .GetParentTiers = NULL,
     .GetCanonicalTier = &QuixoGetCanonicalTier,
 };
 

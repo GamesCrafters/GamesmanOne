@@ -733,7 +733,7 @@ static int TestTierTree(int64_t seed) {
             }
             time_t end = time(NULL);
             time_elapsed += difftime(end, begin);
-            // TODO: print time estimation
+            printf("Finished testing tier %" PRITier "\n", tier);
         } else {
             ++skipped_tiers;
         }
