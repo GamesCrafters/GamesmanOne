@@ -45,9 +45,10 @@ static Move QuixoStringToMove(ReadOnlyString move_string);
 // static TierPosition QuixoFormalPositionToTierPosition(
 //     ReadOnlyString formal_position);
 // static CString QuixoTierPositionToFormalPosition(TierPosition tier_position);
-// static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position);
-// static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move);
-// static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move);
+// static CString QuixoTierPositionToAutoGuiPosition(TierPosition
+// tier_position); static CString QuixoMoveToFormalMove(TierPosition
+// tier_position, Move move); static CString QuixoMoveToAutoGuiMove(TierPosition
+// tier_position, Move move);
 
 // Solver API Setup
 static const TierSolverApi kQuixoSolverApi = {
@@ -452,9 +453,9 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
 }
 
 static void GetCanonicalParentPositionsHelper(
-    const char *board, int src, int dest, char piece_to_move,
-    char opponents_piece, Tier parent_tier, int turn,
-    PositionHashSet *deduplication_set, PositionArray *parents) {
+    char *board, int src, int dest, char piece_to_move, char opponents_piece,
+    Tier parent_tier, int turn, PositionHashSet *deduplication_set,
+    PositionArray *parents) {
     //
     MoveAndShiftPieces(board, src, dest, piece_to_move);  // Shift
     TierPosition parent;
@@ -584,7 +585,7 @@ static TierArray QuixoGetChildTiers(Tier tier) {
         Tier o_flipped = HashTier(num_blanks - 1, num_x, num_o + 1);
         TierArrayAppend(&children, x_flipped);
         TierArrayAppend(&children, o_flipped);
-    } // no children for tiers with num_blanks == 0
+    }  // no children for tiers with num_blanks == 0
 
     return children;
 }
@@ -652,7 +653,7 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
     // Make a copy of move_string bc strtok mutates the original move_string
     char copy_string[6];
     strcpy(copy_string, move_string);
-    
+
     char *token = strtok(copy_string, " ");
     if (token == NULL) return false;
     int src = atoi(token);
@@ -895,7 +896,7 @@ static bool CheckDirection(const char *board, char piece, int i, int j,
                            int dir_i, int dir_j) {
     int count = 0;
     while (i >= 0 && i < board_rows && j >= 0 && j < board_cols) {
-        if (board[i * board_cols + j] ==  piece) {
+        if (board[i * board_cols + j] == piece) {
             if (++count == k_in_a_row) return true;
         } else {
             return false;
