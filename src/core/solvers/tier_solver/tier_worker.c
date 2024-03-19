@@ -34,7 +34,7 @@
 #include <limits.h>   // UCHAR_MAX
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
+#include <stdint.h>   // int64_t, uint64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memcpy
@@ -45,6 +45,7 @@
 #include "core/solvers/tier_solver/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
+#include "lib/mt19937/mt19937-64.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -212,6 +213,51 @@ int TierWorkerMpiServe(void) {
     return kNoError;
 }
 #endif  // USE_MPI
+
+int TierWorkerTest(Tier tier, uint64_t seed) {
+    static const int64_t kTestSizeMax = 1000000;
+    int64_t tier_size = current_api.GetTierSize(tier);
+    int64_t test_size = tier_size <= kTestSizeMax ? tier_size : kTestSizeMax;
+    bool random_test = tier_size > kTestSizeMax;
+    init_genrand64(seed);
+    for (int64_t i = 0; i < test_size; ++i) {
+        TierPosition parent;
+        parent.tier = tier;
+        parent.position = random_test ? genrand64_int63() % tier_size : i;
+        if (!current_api.IsLegalPosition(parent)) continue;
+
+        TierPositionArray children =
+            current_api.GetCanonicalChildPositions(parent);
+        bool illegal_child_found = false;
+        bool child_parent_mismatch = false;
+        for (int64_t j = 0; j < children.size; ++j) {
+            TierPosition child = children.array[j];
+            // Check if all child positions are legal.
+            illegal_child_found |= (child.position < 0);
+            illegal_child_found |=
+                (child.position >= current_api.GetTierSize(child.tier));
+            illegal_child_found |= !current_api.IsLegalPosition(child);
+            if (illegal_child_found) break;
+
+            // Check if all child positions have parent as one of their
+            // parents.
+            TierPosition canonical_parent = parent;
+            canonical_parent.position =
+                current_api.GetCanonicalPosition(canonical_parent);
+            PositionArray parents =
+                current_api.GetCanonicalParentPositions(child, tier);
+            child_parent_mismatch =
+                !PositionArrayContains(&parents, canonical_parent.position);
+            PositionArrayDestroy(&parents);
+            if (child_parent_mismatch) break;
+        }
+        TierPositionArrayDestroy(&children);
+        if (illegal_child_found) return 1;
+        if (child_parent_mismatch) return 2;
+    }
+
+    return 0;
+}
 
 // -----------------------------------------------------------------------------
 

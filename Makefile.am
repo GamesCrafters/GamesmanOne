@@ -18,6 +18,9 @@ bin_gamesman_LDADD = -ljson-c
 # Source file containing the main() function. 
 bin_gamesman_SOURCES = src/core/main.c
 
+# External libraries
+bin_gamesman_SOURCES += lib/mt19937/mt19937-64.c
+
 # src/core/analysis
 bin_gamesman_SOURCES += src/core/analysis/analysis.c
 bin_gamesman_SOURCES += src/core/analysis/stat_manager.c

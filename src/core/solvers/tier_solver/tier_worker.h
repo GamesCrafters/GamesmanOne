@@ -32,6 +32,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // uint64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -60,5 +61,7 @@ int TierWorkerSolve(Tier tier, bool force, bool *solved);
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI
+
+int TierWorkerTest(Tier tier, uint64_t seed);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

@@ -144,11 +144,12 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierTree(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
-static int TestTierTree(int seed);
+static int TestTierTree(int64_t seed);
 
 // -----------------------------------------------------------------------------
 
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
+    TierManagerTestAll(api);
     time_t begin = time(NULL);
     memcpy(&current_api, api, sizeof(current_api));
     int error = InitGlobalVariables(kTierSolving);
@@ -703,7 +704,7 @@ static void PrintAnalyzerResult(void) {
     AnalysisPrintEverything(stdout, &game_analysis);
 }
 
-static int TestTierTree(int seed) {
+static int TestTierTree(int64_t seed) {
     double time_elapsed = 0.0;
     printf("Begin random sanity testing of all tiers\n");
 
@@ -717,16 +718,16 @@ static int TestTierTree(int seed) {
                 SolveUpdateTierTree(tier);
                 ++processed_tiers;
             } else {
-                printf("Failed to solve tier %" PRITier ", code %d\n", tier,
-                       error);
-                ++failed_tiers;
+                printf("TestTierTree: test failed on tier %" PRITier
+                       ", code %d\n",
+                       tier, error);
+                return error;
             }
             time_t end = time(NULL);
             time_elapsed += difftime(end, begin);
             // TODO: print time estimation
         } else {
             ++skipped_tiers;
-            printf("Skipping non-canonical tier %" PRITier "\n");
         }
     }
     // TODO: print tier statistics
