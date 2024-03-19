@@ -487,12 +487,12 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     } else if (num_blanks == board_size - 1) {
         Tier next = HashTier(num_blanks - 1, 1, 1);
         TierArrayAppend(&children, next);
-    } else {
+    } else if (num_blanks > 0) {
         Tier x_flipped = HashTier(num_blanks - 1, num_x + 1, num_o);
         Tier o_flipped = HashTier(num_blanks - 1, num_x, num_o + 1);
         TierArrayAppend(&children, x_flipped);
         TierArrayAppend(&children, o_flipped);
-    }
+    } // no children for tiers with num_blanks == 0
 
     return children;
 }
@@ -659,16 +659,20 @@ static Position QuixoSetInitialPosition(void) {
 }
 
 static Tier HashTier(int num_blanks, int num_x, int num_o) {
-    int board_size = GetBoardSize();
-    return num_o * board_size * board_size + num_x * board_size + num_blanks;
+    // Each number may take values from 0 to board_size. Hence there are
+    // board_size + 1 possible values.
+    int base = GetBoardSize() + 1;
+    return num_o * base * base + num_x * base + num_blanks;
 }
 
 static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o) {
-    int board_size = GetBoardSize();
-    *num_blanks = tier % board_size;
-    tier /= board_size;
-    *num_x = tier % board_size;
-    tier /= board_size;
+    // Each number may take values from 0 to board_size. Hence there are
+    // board_size + 1 possible values.
+    int base = GetBoardSize() + 1;
+    *num_blanks = tier % base;
+    tier /= base;
+    *num_x = tier % base;
+    tier /= base;
     *num_o = tier;
 }
 

@@ -96,6 +96,8 @@ static ReverseTierGraph reverse_tier_graph;
 static bool use_reverse_tier_graph;
 
 static int64_t total_size;
+static int64_t total_tiers;
+static int64_t total_canonical_tiers;
 static int64_t processed_size;
 static int64_t processed_tiers;
 static int64_t skipped_tiers;
@@ -194,6 +196,8 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
 
 static int InitGlobalVariables(int type) {
     total_size = 0;
+    total_tiers = 0;
+    total_canonical_tiers = 0;
     processed_size = 0;
     processed_tiers = 0;
     skipped_tiers = 0;
@@ -275,7 +279,11 @@ _bailout:
 static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
                                         int type) {
     // Add tier size to total if it is canonical.
-    if (IsCanonicalTier(parent)) total_size += current_api.GetTierSize(parent);
+    ++total_tiers;
+    if (IsCanonicalTier(parent)) {
+        ++total_canonical_tiers;
+        total_size += current_api.GetTierSize(parent);
+    }
 
     TierArray tier_children = current_api.GetChildTiers(parent);
     if (type == kTierSolving) {
@@ -359,9 +367,9 @@ static void CreateTierTreePrintError(int error) {
 static int SolveTierTree(bool force, int verbose) {
     double time_elapsed = 0.0;
     if (verbose > 0) {
-        printf("Begin solving all tiers of total size %" PRId64
-               " (positions)\n",
-               total_size);
+        printf("Begin solving all %" PRId64 " tiers (%" PRId64
+               " canonical) of total size %" PRId64 " (positions)\n",
+               total_tiers, total_canonical_tiers, total_size);
     }
 
     while (!TierQueueEmpty(&pending_tiers)) {
@@ -395,9 +403,9 @@ static int SolveTierTree(bool force, int verbose) {
 
 static int SolveTierTreeMpi(bool force, int verbose) {
     if (verbose > 0) {
-        printf("Begin solving all tiers of total size %" PRId64
-               " (positions)\n",
-               total_size);
+        printf("Begin solving all %" PRId64 " tiers (%" PRId64
+               " canonical) of total size %" PRId64 " (positions)\n",
+               total_tiers, total_canonical_tiers, total_size);
     }
 
     time_t begin_time = time(NULL);
