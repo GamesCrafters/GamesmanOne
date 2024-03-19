@@ -5,9 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Game Manager Module which handles game initialization and
  * finalization.
- *
- * @version 1.1.0
- * @date 2024-01-24
+ * @version 1.1.1
+ * @date 2024-02-29
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -76,6 +75,10 @@ const Game *GameManagerInitGameIndex(int index, void *aux) {
 }
 
 const Game *GameManagerGetCurrentGame(void) { return current_game; }
+
+int GameManagerCurrentGameSupportsMpi(void) {
+    return current_game->solver->supports_mpi;
+}
 
 int GameManagerSetVariant(int variant_id) {
     const GameVariant *variant = NULL;

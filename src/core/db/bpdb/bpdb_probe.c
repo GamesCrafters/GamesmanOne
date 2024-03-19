@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the probe for the Bit-Perfect Database.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,8 +40,8 @@
 
 #include "core/constants.h"
 #include "core/db/bpdb/bpdb_file.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static const int kBlocksPerBuffer = 2;
 static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
@@ -55,7 +55,8 @@ static const int kDefaultBitsPerEntry = 8;
 static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry);
 
 static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
-                                        DbProbe *probe, Tier tier);
+                                        DbProbe *probe, Tier tier,
+                                        GetTierNameFunc GetTierName);
 const BpdbFileHeader *ProbeGetHeader(const DbProbe *probe);
 const int32_t *ProbeGetDecompDict(const DbProbe *probe);
 int ProbeGetBlockSize(const DbProbe *probe);
@@ -67,7 +68,8 @@ static bool ExpandProbeBuffer(DbProbe *probe, int target_size);
 static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position);
 
 static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
-                                      DbProbe *probe, Position position);
+                                      DbProbe *probe, Position position,
+                                      GetTierNameFunc GetTierName);
 static int64_t GetBitOffset(Position position, int bits_per_entry);
 static int64_t GetByteOffset(Position position, int bits_per_entry);
 static int64_t GetBlockOffset(Position position, int bits_per_entry,
@@ -105,10 +107,11 @@ int BpdbProbeDestroy(DbProbe *probe) {
 }
 
 uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
-                         TierPosition tier_position) {
+                         TierPosition tier_position,
+                         GetTierNameFunc GetTierName) {
     if (probe->tier != tier_position.tier) {
-        int error = ProbeRecordStep0ReloadHeader(sandbox_path, probe,
-                                                 tier_position.tier);
+        int error = ProbeRecordStep0ReloadHeader(
+            sandbox_path, probe, tier_position.tier, GetTierName);
         if (error != 0) {
             printf(
                 "BpdbProbeRecord: failed to reload header and decompression "
@@ -118,7 +121,8 @@ uint64_t BpdbProbeRecord(ConstantReadOnlyString sandbox_path, DbProbe *probe,
         }
     }
     if (ProbeRecordStep1CacheMiss(probe, tier_position.position)) {
-        ProbeRecordStep2LoadBlocks(sandbox_path, probe, tier_position.position);
+        ProbeRecordStep2LoadBlocks(sandbox_path, probe, tier_position.position,
+                                   GetTierName);
     }
     return ProbeRecordStep3LoadRecord(probe, tier_position.position);
 }
@@ -136,8 +140,9 @@ static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry) {
 
 // Reloads tier bpdb file header and decomp dict into probe's cache.
 static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
-                                        DbProbe *probe, Tier tier) {
-    char *full_path = BpdbFileGetFullPath(sandbox_path, tier);
+                                        DbProbe *probe, Tier tier,
+                                        GetTierNameFunc GetTierName) {
+    char *full_path = BpdbFileGetFullPath(sandbox_path, tier, GetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
     FILE *db_file = GuardedFopen(full_path, "rb");
@@ -235,9 +240,11 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
 }
 
 static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
-                                      DbProbe *probe, Position position) {
+                                      DbProbe *probe, Position position,
+                                      GetTierNameFunc GetTierName) {
     int ret = kRuntimeError;
-    char *full_path = BpdbFileGetFullPath(sandbox_path, probe->tier);
+    char *full_path =
+        BpdbFileGetFullPath(sandbox_path, probe->tier, GetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
     // Get offset into the compressed bit stream.

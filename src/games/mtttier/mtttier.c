@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
- *
- * @version 1.0.2
- * @date 2024-01-12
+ * @version 1.0.5
+ * @date 2024-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,7 +36,7 @@
 #include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // atoi
 
 #include "core/generic_hash/generic_hash.h"
@@ -64,6 +63,8 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position);
 static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
+
+static int MtttierGetTierName(char *dest, Tier tier);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
@@ -93,8 +94,9 @@ static const TierSolverApi kSolverApi = {
     .GetCanonicalParentPositions = &MtttierGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = NULL,
     .GetChildTiers = &MtttierGetChildTiers,
-    .GetParentTiers = NULL,
     .GetCanonicalTier = NULL,
+
+    .GetTierName = &MtttierGetTierName,
 };
 
 // Gameplay API Setup
@@ -249,7 +251,7 @@ static TierPosition MtttierDoMove(TierPosition tier_position, Move move) {
     board[move] = turn;
     TierPosition ret;
     ret.tier = tier_position.tier + 1;
-    ret.position = GenericHashHashLabel(tier_position.tier, board, 1);
+    ret.position = GenericHashHashLabel(ret.tier, board, 1);
     return ret;
 }
 
@@ -341,6 +343,10 @@ static TierArray MtttierGetChildTiers(Tier tier) {
     TierArrayInit(&children);
     if (tier < 9) TierArrayAppend(&children, tier + 1);
     return children;
+}
+
+static int MtttierGetTierName(char *dest, Tier tier) {
+    return sprintf(dest, "%" PRITier "p", tier);
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
@@ -509,7 +515,7 @@ static bool InitGenericHash(void) {
         if (!success) {
             fprintf(stderr,
                     "MtttierInit: failed to initialize generic hash context "
-                    "for tier %" PRId64 ". Aborting...\n",
+                    "for tier %" PRITier ". Aborting...\n",
                     tier);
             GenericHashReinitialize();
             return false;

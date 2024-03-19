@@ -16,44 +16,43 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    apt update && apt install -y git autoconf automake cmake zlib1g zlib1g-dev
+    sudo apt update && sudo apt install -y git autoconf automake cmake zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    dnf update && dnf install -y git autoconf automake cmake zlib zlib-devel
+    sudo dnf update && sudo dnf install -y git autoconf automake cmake zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git autoconf automake cmake zlib
+    brew install git autoconf automake cmake zlib || error_exit "brew install failed"
 }
+
+# Check if running as root, abort if yes.
+if [ "$(id -u)" -eq 0 ]; then
+    error_exit "Running the script as root is not supported. Please rerun the script as normal user."
+fi
 
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-# Check if running as root
-if [ "$(id -u)" -ne 0 ]; then
-    case "$OS" in
-    Linux*)
-        echo "Not running as root. Will skip steps that require root access."
-        INSTALL_DEPENDENCIES=false
-        ;;
-    Darwin*)
-        INSTALL_DEPENDENCIES=true
-        ;;
-    *)
-        error_exit "Unsupported operating system."
-        ;;
-    esac
-else
+# Prompt the user for dependency installation.
+read -p "Install dependencies (may require password for sudo on Linux) [Y]/n? " response
+
+# Default to 'Y' if no response is given
+response=${response:-Y}
+
+if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
     INSTALL_DEPENDENCIES=true
+else
+    INSTALL_DEPENDENCIES=false
 fi
 
-# Install dependencies based on OS only if has root access.
+# Install dependencies based on OS.
 if [ "$INSTALL_DEPENDENCIES" = true ]; then
     case "$OS" in
     Linux*)
@@ -74,7 +73,7 @@ if [ "$INSTALL_DEPENDENCIES" = true ]; then
         ;;
     esac
 else
-    echo "Skipping installation of dependencies due to lack of root privileges."
+    echo "Skipping installation of dependencies."
 fi
 
 # Check for required commands

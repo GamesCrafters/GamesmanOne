@@ -517,6 +517,14 @@ void SafeMpiInit(int *argc, char ***argv) {
     }
 }
 
+void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
+    int error = MPI_Init_thread(argc, argv, required, provided);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiInitThread: failed with code %d\n", error);
+        exit(kMpiError);
+    }
+}
+
 void SafeMpiFinalize(void) {
     int error = MPI_Finalize();
     if (error != MPI_SUCCESS) {

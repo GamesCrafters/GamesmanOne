@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([GamesmanOne], [0.6.0], [robertyishi@berkeley.edu])
+AC_INIT([GamesmanOne], [0.6.1], [robertyishi@berkeley.edu])
 
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AC_CONFIG_SRCDIR([src/core/main.c])
@@ -27,7 +27,7 @@ AC_OPENMP
 AC_CHECK_LIB([z], [deflate], [], [AC_MSG_ERROR([zlib library not found])])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h inttypes.h stdint.h strings.h sys/param.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h float.h inttypes.h limits.h locale.h stddef.h stdint.h stdlib.h string.h strings.h sys/param.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

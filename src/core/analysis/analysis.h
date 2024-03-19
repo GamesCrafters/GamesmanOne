@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Game analysis helper structure.
- * @version 1.0.0
- * @date 2023-10-18
+ * @version 1.0.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

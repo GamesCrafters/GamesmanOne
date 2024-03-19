@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.1.0
- * @date 2023-10-22
+ * @version 1.1.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,7 +28,6 @@
 
 #include <assert.h>    // assert
 #include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
-#include <inttypes.h>  // PRId64
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
 #include <stdlib.h>    // calloc, free
@@ -265,7 +264,7 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
     }
 
     char file_name[file_name_length + 1];  // +1 for '\0'.
-    sprintf(file_name, "%" PRId64 "%s", tier, extension);
+    sprintf(file_name, "%" PRITier "%s", tier, extension);
 
     strcat(path, sandbox_path);
     strcat(path, file_name);

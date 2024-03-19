@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
- * 
- * @version 1.0.1
- * @date 2024-01-13
+ * @version 1.2.1
+ * @date 2024-02-29
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +32,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // uint64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -61,5 +61,7 @@ int TierWorkerSolve(Tier tier, bool force, bool *solved);
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI
+
+int TierWorkerTest(Tier tier, uint64_t seed);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

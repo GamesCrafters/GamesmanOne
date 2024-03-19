@@ -4,13 +4,12 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Regular Solver.
- * 
+ *
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- *
- * @version 1.2.0
- * @date 2024-01-08
+ * @version 1.3.1
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -114,6 +113,9 @@ static SolverOption current_options[NUM_OPTIONS_MAX];
 static int current_selections[NUM_OPTIONS_MAX];
 #undef NUM_OPTIONS_MAX
 
+static ReadOnlyString current_game_name;
+static int current_variant_id = kIllegalVariantIndex;
+
 // Helper Functions
 
 static bool RequiredApiFunctionsImplemented(const RegularSolverApi *api);
@@ -144,7 +146,6 @@ static TierPositionArray TierGetCanonicalChildPositions(
 static PositionArray TierGetCanonicalParentPositions(TierPosition tier_position,
                                                      Tier parent_tier);
 static TierArray GetChildTiers(Tier tier);
-static TierArray GetParentTiers(Tier tier);
 static Tier GetCanonicalTier(Tier tier);
 
 // Default API Functions.
@@ -155,6 +156,8 @@ static int DefaultGetNumberOfCanonicalChildPositions(
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
 
+static int DefaultGetTierName(char *dest, Tier tier);
+
 // -----------------------------------------------------------------------------
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
@@ -163,13 +166,16 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path, NULL);
+    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path,
+                          &DefaultGetTierName, NULL);
     if (ret != 0) goto _bailout;
 
     ret = StatManagerInit(game_name, variant, data_path);
     if (ret != 0) goto _bailout;
 
     // Success.
+    current_game_name = game_name;
+    current_variant_id = variant;
     ret = 0;
 
 _bailout:
@@ -188,6 +194,8 @@ static int RegularSolverFinalize(void) {
     memset(&current_config, 0, sizeof(current_config));
     memset(&current_options, 0, sizeof(current_options));
     memset(&current_selections, 0, sizeof(current_selections));
+    current_game_name = NULL;
+    current_variant_id = kIllegalVariantIndex;
     num_options = 0;
 
     return kNoError;
@@ -362,7 +370,6 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
 
     tier->GetPositionInSymmetricTier = NULL;
     tier->GetChildTiers = &GetChildTiers;
-    tier->GetParentTiers = &GetParentTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
 }
 
@@ -469,13 +476,6 @@ static TierArray GetChildTiers(Tier tier) {
     return ret;
 }
 
-static TierArray GetParentTiers(Tier tier) {
-    (void)tier;  // Unused;
-    TierArray ret;
-    Int64ArrayInit(&ret);
-    return ret;
-}
-
 static Tier GetCanonicalTier(Tier tier) { return tier; }
 
 // Default API Functions
@@ -526,4 +526,11 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
     return children;
+}
+
+static int DefaultGetTierName(char *dest, Tier tier) {
+    // Since we only have one tier, we format it's name as
+    // "<game_name>_<variant_id>".
+    (void)tier;  // Unused.
+    return sprintf(dest, "%s_%d", current_game_name, current_variant_id);
 }

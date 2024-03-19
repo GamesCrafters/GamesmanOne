@@ -7,6 +7,7 @@
 #include <string.h>   // strlen
 
 #include "core/constants.h"
+#include "core/game_manager.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"
@@ -72,8 +73,11 @@ static void RestoreDefaultSettings(void) {
     sprintf(settings.job_name, "%s", game->name);
     sprintf(settings.account, "%s", kSavioDefaultAccount);
     settings.partition_id = partition_id;
-    // Change game interface and specify tier vs regular
-    settings.num_nodes = IntMin2(kSavioNumNodesMax, partition->num_nodes);
+    if (!GameManagerCurrentGameSupportsMpi()) {
+        settings.num_nodes = 1;
+    } else {
+        settings.num_nodes = IntMin2(kSavioNumNodesMax, partition->num_nodes);
+    }
     settings.ntasks_per_node = kSavioDefaultNumTasksPerNode;
     sprintf(settings.time_limit, "%s", kSavioDefaultTimeLimit);
 }

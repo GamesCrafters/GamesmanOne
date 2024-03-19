@@ -8,9 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Bit-Perfect Database Lite.
- * @details
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.1.0
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -42,8 +41,8 @@
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
 #include "core/db/bpdb/bpdb_probe.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -60,7 +59,8 @@
 // Database API.
 
 static int BpdbLiteInit(ReadOnlyString game_name, int variant,
-                        ReadOnlyString path, void *aux);
+                        ReadOnlyString path, GetTierNameFunc GetTierName,
+                        void *aux);
 static void BpdbLiteFinalize(void);
 
 static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size);
@@ -105,6 +105,7 @@ static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
+static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
@@ -117,7 +118,8 @@ static int GetRemotenessFromRecord(uint64_t record);
 // -----------------------------------------------------------------------------
 
 static int BpdbLiteInit(ReadOnlyString game_name, int variant,
-                        ReadOnlyString path, void *aux) {
+                        ReadOnlyString path, GetTierNameFunc GetTierName,
+                        void *aux) {
     (void)aux;  // Unused.
     assert(sandbox_path == NULL);
 
@@ -131,6 +133,7 @@ static int BpdbLiteInit(ReadOnlyString game_name, int variant,
     SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
     current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
+    CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
 
@@ -163,13 +166,14 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size) {
 static int BpdbLiteFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
-    char *full_path = BpdbFileGetFullPath(sandbox_path, current_tier);
+    char *full_path =
+        BpdbFileGetFullPath(sandbox_path, current_tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
     int error = BpdbFileFlush(full_path, &records);
     if (error != 0) fprintf(stderr, "BpdbLiteFlushSolvingTier: code %d", error);
     free(full_path);
-    
+
     return error;
 }
 
@@ -225,17 +229,19 @@ static int BpdbLiteGetRemoteness(Position position) {
 }
 
 static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position) {
-    uint64_t record = BpdbProbeRecord(sandbox_path, probe, tier_position);
+    uint64_t record =
+        BpdbProbeRecord(sandbox_path, probe, tier_position, CurrentGetTierName);
     return GetValueFromRecord(record);
 }
 
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    uint64_t record = BpdbProbeRecord(sandbox_path, probe, tier_position);
+    uint64_t record =
+        BpdbProbeRecord(sandbox_path, probe, tier_position, CurrentGetTierName);
     return GetRemotenessFromRecord(record);
 }
 
 static int BpdbLiteTierStatus(Tier tier) {
-    return BpdbFileGetTierStatus(sandbox_path, tier);
+    return BpdbFileGetTierStatus(sandbox_path, tier, CurrentGetTierName);
 }
 
 // -----------------------------------------------------------------------------

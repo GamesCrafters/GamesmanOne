@@ -42,7 +42,20 @@
 
 int GamesmanHeadlessMain(int argc, char **argv) {
 #ifdef USE_MPI
+#ifdef _OPENMP
+    int thread_level_provided;
+    SafeMpiInitThread(&argc, &argv, MPI_THREAD_FUNNELED,
+                      &thread_level_provided);
+    if (thread_level_provided != MPI_THREAD_FUNNELED) {
+        fprintf(stderr,
+                "GamesmanHeadlessMain: failed to initialize MPI execution "
+                "environment with thread support at level MPI_THREAD_FUNNELED. "
+                "Aborting...\n");
+        return kMpiError;
+    }
+#else
     SafeMpiInit(&argc, &argv);
+#endif  // _OPENMP
 #endif  // USE_MPI
     HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
@@ -61,7 +74,8 @@ int GamesmanHeadlessMain(int argc, char **argv) {
             error = HeadlessSolve(game, variant_id, data_path, force, verbose);
             break;
         case kHeadlessAnalyze:
-            error = HeadlessAnalyze(game, variant_id, data_path, force, verbose);
+            error =
+                HeadlessAnalyze(game, variant_id, data_path, force, verbose);
             break;
         case kHeadlessQuery:
             error = HeadlessQuery(game, variant_id, data_path, position);
