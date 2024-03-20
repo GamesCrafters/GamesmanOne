@@ -562,15 +562,54 @@ static Move QuixoStringToMove(ReadOnlyString move_string) {
 // Uwapi
 /*
 static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
+    if (formal_position == NULL) return false;
+    for (int i =0; i < GetBoardSize(); ++i){
+        char curr = formal_position[i];
+        if (curr != '-' && curr != 'o' && curr != 'x') return false;
+    }
+    if (formal_position[GetBoardSize()] != '\0') return false;
+
+    return true;
 
 }
 
 static TierPosition QuixoFormalPositionToTierPosition(ReadOnlyString
 formal_position) {
+    //for Mtttier, tiers are differentiated by the # of total non-blank pieces
+    //for Quixo, we're counting the # of Xs and # of Os separately
+    //for example, board with (22 b, 2 X, 1 O) is in a different tier than a board with (22b, 1 X, 2 O)
+    char board[GetBoardSize()];
+    int x_count = 0;
+    int o_count = 0;
+    for (int i = 0; i < GetBoardSize(); ++i){
+        board[i] = toupper(formal_position[i]);
+        x_count += board[i] == "X";
+        o_count += board[i] == "O";
+
+    }
+    TierPosition ret = {
+        .tier = TODO,
+        .position = GenericHashHashLabel(TODO, board, 1),
+    };
+
+    return ret;
+
 
 }
 
 static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
+    char board[GetBoardSize()];
+    CString ret = {0};
+    bool success = GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
+
+    if(!success) return ret;
+
+    for (int i = 0; i< GetBoardSize(); ++i){
+        board[i] = tolower(board[i]);
+    }
+    CStringInit(&ret, board);
+
+    return ret;
 
 }
 
