@@ -1,13 +1,13 @@
 #include "games/quixo/quixo.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // atoi
-#include <string.h>    // memset
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // atoi
+#include <string.h>   // memset
 
+#include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -73,7 +73,7 @@ static const TierSolverApi kQuixoSolverApi = {
 
 static const GameplayApiCommon QuixoGameplayApiCommon = {
     .GetInitialPosition = &QuixoGetInitialPosition,
-    .position_string_length_max = 1000,
+    .position_string_length_max = 400,
 
     .move_string_length_max = 6,
     .MoveToString = &QuixoMoveToString,
@@ -150,11 +150,26 @@ static int board_cols;  // (option) Number of columns on the board (default 5).
 static int k_in_a_row;  // (option) Number of pieces in a row a player needs
                         // to win.
 static int num_edge_slots;  // (calculated) Number of edge slots on the board.
-static int edge_indices[kBoardSizeMax];  // (calculated) Indices of edge slots.
-static int symmetry_matrix[8][kBoardSizeMax];
+// (calculated) Indices of edge slots. Only the first num_edge_slots entries are
+// initialized and used.
+static int edge_indices[kBoardSizeMax];
+// (calculated) Indices of move destinations of edge pieces. Each edge piece can
+// have at most 3 distinct destinations. Only the first num_edge_slots entries
+// in the first dimension and the first edge_move_count[i] entries in the second
+// dimension are initialized and used. E.g., if board is 5x5 (board_rows ==
+// board_cols == 5), edge_indices[0] == 0, and edge_move_dests[0] would
+// therefore be {4, 20}.
+static int edge_move_dests[kBoardSizeMax][3];
+// (calculated) Number of move destinations of each edge slot. In the same
+// example from above, edge_move_count[0] is 2, and edge_move_count[1] is 3
+// (assuming slot index 1 at row 0 column 1 is of index 1 in the edge_indices
+// array.)
+static int edge_move_count[kBoardSizeMax];
+static int symmetry_matrix[8][kBoardSizeMax];  // (calculated) Symmetry matrix.
 
 // Helper functions for tier initialization.
 static void UpdateEdgeSlots(void);
+static int GetMoveDestinations(int *dests, int src);
 static int GetBoardSize(void);
 static Tier QuixoSetInitialTier(void);
 static Position QuixoSetInitialPosition(void);
@@ -166,7 +181,6 @@ static void QuixoInitSymmMatrix();
 static int OpponentsTurn(int turn);
 static Move ConstructMove(int src, int dest);
 static void UnpackMove(Move move, int *src, int *dest);
-static int GetMoveDestinations(int *dests, int src);
 static int BoardRowColToIndex(int row, int col);
 static void BoardIndexToRowCol(int index, int *row, int *col);
 
@@ -230,8 +244,8 @@ static int InitGenericHash(void) {
                     fprintf(
                         stderr,
                         "InitGenericHash: failed to initialize generic hash "
-                        "context for tier %" PRId64 ". Aborting...\n",
-                        tier);  // TODO: merge and replace with PRITier.
+                        "context for tier %" PRITier ". Aborting...\n",
+                        tier);
                     GenericHashReinitialize();
                     return kRuntimeError;
                 }
@@ -286,10 +300,9 @@ static MoveArray QuixoGenerateMoves(TierPosition tier_position) {
         // Skip opponent pieces, which cannot be moved.
         if (piece != kBlank && piece != piece_to_move) continue;
 
-        int dests[3];  // Each edge piece have at most 3 distinct destinations.
-        int num_dests = GetMoveDestinations(dests, edge_index);
-        for (int j = 0; j < num_dests; ++j) {
-            MoveArrayAppend(&moves, ConstructMove(edge_index, dests[j]));
+        for (int j = 0; j < edge_move_count[i]; ++j) {
+            Move move = ConstructMove(edge_index, edge_move_dests[i][j]);
+            MoveArrayAppend(&moves, move);
         }
     }
 
@@ -340,7 +353,7 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     Position position = tier_position.position;
     char board[kBoardSizeMax];
     bool success = GenericHashUnhashLabel(tier, position, board);
-    if (!success) return (TierPosition){-1, -1};  // TODO: merge and replace.
+    if (!success) return kIllegalTierPosition;
 
     // Get turn and piece for current player.
     int turn = GenericHashGetTurnLabel(tier, position);
@@ -404,7 +417,10 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     char board[kBoardSizeMax];
     bool success = GenericHashUnhashLabel(tier, position, board);
     if (!success) {
-        fprintf(stderr, "QuixoIsLegalPosition: GenericHashUnhashLabel error\n");
+        fprintf(stderr,
+                "QuixoIsLegalPosition: GenericHashUnhashLabel error on tier "
+                "%" PRITier " position %" PRIPos "\n",
+                tier, position);
         return false;
     }
 
@@ -421,7 +437,7 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
 
 static int NumSymmetries(void) { return (board_rows == board_cols) ? 8 : 4; }
 
-static Position QuixoDoSymmetry(Tier tier, const char *original_board,
+static Position QuixoDoSymmetry(Tier tier, const char *original_board, int turn,
                                 int symmetry) {
     char symmetry_board[kBoardSizeMax];
 
@@ -430,7 +446,7 @@ static Position QuixoDoSymmetry(Tier tier, const char *original_board,
         symmetry_board[i] = original_board[symmetry_matrix[symmetry][i]];
     }
 
-    return GenericHashHashLabel(tier, symmetry_board, 1);
+    return GenericHashHashLabel(tier, symmetry_board, turn);
 }
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
@@ -438,35 +454,18 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     Position position = tier_position.position;
     char board[kBoardSizeMax];
     bool success = GenericHashUnhashLabel(tier, position, board);
-    if (!success) return -1;  // TODO: merge and replace with illeagl position.
+    if (!success) return kIllegalPosition;
 
+    int turn = GenericHashGetTurnLabel(tier, position);
     Position canonical_position = position;
     for (int i = 0; i < NumSymmetries(); ++i) {
-        Position new_position = QuixoDoSymmetry(tier, board, i);
+        Position new_position = QuixoDoSymmetry(tier, board, turn, i);
         if (new_position < canonical_position) {
             canonical_position = new_position;
         }
     }
 
     return canonical_position;
-}
-
-static void GetCanonicalParentPositionsHelper(
-    char *board, int src, int dest, char piece_to_move, char opponents_piece,
-    Tier parent_tier, int turn, PositionHashSet *deduplication_set,
-    PositionArray *parents) {
-    //
-    MoveAndShiftPieces(board, src, dest, piece_to_move);  // Shift
-    TierPosition parent;
-    parent.tier = parent_tier;
-    parent.position = GenericHashHashLabel(parent_tier, board, turn);
-    MoveAndShiftPieces(board, dest, src, opponents_piece);  // Shift back
-    parent.position = QuixoGetCanonicalPosition(parent);
-    if (PositionHashSetContains(deduplication_set, parent.position)) {
-        return;  // Already included.
-    }
-    PositionHashSetAdd(deduplication_set, parent.position);
-    PositionArrayAppend(parents, parent.position);
 }
 
 static PositionArray QuixoGetCanonicalParentPositions(
@@ -493,46 +492,28 @@ static PositionArray QuixoGetCanonicalParentPositions(
         return parents;
     }
 
-    // For each block along the edge, if it's a block with the player's
-    // symbol, it is a contender for the block moved.
-    // We calculate where the block came from originally, i.e. the index on the
-    // opposite row/col. This is where we should move the block back to.
     PositionHashSet deduplication_set;
     PositionHashSetInit(&deduplication_set, 0.5);
-    int board_size = GetBoardSize();
-    int dests[kBoardSizeMax], sources[kBoardSizeMax];
-    int num_parents = 0;
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int dest = edge_indices[i];
+        for (int j = 0; j < edge_move_count[i]; ++j) {
+            int src = edge_move_dests[i][j];
+            if (board[src] != opponents_piece) continue;
 
-    // Top Row -> bottom row
-    for (int src = 0; src < board_cols; ++src) {
-        if (board[src] != opponents_piece) continue;
-        dests[num_parents] = BoardRowColToIndex(board_rows - 1, src);
-        sources[num_parents++] = src;
-    }
-    // Bottom Row -> top row
-    for (int src = board_size - board_cols; src < board_size; ++src) {
-        if (board[src] != opponents_piece) continue;
-        dests[num_parents] = BoardRowColToIndex(0, src % board_cols);
-        sources[num_parents++] = src;
-    }
-    // Left Column -> right column
-    for (int src = 0; src < board_size; src += board_cols) {
-        if (board[src] != opponents_piece) continue;
-        dests[num_parents] =
-            BoardRowColToIndex(src / board_cols, board_cols - 1);
-        sources[num_parents++] = src;
-    }
-    // Right Column -> left column
-    for (int src = board_cols - 1; src < board_size; src += board_cols) {
-        if (board[src] != opponents_piece) continue;
-        dests[num_parents] = BoardRowColToIndex(src / board_cols, 0);
-        sources[num_parents++] = src;
-    }
-
-    for (int i = 0; i < num_parents; ++i) {
-        GetCanonicalParentPositionsHelper(
-            board, sources[i], dests[i], piece_to_move, opponents_piece,
-            parent_tier, turn, &deduplication_set, &parents);
+            // An opponent move from dest to src is possible. Hence we "undo"
+            // that move here by moving the opponent's piece from src to dest.
+            MoveAndShiftPieces(board, src, dest, piece_to_move);  // Undo move
+            TierPosition parent = {.tier = parent_tier};
+            parent.position =
+                GenericHashHashLabel(parent_tier, board, prior_turn);
+            MoveAndShiftPieces(board, dest, src, opponents_piece);  // Restore
+            parent.position = QuixoGetCanonicalPosition(parent);
+            if (PositionHashSetContains(&deduplication_set, parent.position)) {
+                continue;  // Already included.
+            }
+            PositionHashSetAdd(&deduplication_set, parent.position);
+            PositionArrayAppend(&parents, parent.position);
+        }
     }
     PositionHashSetDestroy(&deduplication_set);
 
@@ -548,7 +529,7 @@ static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
 
     char board[kBoardSizeMax];
     bool success = GenericHashUnhashLabel(this_tier, this_position, board);
-    if (!success) return -1;  // TODO: merge and replace with kIllegalPosition
+    if (!success) return -1;
 
     // Swap all 'X' and 'O' pieces on the board.
     for (int i = 0; i < GetBoardSize(); ++i) {
@@ -729,9 +710,52 @@ static void UpdateEdgeSlots(void) {
         BoardIndexToRowCol(i, &row, &col);
         if (row == 0 || col == 0 || row == board_rows - 1 ||
             col == board_cols - 1) {
-            edge_indices[num_edge_slots++] = i;
+            edge_indices[num_edge_slots] = i;
+            edge_move_count[num_edge_slots] =
+                GetMoveDestinations(edge_move_dests[num_edge_slots], i);
+            ++num_edge_slots;
         }
     }
+#ifndef NDEBUG
+    for (int i = 0; i < num_edge_slots; ++i) {
+        printf("Edge slot %d has %d move destinations: ", i,
+               edge_move_count[i]);
+        for (int j = 0; j < edge_move_count[i]; ++j) {
+            printf("%d, ", edge_move_dests[i][j]);
+        }
+        printf("\n");
+    }
+#endif
+}
+
+// Assumes DESTS has enough space.
+static int GetMoveDestinations(int *dests, int src) {
+    int row, col;
+    BoardIndexToRowCol(src, &row, &col);
+    int num_dests = 0;
+
+    // Can move left if not at the left-most column.
+    if (col > 0) {
+        dests[num_dests++] = BoardRowColToIndex(row, 0);
+    }
+
+    // Can move right if not at the right-most column.
+    if (col < board_cols - 1) {
+        dests[num_dests++] = BoardRowColToIndex(row, board_cols - 1);
+    }
+
+    // Can move up if not at the top-most row.
+    if (row > 0) {
+        dests[num_dests++] = BoardRowColToIndex(0, col);
+    }
+
+    // Can move down if not at the bottom-most row.
+    if (row < board_rows - 1) {
+        dests[num_dests++] = BoardRowColToIndex(board_rows - 1, col);
+    }
+
+    assert(num_dests == 3 || num_dests == 2);
+    return num_dests;
 }
 
 static int GetBoardSize(void) { return board_rows * board_cols; }
@@ -834,36 +858,6 @@ static void UnpackMove(Move move, int *src, int *dest) {
     int board_size = GetBoardSize();
     *dest = move % board_size;
     *src = move / board_size;
-}
-
-// Assumes DESTS has enough space.
-static int GetMoveDestinations(int *dests, int src) {
-    int row, col;
-    BoardIndexToRowCol(src, &row, &col);
-    int num_dests = 0;
-
-    // Can move left if not at the left-most column.
-    if (col > 0) {
-        dests[num_dests++] = BoardRowColToIndex(row, 0);
-    }
-
-    // Can move right if not at the right-most column.
-    if (col < board_cols - 1) {
-        dests[num_dests++] = BoardRowColToIndex(row, board_cols - 1);
-    }
-
-    // Can move up if not at the top-most row.
-    if (row > 0) {
-        dests[num_dests++] = BoardRowColToIndex(0, col);
-    }
-
-    // Can move down if not at the bottom-most row.
-    if (row < board_rows - 1) {
-        dests[num_dests++] = BoardRowColToIndex(board_rows - 1, col);
-    }
-
-    assert(num_dests == 3 || num_dests == 2);
-    return num_dests;
 }
 
 static int BoardRowColToIndex(int row, int col) {

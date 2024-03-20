@@ -151,10 +151,11 @@ static int TestTierTree(int64_t seed);
 // -----------------------------------------------------------------------------
 
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
-    TierManagerTestAll(api);
+    int error = TierManagerTestAll(api);
+    if (error) return kRuntimeError;
     time_t begin = time(NULL);
     memcpy(&current_api, api, sizeof(current_api));
-    int error = InitGlobalVariables(kTierSolving);
+    error = InitGlobalVariables(kTierSolving);
     if (error != 0) {
         fprintf(stderr,
                 "TierManagerSolve: initialization failed with code %d.\n",

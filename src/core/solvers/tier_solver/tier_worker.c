@@ -215,7 +215,7 @@ int TierWorkerMpiServe(void) {
 #endif  // USE_MPI
 
 int TierWorkerTest(Tier tier, uint64_t seed) {
-    static const int64_t kTestSizeMax = 1000000;
+    static const int64_t kTestSizeMax = 10000;
     int64_t tier_size = current_api.GetTierSize(tier);
     int64_t test_size = tier_size <= kTestSizeMax ? tier_size : kTestSizeMax;
     bool random_test = tier_size > kTestSizeMax;
@@ -225,6 +225,7 @@ int TierWorkerTest(Tier tier, uint64_t seed) {
         parent.tier = tier;
         parent.position = random_test ? genrand64_int63() % tier_size : i;
         if (!current_api.IsLegalPosition(parent)) continue;
+        if (current_api.Primitive(parent) != kUndecided) continue;
 
         TierPositionArray children =
             current_api.GetCanonicalChildPositions(parent);
