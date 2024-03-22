@@ -27,6 +27,8 @@ static Value QuixoPrimitive(TierPosition tier_position);
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move);
 static bool QuixoIsLegalPosition(TierPosition tier_position);
 static Position QuixoGetCanonicalPosition(TierPosition tier_position);
+static TierPositionArray QuixoGetCanonicalChildPositions(
+    TierPosition tier_position);
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
@@ -62,7 +64,7 @@ static const TierSolverApi kQuixoSolverApi = {
     .DoMove = &QuixoDoMove,
     .IsLegalPosition = &QuixoIsLegalPosition,
     .GetCanonicalPosition = &QuixoGetCanonicalPosition,
-    .GetCanonicalChildPositions = NULL,
+    .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
     .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
     .GetChildTiers = &QuixoGetChildTiers,
@@ -349,7 +351,18 @@ static void MoveAndShiftPieces(char *board, int src, int dest,
     board[dest] = piece_to_move;
 }
 
-// TODO for Robert: clean up this function.
+static Tier GetChildTier(Tier parent, int turn, bool flip) {
+    if (!flip) return parent;
+
+    int num_blanks, num_x, num_o;
+    UnhashTier(parent, &num_blanks, &num_x, &num_o);
+    --num_blanks;
+    num_x += (kPlayerPiece[turn] == kX);
+    num_o += (kPlayerPiece[turn] == kO);
+
+    return HashTier(num_blanks, num_x, num_o);
+}
+
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     Tier tier = tier_position.tier;
     Position position = tier_position.position;
@@ -370,15 +383,7 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     assert(src != dest);
 
     // Update tier.
-    TierPosition ret = {.tier = tier};
-    if (board[src] == kBlank) {
-        int num_blanks, num_x, num_o;
-        UnhashTier(tier, &num_blanks, &num_x, &num_o);
-        --num_blanks;
-        num_x += (kPlayerPiece[turn] == kX);
-        num_o += (kPlayerPiece[turn] == kO);
-        ret.tier = HashTier(num_blanks, num_x, num_o);
-    }
+    TierPosition ret = {.tier = GetChildTier(tier, turn, board[src] == kBlank)};
 
     // Move and shift pieces.
     MoveAndShiftPieces(board, src, dest, piece_to_move);
@@ -468,6 +473,53 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     }
 
     return canonical_position;
+}
+
+static TierPositionArray QuixoGetCanonicalChildPositions(
+    TierPosition tier_position) {
+    //
+    TierPositionArray children;
+    TierPositionArrayInit(&children);
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) {
+        children.size = -1;
+        return children;
+    }
+
+    int turn = GenericHashGetTurnLabel(tier, position);
+    int next_turn = OpponentsTurn(turn);
+    char piece_to_move = kPlayerPiece[turn];
+    TierPositionHashSet deduplication_set;
+    TierPositionHashSetInit(&deduplication_set, 0.5);
+
+    // Find all blank or friendly pieces on 4 edges and 4 corners of the board.
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int edge_index = edge_indices[i];
+        char piece = board[edge_index];
+        // Skip opponent pieces, which cannot be moved.
+        if (piece != kBlank && piece != piece_to_move) continue;
+
+        for (int j = 0; j < edge_move_count[i]; ++j) {
+            int src = edge_index, dest = edge_move_dests[i][j];
+            MoveAndShiftPieces(board, src, dest, piece_to_move);  // Do move.
+            bool flip = (piece == kBlank);
+            TierPosition child = {.tier = GetChildTier(tier, turn, flip)};
+            child.position = GenericHashHashLabel(child.tier, board, next_turn);
+            MoveAndShiftPieces(board, dest, src, piece);  // Undo move.
+            child.position = QuixoGetCanonicalPosition(child);
+            if (TierPositionHashSetContains(&deduplication_set, child)) {
+                continue;  // Already included.
+            }
+            TierPositionHashSetAdd(&deduplication_set, child);
+            TierPositionArrayAppend(&children, child);
+        }
+    }
+    TierPositionHashSetDestroy(&deduplication_set);
+
+    return children;
 }
 
 static PositionArray QuixoGetCanonicalParentPositions(
@@ -570,6 +622,35 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     }  // no children for tiers with num_blanks == 0
 
     return children;
+}
+
+static Tier QuixoGetCanonicalTier(Tier tier) {
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+
+    // Swap the number of Xs and Os.
+    Tier symm = HashTier(num_blanks, num_o, num_x);
+
+    // Return the smaller of the two.
+    return (tier < symm) ? tier : symm;
+}
+
+static int QuixoGetTierName(char *name, Tier tier) {
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+    if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;
+    if (num_blanks + num_x + num_o != GetBoardSize()) {
+        return kIllegalGameTierError;
+    }
+
+    int actual_length = snprintf(name, kDbFileNameLengthMax + 1,
+                                 "%dBlank_%dX_%dO", num_blanks, num_x, num_o);
+    if (actual_length >= kDbFileNameLengthMax + 1) {
+        fprintf(stderr, "QuixoGetTierName: (BUG) tier db filename overflow\n");
+        return kMemoryOverflowError;
+    }
+
+    return kNoError;
 }
 
 /// Gameplay
@@ -692,35 +773,6 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
 
 }
 */
-
-static Tier QuixoGetCanonicalTier(Tier tier) {
-    int num_blanks, num_x, num_o;
-    UnhashTier(tier, &num_blanks, &num_x, &num_o);
-
-    // Swap the number of Xs and Os.
-    Tier symm = HashTier(num_blanks, num_o, num_x);
-
-    // Return the smaller of the two.
-    return (tier < symm) ? tier : symm;
-}
-
-static int QuixoGetTierName(char *name, Tier tier) {
-    int num_blanks, num_x, num_o;
-    UnhashTier(tier, &num_blanks, &num_x, &num_o);
-    if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;
-    if (num_blanks + num_x + num_o != GetBoardSize()) {
-        return kIllegalGameTierError;
-    }
-
-    int actual_length = snprintf(name, kDbFileNameLengthMax + 1,
-                                 "%dBlank_%dX_%dO", num_blanks, num_x, num_o);
-    if (actual_length >= kDbFileNameLengthMax + 1) {
-        fprintf(stderr, "QuixoGetTierName: (BUG) tier db filename overflow\n");
-        return kMemoryOverflowError;
-    }
-
-    return kNoError;
-}
 
 static void UpdateEdgeSlots(void) {
     num_edge_slots = 0;

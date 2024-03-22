@@ -885,7 +885,7 @@ static int TestChildToParentMatching(Tier tier, Position position) {
 
 static int TestPrintError(Tier tier, Position position) {
     return printf("\nTierWorkerTest: error detected at position %" PRIPos
-                  " of tier %" PRITier,
+                  " of tier %" PRITier "\n",
                   position, tier);
 }
 
