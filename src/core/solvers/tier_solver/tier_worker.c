@@ -153,6 +153,10 @@ static void Step6SaveValues(void);
 static void Step7Cleanup(void);
 static void DestroyFrontiers(void);
 
+static bool TestShouldSkip(Tier tier, Position position);
+static int TestChildPositions(Tier tier, Position position);
+static int TestChildToParentMatching(Tier tier, Position position);
+
 // -----------------------------------------------------------------------------
 
 void TierWorkerInit(const TierSolverApi *api) {
@@ -214,50 +218,33 @@ int TierWorkerMpiServe(void) {
 }
 #endif  // USE_MPI
 
-int TierWorkerTest(Tier tier, uint64_t seed) {
+int TierWorkerTest(Tier tier, long seed) {
     static const int64_t kTestSizeMax = 10000;
-    int64_t tier_size = current_api.GetTierSize(tier);
-    int64_t test_size = tier_size <= kTestSizeMax ? tier_size : kTestSizeMax;
-    bool random_test = tier_size > kTestSizeMax;
     init_genrand64(seed);
+
+    int64_t tier_size = current_api.GetTierSize(tier);
+    bool random_test = tier_size > kTestSizeMax;
+    int64_t test_size = random_test ? kTestSizeMax : tier_size;
+
     for (int64_t i = 0; i < test_size; ++i) {
-        TierPosition parent;
-        parent.tier = tier;
-        parent.position = random_test ? genrand64_int63() % tier_size : i;
-        if (!current_api.IsLegalPosition(parent)) continue;
-        if (current_api.Primitive(parent) != kUndecided) continue;
+        Position position = random_test ? genrand64_int63() % tier_size : i;
+        if (TestShouldSkip(tier, position)) continue;
 
-        TierPositionArray children =
-            current_api.GetCanonicalChildPositions(parent);
-        bool illegal_child_found = false;
-        bool child_parent_mismatch = false;
-        for (int64_t j = 0; j < children.size; ++j) {
-            TierPosition child = children.array[j];
-            // Check if all child positions are legal.
-            illegal_child_found |= (child.position < 0);
-            illegal_child_found |=
-                (child.position >= current_api.GetTierSize(child.tier));
-            illegal_child_found |= !current_api.IsLegalPosition(child);
-            if (illegal_child_found) break;
+        // Check if all child positions are legal.
+        int error = TestChildPositions(tier, position);
+        if (error != kTierSolverTestNoError) return error;
 
-            // Check if all child positions have parent as one of their
-            // parents.
-            TierPosition canonical_parent = parent;
-            canonical_parent.position =
-                current_api.GetCanonicalPosition(canonical_parent);
-            PositionArray parents =
-                current_api.GetCanonicalParentPositions(child, tier);
-            child_parent_mismatch =
-                !PositionArrayContains(&parents, canonical_parent.position);
-            PositionArrayDestroy(&parents);
-            if (child_parent_mismatch) break;
+        // Perform the following test only if current game variant implements
+        // its own GetCanonicalParentPositions.
+        if (current_api.GetCanonicalParentPositions != NULL) {
+            // Check if all child positions of the current position has the
+            // current position as one of their parents.
+            error = TestChildToParentMatching(tier, position);
+            if (error != kTierSolverTestNoError) return error;
         }
-        TierPositionArrayDestroy(&children);
-        if (illegal_child_found) return 1;
-        if (child_parent_mismatch) return 2;
     }
 
-    return 0;
+    return kTierSolverTestNoError;
 }
 
 // -----------------------------------------------------------------------------
@@ -834,6 +821,59 @@ static void DestroyFrontiers(void) {
         FrontierDestroy(&lose_frontiers[i]);
         FrontierDestroy(&tie_frontiers[i]);
     }
+}
+
+static bool TestShouldSkip(Tier tier, Position position) {
+    TierPosition tier_position = {.tier = tier, .position = position};
+    if (!current_api.IsLegalPosition(tier_position)) return true;
+    if (current_api.Primitive(tier_position) != kUndecided) return true;
+
+    return false;
+}
+
+static int TestChildPositions(Tier tier, Position position) {
+    TierPosition parent = {.tier = tier, .position = position};
+    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
+    int error = kTierSolverTestNoError;
+    for (int64_t i = 0; i < children.size; ++i) {
+        TierPosition child = children.array[i];
+        if (child.position < 0) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        } else if (child.position >= current_api.GetTierSize(child.tier)) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        } else if (!current_api.IsLegalPosition(child)) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        }
+    }
+
+    return error;
+}
+
+static int TestChildToParentMatching(Tier tier, Position position) {
+    TierPosition parent = {.tier = tier, .position = position};
+    TierPosition canonical_parent = parent;
+    canonical_parent.position =
+        current_api.GetCanonicalPosition(canonical_parent);
+    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
+    int error = kTierSolverTestNoError;
+    for (int64_t i = 0; i < children.size; ++i) {
+        // Check if all child positions have parent as one of their parents.
+        TierPosition child = children.array[i];
+        PositionArray parents =
+            current_api.GetCanonicalParentPositions(child, tier);
+        if (!PositionArrayContains(&parents, canonical_parent.position)) {
+            error = kTierSolverTestChildParentMismatchError;
+        }
+
+        PositionArrayDestroy(&parents);
+        if (error != kTierSolverTestNoError) break;
+    }
+    TierPositionArrayDestroy(&children);
+
+    return error;
 }
 
 #undef PRAGMA

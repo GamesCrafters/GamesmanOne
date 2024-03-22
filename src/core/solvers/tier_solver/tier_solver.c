@@ -51,6 +51,10 @@
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path);
 static int TierSolverFinalize(void);
+
+static int TierSolverTest(long seed);
+static ReadOnlyString TierSolverExplainTestError(int error);
+
 static int TierSolverSolve(void *aux);
 static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
@@ -66,6 +70,9 @@ const Solver kTierSolver = {
 
     .Init = &TierSolverInit,
     .Finalize = &TierSolverFinalize,
+
+    .Test = &TierSolverTest,
+    .ExplainTestError = &TierSolverExplainTestError,
 
     .Solve = &TierSolverSolve,
     .Analyze = &TierSolverAnalyze,
@@ -176,6 +183,29 @@ static int TierSolverFinalize(void) {
     num_options = 0;
 
     return kNoError;
+}
+
+static int TierSolverTest(long seed) {
+    TierWorkerInit(&current_api);  // TODO: check this logic.
+    return TierManagerTest(&current_api, seed);
+}
+
+static ReadOnlyString TierSolverExplainTestError(int error) {
+    switch (error) {
+        case kTierSolverTestNoError:
+            return "no error";
+        case kTierSolverTestDependencyError:
+            return "another error occurred before the test begins";
+        case kTierSolverTestIllegalChildError:
+            return "an illegal position was found to be a child position of "
+                   "some legal position";
+        case kTierSolverTestChildParentMismatchError:
+            return "one of the child positions of a legal position was found "
+                   "not to have that legal position as its parent";
+    }
+
+    return "unknown error, which usually indicates a bug in the tier solver "
+           "test code";
 }
 
 static int TierSolverSolve(void *aux) {

@@ -146,16 +146,15 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierTree(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
-static int TestTierTree(int64_t seed);
+static int TestTierTree(long seed);
+static void PrintTestResult(double time_elapsed);
 
 // -----------------------------------------------------------------------------
 
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
-    int error = TierManagerTestAll(api);
-    if (error) return kRuntimeError;
     time_t begin = time(NULL);
     memcpy(&current_api, api, sizeof(current_api));
-    error = InitGlobalVariables(kTierSolving);
+    int error = InitGlobalVariables(kTierSolving);
     if (error != 0) {
         fprintf(stderr,
                 "TierManagerSolve: initialization failed with code %d.\n",
@@ -194,17 +193,17 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
     return ret;
 }
 
-int TierManagerTestAll(const TierSolverApi *api) {
+int TierManagerTest(const TierSolverApi *api, long seed) {
     memcpy(&current_api, api, sizeof(current_api));
     int error = InitGlobalVariables(kTierSolving);
     if (error != 0) {
         fprintf(stderr,
-                "TierManagerTestAll: initialization failed with code %d.\n",
+                "TierManagerTest: initialization failed with code %d.\n",
                 error);
-        return error;
+        return kTierSolverTestDependencyError;
     }
 
-    int ret = TestTierTree(0);  // TODO: Implement seed.
+    int ret = TestTierTree(seed);
     DestroyGlobalVariables();
 
     return ret;
@@ -290,6 +289,15 @@ _bailout:
     return ret;
 }
 
+static int GetNumCanonicalTiers(const TierArray *array) {
+    int ret = 0;
+    for (int64_t i = 0; i < array->size; ++i) {
+        ret += IsCanonicalTier(array->array[i]);
+    }
+
+    return ret;
+}
+
 static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
                                         int type) {
     // Add tier size to total if it is canonical.
@@ -300,8 +308,9 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
     }
 
     TierArray tier_children = current_api.GetChildTiers(parent);
+    int num_canonical_tier_children = GetNumCanonicalTiers(&tier_children);
     if (type == kTierSolving) {
-        if (!TierTreeSetNumTiers(parent, (int)tier_children.size)) {
+        if (!TierTreeSetNumTiers(parent, num_canonical_tier_children)) {
             TierArrayDestroy(&tier_children);
             return (int)kTierTreeOutOfMemory;
         }
@@ -713,33 +722,50 @@ static void PrintAnalyzerResult(void) {
     AnalysisPrintEverything(stdout, &game_analysis);
 }
 
-static int TestTierTree(int64_t seed) {
+static int TestTierTree(long seed) {
     double time_elapsed = 0.0;
-    printf("Begin random sanity testing of all tiers\n");
+    printf("Begin random sanity testing of all %" PRId64 " tiers (%" PRId64
+           " canonical) of total size %" PRId64 " (positions). %" PRId64
+           " tiers ready in test queue\n",
+           total_tiers, total_canonical_tiers, total_size,
+           TierQueueSize(&pending_tiers));
 
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
         if (IsCanonicalTier(tier)) {  // Only test canonical tiers.
             time_t begin = time(NULL);
+            printf("Testing tier %" PRITier " of size %" PRId64 "...", tier,
+                   current_api.GetTierSize(tier));
             int error = TierWorkerTest(tier, seed);
             if (error == 0) {
                 // Test passed.
                 SolveUpdateTierTree(tier);
                 ++processed_tiers;
             } else {
-                printf("TestTierTree: test failed on tier %" PRITier
-                       ", code %d\n",
-                       tier, error);
+                printf("FAILED\n");
                 return error;
             }
             time_t end = time(NULL);
             time_elapsed += difftime(end, begin);
-            printf("Finished testing tier %" PRITier "\n", tier);
+            printf("PASSED. %" PRId64 " tiers ready in test queue\n",
+                   TierQueueSize(&pending_tiers));
         } else {
             ++skipped_tiers;
         }
     }
-    // TODO: print tier statistics
+    PrintTestResult(time_elapsed);
 
-    return kNoError;
+    return kTierSolverTestNoError;
+}
+
+static void PrintTestResult(double time_elapsed) {
+    assert(failed_tiers == 0);
+    printf(
+        "Finished solving all tiers in %d second(s).\n"
+        "Number of canonical tiers tested: %" PRId64
+        "\nNumber of non-canonical tiers skipped: %" PRId64
+        "\nTotal tiers tested: %" PRId64 "\n",
+        (int)time_elapsed, processed_tiers, skipped_tiers,
+        processed_tiers + skipped_tiers);
+    printf("\n");
 }

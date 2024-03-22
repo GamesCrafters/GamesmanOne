@@ -3,8 +3,9 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // true
 #include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fprintf, stderr
+#include <stdio.h>    // printf, fprintf, stderr, scanf
 #include <stdlib.h>   // atoi
+#include <time.h>     // time
 
 #include "core/constants.h"
 #include "core/game_manager.h"
@@ -32,6 +33,7 @@ static int SetCurrentGame(ReadOnlyString key);
 #ifndef USE_MPI
 static int SolveAndStart(ReadOnlyString key);
 #endif  // USE_MPI
+static int TestCurrentGameVariant(ReadOnlyString key);
 static void UpdateTitle(void);
 
 // -----------------------------------------------------------------------------
@@ -51,20 +53,18 @@ int InteractivePresolve(ReadOnlyString key) {
 #else
         "Generate SLURM job script for Savio",
 #endif  // USE_MPI
-        "Start without solving",
-        "Game options",
-        "Solver options",
+        "Start without solving", "Test current game variant",
+        "Game options",          "Solver options",
     };
-    static ConstantReadOnlyString keys[] = {"s", "w", "g", "o"};
+    static ConstantReadOnlyString keys[] = {"s", "w", "t", "g", "o"};
     static const HookFunctionPointer hooks[] = {
 #ifndef USE_MPI
         &SolveAndStart,
 #else
         &InteractiveSavioPartitionSelect,
 #endif  // USE_MPI
-        &InteractivePostSolve,
-        &InteractiveGameOptions,
-        &InteractiveSolverOptions,
+        &InteractivePostSolve,   &TestCurrentGameVariant,
+        &InteractiveGameOptions, &InteractiveSolverOptions,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
 
@@ -102,6 +102,33 @@ static int SolveAndStart(ReadOnlyString key) {
     return InteractivePostSolve(key);
 }
 #endif  // USE_MPI
+
+static int TestCurrentGameVariant(ReadOnlyString key) {
+    (void)key;  // Unused.
+    long seed;
+    char input[100];
+    printf(
+        "Please enter a 64-bit integer as a seed, or leave blank to use a "
+        "random seed based on current time: ");
+    if (fgets(input, sizeof(input), stdin)) {
+        // Attempt to parse a long long from the input
+        if (sscanf(input, "%ld", &seed) != 1) {
+            // If parsing fails, use the current time as the seed
+            seed = (long)time(NULL);
+        }
+    } else {
+        // In case fgets fails, fallback to using the current time as the seed
+        seed = (long)time(NULL);
+    }
+    printf("Testing with seed %ld\n", seed);
+    int error = SolverManagerTest(seed);
+    if (error != 0) {
+        printf("TestCurrentGameVariant: an error occurred. Explanation: %s\n",
+               SolverManagerExplainTestError(error));
+    }
+
+    return 0;
+}
 
 static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();

@@ -67,6 +67,15 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
  */
 int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose);
 
-int TierManagerTestAll(const TierSolverApi *api);
+/**
+ * @brief Tests the given tier solver API implementation using the given SEED
+ * for random number generation.
+ *
+ * @param api Tier solver API to test.
+ * @param seed Seed for random number generation.
+ * @return 0 on success, or
+ * @return one of the values from TierSolverTestErrors defined in tier_solver.h.
+ */
+int TierManagerTest(const TierSolverApi *api, long seed);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

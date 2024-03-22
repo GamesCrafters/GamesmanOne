@@ -285,6 +285,13 @@ typedef struct TierSolverApi {
     int (*GetTierName)(char *name, Tier tier);
 } TierSolverApi;
 
+enum TierSolverTestErrors {
+    kTierSolverTestNoError,
+    kTierSolverTestDependencyError,
+    kTierSolverTestIllegalChildError,
+    kTierSolverTestChildParentMismatchError,
+};
+
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
     int verbose; /**< Level of details to output. */

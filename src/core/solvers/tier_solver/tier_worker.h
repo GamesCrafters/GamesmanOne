@@ -62,6 +62,6 @@ int TierWorkerSolve(Tier tier, bool force, bool *solved);
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI
 
-int TierWorkerTest(Tier tier, uint64_t seed);
+int TierWorkerTest(Tier tier, long seed);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
