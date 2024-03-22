@@ -18,6 +18,9 @@ static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
 static int QuixoFinalize(void);
 
+static const GameVariant *QuixoGetCurrentVariant(void);
+static int QuixoSetVariantOption(int option, int selection);
+
 static Tier QuixoGetInitialTier(void);
 static Position QuixoGetInitialPosition(void);
 
@@ -52,6 +55,27 @@ static Move QuixoStringToMove(ReadOnlyString move_string);
 // tier_position); static CString QuixoMoveToFormalMove(TierPosition
 // tier_position, Move move); static CString QuixoMoveToAutoGuiMove(TierPosition
 // tier_position, Move move);
+
+// Variants
+
+static ConstantReadOnlyString kQuixoRuleChoices[] = {
+    "5x5 5-in-a-row",
+    "4x4 4-in-a-row",
+    "3x3 3-in-a-row",
+    "4x5 4-in-a-row",
+};
+
+static const GameVariantOption kQuixoRules = {
+    .name = "rules",
+    .num_choices = sizeof(kQuixoRuleChoices) / sizeof(kQuixoRuleChoices[0]),
+    .choices = kQuixoRuleChoices,
+};
+
+#define NUM_OPTIONS 2  // 1 option and 1 zero-terminator
+static GameVariantOption options[NUM_OPTIONS];
+static int selections[NUM_OPTIONS] = {0, 0};  // Default "5x5 5-in-a-row".
+#undef NUM_OPTIONS
+static GameVariant current_variant;
 
 // Solver API Setup
 static const TierSolverApi kQuixoSolverApi = {
@@ -273,6 +297,21 @@ static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o) {
 static int QuixoFinalize(void) {
     GenericHashReinitialize();
     return kNoError;
+}
+
+static const GameVariant *QuixoGetCurrentVariant(void) {
+    return &current_variant;
+}
+
+static int QuixoSetVariantOption(int option, int selection) {
+    if (option != 0 || selection < 0 || selection >= kQuixoRules.num_choices) {
+        return kRuntimeError;
+    }
+
+    selections[0] = selection;
+    switch (selection) {
+        
+    }
 }
 
 static Tier QuixoGetInitialTier(void) { return initial_tier; }
