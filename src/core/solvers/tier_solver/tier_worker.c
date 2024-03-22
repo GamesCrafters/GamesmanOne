@@ -156,6 +156,7 @@ static void DestroyFrontiers(void);
 static bool TestShouldSkip(Tier tier, Position position);
 static int TestChildPositions(Tier tier, Position position);
 static int TestChildToParentMatching(Tier tier, Position position);
+static int TestPrintError(Tier tier, Position position);
 
 // -----------------------------------------------------------------------------
 
@@ -232,7 +233,10 @@ int TierWorkerTest(Tier tier, long seed) {
 
         // Check if all child positions are legal.
         int error = TestChildPositions(tier, position);
-        if (error != kTierSolverTestNoError) return error;
+        if (error != kTierSolverTestNoError) {
+            TestPrintError(tier, position);
+            return error;
+        }
 
         // Perform the following test only if current game variant implements
         // its own GetCanonicalParentPositions.
@@ -240,7 +244,10 @@ int TierWorkerTest(Tier tier, long seed) {
             // Check if all child positions of the current position has the
             // current position as one of their parents.
             error = TestChildToParentMatching(tier, position);
-            if (error != kTierSolverTestNoError) return error;
+            if (error != kTierSolverTestNoError) {
+                TestPrintError(tier, position);
+                return error;
+            }
         }
     }
 
@@ -874,6 +881,12 @@ static int TestChildToParentMatching(Tier tier, Position position) {
     TierPositionArrayDestroy(&children);
 
     return error;
+}
+
+static int TestPrintError(Tier tier, Position position) {
+    return printf("\nTierWorkerTest: error detected at position %" PRIPos
+                  " of tier %" PRITier,
+                  position, tier);
 }
 
 #undef PRAGMA

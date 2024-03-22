@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Tier Solver.
- * @version 1.4.0
- * @date 2024-03-18
+ * @version 1.4.1
+ * @date 2024-03-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -145,6 +145,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
+static int DefaultGetTierName(char *name, Tier tier);
 
 // -----------------------------------------------------------------------------
 
@@ -196,6 +197,8 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
             return "no error";
         case kTierSolverTestDependencyError:
             return "another error occurred before the test begins";
+        case kTierSolverTestGetTierNameError:
+            return "error reported from game-specific GetTierName function";
         case kTierSolverTestIllegalChildError:
             return "an illegal position was found to be a child position of "
                    "some legal position";
@@ -423,6 +426,11 @@ static bool SetCurrentApi(const TierSolverApi *api) {
         current_api.GetCanonicalChildPositions =
             &DefaultGetCanonicalChildPositions;
     }
+
+    if (current_api.GetTierName == NULL) {
+        current_api.GetTierName = &DefaultGetTierName;
+    }
+
     return true;
 }
 
@@ -496,4 +504,10 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
     return children;
+}
+
+static int DefaultGetTierName(char *name, Tier tier) {
+    sprintf(name, "%" PRITier, tier);
+
+    return kNoError;
 }

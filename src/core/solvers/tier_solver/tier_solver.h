@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Tier Solver API.
- * @version 1.4.0
- * @date 2024-03-18
+ * @version 1.4.1
+ * @date 2024-03-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -281,6 +281,11 @@ typedef struct TierSolverApi {
      *
      * @note This function is OPTIONAL. If set to NULL, the tier database files
      * will use the TIER value as their file names.
+     *
+     * @param name Tier name output buffer.
+     * @param tier Get name of this tier.
+     * @return 0 on success, or
+     * @return non-zero error code on failure.
      */
     int (*GetTierName)(char *name, Tier tier);
 } TierSolverApi;
@@ -288,6 +293,7 @@ typedef struct TierSolverApi {
 enum TierSolverTestErrors {
     kTierSolverTestNoError,
     kTierSolverTestDependencyError,
+    kTierSolverTestGetTierNameError,
     kTierSolverTestIllegalChildError,
     kTierSolverTestChildParentMismatchError,
 };

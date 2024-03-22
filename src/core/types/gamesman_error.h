@@ -39,6 +39,7 @@ enum GamesmanError {
     kIllegalArgumentError,     /**< Illegal argument passed into function. */
     kIllegalGameNameError,     /**< Illegal game name encountered. */
     kIllegalGameVariantError,  /**< Illegal game variant encountered. */
+    kIllegalGameTierError,     /**< Illegal game tier encountered. */
     kIllegalGamePositionError, /**< Illegal game position encountered. */
     kIllegalGamePositionValueError, /**< Illegal position value encountered. */
     kIllegalGameTierGraphError,     /**< Tier graph contains a loop. */

@@ -3,7 +3,7 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdio.h>    // fprintf, stderr
+#include <stdio.h>    // fprintf, stderr, sprintf
 #include <stdlib.h>   // atoi
 #include <string.h>   // memset
 
@@ -33,6 +33,7 @@ static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
                                                 Tier symmetric);
 static TierArray QuixoGetChildTiers(Tier tier);
 static Tier QuixoGetCanonicalTier(Tier tier);
+static int QuixoGetTierName(char *name, Tier tier);
 
 // Gameplay
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer);
@@ -66,6 +67,7 @@ static const TierSolverApi kQuixoSolverApi = {
     .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
     .GetChildTiers = &QuixoGetChildTiers,
     .GetCanonicalTier = &QuixoGetCanonicalTier,
+    .GetTierName = &QuixoGetTierName,
 };
 
 // -----------------------------------------------------------------------------
@@ -700,6 +702,24 @@ static Tier QuixoGetCanonicalTier(Tier tier) {
 
     // Return the smaller of the two.
     return (tier < symm) ? tier : symm;
+}
+
+static int QuixoGetTierName(char *name, Tier tier) {
+    int num_blanks, num_x, num_o;
+    UnhashTier(tier, &num_blanks, &num_x, &num_o);
+    if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;
+    if (num_blanks + num_x + num_o != GetBoardSize()) {
+        return kIllegalGameTierError;
+    }
+
+    int actual_length = snprintf(name, kDbFileNameLengthMax + 1,
+                                 "%dBlank_%dX_%dO", num_blanks, num_x, num_o);
+    if (actual_length >= kDbFileNameLengthMax + 1) {
+        fprintf(stderr, "QuixoGetTierName: (BUG) tier db filename overflow\n");
+        return kMemoryOverflowError;
+    }
+
+    return kNoError;
 }
 
 static void UpdateEdgeSlots(void) {

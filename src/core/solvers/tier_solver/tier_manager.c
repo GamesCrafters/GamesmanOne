@@ -549,8 +549,10 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
         operation = "checking";
     }
     if (verbose > 0) {
-        printf("Finished %s tier %" PRITier " ", operation, tier);
-        printf("of size %" PRId64 ", ", tier_size);
+        char tier_name[kDbFileNameLengthMax + 1];
+        current_api.GetTierName(tier_name, tier);
+        printf("Finished %s tier [%s] ", operation, tier_name);
+        printf("(#%" PRITier ") of size %" PRId64 ", ", tier, tier_size);
 
         int64_t remaining_size = total_size - processed_size;
         printf("remaining size %" PRId64 ". ", remaining_size);
@@ -730,14 +732,21 @@ static int TestTierTree(long seed) {
            total_tiers, total_canonical_tiers, total_size,
            TierQueueSize(&pending_tiers));
 
+    char tier_name[kDbFileNameLengthMax + 1];
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
         if (IsCanonicalTier(tier)) {  // Only test canonical tiers.
             time_t begin = time(NULL);
-            printf("Testing tier %" PRITier " of size %" PRId64 "...", tier,
-                   current_api.GetTierSize(tier));
-            int error = TierWorkerTest(tier, seed);
-            if (error == 0) {
+            int error = current_api.GetTierName(tier_name, tier);
+            if (error != kNoError) {
+                printf("Failed to get name of tier %" PRITier "\n", tier);
+                return kTierSolverTestGetTierNameError;
+            }
+
+            printf("Testing tier [%s] (#%" PRITier ") of size %" PRId64 "... ",
+                   tier_name, tier, current_api.GetTierSize(tier));
+            error = TierWorkerTest(tier, seed);
+            if (error == kTierSolverTestNoError) {
                 // Test passed.
                 SolveUpdateTierTree(tier);
                 ++processed_tiers;
