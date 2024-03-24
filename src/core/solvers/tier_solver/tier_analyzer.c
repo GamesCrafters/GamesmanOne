@@ -273,6 +273,10 @@ static bool Step3Discover(Analysis *dest) {
     return success;
 }
 
+static bool IsPrimitive(TierPosition tier_position) {
+    return current_api->Primitive(tier_position) != kUndecided;
+}
+
 static bool DiscoverHelper(Analysis *dest) {
     bool success = true;
 
@@ -281,6 +285,8 @@ static bool DiscoverHelper(Analysis *dest) {
         if (!success) continue;
 
         TierPosition parent = {.tier = this_tier, .position = fringe.array[i]};
+        if (IsPrimitive(parent)) continue;  // Skip primitive positions.
+
         TierPositionArray children = GetChildPositions(parent, dest);
         if (children.size < 0) {
             success = false;

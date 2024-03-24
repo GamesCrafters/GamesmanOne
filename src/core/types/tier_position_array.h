@@ -59,10 +59,14 @@ bool TierPositionArrayAppend(TierPositionArray *array,
 
 /**
  * @brief Returns the last TierPosition in ARRAY.
- * 
+ *
  * @param array Source tier position array.
  * @return Last item in ARRAY.
  */
 TierPosition TierPositionArrayBack(const TierPositionArray *array);
+
+/** @brief Returns whether the given TierPosition ARRAY contains the TARGET. */
+bool TierPositionArrayContains(const TierPositionArray *array,
+                               TierPosition target);
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H

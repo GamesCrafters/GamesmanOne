@@ -39,6 +39,20 @@ void Int64ArrayInit(Int64Array *array) {
     array->capacity = 0;
 }
 
+bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
+    Int64ArrayInit(dest);
+    if (src->size == 0) return true;
+
+    dest->array = (int64_t *)malloc(src->size * sizeof(int64_t));
+    if (dest->array == NULL) return false;
+
+    memcpy(dest->array, src->array, src->size * sizeof(int64_t));
+    dest->size = src->size;
+    dest->capacity = src->size;
+
+    return true;
+}
+
 void Int64ArrayDestroy(Int64Array *array) {
     free(array->array);
     array->array = NULL;
@@ -87,7 +101,8 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     return false;
 }
 
-void Int64ArraySort(Int64Array *array, int (*comp)(const void *, const void *)) {
+void Int64ArraySort(Int64Array *array,
+                    int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
 }
 

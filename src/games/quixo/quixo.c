@@ -72,10 +72,13 @@ static const GameVariantOption kQuixoRules = {
 };
 
 #define NUM_OPTIONS 2  // 1 option and 1 zero-terminator
-static GameVariantOption options[NUM_OPTIONS];
-static int selections[NUM_OPTIONS] = {0, 0};  // Default "5x5 5-in-a-row".
+static GameVariantOption quixo_variant_options[NUM_OPTIONS];
+static int quixo_variant_option_selections[NUM_OPTIONS] = {0, 0};  // 5x5
 #undef NUM_OPTIONS
-static GameVariant current_variant;
+static GameVariant current_variant = {
+    .options = quixo_variant_options,
+    .selections = quixo_variant_option_selections,
+};
 
 // Solver API Setup
 static const TierSolverApi kQuixoSolverApi = {
@@ -88,8 +91,8 @@ static const TierSolverApi kQuixoSolverApi = {
     .DoMove = &QuixoDoMove,
     .IsLegalPosition = &QuixoIsLegalPosition,
     .GetCanonicalPosition = &QuixoGetCanonicalPosition,
-    .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
-    .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
+    // .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
+    // .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
     .GetChildTiers = &QuixoGetChildTiers,
     .GetCanonicalTier = &QuixoGetCanonicalTier,
@@ -149,14 +152,14 @@ const Game kQuixo = {
     .formal_name = "Quixo",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kQuixoSolverApi,
-    .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,  // TODO
-    .uwapi = NULL,                                           // TODO
+    .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,
+    .uwapi = NULL,  // TODO
 
     .Init = &QuixoInit,
     .Finalize = &QuixoFinalize,
 
-    .GetCurrentVariant = NULL,
-    .SetVariantOption = NULL,
+    .GetCurrentVariant = &QuixoGetCurrentVariant,
+    .SetVariantOption = &QuixoSetVariantOption,
 };
 
 // -----------------------------------------------------------------------------
@@ -225,18 +228,9 @@ static void Mirror(int *dest, int *src);
 static int GetShiftOffset(int src, int dest);
 
 static int QuixoInit(void *aux) {
-    (void)aux;                    // Unused.
-    board_rows = board_cols = 5;  // TODO: add variants.
-    k_in_a_row = 5;
-    UpdateEdgeSlots();
-    int ret = InitGenericHash();
-    if (ret != kNoError) return ret;
-
-    QuixoSetInitialTier();
-    QuixoSetInitialPosition();
-    QuixoInitSymmMatrix();
-
-    return kNoError;
+    (void)aux;  // Unused.
+    quixo_variant_options[0] = kQuixoRules;
+    return QuixoSetVariantOption(0, 0);  // Initialize the default variant.
 }
 
 static int InitGenericHash(void) {
@@ -259,15 +253,9 @@ static int InitGenericHash(void) {
                 pieces_init_array[1] = pieces_init_array[2] = num_blanks;
                 pieces_init_array[4] = pieces_init_array[5] = num_x;
                 pieces_init_array[7] = pieces_init_array[8] = num_o;
-
-                int player = kTwoPlayerInitializer;
-                if (num_blanks == board_size) {
-                    player = 1;  // X always goes first.
-                } else if (num_blanks == board_size - 1) {
-                    player = 2;  // O always flips the second piece.
-                }
-                success = GenericHashAddContext(player, GetBoardSize(),
-                                                pieces_init_array, NULL, tier);
+                success =
+                    GenericHashAddContext(kTwoPlayerInitializer, GetBoardSize(),
+                                          pieces_init_array, NULL, tier);
                 if (!success) {
                     fprintf(
                         stderr,
@@ -288,8 +276,8 @@ static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o) {
     int board_size = GetBoardSize();
     if (num_blanks < 0 || num_x < 0 || num_o < 0) return false;
     if (num_blanks + num_x + num_o != board_size) return false;
-    if (num_blanks == board_size - 2) return num_x == 1 && num_o == 1;
-    if (num_blanks == board_size - 1) return num_x == 1 && num_o == 0;
+    // if (num_blanks == board_size - 2) return num_x == 1 && num_o == 1;
+    // if (num_blanks == board_size - 1) return num_x == 1 && num_o == 0;
 
     return true;
 }
@@ -303,15 +291,43 @@ static const GameVariant *QuixoGetCurrentVariant(void) {
     return &current_variant;
 }
 
+static int QuixoInitVariant(int rows, int cols, int k) {
+    board_rows = rows;
+    board_cols = cols;
+    k_in_a_row = k;
+    UpdateEdgeSlots();
+    int ret = InitGenericHash();
+    if (ret != kNoError) return ret;
+
+    QuixoSetInitialTier();
+    QuixoSetInitialPosition();
+    QuixoInitSymmMatrix();
+
+    return kNoError;
+}
+
 static int QuixoSetVariantOption(int option, int selection) {
+    // There is only one option in the game, and the selection must be between 0
+    // to num_choices - 1 inclusive.
     if (option != 0 || selection < 0 || selection >= kQuixoRules.num_choices) {
         return kRuntimeError;
     }
 
-    selections[0] = selection;
+    quixo_variant_option_selections[0] = selection;
     switch (selection) {
-        
+        case 0:  // 5x5 5-in-a-row
+            return QuixoInitVariant(5, 5, 5);
+        case 1:  // 4x4 4-in-a-row
+            return QuixoInitVariant(4, 4, 4);
+        case 2:  // 3x3 3-in-a-row
+            return QuixoInitVariant(3, 3, 3);
+        case 3:  // 4x5 4-in-a-row
+            return QuixoInitVariant(4, 5, 4);
+        default:
+            return kIllegalGameVariantError;
     }
+
+    return kNoError;
 }
 
 static Tier QuixoGetInitialTier(void) { return initial_tier; }
@@ -561,6 +577,30 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
     return children;
 }
 
+static bool IsCorrectFlipping(Tier child, Tier parent, int child_turn) {
+    // Not flipping is always allowed.
+    if (child == parent) return true;
+
+    int child_num_blanks, child_num_x, child_num_o;
+    UnhashTier(child, &child_num_blanks, &child_num_x, &child_num_o);
+
+    int parent_num_blanks, parent_num_x, parent_num_o;
+    UnhashTier(parent, &parent_num_blanks, &parent_num_x, &parent_num_o);
+
+    assert(child_num_blanks >= 0 && child_num_x >= 0 && child_num_o >= 0);
+    assert(child_num_blanks + child_num_x + child_num_o == GetBoardSize());
+    assert(parent_num_blanks >= 0 && parent_num_x >= 0 && parent_num_o >= 0);
+    assert(parent_num_blanks + parent_num_x + parent_num_o == GetBoardSize());
+    assert(child_num_blanks == parent_num_blanks - 1);
+
+    if (child_num_x == parent_num_x + 1) {  // Flipping an X.
+        return child_turn == 2;  // Must be O's turn at child position.
+    }
+    // Else, flipping an O.
+    assert(child_num_o == parent_num_o + 1);
+    return child_turn == 1;
+}
+
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier) {
     //
@@ -571,6 +611,8 @@ static PositionArray QuixoGetCanonicalParentPositions(
 
     int turn = GenericHashGetTurnLabel(tier, position);
     assert(turn == 1 || turn == 2);
+    if (!IsCorrectFlipping(tier, parent_tier, turn)) return parents;
+    
     int prior_turn = OpponentsTurn(turn);  // Player who made the last move.
     bool flipped = (tier != parent_tier);  // Tier must be different if flipped.
     char opponents_piece = kPlayerPiece[prior_turn];
@@ -617,9 +659,13 @@ static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
                                                 Tier symmetric) {
     Tier this_tier = tier_position.tier;
     Position this_position = tier_position.position;
+
+    // If applying tier symmetry to the same tier, return the original position.
+    if (symmetric == this_tier) return this_position;
+
+    // Otherwise, swap X and O pieces and swap the turn.
     assert(QuixoGetCanonicalTier(symmetric) ==
            QuixoGetCanonicalTier(this_tier));
-
     char board[kBoardSizeMax];
     bool success = GenericHashUnhashLabel(this_tier, this_position, board);
     if (!success) return -1;
@@ -647,13 +693,14 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     assert(num_blanks >= 0 && num_x >= 0 && num_o >= 0);
     TierArray children;
     TierArrayInit(&children);
-    if (num_blanks == board_size) {
+    /*if (num_blanks == board_size) {
         Tier next = HashTier(num_blanks - 1, 1, 0);
         TierArrayAppend(&children, next);
     } else if (num_blanks == board_size - 1) {
         Tier next = HashTier(num_blanks - 1, 1, 1);
         TierArrayAppend(&children, next);
-    } else if (num_blanks > 0) {
+    } else */
+    if (num_blanks > 0) {
         Tier x_flipped = HashTier(num_blanks - 1, num_x + 1, num_o);
         Tier o_flipped = HashTier(num_blanks - 1, num_x, num_o + 1);
         TierArrayAppend(&children, x_flipped);
@@ -700,29 +747,35 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
                                           tier_position.position, board);
     if (!success) return kRuntimeError;
 
-    // TODO: hardcoding 5X5, change later!
+    int offset = 0;
+    for (int r = 0; r < board_rows; ++r) {
+        if (r == (board_rows - 1) / 2) {
+            offset += sprintf(buffer + offset, "LEGEND: ");
+        } else {
+            offset += sprintf(buffer + offset, "        ");
+        }
 
-    static ConstantReadOnlyString kFormat =
-        "         (  1  2  3  4  5)          : %c %c %c %c %c\n"
-        "LEGEND:  (  6  7  8  9 10)   BOARD: : %c %c %c %c %c\n"
-        "         ( 11 12 13 14 15)          : %c %c %c %c %c\n"
-        "         ( 16 17 18 19 20)          : %c %c %c %c %c\n"
-        "         ( 21 22 23 24 25)          : %c %c %c %c %c\n";
+        for (int c = 0; c < board_cols; ++c) {
+            int index = r * board_cols + c + 1;
+            if (c == 0) {
+                offset += sprintf(buffer + offset, "(%2d", index);
+            } else {
+                offset += sprintf(buffer + offset, " %2d", index);
+            }
+        }
+        offset += sprintf(buffer + offset, ")");
 
-    int actual_length = snprintf(
-        buffer, QuixoGameplayApiCommon.position_string_length_max + 1, kFormat,
-        board[0], board[1], board[2], board[3], board[4], board[5], board[6],
-        board[7], board[8], board[9], board[10], board[11], board[12],
-        board[13], board[14], board[15], board[16], board[17], board[18],
-        board[19], board[20], board[21], board[22], board[23], board[24]);
+        if (r == (board_rows - 1) / 2) {
+            offset += sprintf(buffer + offset, "    BOARD: : ");
+        } else {
+            offset += sprintf(buffer + offset, "           : ");
+        }
 
-    if (actual_length >=
-        QuixoGameplayApiCommon.position_string_length_max + 1) {
-        fprintf(
-            stderr,
-            "QuixoTierPositionToString: (BUG) not enough space was allocated "
-            "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
+        for (int c = 0; c < board_cols; ++c) {
+            int index = r * board_cols + c;
+            offset += sprintf(buffer + offset, "%c ", board[index]);
+        }
+        offset += sprintf(buffer + offset, "\n");
     }
     return kNoError;
 }

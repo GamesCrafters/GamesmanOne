@@ -295,7 +295,10 @@ enum TierSolverTestErrors {
     kTierSolverTestDependencyError,
     kTierSolverTestGetTierNameError,
     kTierSolverTestIllegalChildError,
+    kTierSolverTestTierSymmetrySelfMappingError,
+    kTierSolverTestTierSymmetryInconsistentError,
     kTierSolverTestChildParentMismatchError,
+    kTierSolverTestParentChildMismatchError,
 };
 
 /** @brief Solver options of the Tier Solver. */

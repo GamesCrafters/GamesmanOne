@@ -202,9 +202,21 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
         case kTierSolverTestIllegalChildError:
             return "an illegal position was found to be a child position of "
                    "some legal position";
+        case kTierSolverTestTierSymmetrySelfMappingError:
+            return "applying tier symmetry within the same tier returned a "
+                   "different position";
+        case kTierSolverTestTierSymmetryInconsistentError:
+            return "applying tier symmetry twice - first using a symmetric "
+                   "tier, then using the original tier - returned a different "
+                   "position";
         case kTierSolverTestChildParentMismatchError:
-            return "one of the child positions of a legal position was found "
-                   "not to have that legal position as its parent";
+            return "one of the canonical child positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "parent";
+        case kTierSolverTestParentChildMismatchError:
+            return "one of the canonical parent positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "child";
     }
 
     return "unknown error, which usually indicates a bug in the tier solver "

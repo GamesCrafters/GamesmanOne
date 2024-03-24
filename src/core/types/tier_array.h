@@ -37,6 +37,9 @@ typedef Int64Array TierArray;
 /** @brief Initializes the Tier ARRAY. */
 void TierArrayInit(TierArray *array);
 
+/** @brief Initializes the DEST tier array as a copy of tier array SRC. */
+bool TierArrayInitCopy(TierArray *dest, const TierArray *src);
+
 /** @brief Destroys the Tier ARRAY. */
 void TierArrayDestroy(TierArray *array);
 

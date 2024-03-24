@@ -32,6 +32,10 @@
 
 void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
 
+bool TierArrayInitCopy(TierArray *dest, const TierArray *src) {
+    return Int64ArrayInitCopy(dest, src);
+}
+
 void TierArrayDestroy(TierArray *array) { Int64ArrayDestroy(array); }
 
 bool TierArrayAppend(TierArray *array, Tier tier) {

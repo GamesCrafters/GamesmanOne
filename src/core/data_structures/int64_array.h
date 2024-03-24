@@ -62,6 +62,16 @@ typedef struct Int64Array {
 void Int64ArrayInit(Int64Array *array);
 
 /**
+ * @brief Initializes DEST array to be a copy of the SRC array.
+ * 
+ * @param dest Array to initialize.
+ * @param src Source array to copy from.
+ * @return true on success, or
+ * @return false otherwise.
+ */
+bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src);
+
+/**
  * @brief Deallocates ARRAY.
  *
  * @param array Array to deallocate.

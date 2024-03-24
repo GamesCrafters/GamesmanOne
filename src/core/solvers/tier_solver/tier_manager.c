@@ -104,6 +104,7 @@ static Analysis game_analysis;
 // Helper functions.
 
 static int InitGlobalVariables(int type);
+static TierArray PopParentTiers(Tier child);
 static TierArray GetParentTiers(Tier child);
 static void DestroyGlobalVariables(void);
 
@@ -230,8 +231,12 @@ static int InitGlobalVariables(int type) {
     return BuildTierTree(type);
 }
 
-static TierArray GetParentTiers(Tier child) {
+static TierArray PopParentTiers(Tier child) {
     return ReverseTierGraphPopParentsOf(&reverse_tier_graph, child);
+}
+
+static TierArray GetParentTiers(Tier child) {
+    return ReverseTierGraphGetParentsOf(&reverse_tier_graph, child);
 }
 
 static void DestroyGlobalVariables(void) {
@@ -509,7 +514,7 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
 #endif  // USE_MPI
 
 static void SolveUpdateTierTree(Tier solved_tier) {
-    TierArray parent_tiers = GetParentTiers(solved_tier);
+    TierArray parent_tiers = PopParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
@@ -681,7 +686,12 @@ static int DiscoverTierTree(bool force, int verbose) {
 }
 
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
-    if (verbose > 0) printf("\n--- Tier %" PRITier " analyzed ---\n", tier);
+    char tier_name[kDbFileNameLengthMax + 1];
+    current_api.GetTierName(tier_name, tier);
+    if (verbose > 0) {
+        printf("\n--- Tier [%s] (#%" PRITier ") analyzed ---\n", tier_name,
+               tier);
+    }
     if (verbose > 1) {
         AnalysisPrintEverything(stdout, analysis);
     } else if (verbose > 0) {
@@ -745,7 +755,9 @@ static int TestTierTree(long seed) {
 
             printf("Testing tier [%s] (#%" PRITier ") of size %" PRId64 "... ",
                    tier_name, tier, current_api.GetTierSize(tier));
-            error = TierWorkerTest(tier, seed);
+            TierArray parent_tiers = GetParentTiers(tier);
+            error = TierWorkerTest(tier, &parent_tiers, seed);
+            TierArrayDestroy(&parent_tiers);
             if (error == kTierSolverTestNoError) {
                 // Test passed.
                 SolveUpdateTierTree(tier);
