@@ -503,7 +503,6 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
             TierArrayAppend(&solving_tiers, tier);
         } else {
             // No solvable tiers available, let the worker node go to sleep.
-            printf("Sending worker %d to sleep\n", worker_rank);
             TierMpiManagerSendSleep(worker_rank);
         }
     }
