@@ -605,9 +605,6 @@ static void PrintSummary(FILE *stream, const Analysis *analysis,
         fprintf(stream, "\n\tHash space: %" PRId64 " | Hash efficiency: %f\n",
                 analysis->hash_size, AnalysisGetHashEfficiency(analysis));
     }
-    fprintf(stream,
-            "Example drawing position: %" PRId64 " in tier %" PRId64 "\n",
-            analysis->draw_example.position, analysis->draw_example.tier);
 }
 
 static int WidthOf(int64_t n) {
