@@ -34,10 +34,7 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
     TierPosition tier_position);
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
-static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
-                                                Tier symmetric);
 static TierArray QuixoGetChildTiers(Tier tier);
-static Tier QuixoGetCanonicalTier(Tier tier);
 static int QuixoGetTierName(char *name, Tier tier);
 
 // Gameplay
@@ -91,11 +88,9 @@ static const TierSolverApi kQuixoSolverApi = {
     .DoMove = &QuixoDoMove,
     .IsLegalPosition = &QuixoIsLegalPosition,
     .GetCanonicalPosition = &QuixoGetCanonicalPosition,
-    // .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
-    // .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
-    .GetPositionInSymmetricTier = &QuixoGetPositionInSymmetricTier,
+    .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
+    .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
     .GetChildTiers = &QuixoGetChildTiers,
-    .GetCanonicalTier = &QuixoGetCanonicalTier,
     .GetTierName = &QuixoGetTierName,
 };
 
@@ -655,51 +650,13 @@ static PositionArray QuixoGetCanonicalParentPositions(
     return parents;
 }
 
-static Position QuixoGetPositionInSymmetricTier(TierPosition tier_position,
-                                                Tier symmetric) {
-    Tier this_tier = tier_position.tier;
-    Position this_position = tier_position.position;
-
-    // If applying tier symmetry to the same tier, return the original position.
-    if (symmetric == this_tier) return this_position;
-
-    // Otherwise, swap X and O pieces and swap the turn.
-    assert(QuixoGetCanonicalTier(symmetric) ==
-           QuixoGetCanonicalTier(this_tier));
-    char board[kBoardSizeMax];
-    bool success = GenericHashUnhashLabel(this_tier, this_position, board);
-    if (!success) return -1;
-
-    // Swap all 'X' and 'O' pieces on the board.
-    for (int i = 0; i < GetBoardSize(); ++i) {
-        if (board[i] == kX) {
-            board[i] = kO;
-        } else if (board[i] == kO) {
-            board[i] = kX;
-        }
-    }
-
-    int turn = GenericHashGetTurnLabel(this_tier, this_position);
-    int opponents_turn = OpponentsTurn(turn);
-
-    return GenericHashHashLabel(symmetric, board, opponents_turn);
-}
-
 static TierArray QuixoGetChildTiers(Tier tier) {
     int num_blanks, num_x, num_o;
     UnhashTier(tier, &num_blanks, &num_x, &num_o);
-    int board_size = GetBoardSize();
-    assert(num_blanks + num_x + num_o == board_size);
+    assert(num_blanks + num_x + num_o == GetBoardSize());
     assert(num_blanks >= 0 && num_x >= 0 && num_o >= 0);
     TierArray children;
     TierArrayInit(&children);
-    /*if (num_blanks == board_size) {
-        Tier next = HashTier(num_blanks - 1, 1, 0);
-        TierArrayAppend(&children, next);
-    } else if (num_blanks == board_size - 1) {
-        Tier next = HashTier(num_blanks - 1, 1, 1);
-        TierArrayAppend(&children, next);
-    } else */
     if (num_blanks > 0) {
         Tier x_flipped = HashTier(num_blanks - 1, num_x + 1, num_o);
         Tier o_flipped = HashTier(num_blanks - 1, num_x, num_o + 1);
@@ -708,17 +665,6 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     }  // no children for tiers with num_blanks == 0
 
     return children;
-}
-
-static Tier QuixoGetCanonicalTier(Tier tier) {
-    int num_blanks, num_x, num_o;
-    UnhashTier(tier, &num_blanks, &num_x, &num_o);
-
-    // Swap the number of Xs and Os.
-    Tier symm = HashTier(num_blanks, num_o, num_x);
-
-    // Return the smaller of the two.
-    return (tier < symm) ? tier : symm;
 }
 
 static int QuixoGetTierName(char *name, Tier tier) {
