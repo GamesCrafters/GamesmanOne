@@ -59,7 +59,7 @@ static const int kOpeningCreditsMessageSize = 24;
 #ifndef USE_MPI
 static ConstantReadOnlyString kOpeningCreditsNoMessage = "........................";
 #else  // USE_MPI defined.
-static ConstantReadOnlyString kOpeningCreditsMpiMessage = " Compiled with Open MPI ";
+static ConstantReadOnlyString kOpeningCreditsMpiMessage = "      MPI Enabled       ";
 #endif  // USE_MPI
 
 static void PrintOpeningCredits(void) {
