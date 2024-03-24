@@ -579,6 +579,7 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
         }
         printf("Estimated time remaining: %s.\n", time_string);
     }
+    fflush(stdout);
 }
 
 static void PrintSolverResult(double time_elapsed) {
