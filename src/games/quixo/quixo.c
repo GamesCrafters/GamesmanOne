@@ -30,6 +30,7 @@ static Value QuixoPrimitive(TierPosition tier_position);
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move);
 static bool QuixoIsLegalPosition(TierPosition tier_position);
 static Position QuixoGetCanonicalPosition(TierPosition tier_position);
+static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position);
 static TierPositionArray QuixoGetCanonicalChildPositions(
     TierPosition tier_position);
 static PositionArray QuixoGetCanonicalParentPositions(
@@ -88,6 +89,8 @@ static const TierSolverApi kQuixoSolverApi = {
     .DoMove = &QuixoDoMove,
     .IsLegalPosition = &QuixoIsLegalPosition,
     .GetCanonicalPosition = &QuixoGetCanonicalPosition,
+    .GetNumberOfCanonicalChildPositions =
+        &QuixoGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = &QuixoGetCanonicalChildPositions,
     .GetCanonicalParentPositions = &QuixoGetCanonicalParentPositions,
     .GetChildTiers = &QuixoGetChildTiers,
@@ -525,6 +528,48 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     return canonical_position;
 }
 
+static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
+    //
+    int count = 0;
+    Tier tier = tier_position.tier;
+    Position position = tier_position.position;
+    char board[kBoardSizeMax];
+    bool success = GenericHashUnhashLabel(tier, position, board);
+    if (!success) return -1;
+
+    int turn = GenericHashGetTurnLabel(tier, position);
+    int next_turn = OpponentsTurn(turn);
+    char piece_to_move = kPlayerPiece[turn];
+    TierPositionHashSet deduplication_set;
+    TierPositionHashSetInit(&deduplication_set, 0.5);
+
+    // Find all blank or friendly pieces on 4 edges and 4 corners of the board.
+    for (int i = 0; i < num_edge_slots; ++i) {
+        int edge_index = edge_indices[i];
+        char piece = board[edge_index];
+        // Skip opponent pieces, which cannot be moved.
+        if (piece != kBlank && piece != piece_to_move) continue;
+
+        for (int j = 0; j < edge_move_count[i]; ++j) {
+            int src = edge_index, dest = edge_move_dests[i][j];
+            MoveAndShiftPieces(board, src, dest, piece_to_move);  // Do move.
+            bool flip = (piece == kBlank);
+            TierPosition child = {.tier = GetChildTier(tier, turn, flip)};
+            child.position = GenericHashHashLabel(child.tier, board, next_turn);
+            MoveAndShiftPieces(board, dest, src, piece);  // Undo move.
+            child.position = QuixoGetCanonicalPosition(child);
+            if (TierPositionHashSetContains(&deduplication_set, child)) {
+                continue;  // Already included.
+            }
+            TierPositionHashSetAdd(&deduplication_set, child);
+            ++count;
+        }
+    }
+    TierPositionHashSetDestroy(&deduplication_set);
+
+    return count;
+}
+
 static TierPositionArray QuixoGetCanonicalChildPositions(
     TierPosition tier_position) {
     //
@@ -607,7 +652,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
     int turn = GenericHashGetTurnLabel(tier, position);
     assert(turn == 1 || turn == 2);
     if (!IsCorrectFlipping(tier, parent_tier, turn)) return parents;
-    
+
     int prior_turn = OpponentsTurn(turn);  // Player who made the last move.
     bool flipped = (tier != parent_tier);  // Tier must be different if flipped.
     char opponents_piece = kPlayerPiece[prior_turn];
