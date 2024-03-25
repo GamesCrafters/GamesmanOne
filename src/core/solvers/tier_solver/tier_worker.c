@@ -54,12 +54,14 @@
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR PRAGMA(omp for)
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
 #else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
@@ -649,7 +651,7 @@ static bool PushFrontierHelper(
     bool success = true;
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_index = 0;
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                           &child_index, remoteness,
@@ -982,4 +984,5 @@ static int TestPrintError(Tier tier, Position position) {
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
 #undef PRAGMA_OMP_FOR
+#undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_PARALLEL_FOR
