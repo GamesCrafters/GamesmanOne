@@ -756,6 +756,7 @@ static int TestTierTree(long seed) {
             printf("Testing tier [%s] (#%" PRITier ") of size %" PRId64 "... ",
                    tier_name, tier, current_api.GetTierSize(tier));
             TierArray parent_tiers = GetParentTiers(tier);
+            TierArrayAppend(&parent_tiers, tier);
             error = TierWorkerTest(tier, &parent_tiers, seed);
             TierArrayDestroy(&parent_tiers);
             if (error == kTierSolverTestNoError) {

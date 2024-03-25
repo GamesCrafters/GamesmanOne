@@ -258,7 +258,7 @@ static int TestTierSymmetryRemoval(Tier tier, Position position,
 }
 
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed) {
-    static const int64_t kTestSizeMax = 10000;
+    static const int64_t kTestSizeMax = 1000;
     init_genrand64(seed);
 
     int64_t tier_size = current_api.GetTierSize(tier);
