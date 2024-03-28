@@ -418,7 +418,7 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
         TierPosition child_tier_position = {.tier = child_tier};
         int tid = GetThreadId();
 
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < child_tier_size; ++position) {
             child_tier_position.position = position;
             Value value = DbManagerProbeValue(&probe, child_tier_position);
@@ -449,7 +449,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
         TierPosition canonical_tier_position = {.tier = canonical_tier};
         int tid = GetThreadId();
 
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (int64_t position = 0; position < child_tier_size; ++position) {
             canonical_tier_position.position = position;
             Value value = DbManagerProbeValue(&probe, canonical_tier_position);
