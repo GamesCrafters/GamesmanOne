@@ -53,14 +53,12 @@
 #include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR PRAGMA(omp for)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
 #else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
@@ -983,6 +981,5 @@ static int TestPrintError(Tier tier, Position position) {
 
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
-#undef PRAGMA_OMP_FOR
 #undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_PARALLEL_FOR
