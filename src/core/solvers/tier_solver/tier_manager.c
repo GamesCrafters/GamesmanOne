@@ -121,6 +121,7 @@ static int SolveTierTreeMpi(bool force, int verbose);
 static void SolveTierTreeMpiTerminateWorkers(void);
 static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
                                      int verbose);
+static void PrintDispatchMessage(Tier tier, int worker_rank);
 #endif  // USE_MPI
 static void SolveUpdateTierTree(Tier solved_tier);
 static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
@@ -496,8 +497,7 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
         if (!TierQueueEmpty(&pending_tiers)) {
             // A solvable tier is available, dispatch it to the worker node.
             Tier tier = TierQueuePop(&pending_tiers);
-            printf("Dispatching tier %" PRITier " to worker %d.\n", tier,
-                   worker_rank);
+            PrintDispatchMessage(tier, worker_rank);
             job_list[worker_rank] = tier;
             TierMpiManagerSendSolve(worker_rank, tier, force);
             TierArrayAppend(&solving_tiers, tier);
@@ -508,6 +508,14 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
     }
 
     TierArrayDestroy(&solving_tiers);
+}
+
+static void PrintDispatchMessage(Tier tier, int worker_rank) {
+    char tier_name[kDbFileNameLengthMax + 1];
+    current_api.GetTierName(tier_name, tier);
+    printf("Dispatching tier [%s] (#%" PRITier ") to worker %d.\n", tier_name,
+           tier, worker_rank);
+    fflush(stdout);
 }
 
 #endif  // USE_MPI
