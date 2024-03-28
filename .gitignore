@@ -1,6 +1,6 @@
 # Automatic directories
 bin
-data
+data*
 
 # Prerequisites
 *.d

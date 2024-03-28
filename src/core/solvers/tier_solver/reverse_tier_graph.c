@@ -7,9 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseTierGraph type.
- *
- * @version 1.0.0
- * @date 2024-01-19
+ * @version 1.1.0
+ * @date 2024-03-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
