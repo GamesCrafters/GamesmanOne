@@ -528,7 +528,7 @@ static bool Step3ScanTier(void) {
 
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < this_tier_size; ++position) {
             TierPosition tier_position = {.tier = this_tier,
                                           .position = position};
