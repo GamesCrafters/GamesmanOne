@@ -28,7 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdlib.h>   // calloc, free
+#include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // memset
 
 #include "core/analysis/analysis.h"
@@ -72,8 +72,9 @@ static BitStream *child_tier_maps;
 static omp_lock_t *child_tier_map_locks;
 #endif  // _OPENMP
 
-static PositionArray fringe;      // Discovered but unprocessed positions.
-static PositionArray discovered;  // Newly discovered positions.
+static int num_threads;            // Number of threads available.
+static PositionArray *fringe;      // Discovered but unprocessed positions.
+static PositionArray *discovered;  // Newly discovered positions.
 
 static int AnalysisStatus(Tier tier);
 
@@ -90,7 +91,7 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
                                            Analysis *dest);
 static bool IsCanonicalPosition(TierPosition tier_position);
 static bool DiscoverHelper(Analysis *dest);
-static bool DiscoverHelperProcessThisTier(Position child);
+static bool DiscoverHelperProcessThisTier(Position child, int tid);
 static bool DiscoverHelperProcessChildTier(TierPosition child);
 
 static bool Step4SaveChildMaps(void);
@@ -100,6 +101,12 @@ static bool Step5Analyze(Analysis *dest);
 static bool Step6SaveAnalysis(const Analysis *dest);
 
 static void Step7CleanUp(void);
+
+static int GetThreadId(void);
+static int64_t GetFringeSize(void);
+static int64_t *MakeFringeOffsets(void);
+static void DestroyFringe(PositionArray *target);
+static void InitFringe(PositionArray *target);
 
 // -----------------------------------------------------------------------------
 
@@ -145,12 +152,21 @@ void TierAnalyzerFinalize(void) { current_api = NULL; }
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }
 
 static bool Step0Initialize(Analysis *dest) {
+#ifdef _OPENMP
+    num_threads = omp_get_max_threads();
+#else   // _OPENMP not defined.
+    num_threads = 1;
+#endif  // _OPENMP
     this_tier_size = current_api->GetTierSize(this_tier);
     child_tiers = GetCanonicalChildTiers(this_tier);
     if (child_tiers.size < 0) return false;
 
-    PositionArrayInit(&fringe);
-    PositionArrayInit(&discovered);
+    fringe = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
+    discovered = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
+    if (fringe == NULL || discovered == NULL) return false;
+
+    InitFringe(fringe);
+    InitFringe(discovered);
 
     TierHashMapInit(&child_tier_to_index, 0.5);
     for (int64_t i = 0; i < child_tiers.size; ++i) {
@@ -238,15 +254,17 @@ static BitStream LoadDiscoveryMap(Tier tier) {
 static bool Step2LoadFringe(void) {
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
-    for (Position position = 0; position < this_tier_size; ++position) {
-        if (!success) continue;
-        if (BitStreamGet(&this_tier_map, position)) {
-            bool append_success;
-            PRAGMA_OMP_CRITICAL(tier_analyzer_fringe) {
-                append_success = PositionArrayAppend(&fringe, position);
+    PRAGMA_OMP_PARALLEL {
+        int tid = GetThreadId();
+
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        for (Position position = 0; position < this_tier_size; ++position) {
+            if (!success) continue;
+            if (BitStreamGet(&this_tier_map, position)) {
+                bool append_success;
+                append_success = PositionArrayAppend(&fringe[tid], position);
+                if (!append_success) success = false;
             }
-            if (!append_success) success = false;
         }
     }
 
@@ -256,19 +274,20 @@ static bool Step2LoadFringe(void) {
 static bool Step3Discover(Analysis *dest) {
     bool success = true;
 
-    while (fringe.size > 0) {
+    while (GetFringeSize() > 0) {
         success = DiscoverHelper(dest);
         if (!success) break;
 
-        // Swap fringe with discovered and restart the process.
-        PositionArrayDestroy(&fringe);
+        // Swap fringe with discovered and restart.
+        DestroyFringe(fringe);
+        InitFringe(fringe);
+        PositionArray *tmp = fringe;
         fringe = discovered;
-        memset(&discovered, 0, sizeof(discovered));
-        PositionArrayInit(&discovered);
+        discovered = tmp;
     }
 
-    PositionArrayDestroy(&fringe);
-    PositionArrayDestroy(&discovered);
+    DestroyFringe(fringe);
+    DestroyFringe(discovered);
 
     return success;
 }
@@ -277,37 +296,58 @@ static bool IsPrimitive(TierPosition tier_position) {
     return current_api->Primitive(tier_position) != kUndecided;
 }
 
+static void UpdateFringeId(int *fringe_id, int64_t i,
+                           const int64_t *fringe_offsets) {
+    while (i >= fringe_offsets[*fringe_id + 1]) {
+        ++(*fringe_id);
+    }
+}
+
 static bool DiscoverHelper(Analysis *dest) {
     bool success = true;
+    int64_t *fringe_offsets = MakeFringeOffsets();
+    if (fringe_offsets == NULL) return false;
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
-    for (int64_t i = 0; i < fringe.size; ++i) {
-        if (!success) continue;
+    PRAGMA_OMP_PARALLEL {
+        int tid = GetThreadId();
+        int fringe_id = 0;
 
-        TierPosition parent = {.tier = this_tier, .position = fringe.array[i]};
-        if (IsPrimitive(parent)) continue;  // Skip primitive positions.
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
+            if (!success) continue;
 
-        TierPositionArray children = GetChildPositions(parent, dest);
-        if (children.size < 0) {
-            success = false;
-            continue;
-        }
+            UpdateFringeId(&fringe_id, i, fringe_offsets);
+            int64_t index_in_fringe = i - fringe_offsets[fringe_id];
+            TierPosition parent;
+            parent.tier = this_tier;
+            parent.position = fringe[fringe_id].array[index_in_fringe];
 
-        for (int64_t j = 0; j < children.size; ++j) {
-            TierPosition child = children.array[j];
-            if (child.tier == this_tier) {
-                DiscoverHelperProcessThisTier(child.position);
-            } else {
-                DiscoverHelperProcessChildTier(child);
+            if (IsPrimitive(parent)) continue;  // Skip primitive positions.
+
+            TierPositionArray children = GetChildPositions(parent, dest);
+            if (children.size < 0) {
+                success = false;
+                continue;
             }
+
+            for (int64_t j = 0; j < children.size; ++j) {
+                TierPosition child = children.array[j];
+                if (child.tier == this_tier) {
+                    DiscoverHelperProcessThisTier(child.position, tid);
+                } else {
+                    DiscoverHelperProcessChildTier(child);
+                }
+            }
+            TierPositionArrayDestroy(&children);
         }
-        TierPositionArrayDestroy(&children);
     }
+    free(fringe_offsets);
+    fringe_offsets = NULL;
 
     return success;
 }
 
-static bool DiscoverHelperProcessThisTier(Position child) {
+static bool DiscoverHelperProcessThisTier(Position child, int tid) {
     int error = 0;
     bool child_is_discovered;
     PRAGMA_OMP_CRITICAL(tier_analyzer_this_tier_map) {
@@ -318,11 +358,9 @@ static bool DiscoverHelperProcessThisTier(Position child) {
     }
     if (error != 0) return false;
 
-    PRAGMA_OMP_CRITICAL(tier_analyzer_discovered) {
-        // Only add each unique position to the fringe once.
-        if (!child_is_discovered) {
-            error = !PositionArrayAppend(&discovered, child);
-        }
+    // Only add each unique position to the fringe once.
+    if (!child_is_discovered) {
+        error = !PositionArrayAppend(&discovered[tid], child);
     }
     return error == 0;
 }
@@ -475,8 +513,55 @@ static void Step7CleanUp(void) {
     free(child_tier_map_locks);
     child_tier_map_locks = NULL;
 #endif  // _OPENMP
-    PositionArrayDestroy(&fringe);
-    PositionArrayDestroy(&discovered);
+
+    // Clean up fringe and discovered queues.
+    DestroyFringe(fringe);
+    DestroyFringe(discovered);
+    free(fringe);
+    free(discovered);
+}
+
+static int GetThreadId(void) {
+#ifdef _OPENMP
+    return omp_get_thread_num();
+#else   // _OPENMP not defined, thread 0 is the only available thread.
+    return 0;
+#endif  // _OPENMP
+}
+
+static int64_t GetFringeSize(void) {
+    int64_t size = 0;
+    for (int i = 0; i < num_threads; ++i) {
+        size += fringe[i].size;
+    }
+
+    return size;
+}
+
+static int64_t *MakeFringeOffsets(void) {
+    int64_t *frontier_offsets =
+        (int64_t *)malloc((num_threads + 1) * sizeof(int64_t));
+    if (frontier_offsets == NULL) return NULL;
+
+    frontier_offsets[0] = 0;
+    for (int i = 1; i <= num_threads; ++i) {
+        frontier_offsets[i] = frontier_offsets[i - 1] + fringe[i - 1].size;
+    }
+
+    return frontier_offsets;
+}
+
+static void DestroyFringe(PositionArray *target) {
+    if (target == NULL) return;
+    for (int i = 0; i < num_threads; ++i) {
+        PositionArrayDestroy(&target[i]);
+    }
+}
+
+static void InitFringe(PositionArray *target) {
+    for (int i = 0; i < num_threads; ++i) {
+        PositionArrayInit(&target[i]);
+    }
 }
 
 #undef PRAGMA
