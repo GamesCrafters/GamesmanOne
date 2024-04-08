@@ -44,16 +44,16 @@
 #include <omp.h>
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR PRAGMA(omp for)
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
+#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
 #define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
 
 // Otherwise, the following macros do nothing.
 #else
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR
-#define PRAGMA_OMP_PARALLEL_FOR
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
+#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
@@ -238,7 +238,7 @@ static BitStream LoadDiscoveryMap(Tier tier) {
 static bool Step2LoadFringe(void) {
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
     for (Position position = 0; position < this_tier_size; ++position) {
         if (!success) continue;
         if (BitStreamGet(&this_tier_map, position)) {
@@ -280,7 +280,7 @@ static bool IsPrimitive(TierPosition tier_position) {
 static bool DiscoverHelper(Analysis *dest) {
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
     for (int64_t i = 0; i < fringe.size; ++i) {
         if (!success) continue;
 
@@ -424,7 +424,7 @@ static bool Step5Analyze(Analysis *dest) {
         DbProbe probe;
         int error = DbManagerProbeInit(&probe);
         if (error == 0) {
-            PRAGMA_OMP_FOR
+            PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(4096)
             for (int64_t i = 0; i < this_tier_size; ++i) {
                 TierPosition tier_position = {.tier = this_tier, .position = i};
                 TierPosition canonical = {
@@ -481,6 +481,6 @@ static void Step7CleanUp(void) {
 
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
-#undef PRAGMA_OMP_FOR
-#undef PRAGMA_OMP_PARALLEL_FOR
+#undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
+#undef PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_CRITICAL
