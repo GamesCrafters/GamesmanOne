@@ -410,6 +410,7 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
             bool success = TierPositionHashSetAdd(&deduplication_set, child);
             if (!success) {
+                TierPositionHashSetDestroy(&deduplication_set);
                 TierPositionArrayDestroy(&ret);
                 ret.capacity = ret.size = -1;
                 return ret;
@@ -419,6 +420,7 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     // Using multiplication to avoid branching.
     int num_canonical_moves =
         deduplication_set.size * IsCanonicalPosition(tier_position);
+    TierPositionHashSetDestroy(&deduplication_set);
 
     PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
         AnalysisDiscoverMoves(dest, tier_position, moves.size,
