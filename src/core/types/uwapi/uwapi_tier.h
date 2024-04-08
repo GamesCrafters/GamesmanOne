@@ -13,8 +13,8 @@
  * @link https://github.com/GamesCrafters/GamesCraftersUWAPI
  * @link https://github.com/GamesCrafters/GamesmanUni
  *
- * @version 1.0.0
- * @date 2024-01-23
+ * @version 1.0.1
+ * @date 2024-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -48,6 +48,35 @@
  * @note All member functions are REQUIRED unless otherwise specified.
  */
 typedef struct UwapiTier {
+    /**
+     * @brief Returns the initial tier of the current game variant.
+     *
+     * @note This is typically set to the same function used by the tier
+     * solver API.
+     */
+    Tier (*GetInitialTier)(void);
+
+    /**
+     * @brief Returns the initial position (within the initial tier) of the
+     * current game variant.
+     *
+     * @note This is typically set to the same function used by the tier
+     * solver API.
+     */
+    Position (*GetInitialPosition)(void);
+
+    /**
+     * @brief Returns a random tier position of the current game variant.
+     *
+     * @note This function is optional.
+     *
+     * @todo Decide if this function should only return legal tier positions as
+     * defined by the game developer. Note that it's hard to determine whether
+     * positions are actually reachable without solving and these API functions
+     * are defined before the game is solved.
+     */
+    TierPosition (*GetRandomLegalTierPosition)(void);
+
     /**
      * @brief Returns an array of moves available at TIER_POSITION.
      *
@@ -163,35 +192,6 @@ typedef struct UwapiTier {
      * to the given MOVE at the given TIER_POSITION.
      */
     CString (*MoveToAutoGuiMove)(TierPosition tier_position, Move move);
-
-    /**
-     * @brief Returns the initial tier of the current game variant.
-     *
-     * @note This is typically set to the same function used by the tier
-     * solver API.
-     */
-    Tier (*GetInitialTier)(void);
-
-    /**
-     * @brief Returns the initial position (within the initial tier) of the
-     * current game variant.
-     *
-     * @note This is typically set to the same function used by the tier
-     * solver API.
-     */
-    Position (*GetInitialPosition)(void);
-
-    /**
-     * @brief Returns a random tier position of the current game variant.
-     *
-     * @note This function is optional.
-     *
-     * @todo Decide if this function should only return legal tier positions as
-     * defined by the game developer. Note that it's hard to determine whether
-     * positions are actually reachable without solving and these API functions
-     * are defined before the game is solved.
-     */
-    TierPosition (*GetRandomLegalTierPosition)(void);
 } UwapiTier;
 
 #endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H

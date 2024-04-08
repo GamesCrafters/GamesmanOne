@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array).
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 2.0.0
+ * @date 2024-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,6 +38,16 @@ typedef struct CString {
 } CString;
 
 /**
+ * @brief Initializes an empty CSTRING.
+ *
+ * @param cstring Target CString, which is assumed to be uninitialized.
+ * 
+ * @return true on success,
+ * @return false otherwise.
+ */
+bool CStringInit(CString *cstring);
+
+/**
  * @brief Initializes CSTRING to the same string as SRC.
  *
  * @details On success, CSTRING will have the same length as SRC with capacity
@@ -48,9 +58,35 @@ typedef struct CString {
  * @return true on success,
  * @return false otherwise.
  */
-bool CStringInit(CString *cstring, const char *src);
+bool CStringInitCopy(CString *cstring, const char *src);
 
 /** @brief Destroys the given CSTRING. */
 void CStringDestroy(CString *cstring);
+
+/**
+ * @brief Appends SRC to the end of DEST CString.
+ *
+ * @param dest Destination CString.
+ * @param src Source string.
+ * @return true on success,
+ * @return false otherwise.
+ */
+bool CStringAppend(CString *dest, const char *src);
+
+/**
+ * @brief Resizes CSTRING to SIZE. If SIZE is greater than the current size of
+ * CSTRING, characters beyond SIZE are removed; if SIZE is smaller than the
+ * current size of CSTRING, the current content is extended to SIZE characters
+ * by inserting at the end as many FILL characters as needed to reach the
+ * specified SIZE.
+ *
+ * @param cstring CString to resize.
+ * @param size New size of the CString.
+ * @param fill Fill in the new space with this character. Ignored if SIZE is
+ * smaller than the current size of CSTRING.
+ * @return true on success,
+ * @return false otherwise.
+ */
+bool CStringResize(CString *cstring, int64_t size, char fill);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_CSTRING_H_

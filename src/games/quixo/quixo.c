@@ -45,14 +45,13 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string);
 static Move QuixoStringToMove(ReadOnlyString move_string);
 
 // UWAPI
-// static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position);
-// static TierPosition QuixoFormalPositionToTierPosition(
-//     ReadOnlyString formal_position);
-// static CString QuixoTierPositionToFormalPosition(TierPosition tier_position);
-// static CString QuixoTierPositionToAutoGuiPosition(TierPosition
-// tier_position); static CString QuixoMoveToFormalMove(TierPosition
-// tier_position, Move move); static CString QuixoMoveToAutoGuiMove(TierPosition
-// tier_position, Move move);
+static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position);
+static TierPosition QuixoFormalPositionToTierPosition(
+    ReadOnlyString formal_position);
+static CString QuixoTierPositionToFormalPosition(TierPosition tier_position);
+static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position);
+static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move);
+static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move);
 
 // Variants
 
@@ -128,21 +127,23 @@ static const GameplayApi QuixoGameplayApi = {
 // -----------------------------------------------------------------------------
 // UWAPI Setup
 
-// static const UwapiTier kQuixoUwapiTier = {
-//     .GenerateMoves = &QuixoGenerateMoves,
-//     .DoMove = &QuixoDoMove,
-//     .IsLegalFormalPosition = &QuixoIsLegalFormalPosition,
-//     .FormalPositionToTierPosition = &QuixoFormalPositionToTierPosition,
-//     .TierPositionToFormalPosition = &QuixoTierPositionToFormalPosition,
-//     .TierPositionToAutoGuiPosition = &QuixoTierPositionToAutoGuiPosition,
-//     .MoveToFormalMove = &QuixoMoveToFormalMove,
-//     .MoveToAutoGuiMove = &QuixoMoveToAutoGuiMove,
-//     .GetInitialTier = &QuixoGetInitialTier,
-//     .GetInitialPosition = &QuixoGetInitialPosition,
-//     .GetRandomLegalTierPosition = NULL,
-// };
+static const UwapiTier kQuixoUwapiTier = {
+    .GetInitialTier = &QuixoGetInitialTier,
+    .GetInitialPosition = &QuixoGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
 
-// static const Uwapi QuixoUwapi = {.tier = &kQuixoUwapiTier};
+    .GenerateMoves = &QuixoGenerateMoves,
+    .DoMove = &QuixoDoMove,
+
+    .IsLegalFormalPosition = &QuixoIsLegalFormalPosition,
+    .FormalPositionToTierPosition = &QuixoFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = &QuixoTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = &QuixoTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = &QuixoMoveToFormalMove,
+    .MoveToAutoGuiMove = &QuixoMoveToAutoGuiMove,
+};
+
+static const Uwapi kQuixoUwapi = {.tier = &kQuixoUwapiTier};
 // -----------------------------------------------------------------------------
 
 const Game kQuixo = {
@@ -151,7 +152,7 @@ const Game kQuixo = {
     .solver = &kTierSolver,
     .solver_api = (const void *)&kQuixoSolverApi,
     .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kQuixoUwapi,
 
     .Init = &QuixoInit,
     .Finalize = &QuixoFinalize,
@@ -826,32 +827,118 @@ static Move QuixoStringToMove(ReadOnlyString move_string) {
 
 // Uwapi
 
-/*
 static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
+    // Check if FORMAL_POSITION is of the correct format.
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+    if (strlen(formal_position) != (size_t)(2 + GetBoardSize())) return false;
 
+    // Check if the board corresponds to a valid tier.
+    ConstantReadOnlyString board = formal_position + 2;
+    int turn = formal_position[0] - '0';
+    int num_blanks = 0, num_x = 0, num_o = 0;
+    for (int i = 0; i < GetBoardSize(); ++i) {
+        if (board[i] != kBlank && board[i] != kX && board[i] != kO) {
+            return false;
+        }
+        num_blanks += (board[i] == kBlank);
+        num_x += (board[i] == kX);
+        num_o += (board[i] == kO);
+    }
+    if (!IsValidPieceConfig(num_blanks, num_x, num_o)) return false;
+
+    // Check if the board is a valid position.
+    TierPosition tier_position = {.tier = HashTier(num_blanks, num_x, num_o)};
+    tier_position.position =
+        GenericHashHashLabel(tier_position.tier, board, turn);
+    if (!QuixoIsLegalPosition(tier_position)) return false;
+
+    return true;
 }
 
-static TierPosition QuixoFormalPositionToTierPosition(ReadOnlyString
-formal_position) {
+static TierPosition QuixoFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    //
+    ConstantReadOnlyString board = formal_position + 2;
+    int turn = formal_position[0] - '0';
+    int num_blanks = 0, num_x = 0, num_o = 0;
+    for (int i = 0; i < GetBoardSize(); ++i) {
+        num_blanks += (board[i] == kBlank);
+        num_x += (board[i] == kX);
+        num_o += (board[i] == kO);
+    }
 
+    TierPosition ret = {.tier = HashTier(num_blanks, num_x, num_o)};
+    ret.position = GenericHashHashLabel(ret.tier, board, turn);
+
+    return ret;
 }
 
 static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
+    CString ret;
+    CStringInit(&ret);
+    CStringResize(&ret, 2 + GetBoardSize(), '\0');
 
+    // Set turn.
+    int turn =
+        GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    ret.str[0] = '0' + turn;
+    ret.str[1] = '_';
+
+    // Set board.
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position,
+                           ret.str + 2);
+
+    return ret;
 }
 
 static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
-
+    return QuixoTierPositionToFormalPosition(tier_position);
 }
 
 static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused;
+    int src, dest;
+    UnpackMove(move, &src, &dest);
+    char buf[2 + 2 * kInt32Base10StringLengthMax];
+    sprintf(buf, "%d %d", src, dest);
+    CString ret;
+    CStringInitCopy(&ret, buf);
 
+    return ret;
 }
 
 static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    // Format: M_<src>_<dest>, where src is the center of the source tile and
+    // dest is an invisible center inside the source tile in the move direction.
+    // The first board_size centers (indexed from 0 - board_size - 1) correspond
+    // to the centers for the tiles. The next board_size centers (board_size - 2
+    // * board_size - 1) correspond to the destinations for all upward arrows.
+    // Then follow left, downward, and right arrows.
+    (void)tier_position;  // Unused;
+    int src, dest, dest_center, board_size = GetBoardSize();
+    UnpackMove(move, &src, &dest);
+    if (Abs(dest - src) < board_cols) {  // same row
+        if (dest < src) {                // moving left
+            dest_center = src + 2 * board_size;
+        } else {  // moving right
+            dest_center = src + 4 * board_size;
+        }
+    } else {               // same column
+        if (dest < src) {  // moving up
+            dest_center = src + board_size;
+        } else {  // moving down
+            dest_center = src + 3 * board_size;
+        }
+    }
 
+    char buf[16];
+    sprintf(buf, "M_%d_%d", src, dest_center);
+    CString ret;
+    CStringInitCopy(&ret, buf);
+
+    return ret;
 }
-*/
 
 static void UpdateEdgeSlots(void) {
     num_edge_slots = 0;
@@ -867,16 +954,6 @@ static void UpdateEdgeSlots(void) {
             ++num_edge_slots;
         }
     }
-#ifndef NDEBUG
-    for (int i = 0; i < num_edge_slots; ++i) {
-        printf("Edge slot %d has %d move destinations: ", i,
-               edge_move_count[i]);
-        for (int j = 0; j < edge_move_count[i]; ++j) {
-            printf("%d, ", edge_move_dests[i][j]);
-        }
-        printf("\n");
-    }
-#endif
 }
 
 // Assumes DESTS has enough space.
