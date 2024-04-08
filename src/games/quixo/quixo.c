@@ -274,8 +274,6 @@ static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o) {
     int board_size = GetBoardSize();
     if (num_blanks < 0 || num_x < 0 || num_o < 0) return false;
     if (num_blanks + num_x + num_o != board_size) return false;
-    // if (num_blanks == board_size - 2) return num_x == 1 && num_o == 1;
-    // if (num_blanks == board_size - 1) return num_x == 1 && num_o == 0;
 
     return true;
 }
@@ -529,7 +527,6 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
 }
 
 static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
-    //
     int count = 0;
     Tier tier = tier_position.tier;
     Position position = tier_position.position;
@@ -827,9 +824,8 @@ static Move QuixoStringToMove(ReadOnlyString move_string) {
     return ConstructMove(src - 1, dest - 1);
 }
 
-//
-
 // Uwapi
+
 /*
 static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
 
