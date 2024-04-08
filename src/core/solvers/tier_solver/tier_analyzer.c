@@ -26,10 +26,10 @@
 
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // memset
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdlib.h>   // calloc, free
+#include <string.h>   // memset
 
 #include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
@@ -363,15 +363,24 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     if (moves.size < 0) return ret;
 
     TierPositionArrayInit(&ret);
-    int num_canonical_children = 0;
+    TierPositionHashSet deduplication_set;
+    TierPositionHashSetInit(&deduplication_set, 0.5);
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = current_api->DoMove(tier_position, moves.array[i]);
         TierPositionArrayAppend(&ret, child);
-        num_canonical_children += IsCanonicalPosition(child);
+        child.position = current_api->GetCanonicalPosition(child);
+        if (!TierPositionHashSetContains(&deduplication_set, child)) {
+            bool success = TierPositionHashSetAdd(&deduplication_set, child);
+            if (!success) {
+                TierPositionArrayDestroy(&ret);
+                ret.capacity = ret.size = -1;
+                return ret;
+            }
+        }
     }
     // Using multiplication to avoid branching.
     int num_canonical_moves =
-        num_canonical_children * IsCanonicalPosition(tier_position);
+        deduplication_set.size * IsCanonicalPosition(tier_position);
 
     PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
         AnalysisDiscoverMoves(dest, tier_position, moves.size,

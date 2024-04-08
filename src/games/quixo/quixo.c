@@ -59,6 +59,7 @@ static ConstantReadOnlyString kQuixoRuleChoices[] = {
     "5x5 5-in-a-row",
     "4x4 4-in-a-row",
     "3x3 3-in-a-row",
+    "2x2 2-in-a-row",
     "4x5 4-in-a-row",
 };
 
@@ -318,7 +319,9 @@ static int QuixoSetVariantOption(int option, int selection) {
             return QuixoInitVariant(4, 4, 4);
         case 2:  // 3x3 3-in-a-row
             return QuixoInitVariant(3, 3, 3);
-        case 3:  // 4x5 4-in-a-row
+        case 3:  // 2x2 2-in-a-row
+            return QuixoInitVariant(2, 2, 2);
+        case 4:  // 4x5 4-in-a-row
             return QuixoInitVariant(4, 5, 4);
         default:
             return kIllegalGameVariantError;
