@@ -1,0 +1,163 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 504,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 512,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 524,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 556,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 559,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libjson-c.5.3.0.dylib",
+				"libjson-c.5.dylib"
+			],
+			"targetId" : "json-c::@6890427a1f51a3e7e1df",
+			"targetIndex" : 29,
+			"targetInstallNamelink" : "skip",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libjson-c.dylib"
+			],
+			"targetId" : "json-c::@6890427a1f51a3e7e1df",
+			"targetIndex" : 29,
+			"targetInstallNamelink" : "only",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libjson-c.a"
+			],
+			"targetId" : "json-c-static::@6890427a1f51a3e7e1df",
+			"targetIndex" : 30,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/json-c",
+			"exportName" : "json-c-targets",
+			"exportTargets" : 
+			[
+				{
+					"id" : "json-c::@6890427a1f51a3e7e1df",
+					"index" : 29
+				},
+				{
+					"id" : "json-c-static::@6890427a1f51a3e7e1df",
+					"index" : 30
+				}
+			],
+			"paths" : 
+			[
+				"CMakeFiles/Export/c72427da9e5c73ebf6c111c2977a0759/json-c-targets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/json-c",
+			"paths" : 
+			[
+				"/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build/json-c-config.cmake"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "lib/pkgconfig",
+			"paths" : 
+			[
+				"/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build/json-c.pc"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "/usr/local/include/json-c",
+			"paths" : 
+			[
+				"/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build/json_config.h",
+				"/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build/json.h",
+				"arraylist.h",
+				"debug.h",
+				"json_c_version.h",
+				"json_inttypes.h",
+				"json_object.h",
+				"json_object_iterator.h",
+				"json_tokener.h",
+				"json_types.h",
+				"json_util.h",
+				"json_visit.h",
+				"linkhash.h",
+				"printbuf.h",
+				"json_pointer.h",
+				"json_patch.h"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	}
+}

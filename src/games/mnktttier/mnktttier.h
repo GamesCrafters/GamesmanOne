@@ -1,11 +1,15 @@
 /**
- * @file game_list.c
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @file mnktttier.h
+ * @author Dan Garcia: designed and developed of the original version (mttt.c in
+ * GamesmanClassic.)
+ * @author Max Delgadillo: developed of the first tiered version using generic
+ * hash.
+ * @author Robert Shi (robertyishi@berkeley.edu): adapted to the new system.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Definition for the list of all games.
- * @version 1.0.0
- * @date 2024-01-24
+ * @brief Tic-Tac-Tier - Tiered Tic-Tac-Toe.
+ * @version 1.0.4
+ * @date 2024-02-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,23 +28,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_list.h"
-
-#include <stddef.h>  // NULL
+#ifndef GAMESMANONE_GAMES_MNKTTTIER_MNKTTTIER_H_
+#define GAMESMANONE_GAMES_MNKTTTIER_MNKTTTIER_H_
 
 #include "core/types/gamesman_types.h"
 
-// 1. To add a new game, include the game header here.
+extern const Game kMnktttier;
 
-#include "games/fsvp/fsvp.h"
-#include "games/mallqueenschess/mallqueenschess.h"
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-#include "games/mnktttier/mnktttier.h"
-
-// 2. Then add the new game object to the list. Note that the list must be
-// NULL-terminated.
-
-const Game *const kAllGames[] = {
-    &kFsvp, &kMtttier, &kMttt, &kMnktttier, &kMallqueenschess, NULL,
-};
+#endif  // GAMESMANONE_GAMES_MNKTTTIER_MNKTTTIER_H_

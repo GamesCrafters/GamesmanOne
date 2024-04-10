@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="Darwin-clang++"
+	BuildStamp="20240410-1813-Experimental"
+	Name="wifi-10-44-132-245.wifi.berkeley.edu"
+	Generator="ctest-3.29.0"
+	CompilerName="/usr/bin/clang++"
+	CompilerVersion=""
+	OSName="macOS"
+	Hostname="wifi-10-44-132-107.wifi.berkeley.edu"
+	OSRelease="13.6.6"
+	OSVersion="22G630"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="158"
+	ProcessorCacheSize="32768"
+	NumberOfLogicalCPU="16"
+	NumberOfPhysicalCPU="8"
+	TotalVirtualMemory="10240"
+	TotalPhysicalMemory="16384"
+	LogicalProcessorsPerPhysical="8"
+	ProcessorClockFrequency="2300"
+	>
+	<Testing>
+		<StartDateTime>Apr 10 11:13 PDT</StartDateTime>
+		<StartTestTime>1712772806</StartTestTime>
+		<TestList/>
+		<EndDateTime>Apr 10 11:13 PDT</EndDateTime>
+		<EndTestTime>1712772806</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

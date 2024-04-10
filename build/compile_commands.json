@@ -1,0 +1,350 @@
+[
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/arraylist.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/arraylist.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/arraylist.c",
+  "output": "CMakeFiles/json-c.dir/arraylist.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/debug.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/debug.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/debug.c",
+  "output": "CMakeFiles/json-c.dir/debug.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_c_version.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_c_version.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_c_version.c",
+  "output": "CMakeFiles/json-c.dir/json_c_version.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_object.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object.c",
+  "output": "CMakeFiles/json-c.dir/json_object.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_object_iterator.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object_iterator.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object_iterator.c",
+  "output": "CMakeFiles/json-c.dir/json_object_iterator.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_tokener.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_tokener.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_tokener.c",
+  "output": "CMakeFiles/json-c.dir/json_tokener.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_util.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_util.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_util.c",
+  "output": "CMakeFiles/json-c.dir/json_util.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_visit.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_visit.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_visit.c",
+  "output": "CMakeFiles/json-c.dir/json_visit.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/linkhash.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/linkhash.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/linkhash.c",
+  "output": "CMakeFiles/json-c.dir/linkhash.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/printbuf.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/printbuf.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/printbuf.c",
+  "output": "CMakeFiles/json-c.dir/printbuf.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/random_seed.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/random_seed.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/random_seed.c",
+  "output": "CMakeFiles/json-c.dir/random_seed.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/strerror_override.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/strerror_override.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/strerror_override.c",
+  "output": "CMakeFiles/json-c.dir/strerror_override.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_pointer.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_pointer.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_pointer.c",
+  "output": "CMakeFiles/json-c.dir/json_pointer.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -Djson_c_EXPORTS -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c.dir/json_patch.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_patch.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_patch.c",
+  "output": "CMakeFiles/json-c.dir/json_patch.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/arraylist.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/arraylist.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/arraylist.c",
+  "output": "CMakeFiles/json-c-static.dir/arraylist.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/debug.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/debug.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/debug.c",
+  "output": "CMakeFiles/json-c-static.dir/debug.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_c_version.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_c_version.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_c_version.c",
+  "output": "CMakeFiles/json-c-static.dir/json_c_version.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_object.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object.c",
+  "output": "CMakeFiles/json-c-static.dir/json_object.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_object_iterator.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object_iterator.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_object_iterator.c",
+  "output": "CMakeFiles/json-c-static.dir/json_object_iterator.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_tokener.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_tokener.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_tokener.c",
+  "output": "CMakeFiles/json-c-static.dir/json_tokener.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_util.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_util.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_util.c",
+  "output": "CMakeFiles/json-c-static.dir/json_util.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_visit.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_visit.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_visit.c",
+  "output": "CMakeFiles/json-c-static.dir/json_visit.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/linkhash.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/linkhash.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/linkhash.c",
+  "output": "CMakeFiles/json-c-static.dir/linkhash.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/printbuf.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/printbuf.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/printbuf.c",
+  "output": "CMakeFiles/json-c-static.dir/printbuf.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/random_seed.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/random_seed.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/random_seed.c",
+  "output": "CMakeFiles/json-c-static.dir/random_seed.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/strerror_override.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/strerror_override.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/strerror_override.c",
+  "output": "CMakeFiles/json-c-static.dir/strerror_override.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_pointer.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_pointer.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_pointer.c",
+  "output": "CMakeFiles/json-c-static.dir/json_pointer.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIC   -D JSON_C_DLL -D_REENTRANT -o CMakeFiles/json-c-static.dir/json_patch.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_patch.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/json_patch.c",
+  "output": "CMakeFiles/json-c-static.dir/json_patch.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -DTEST_FORMATTED=1 -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test1Formatted.dir/test1.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test1.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test1.c",
+  "output": "tests/CMakeFiles/test1Formatted.dir/test1.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -DTEST_FORMATTED=1 -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test1Formatted.dir/parse_flags.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/parse_flags.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/parse_flags.c",
+  "output": "tests/CMakeFiles/test1Formatted.dir/parse_flags.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -DTEST_FORMATTED=1 -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test2Formatted.dir/test2.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test2.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test2.c",
+  "output": "tests/CMakeFiles/test2Formatted.dir/test2.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -DTEST_FORMATTED=1 -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test2Formatted.dir/parse_flags.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/parse_flags.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/parse_flags.c",
+  "output": "tests/CMakeFiles/test2Formatted.dir/parse_flags.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test1.dir/test1.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test1.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test1.c",
+  "output": "tests/CMakeFiles/test1.dir/test1.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test2.dir/test2.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test2.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test2.c",
+  "output": "tests/CMakeFiles/test2.dir/test2.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test4.dir/test4.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test4.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test4.c",
+  "output": "tests/CMakeFiles/test4.dir/test4.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/testReplaceExisting.dir/testReplaceExisting.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/testReplaceExisting.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/testReplaceExisting.c",
+  "output": "tests/CMakeFiles/testReplaceExisting.dir/testReplaceExisting.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_cast.dir/test_cast.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_cast.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_cast.c",
+  "output": "tests/CMakeFiles/test_cast.dir/test_cast.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_charcase.dir/test_charcase.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_charcase.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_charcase.c",
+  "output": "tests/CMakeFiles/test_charcase.dir/test_charcase.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_compare.dir/test_compare.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_compare.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_compare.c",
+  "output": "tests/CMakeFiles/test_compare.dir/test_compare.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_deep_copy.dir/test_deep_copy.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_deep_copy.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_deep_copy.c",
+  "output": "tests/CMakeFiles/test_deep_copy.dir/test_deep_copy.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_double_serializer.dir/test_double_serializer.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_double_serializer.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_double_serializer.c",
+  "output": "tests/CMakeFiles/test_double_serializer.dir/test_double_serializer.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_float.dir/test_float.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_float.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_float.c",
+  "output": "tests/CMakeFiles/test_float.dir/test_float.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_int_add.dir/test_int_add.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_int_add.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_int_add.c",
+  "output": "tests/CMakeFiles/test_int_add.dir/test_int_add.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_int_get.dir/test_int_get.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_int_get.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_int_get.c",
+  "output": "tests/CMakeFiles/test_int_get.dir/test_int_get.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_locale.dir/test_locale.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_locale.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_locale.c",
+  "output": "tests/CMakeFiles/test_locale.dir/test_locale.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_null.dir/test_null.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_null.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_null.c",
+  "output": "tests/CMakeFiles/test_null.dir/test_null.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_parse.dir/test_parse.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_parse.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_parse.c",
+  "output": "tests/CMakeFiles/test_parse.dir/test_parse.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_parse_int64.dir/test_parse_int64.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_parse_int64.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_parse_int64.c",
+  "output": "tests/CMakeFiles/test_parse_int64.dir/test_parse_int64.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_printbuf.dir/test_printbuf.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_printbuf.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_printbuf.c",
+  "output": "tests/CMakeFiles/test_printbuf.dir/test_printbuf.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_set_serializer.dir/test_set_serializer.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_set_serializer.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_set_serializer.c",
+  "output": "tests/CMakeFiles/test_set_serializer.dir/test_set_serializer.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_set_value.dir/test_set_value.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_set_value.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_set_value.c",
+  "output": "tests/CMakeFiles/test_set_value.dir/test_set_value.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_strerror.dir/test_strerror.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_strerror.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_strerror.c",
+  "output": "tests/CMakeFiles/test_strerror.dir/test_strerror.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_util_file.dir/test_util_file.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_util_file.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_util_file.c",
+  "output": "tests/CMakeFiles/test_util_file.dir/test_util_file.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_visit.dir/test_visit.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_visit.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_visit.c",
+  "output": "tests/CMakeFiles/test_visit.dir/test_visit.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_object_iterator.dir/test_object_iterator.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_object_iterator.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_object_iterator.c",
+  "output": "tests/CMakeFiles/test_object_iterator.dir/test_object_iterator.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_json_pointer.dir/test_json_pointer.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_json_pointer.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_json_pointer.c",
+  "output": "tests/CMakeFiles/test_json_pointer.dir/test_json_pointer.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/PUBLIC -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o tests/CMakeFiles/test_json_patch.dir/test_json_patch.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_json_patch.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/tests/test_json_patch.c",
+  "output": "tests/CMakeFiles/test_json_patch.dir/test_json_patch.c.o"
+},
+{
+  "directory": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build",
+  "command": "/usr/bin/clang -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/build -I/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/apps/PUBLIC -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.0.sdk -mmacosx-version-min=13.6 -fPIE   -D JSON_C_DLL -D_REENTRANT -o apps/CMakeFiles/json_parse.dir/json_parse.c.o -c /Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/apps/json_parse.c",
+  "file": "/Users/ryanliu/Desktop/Berkeley/GamesmanOne/lib/json-c/apps/json_parse.c",
+  "output": "apps/CMakeFiles/json_parse.dir/json_parse.c.o"
+}
+]

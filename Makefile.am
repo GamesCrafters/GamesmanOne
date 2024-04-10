@@ -117,3 +117,4 @@ bin_gamesman_SOURCES += src/games/fsvp/fsvp.c
 bin_gamesman_SOURCES += src/games/mallqueenschess/mallqueenschess.c
 bin_gamesman_SOURCES += src/games/mttt/mttt.c
 bin_gamesman_SOURCES += src/games/mtttier/mtttier.c
+bin_gamesman_SOURCES += src/games/mnktttier/mnktttier.c
