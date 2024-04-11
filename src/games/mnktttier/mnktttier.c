@@ -146,7 +146,7 @@ static const UwapiTier kMnktttierUwapiTier = {
     .GetRandomLegalTierPosition = NULL,
 };
 
-// static const Uwapi kMnktttierUwapi = {.tier = &kMnktttierUwapiTier};
+static const Uwapi kMnktttierUwapi = {.tier = &kMnktttierUwapiTier};
 
 const Game kMnktttier = {
     .name = "mnktttier",
@@ -154,7 +154,7 @@ const Game kMnktttier = {
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
     .gameplay_api = (const GameplayApi *)&kMnktttierGameplayApi,
-    // .uwapi = &kMnktttierUwapi,
+    .uwapi = &kMnktttierUwapi,
 
     .Init = &MnktttierInit,
     .Finalize = &MnktttierFinalize,
@@ -266,7 +266,7 @@ static bool InitArrays(void) {
         }
     }
     // Initialize Symmetries
-    kNumSymmetries = (M == K) ? 8 : 4;
+    kNumSymmetries = (M == N) ? 8 : 4;
     kSymmetryMatrix = calloc(kNumSymmetries, sizeof(int*));
     if (kSymmetryMatrix ==  NULL) {
         return false;
@@ -313,7 +313,7 @@ static void FreeArrays(void) {
 
 #define NUM_OPTIONS 4  // 3 options and 1 zero-terminator.
 static GameVariantOption options[NUM_OPTIONS];
-static int selections[NUM_OPTIONS] = {4, 4, 4, 0};
+static int selections[NUM_OPTIONS] = {1, 1, 1, 0};
 #undef NUM_OPTIONS
 static GameVariant current_variant;
 
@@ -322,6 +322,7 @@ static const GameVariant *MnktttierGetCurrentVariant(void) {
 }
 
 static int MnktttierSetVariantOption(int option, int selection) {
+    selections[option] = selection;
     FreeArrays();
     if (option == 0 && selection >= 0 && selection < 4) {
         M = atoi(kMnktttierMChoices[selection]);
@@ -534,7 +535,7 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         
         cur += sizeof(prefix) - 1;
         for (int j = 0; j < N; j++) {
-            sprintf(cur, "%02d ", i * N + j);
+            sprintf(cur, "%2d ", i * N + j);
             cur += 3;
         }
         if (i == M/2) {
@@ -559,7 +560,7 @@ static int MnktttierMoveToString(Move move, char *buffer) {
     int actual_length =
         snprintf(buffer, kMnktttierGameplayApiCommon.move_string_length_max + 1,
                  "%" PRId64, move);
-    snprintf(buffer, "%d", move);
+    sprintf(buffer, "%d", move);
     if (actual_length >= kMnktttierGameplayApiCommon.move_string_length_max + 1) {
         fprintf(stderr,
                 "MnktttierMoveToString: (BUG) not enough space was allocated "
