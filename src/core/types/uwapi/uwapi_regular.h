@@ -70,6 +70,17 @@ typedef struct UwapiRegular {
     Position (*DoMove)(Position position, Move move);
 
     /**
+     * @brief Returns the value of POSITION if POSITION is primitive. Returns
+     * kUndecided otherwise.
+     *
+     * @note Assumes POSITION is valid. Results in undefined behavior otherwise.
+     *
+     * @note This is typically set to the same function used by the regular
+     * solver API.
+     */
+    Value (*Primitive)(Position position);
+
+    /**
      * @brief Returns whether the given FORMAL_POSITION is legal.
      *
      * @details A formal position is a human-editable (and hopefully

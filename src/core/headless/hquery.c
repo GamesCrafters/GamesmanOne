@@ -144,6 +144,7 @@ static bool ImplementsRegularUwapi(const Game *game) {
     if (game->uwapi->regular == NULL) return false;
     if (game->uwapi->regular->GenerateMoves == NULL) return false;
     if (game->uwapi->regular->DoMove == NULL) return false;
+    if (game->uwapi->regular->Primitive == NULL) return false;
     if (game->uwapi->regular->IsLegalFormalPosition == NULL) return false;
     if (game->uwapi->regular->FormalPositionToPosition == NULL) return false;
     if (game->uwapi->regular->PositionToFormalPosition == NULL) return false;
@@ -161,6 +162,7 @@ static bool ImplementsTierUwapi(const Game *game) {
     if (game->uwapi->tier == NULL) return false;
     if (game->uwapi->tier->GenerateMoves == NULL) return false;
     if (game->uwapi->tier->DoMove == NULL) return false;
+    if (game->uwapi->tier->Primitive == NULL) return false;
     if (game->uwapi->tier->IsLegalFormalPosition == NULL) return false;
     if (game->uwapi->tier->FormalPositionToTierPosition == NULL) return false;
     if (game->uwapi->tier->TierPositionToFormalPosition == NULL) return false;
@@ -317,7 +319,12 @@ static int GetRandomTier(const Game *game) {
 
 static int JsonPrintPositionResponse(const Game *game, Position position) {
     int ret = 0;
-    MoveArray moves = game->uwapi->regular->GenerateMoves(position);
+    MoveArray moves;
+    if (game->uwapi->regular->Primitive(position) == kUndecided) {
+        moves = game->uwapi->regular->GenerateMoves(position);
+    } else {
+        MoveArrayInit(&moves);
+    }
     json_object *moves_array_obj = NULL, *child_obj = NULL, *parent_obj = NULL;
     if (moves.size < 0) {
         fprintf(stderr, "out of memory");
@@ -439,7 +446,12 @@ static json_object *JsonCreateParentPositionObject(
 static int JsonPrintTierPositionResponse(const Game *game,
                                          TierPosition tier_position) {
     int ret = 0;
-    MoveArray moves = game->uwapi->tier->GenerateMoves(tier_position);
+    MoveArray moves;
+    if (game->uwapi->tier->Primitive(tier_position) == kUndecided) {
+        moves = game->uwapi->tier->GenerateMoves(tier_position);
+    } else {
+        MoveArrayInit(&moves);
+    }
     json_object *moves_array_obj = NULL, *child_obj = NULL, *parent_obj = NULL;
     if (moves.size < 0) {
         fprintf(stderr, "out of memory");

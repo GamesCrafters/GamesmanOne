@@ -56,11 +56,8 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move);
 // Variants
 
 static ConstantReadOnlyString kQuixoRuleChoices[] = {
-    "5x5 5-in-a-row",
-    "4x4 4-in-a-row",
-    "3x3 3-in-a-row",
-    "2x2 2-in-a-row",
-    "4x5 4-in-a-row",
+    "5x5 5-in-a-row", "4x4 4-in-a-row", "3x3 3-in-a-row",
+    "2x2 2-in-a-row", "4x5 4-in-a-row",
 };
 
 static const GameVariantOption kQuixoRules = {
@@ -135,6 +132,7 @@ static const UwapiTier kQuixoUwapiTier = {
 
     .GenerateMoves = &QuixoGenerateMoves,
     .DoMove = &QuixoDoMove,
+    .Primitive = &QuixoPrimitive,
 
     .IsLegalFormalPosition = &QuixoIsLegalFormalPosition,
     .FormalPositionToTierPosition = &QuixoFormalPositionToTierPosition,
@@ -896,7 +894,14 @@ static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
 }
 
 static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
-    return QuixoTierPositionToFormalPosition(tier_position);
+    // AutoGUI currently does not support mapping '-' (the blank piece) to
+    // images. Must use a different character here.
+    CString ret = QuixoTierPositionToFormalPosition(tier_position);
+    for (int64_t i = 0; i < ret.length; ++i) {
+        if (ret.str[i] == '-') ret.str[i] = 'B';
+    }
+
+    return ret;
 }
 
 static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
@@ -923,9 +928,9 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     UnpackMove(move, &src, &dest);
     if (Abs(dest - src) < board_cols) {  // same row
         if (dest < src) {                // moving left
-            dest_center = src + 2 * board_size;
-        } else {  // moving right
             dest_center = src + 4 * board_size;
+        } else {  // moving right
+            dest_center = src + 2 * board_size;
         }
     } else {               // same column
         if (dest < src) {  // moving up

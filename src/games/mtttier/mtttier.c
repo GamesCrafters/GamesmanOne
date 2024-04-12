@@ -132,6 +132,7 @@ static const GameplayApi kMtttierGameplayApi = {
 static const UwapiTier kMtttierUwapiTier = {
     .GenerateMoves = &MtttierGenerateMoves,
     .DoMove = &MtttierDoMove,
+    .Primitive = &MtttierPrimitive,
     .IsLegalFormalPosition = &MtttierIsLegalFormalPosition,
     .FormalPositionToTierPosition = &MtttierFormalPositionToTierPosition,
     .TierPositionToFormalPosition = &MtttierTierPositionToFormalPosition,

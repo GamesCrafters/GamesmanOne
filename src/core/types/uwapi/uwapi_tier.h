@@ -102,6 +102,18 @@ typedef struct UwapiTier {
     TierPosition (*DoMove)(TierPosition tier_position, Move move);
 
     /**
+     * @brief Returns the value of TIER_POSITION if TIER_POSITION is primitive.
+     * Returns kUndecided otherwise.
+     *
+     * @note Assumes TIER_POSITION is valid. Passing an invalid tier or an
+     * illegal position within the tier results in undefined behavior.
+     *
+     * @note This is typically set to the same function used by the tier
+     * solver API.
+     */
+    Value (*Primitive)(TierPosition tier_position);
+
+    /**
      * @brief Returns whether the given FORMAL_POSITION is legal.
      *
      * @details A formal position is a human-editable (and hopefully

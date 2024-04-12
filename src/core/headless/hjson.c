@@ -65,7 +65,7 @@ int HeadlessJsonAddValue(json_object *dest, Value value) {
     json_object *value_obj = json_object_new_string(value_string);
     if (value_obj == NULL) return kMallocFailureError;
 
-    return json_object_object_add(dest, "value", value_obj);
+    return json_object_object_add(dest, "positionValue", value_obj);
 }
 
 int HeadlessJsonAddRemoteness(json_object *dest, int remoteness) {
