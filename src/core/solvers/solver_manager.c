@@ -12,9 +12,8 @@
  * simultaneously. As a result, no more than one solver or database can be
  * loaded at the same time. This module handles the loading and deallocation
  * of THE solver used by the current GAMESMAN instance.
- *
- * @version 1.1.0
- * @date 2024-01-08
+ * @version 1.2.0
+ * @date 2024-03-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,9 +36,10 @@
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
+#include <stdio.h>   // printf
 
-#include "core/types/gamesman_types.h"
 #include "core/game_manager.h"
+#include "core/types/gamesman_types.h"
 
 static const Solver *current_solver;
 
@@ -47,7 +47,8 @@ int SolverManagerInit(ReadOnlyString data_path) {
     const Game *game = GameManagerGetCurrentGame();
     if (game == NULL) return kUseBeforeInitializationError;
 
-    const GameVariant *variant = game->GetCurrentVariant();
+    const GameVariant *variant = NULL;
+    if (game->GetCurrentVariant != NULL) variant = game->GetCurrentVariant();
     int variant_id = GameVariantToIndex(variant);
 
     if (current_solver != NULL) {
@@ -56,6 +57,28 @@ int SolverManagerInit(ReadOnlyString data_path) {
     current_solver = game->solver;
     return current_solver->Init(game->name, variant_id, game->solver_api,
                                 data_path);
+}
+
+int SolverManagerTest(long seed) {
+    if (current_solver->Test == NULL) {
+        printf("%s does not have any tests implemented.\n",
+               current_solver->name);
+        return kNotImplementedError;
+    }
+
+    return current_solver->Test(seed);
+}
+
+ReadOnlyString SolverManagerExplainTestError(int error) {
+    if (current_solver->ExplainTestError == NULL) {
+        printf(
+            "%s does not have explanations available for its test error codes. "
+            "The error code is %d",
+            current_solver->name, error);
+        return "SolverManagerExplainTestError: no explanation available";
+    }
+
+    return current_solver->ExplainTestError(error);
 }
 
 int SolverManagerGetSolverStatus(void) {

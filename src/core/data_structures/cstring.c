@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array) implementation.
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 2.0.0
+ * @date 2024-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,10 +31,19 @@
 #include <stdlib.h>   // malloc, free
 #include <string.h>   // memset, strlen
 
-bool CStringInit(CString *cstring, const char *src) {
-    cstring->length = -1;
-    cstring->capacity = -1;
-    
+bool CStringInit(CString *cstring) {
+    cstring->str = (char *)calloc(1, sizeof(char));
+    if (cstring->str == NULL) return false;
+
+    cstring->length = 0;
+    cstring->capacity = 1;
+
+    return true;
+}
+
+bool CStringInitCopy(CString *cstring, const char *src) {
+    if (src == NULL) return false;
+
     int64_t length = strlen(src);
     cstring->str = (char *)malloc(length + 1);
     if (cstring->str == NULL) return false;
@@ -48,4 +57,49 @@ bool CStringInit(CString *cstring, const char *src) {
 void CStringDestroy(CString *cstring) {
     free(cstring->str);
     memset(cstring, 0, sizeof(*cstring));
+}
+
+static bool CStringExpand(CString *cstring, int64_t target_size) {
+    int64_t new_capacity = cstring->capacity * 2;
+    while (new_capacity <= target_size) {
+        new_capacity *= 2;
+    }
+    char *new_str = (char *)realloc(cstring->str, new_capacity);
+    if (new_str == NULL) return false;
+
+    cstring->str = new_str;
+    cstring->capacity = new_capacity;
+
+    return true;
+}
+
+bool CStringAppend(CString *dest, const char *src) {
+    int64_t append_length = strlen(src);
+    int64_t target_size = dest->length + append_length;
+
+    // Expand if necessary.
+    if (target_size >= dest->capacity) {
+        CStringExpand(dest, target_size);
+    }
+
+    strcat(dest->str, src);
+
+    return true;
+}
+
+bool CStringResize(CString *cstring, int64_t size, char fill) {
+    if (cstring->length >= size) {
+        cstring->length = size;
+        cstring->str[size] = '\0';
+        return true;
+    }
+
+    // cstring->length < size, expanding.
+    if (size >= cstring->capacity) {
+        CStringExpand(cstring, size);
+    }
+    memset(cstring->str + cstring->length, fill, size - cstring->length);
+    cstring->length = size;
+
+    return true;
 }

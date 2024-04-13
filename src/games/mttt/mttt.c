@@ -418,7 +418,7 @@ static CString MtttPositionToFormalPosition(Position position) {
     BlankOX board[9] = {0};
     Unhash(position, board);
     CString ret;
-    if (!CStringInit(&ret, "---------")) return ret;
+    if (!CStringInitCopy(&ret, "---------")) return ret;
 
     for (int i = 0; i < 9; ++i) {
         ret.str[i] = kUwapiPieceMap[board[i]];
@@ -431,7 +431,7 @@ static CString MtttPositionToAutoGuiPosition(Position position) {
     BlankOX board[9] = {0};
     Unhash(position, board);
     CString ret;
-    if (!CStringInit(&ret, "1_---------")) return ret;
+    if (!CStringInitCopy(&ret, "1_---------")) return ret;
 
     BlankOX turn = WhoseTurn(board);
     ret.str[0] = turn == kX ? '1' : '2';
@@ -445,7 +445,7 @@ static CString MtttPositionToAutoGuiPosition(Position position) {
 static CString MtttMoveToFormalMove(Position position, Move move) {
     (void)position;  // Unused.
     CString ret;
-    if (!CStringInit(&ret, "0")) return ret;
+    if (!CStringInitCopy(&ret, "0")) return ret;
     ret.str[0] = '0' + move;
     return ret;
 }
@@ -454,7 +454,7 @@ static CString MtttMoveToAutoGuiMove(Position position, Move move) {
     BlankOX board[9] = {0};
     Unhash(position, board);
     CString ret;
-    if (!CStringInit(&ret, "A_x_0")) return ret;
+    if (!CStringInitCopy(&ret, "A_x_0")) return ret;
 
     BlankOX turn = WhoseTurn(board);
     ret.str[2] = turn == kX ? 'x' : 'o';

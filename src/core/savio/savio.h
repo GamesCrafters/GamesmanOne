@@ -41,6 +41,7 @@ typedef struct SavioJobSettings {
     int num_nodes;
     int ntasks_per_node;
     char time_limit[kSavioTimeLimitLengthMax + 1];
+    bool bind_omp_threads_to_cores;
 } SavioJobSettings;
 
 extern const SavioPartition kSavioPartitions[kNumSavioPartitions];

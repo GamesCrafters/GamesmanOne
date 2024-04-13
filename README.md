@@ -16,8 +16,8 @@
 1. The `configure` script can be run with different options. Here is a list of commonly used commands:
     - `./configure 'CFLAGS=-Wall -Wextra -g -O0' --disable-openmp` for debugging on a single thread.
     - `./configure 'CFLAGS=-Wall -Wextra -g -O0'` for debugging with OpenMP multithreading enabled.
-    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG' --disable-openmp` for solving on a single thread.
-    - `./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG'` for solving on multiple threads.
+    - `./configure 'CFLAGS=-Wall -Wextra -O3 -DNDEBUG' --disable-openmp` for solving on a single thread.
+    - `./configure 'CFLAGS=-Wall -Wextra -O3 -DNDEBUG'` for solving on multiple threads.
 2. After running the `configure` script, run `make`.
 
 ## Steps to Add New Source Files

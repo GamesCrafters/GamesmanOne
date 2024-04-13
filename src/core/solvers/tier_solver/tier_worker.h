@@ -32,6 +32,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // uint64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -60,5 +61,16 @@ int TierWorkerSolve(Tier tier, bool force, bool *solved);
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI
+
+/**
+ * @brief Tests the given TIER.
+ *
+ * @param tier Tier to test.
+ * @param parent_tiers Array of parent tiers of TIER.
+ * @param seed Seed for psuedorandom number generator.
+ * @return 0 on success or one of the error codes enumerated in
+ * TierSolverTestErrors otherwise.
+ */
+int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

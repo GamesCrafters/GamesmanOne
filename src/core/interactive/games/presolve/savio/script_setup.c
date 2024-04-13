@@ -21,10 +21,10 @@ static const SavioPartition *partition;
 static const Game *game;
 static int variant_id;
 
-#define NUM_ITEMS 7
+#define NUM_ITEMS 8
 // Note that the size of each string here must be longer than the maximum
 // length that an item can grow into.
-static char items[NUM_ITEMS][2 * kSavioJobNameLengthMax + 1];
+static char items[NUM_ITEMS][256];
 static ReadOnlyString items_p[NUM_ITEMS];
 static char keys[NUM_ITEMS][kKeyLengthMax + 1];
 static ReadOnlyString keys_p[NUM_ITEMS];
@@ -34,6 +34,7 @@ static void InitGlobalVariables(ReadOnlyString key);
 static void RestoreDefaultSettings(void);
 
 static void UpdateItems(void);
+static ReadOnlyString OmpThreadBindingDesc(bool bind_to_cores);
 static void InitKeys(void);
 static void InitHooks(void);
 
@@ -43,6 +44,7 @@ static int PromptForAccount(ReadOnlyString key);
 static int PromptForNumNodes(ReadOnlyString key);
 static int PromptForNumTasksPerNode(ReadOnlyString key);
 static int PromptForNumCpuPerTask(ReadOnlyString key);
+static int PromptForTogglingOmpThreadBinding(ReadOnlyString key);
 static int PromptForTimeLimit(ReadOnlyString key);
 
 static int IntMin2(int x, int y);
@@ -92,11 +94,17 @@ static void UpdateItems(void) {
     sprintf(
         items[5], "Number of CPUs per task: [%d]",
         SavioGetNumCpuPerTask(partition->num_cpu, settings.ntasks_per_node));
-    sprintf(items[6], "Time limit: [%s]", settings.time_limit);
+    sprintf(items[6], "Bind OpenMP threads to: [%s]",
+            OmpThreadBindingDesc(settings.bind_omp_threads_to_cores));
+    sprintf(items[7], "Time limit: [%s]", settings.time_limit);
 
     for (int i = 0; i < NUM_ITEMS; ++i) {
         items_p[i] = (ReadOnlyString)&items[i];
     }
+}
+
+static ReadOnlyString OmpThreadBindingDesc(bool bind_to_cores) {
+    return bind_to_cores ? "cores" : "hyper-threads";
 }
 
 static void InitKeys(void) {
@@ -115,7 +123,8 @@ static void InitHooks(void) {
     hooks[3] = &PromptForNumNodes;
     hooks[4] = &PromptForNumTasksPerNode;
     hooks[5] = &PromptForNumCpuPerTask;
-    hooks[6] = &PromptForTimeLimit;
+    hooks[6] = &PromptForTogglingOmpThreadBinding;
+    hooks[7] = &PromptForTimeLimit;
 }
 
 static int ConfirmSettings(ReadOnlyString key) {
@@ -149,11 +158,11 @@ static int PromptForAccount(ReadOnlyString key) {
     char buf[kSavioAccountNameLengthMax + 1];
     printf(
         "Setting the name of the Savio account that will be charged for "
-        "service units. It is unlikely that you will need to change the "
-        "default value if you are a member of the GamesCrafters project "
-        "(fc_gamecrafters).\n\n"
-        "Please enter the account name (%d or fewer characters) or leave blank "
-        "to discard changes and go back to the previous menu",
+        "service units.\n"
+        "It is unlikely that you will need to change the default value if you "
+        "are a member of the GamesCrafters project (fc_gamecrafters).\n\n"
+        "Please enter the account name (%d or fewer characters)\n"
+        "or leave blank to discard changes and go back to the previous menu",
         kSavioAccountNameLengthMax);
     PromptForInput("", buf, kSavioAccountNameLengthMax);
     if (strlen(buf) == 0) return 0;
@@ -170,22 +179,24 @@ static int PromptForNumNodes(ReadOnlyString key) {
     int nodes_min = 1;
     int nodes_max = game->solver->supports_mpi ? kSavioNumNodesMax : 1;
     printf(
-        "Number of compute nodes to use in the chosen partition (%s). Savio "
-        "enforces that a maximum of %d compute nodes can be allocated per "
-        "job. Since non-tier games are solved on the same node, GAMESMAN will "
-        "limit the number of nodes to 1 if the current game is not a tier "
-        "game.\n\n"
-        "Please enter the number of nodes to use for this job (%d-%d) or 'b' "
-        "to discard changes and return to the previous menu%s",
-        partition->name, kSavioNumNodesMax, nodes_min, nodes_max, "");
+        "Setting the number of compute nodes to use in the chosen partition "
+        "(%s).\n"
+        "The Savio Cluster restricts the maximum number of compute nodes "
+        "allocated per job to %d.\n"
+        "If the solver for the current game does not support MPI, GAMESMAN "
+        "will limit the number of nodes to 1.\n\n"
+        "Please enter the number of nodes to use for this job (%d-%d)\n"
+        "or 'b' to discard changes and return to the previous menu",
+        partition->name, kSavioNumNodesMax, nodes_min, nodes_max);
     PromptForInput("", buf, kInt32Base10StringLengthMax);
     if (strcmp(buf, "b") == 0) return 0;
     int parsed = atoi(buf);
     while (parsed < nodes_min || parsed > nodes_max) {
         printf(
             "\nSorry, the number you entered (%d) is outside the range of "
-            "valid number of nodes (%d-%d). Please try again or enter 'b' to "
-            "discard changes and return to the previous menu",
+            "valid number of nodes (%d-%d).\n"
+            "Please try again or enter 'b' to discard changes and return to "
+            "the previous menu",
             parsed, nodes_min, nodes_max);
         PromptForInput("", buf, kInt32Base10StringLengthMax);
         if (strcmp(buf, "b") == 0) return 0;
@@ -202,15 +213,16 @@ static int PromptForNumTasksPerNode(ReadOnlyString key) {
     int tasks_min = 1;
     int tasks_max = partition->num_cpu;
     printf(
-        "Setting the number of tasks to allocate on each compute node. "
+        "Setting the number of tasks to allocate on each compute node.\n"
         "Changing this value will also adjust the number of CPUs per task "
         "according to the available number of CPUs on the compute nodes in the "
-        "chosen partition to max out the number of CPUs utilized on each node. "
+        "chosen partition to max out the number of CPUs utilized on each "
+        "node.\n"
         "To utilize all CPUs on each node, set this number to a factor of %d - "
         "the number of CPUs available on each node in the chosen partition "
         "(%s).\n\n"
-        "Please enter the number of tasks to run on each node (%d-%d) or 'b' "
-        "to discard changes and return to the previous menu",
+        "Please enter the number of tasks to run on each node (%d-%d)\n"
+        "or 'b' to discard changes and return to the previous menu",
         partition->num_cpu, partition->name, tasks_min, tasks_max);
     PromptForInput("", buf, kInt32Base10StringLengthMax);
     if (strcmp(buf, "b") == 0) return 0;
@@ -218,8 +230,9 @@ static int PromptForNumTasksPerNode(ReadOnlyString key) {
     while (parsed < tasks_min || parsed > tasks_max) {
         printf(
             "\nSorry, the number you entered (%d) is outside the range of "
-            "valid number of tasks per node (%d-%d). Please try again or enter "
-            "'b' to discard changes and return to the previous menu",
+            "valid number of tasks per node (%d-%d).\n"
+            "Please try again or enter 'b' to discard changes and return to "
+            "the previous menu",
             parsed, tasks_min, tasks_max);
         PromptForInput("", buf, kInt32Base10StringLengthMax);
         if (strcmp(buf, "b") == 0) return 0;
@@ -236,14 +249,16 @@ static int PromptForNumCpuPerTask(ReadOnlyString key) {
     int cpus_min = 1;
     int cpus_max = partition->num_cpu;
     printf(
-        "Setting the number of CPUs to use on each task. Changing this value "
-        "also adjusts the number of tasks allocated per compute node according "
-        "to the number of CPUs availale on each node in the chosen partition "
-        "to max out the number of CPUs utilized on each node. To utilize all "
-        "CPUs on each node, set this number to a factor of %d - the number of "
-        "CPUs available on each node in the chosen partition (%s).\n\n"
-        "Please enter the number of tasks to run on each node (%d-%d) or 'b' "
-        "to discard changes and return to the previous menu",
+        "Setting the number of CPUs to use on each task.\n"
+        "Changing this value also adjusts the number of tasks allocated per "
+        "compute node according to the number of CPUs availale on each node in "
+        "the chosen partition to max out the number of CPUs utilized on each "
+        "node.\n"
+        "To utilize all CPUs on each node, set this number to a factor of %d - "
+        "the number of CPUs available on each node in the chosen partition "
+        "(%s).\n\n"
+        "Please enter the number of tasks to run on each node (%d-%d)\n"
+        "or 'b' to discard changes and return to the previous menu",
         partition->num_cpu, partition->name, cpus_min, cpus_max);
     PromptForInput("", buf, kInt32Base10StringLengthMax);
     if (strcmp(buf, "b") == 0) return 0;
@@ -251,8 +266,9 @@ static int PromptForNumCpuPerTask(ReadOnlyString key) {
     while (parsed < cpus_min || parsed > cpus_max) {
         printf(
             "\nSorry, the number you entered (%d) is outside the range of "
-            "valid number of CPUs per task (%d-%d). Please try again or enter "
-            "'b' to discard changes and return to the previous menu",
+            "valid number of CPUs per task (%d-%d).\n"
+            "Please try again or enter 'b' to discard changes and return to "
+            "the previous menu",
             parsed, cpus_min, cpus_max);
         PromptForInput("", buf, kInt32Base10StringLengthMax);
         if (strcmp(buf, "b") == 0) return 0;
@@ -264,32 +280,56 @@ static int PromptForNumCpuPerTask(ReadOnlyString key) {
     return 0;
 }
 
+static int PromptForTogglingOmpThreadBinding(ReadOnlyString key) {
+    (void)key;  // Unused
+    ConstantReadOnlyString curr_binding =
+        OmpThreadBindingDesc(settings.bind_omp_threads_to_cores);
+    ConstantReadOnlyString toggled_binding =
+        OmpThreadBindingDesc(!settings.bind_omp_threads_to_cores);
+    printf(
+        "Toggling thread binding from %s to %s.\n"
+        "Binding OpenMP threads to hyper-threads doubles the number of threads "
+        "used, which may or may not improve performance.\n"
+        "The actual performance depends on the implementation of the game and "
+        "the solver, and needs to be benchmarked.\n",
+        curr_binding, toggled_binding);
+    settings.bind_omp_threads_to_cores = !settings.bind_omp_threads_to_cores;
+
+    return 0;
+}
+
 static int PromptForTimeLimit(ReadOnlyString key) {
     (void)key;  // Unused
     char buf[kSavioTimeLimitLengthMax + 1];
     printf(
-        "Setting a new time limit for the job. The hard time limit for "
-        "regular jobs on Savio is 72:00:00 or 3 days. Regular jobs that run "
-        "for longer than 3 days will be terminated. If your job finishes "
-        "before it reaches this time limit, it will terminate and your account "
-        "will only be charged for the amount of time actually used. If your "
-        "job reaches the time limit, it will be killed regardless of its "
-        "status. It is okay to always set this to the 3-day maximum. "
-        "However, the SLURM job scheduler may schedule jobs that have a "
-        "shorter time limit to run first. This might be helpful if you want to "
-        "run a quick job when there are a lot of jobs in the SLURM queue.\n\n"
+        "Setting a new time limit for the job.\n"
+        "The scheduler-enforced time limit for regular jobs on Savio is "
+        "72:00:00 or 3 days.\n"
+        "Regular jobs that run for longer than 3 days will be terminated.\n"
+        "If your job finishes before it reaches this time limit, it will "
+        "terminate and your account will only be charged for the amount of "
+        "time actually used.\n"
+        "If your job reaches the time limit, it will be killed regardless of "
+        "its "
+        "status.\n"
+        "It is okay to always set this to the 3-day maximum. However, jobs "
+        "that have a shorter time limit may preempt other jobs that has longer "
+        "time limits in the wait queue.\n"
+        "This might be helpful if you want to run a quick job when there are "
+        "lots of jobs in the SLURM queue.\n\n"
         "The time limit must be of format \"hh:mm:ss\" where mm and ss must be "
         "values between 00 and 59, and the total time must not be longer than "
         "72 hours.\n\n"
-        "Please enter a new time limit for the job, or enter 'b' to discard "
-        "changes and return to the previous menu");
+        "Please enter a new time limit for the job,\n"
+        "or enter 'b' to discard changes and return to the previous menu");
     PromptForInput("", buf, kSavioTimeLimitLengthMax);
     while (!IsValidTimeLimit(buf)) {
         printf(
             "\nSorry, the time limit you entered (%s) is outside of the valid "
             "range of time limits (00:00:00 - 72:00:00) or not of the valid "
-            "time format \"hh:mm:ss\". Please try again or enter 'b' to "
-            "discard changes and return to the previous menu",
+            "time format \"hh:mm:ss\".\n"
+            "Please try again or enter 'b' to discard changes and return to "
+            "the previous menu",
             buf);
         PromptForInput("", buf, kSavioTimeLimitLengthMax);
     }

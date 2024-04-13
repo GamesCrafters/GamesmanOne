@@ -31,8 +31,8 @@
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // FILE
 
-#include "core/types/gamesman_types.h"
 #include "core/constants.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Analysis of a game or a single tier.
@@ -257,11 +257,23 @@ int64_t AnalysisGetNumNonCanonicalPositions(const Analysis *analysis);
 double AnalysisGetSymmetryFactor(const Analysis *analysis);
 
 /**
+ * @brief Returns whether average branching factor is valid. Returns false when
+ * no positions are discovered.
+ */
+bool AnalysisAverageBranchingFactorIsValid(const Analysis *analysis);
+
+/**
  * @brief Returns the average branching factor from ANALYSIS. The average
  * branching factor is defined as the average number of moves of all reachable
  * positions.
  */
 double AnalysisGetAverageBranchingFactor(const Analysis *analysis);
+
+/**
+ * @brief Returns whether the average canonical branching factor is valid.
+ * Returns false when no canonical positions are discovered.
+ */
+bool AnalysisCanonicalBranchingFactorIsValid(const Analysis *analysis);
 
 /**
  * @brief Returns the average canonical branching factor from ANALYSIS. The

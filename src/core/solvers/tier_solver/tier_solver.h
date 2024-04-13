@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Tier Solver API.
- * @version 1.3.0
- * @date 2024-02-15
+ * @version 1.4.1
+ * @date 2024-03-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -254,23 +254,6 @@ typedef struct TierSolverApi {
     TierArray (*GetChildTiers)(Tier tier);
 
     /**
-     * @brief Returns an array of parent tiers of the given TIER.
-     *
-     * @details A parent tier is a tier that has at least one position from
-     * which a position within the child tier can be reached by making a single
-     * move.
-     *
-     * @note Assumes TIER is valid. Results in undefined behavior otherwise.
-     *
-     * @note This function is OPTIONAL, but is required for Tier Retrograde
-     * Analysis. If not implemented, Tier Retrograde Analysis will be disabled
-     * and a reverse tier graph will be built and stored in memory by performing
-     * a DFS on the tier graph implicitly defined by the initial tier and the
-     * GetChildTiers function.
-     */
-    TierArray (*GetParentTiers)(Tier tier);
-
-    /**
      * @brief Returns the canonical tier symmetric to the given TIER. Returns
      * TIER if itself is canonical.
      *
@@ -298,9 +281,34 @@ typedef struct TierSolverApi {
      *
      * @note This function is OPTIONAL. If set to NULL, the tier database files
      * will use the TIER value as their file names.
+     *
+     * @param name Tier name output buffer.
+     * @param tier Get name of this tier.
+     * @return 0 on success, or
+     * @return non-zero error code on failure.
      */
     int (*GetTierName)(char *name, Tier tier);
 } TierSolverApi;
+
+/** @brief All detectable error types by the tier solver test function. */
+enum TierSolverTestErrors {
+    kTierSolverTestNoError,           /**< No error. */
+    kTierSolverTestDependencyError,   /**< Test failed due to a prior error. */
+    kTierSolverTestGetTierNameError,  /**< Failed to get tier name. */
+    kTierSolverTestIllegalChildError, /**< Illegal child position detected. */
+    /** Applying tier symmetry within the same tier returned a different
+       position. */
+    kTierSolverTestTierSymmetrySelfMappingError,
+    /** Applying tier symmetry twice - first using a symmetric tier, then using
+       the original tier - returned a different position */
+    kTierSolverTestTierSymmetryInconsistentError,
+    /** One of the canonical child positions of a legal canonical position was
+       found not to have that legal position as its parent */
+    kTierSolverTestChildParentMismatchError,
+    /** One of the canonical parent positions of a legal canonical position was
+       found not to have that legal position as its child. */
+    kTierSolverTestParentChildMismatchError,
+};
 
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {

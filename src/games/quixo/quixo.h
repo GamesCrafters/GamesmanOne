@@ -1,11 +1,13 @@
 /**
- * @file constants.c
- * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @file quixo.h
+ * @author Robert Shi (robertyishi@berkeley.edu),
+ *         Maria Rufova,
+ *         Benji Xu,
+ *         Angela He,
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Definitions of global constants.
- * @version 1.1.1
- * @date 2024-01-24
+ * @brief Quixo - the board game designed by Thierry Chapeau.
+ * @version 1.0.0
+ * @date 2024-04-12
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,21 +26,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/constants.h"
+#ifndef GAMESMANONE_GAMES_QUIXO_QUIXO_H_
+#define GAMESMANONE_GAMES_QUIXO_QUIXO_H_
 
 #include "core/types/gamesman_types.h"
 
-ConstantReadOnlyString kValueStrings[] = {
-    "undecided", "lose", "draw", "tie", "win",
-};
+extern const Game kQuixo;
 
-const Tier kDefaultTier = 0;
-const Tier kIllegalTier = -1;
-const Position kIllegalPosition = -1;
-const TierPosition kIllegalTierPosition = {
-    .tier = kIllegalTier,
-    .position = kIllegalPosition,
-};
-
-ConstantReadOnlyString kGamesmanDate = "2024.04.12";
-ConstantReadOnlyString kGamesmanVersion = "1.0.0";
+#endif  // GAMESMANONE_GAMES_QUIXO_QUIXO_H_

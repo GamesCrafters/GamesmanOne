@@ -7,9 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseTierGraph type.
- *
- * @version 1.0.0
- * @date 2024-01-19
+ * @version 1.1.0
+ * @date 2024-03-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -82,6 +81,23 @@ TierArray ReverseTierGraphPopParentsOf(ReverseTierGraph *graph, Tier child) {
     int index = TierHashMapIteratorValue(&it);
     TierArray ret = graph->parents_of[index];
     memset(&graph->parents_of[index], 0, sizeof(graph->parents_of[index]));
+    
+    return ret;
+}
+
+TierArray ReverseTierGraphGetParentsOf(ReverseTierGraph *graph, Tier child) {
+    static const TierArray kIllegalTierArray = {
+        .array = NULL,
+        .size = -1,
+        .capacity = -1,
+    };
+    TierHashMapIterator it = TierHashMapGet(&graph->index_of, child);
+    if (!TierHashMapIteratorIsValid(&it)) return kIllegalTierArray;
+
+    int index = TierHashMapIteratorValue(&it);
+    TierArray ret;
+    TierArrayInitCopy(&ret, &graph->parents_of[index]);
+    
     return ret;
 }
 

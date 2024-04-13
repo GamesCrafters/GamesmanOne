@@ -35,8 +35,8 @@
 #include <string.h>    // memset
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
@@ -285,9 +285,19 @@ double AnalysisGetSymmetryFactor(const Analysis *analysis) {
     return (double)num_canonical / (double)num_reachable;
 }
 
+bool AnalysisAverageBranchingFactorIsValid(const Analysis *analysis) {
+    int64_t num_reachable = AnalysisGetNumReachablePositions(analysis);
+    return num_reachable > 0;
+}
+
 double AnalysisGetAverageBranchingFactor(const Analysis *analysis) {
     int64_t num_reachable = AnalysisGetNumReachablePositions(analysis);
     return (double)analysis->move_count / (double)num_reachable;
+}
+
+bool AnalysisCanonicalBranchingFactorIsValid(const Analysis *analysis) {
+    int64_t num_canonical = AnalysisGetNumCanonicalPositions(analysis);
+    return num_canonical > 0;
 }
 
 double AnalysisGetCanonicalBranchingFactor(const Analysis *analysis) {
@@ -383,11 +393,19 @@ void AnalysisPrintStatistics(FILE *stream, const Analysis *analysis) {
             analysis->move_count, analysis->canonical_move_count);
 
     // Average branching factor.
-    double branching_factor = AnalysisGetAverageBranchingFactor(analysis);
-    double canonical_branching_factor =
-        AnalysisGetCanonicalBranchingFactor(analysis);
-    fprintf(stream, "Average branching factor: %f (%f canonical)\n",
-            branching_factor, canonical_branching_factor);
+    fprintf(stream, "Average branching factor: ");
+    if (!AnalysisAverageBranchingFactorIsValid(analysis)) {
+        fprintf(stream, "N/A ");
+    } else {
+        double branching_factor = AnalysisGetAverageBranchingFactor(analysis);
+        fprintf(stream, "%f ", branching_factor);
+    }
+    if (AnalysisCanonicalBranchingFactorIsValid(analysis)) {
+        double canonical_branching_factor =
+            AnalysisGetCanonicalBranchingFactor(analysis);
+        fprintf(stream, "(%f canonical)", canonical_branching_factor);
+    }
+    fprintf(stream, "\n");
 }
 
 void AnalysisPrintPositionWithMostMoves(FILE *stream,

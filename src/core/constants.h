@@ -4,7 +4,6 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- *
  * @version 1.1.1
  * @date 2024-01-24
  *
@@ -86,6 +85,7 @@ enum RemotenessLimits {
     kNumRemotenesses,      /**< Number of values a remoteness can take. */
 };
 
+/** @brief Limiting constants on MPI implementation. */
 enum MpiLimits {
     /**
      * The Savio cluster currently support at most 24 nodes allocated per job.

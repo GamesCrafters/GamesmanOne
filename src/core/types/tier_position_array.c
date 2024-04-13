@@ -72,3 +72,15 @@ bool TierPositionArrayAppend(TierPositionArray *array,
 TierPosition TierPositionArrayBack(const TierPositionArray *array) {
     return array->array[array->size - 1];
 }
+
+bool TierPositionArrayContains(const TierPositionArray *array,
+                               TierPosition target) {
+    for (int64_t i = 0; i < array->size; ++i) {
+        if (array->array[i].position == target.position &&
+            array->array[i].tier == target.tier) {
+            return true;
+        }
+    }
+
+    return false;
+}

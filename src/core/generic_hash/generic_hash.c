@@ -13,8 +13,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash system for finite board games with
  * fixed sets of pieces.
- * @version 1.0.1
- * @date 2024-01-03
+ * @version 1.0.2
+ * @date 2024-03-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -43,8 +43,8 @@
 #include <string.h>   // memset
 
 #include "core/data_structures/int64_hash_map.h"
-#include "core/types/gamesman_types.h"
 #include "core/generic_hash/context.h"
+#include "core/types/gamesman_types.h"
 
 typedef struct ContextManager {
     GenericHashContext *contexts;
@@ -100,7 +100,7 @@ Position GenericHashNumPositions(void) {
     return GenericHashContextNumPositions(&manager.contexts[0]);
 }
 
-Position GenericHashHash(ReadOnlyString board, int turn) {
+Position GenericHashHash(const char *board, int turn) {
     if (!ManagerCheckUniqueContext()) return -1;
     return GenericHashContextHash(&manager.contexts[0], board, turn);
 }
@@ -123,7 +123,7 @@ Position GenericHashNumPositionsLabel(int64_t context_label) {
     return GenericHashContextNumPositions(&manager.contexts[context_index]);
 }
 
-Position GenericHashHashLabel(int64_t context_label, ReadOnlyString board,
+Position GenericHashHashLabel(int64_t context_label, const char *board,
                               int turn) {
     int64_t context_index = ManagerGetContextIndex(context_label);
     if (context_index < 0) return -1;

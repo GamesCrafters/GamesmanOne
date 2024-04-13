@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -90,11 +90,10 @@ static TierQueue pending_tiers;  // Tiers ready to be solved/analyzed.
 
 // Cached reverse tier graph of the game.
 static ReverseTierGraph reverse_tier_graph;
-// The reverse tier graph is used if the GetParentTiers function is not
-// provided.
-static bool use_reverse_tier_graph;
 
 static int64_t total_size;
+static int64_t total_tiers;
+static int64_t total_canonical_tiers;
 static int64_t processed_size;
 static int64_t processed_tiers;
 static int64_t skipped_tiers;
@@ -105,7 +104,8 @@ static Analysis game_analysis;
 // Helper functions.
 
 static int InitGlobalVariables(int type);
-static TierArray GetParentTiersFromReverseTierGraph(Tier child);
+static TierArray PopParentTiers(Tier child);
+static TierArray GetParentTiers(Tier child);
 static void DestroyGlobalVariables(void);
 
 static int BuildTierTree(int type);
@@ -121,6 +121,7 @@ static int SolveTierTreeMpi(bool force, int verbose);
 static void SolveTierTreeMpiTerminateWorkers(void);
 static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
                                      int verbose);
+static void PrintDispatchMessage(Tier tier, int worker_rank);
 #endif  // USE_MPI
 static void SolveUpdateTierTree(Tier solved_tier);
 static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
@@ -146,6 +147,9 @@ static int DiscoverTierTree(bool force, int verbose);
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierTree(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
+
+static int TestTierTree(long seed);
+static void PrintTestResult(double time_elapsed);
 
 // -----------------------------------------------------------------------------
 
@@ -184,8 +188,26 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
                 error);
         return error;
     }
+
     int ret = DiscoverTierTree(force, verbose);
     DestroyGlobalVariables();
+
+    return ret;
+}
+
+int TierManagerTest(const TierSolverApi *api, long seed) {
+    memcpy(&current_api, api, sizeof(current_api));
+    int error = InitGlobalVariables(kTierSolving);
+    if (error != 0) {
+        fprintf(stderr,
+                "TierManagerTest: initialization failed with code %d.\n",
+                error);
+        return kTierSolverTestDependencyError;
+    }
+
+    int ret = TestTierTree(seed);
+    DestroyGlobalVariables();
+
     return ret;
 }
 
@@ -193,27 +215,29 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
 
 static int InitGlobalVariables(int type) {
     total_size = 0;
+    total_tiers = 0;
+    total_canonical_tiers = 0;
     processed_size = 0;
     processed_tiers = 0;
     skipped_tiers = 0;
     failed_tiers = 0;
     TierQueueInit(&pending_tiers);
     TierHashMapInit(&tier_tree, 0.5);
-    if (type == kTierSolving) {
-        if (current_api.GetParentTiers == NULL) {
-            current_api.GetParentTiers = &GetParentTiersFromReverseTierGraph;
-            use_reverse_tier_graph = true;
-            ReverseTierGraphInit(&reverse_tier_graph);
-        }
-    } else if (type == kTierAnalyzing) {
+    ReverseTierGraphInit(&reverse_tier_graph);
+    if (type == kTierAnalyzing) {
         AnalysisInit(&game_analysis);
         AnalysisSetHashSize(&game_analysis, 0);
     }
+
     return BuildTierTree(type);
 }
 
-static TierArray GetParentTiersFromReverseTierGraph(Tier child) {
+static TierArray PopParentTiers(Tier child) {
     return ReverseTierGraphPopParentsOf(&reverse_tier_graph, child);
+}
+
+static TierArray GetParentTiers(Tier child) {
+    return ReverseTierGraphGetParentsOf(&reverse_tier_graph, child);
 }
 
 static void DestroyGlobalVariables(void) {
@@ -271,14 +295,28 @@ _bailout:
     return ret;
 }
 
+static int GetNumCanonicalTiers(const TierArray *array) {
+    int ret = 0;
+    for (int64_t i = 0; i < array->size; ++i) {
+        ret += IsCanonicalTier(array->array[i]);
+    }
+
+    return ret;
+}
+
 static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
                                         int type) {
     // Add tier size to total if it is canonical.
-    if (IsCanonicalTier(parent)) total_size += current_api.GetTierSize(parent);
+    ++total_tiers;
+    if (IsCanonicalTier(parent)) {
+        ++total_canonical_tiers;
+        total_size += current_api.GetTierSize(parent);
+    }
 
     TierArray tier_children = current_api.GetChildTiers(parent);
+    int num_canonical_tier_children = GetNumCanonicalTiers(&tier_children);
     if (type == kTierSolving) {
-        if (!TierTreeSetNumTiers(parent, (int)tier_children.size)) {
+        if (!TierTreeSetNumTiers(parent, num_canonical_tier_children)) {
             TierArrayDestroy(&tier_children);
             return (int)kTierTreeOutOfMemory;
         }
@@ -358,9 +396,9 @@ static void CreateTierTreePrintError(int error) {
 static int SolveTierTree(bool force, int verbose) {
     double time_elapsed = 0.0;
     if (verbose > 0) {
-        printf("Begin solving all tiers of total size %" PRId64
-               " (positions)\n",
-               total_size);
+        printf("Begin solving all %" PRId64 " tiers (%" PRId64
+               " canonical) of total size %" PRId64 " (positions)\n",
+               total_tiers, total_canonical_tiers, total_size);
     }
 
     while (!TierQueueEmpty(&pending_tiers)) {
@@ -394,9 +432,9 @@ static int SolveTierTree(bool force, int verbose) {
 
 static int SolveTierTreeMpi(bool force, int verbose) {
     if (verbose > 0) {
-        printf("Begin solving all tiers of total size %" PRId64
-               " (positions)\n",
-               total_size);
+        printf("Begin solving all %" PRId64 " tiers (%" PRId64
+               " canonical) of total size %" PRId64 " (positions)\n",
+               total_tiers, total_canonical_tiers, total_size);
     }
 
     time_t begin_time = time(NULL);
@@ -459,14 +497,12 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
         if (!TierQueueEmpty(&pending_tiers)) {
             // A solvable tier is available, dispatch it to the worker node.
             Tier tier = TierQueuePop(&pending_tiers);
-            printf("Dispatching tier %" PRITier " to worker %d.\n", tier,
-                   worker_rank);
+            PrintDispatchMessage(tier, worker_rank);
             job_list[worker_rank] = tier;
             TierMpiManagerSendSolve(worker_rank, tier, force);
             TierArrayAppend(&solving_tiers, tier);
         } else {
             // No solvable tiers available, let the worker node go to sleep.
-            printf("Sending worker %d to sleep\n", worker_rank);
             TierMpiManagerSendSleep(worker_rank);
         }
     }
@@ -474,10 +510,18 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
     TierArrayDestroy(&solving_tiers);
 }
 
+static void PrintDispatchMessage(Tier tier, int worker_rank) {
+    char tier_name[kDbFileNameLengthMax + 1];
+    current_api.GetTierName(tier_name, tier);
+    printf("Dispatching tier [%s] (#%" PRITier ") to worker %d.\n", tier_name,
+           tier, worker_rank);
+    fflush(stdout);
+}
+
 #endif  // USE_MPI
 
 static void SolveUpdateTierTree(Tier solved_tier) {
-    TierArray parent_tiers = current_api.GetParentTiers(solved_tier);
+    TierArray parent_tiers = PopParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
@@ -517,8 +561,10 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
         operation = "checking";
     }
     if (verbose > 0) {
-        printf("Finished %s tier %" PRITier " ", operation, tier);
-        printf("of size %" PRId64 ", ", tier_size);
+        char tier_name[kDbFileNameLengthMax + 1];
+        current_api.GetTierName(tier_name, tier);
+        printf("Finished %s tier [%s] ", operation, tier_name);
+        printf("(#%" PRITier ") of size %" PRId64 ", ", tier, tier_size);
 
         int64_t remaining_size = total_size - processed_size;
         printf("remaining size %" PRId64 ". ", remaining_size);
@@ -541,6 +587,7 @@ static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
         }
         printf("Estimated time remaining: %s.\n", time_string);
     }
+    fflush(stdout);
 }
 
 static void PrintSolverResult(double time_elapsed) {
@@ -647,7 +694,12 @@ static int DiscoverTierTree(bool force, int verbose) {
 }
 
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
-    if (verbose > 0) printf("\n--- Tier %" PRITier " analyzed ---\n", tier);
+    char tier_name[kDbFileNameLengthMax + 1];
+    current_api.GetTierName(tier_name, tier);
+    if (verbose > 0) {
+        printf("\n--- Tier [%s] (#%" PRITier ") analyzed ---\n", tier_name,
+               tier);
+    }
     if (verbose > 1) {
         AnalysisPrintEverything(stdout, analysis);
     } else if (verbose > 0) {
@@ -688,4 +740,62 @@ static void PrintAnalyzerResult(void) {
     }
 
     AnalysisPrintEverything(stdout, &game_analysis);
+}
+
+static int TestTierTree(long seed) {
+    double time_elapsed = 0.0;
+    printf("Begin random sanity testing of all %" PRId64 " tiers (%" PRId64
+           " canonical) of total size %" PRId64 " (positions). %" PRId64
+           " tiers ready in test queue\n",
+           total_tiers, total_canonical_tiers, total_size,
+           TierQueueSize(&pending_tiers));
+
+    char tier_name[kDbFileNameLengthMax + 1];
+    while (!TierQueueEmpty(&pending_tiers)) {
+        Tier tier = TierQueuePop(&pending_tiers);
+        if (IsCanonicalTier(tier)) {  // Only test canonical tiers.
+            time_t begin = time(NULL);
+            int error = current_api.GetTierName(tier_name, tier);
+            if (error != kNoError) {
+                printf("Failed to get name of tier %" PRITier "\n", tier);
+                return kTierSolverTestGetTierNameError;
+            }
+
+            printf("Testing tier [%s] (#%" PRITier ") of size %" PRId64 "... ",
+                   tier_name, tier, current_api.GetTierSize(tier));
+            TierArray parent_tiers = GetParentTiers(tier);
+            TierArrayAppend(&parent_tiers, tier);
+            error = TierWorkerTest(tier, &parent_tiers, seed);
+            TierArrayDestroy(&parent_tiers);
+            if (error == kTierSolverTestNoError) {
+                // Test passed.
+                SolveUpdateTierTree(tier);
+                ++processed_tiers;
+            } else {
+                printf("FAILED\n");
+                return error;
+            }
+            time_t end = time(NULL);
+            time_elapsed += difftime(end, begin);
+            printf("PASSED. %" PRId64 " tiers ready in test queue\n",
+                   TierQueueSize(&pending_tiers));
+        } else {
+            ++skipped_tiers;
+        }
+    }
+    PrintTestResult(time_elapsed);
+
+    return kTierSolverTestNoError;
+}
+
+static void PrintTestResult(double time_elapsed) {
+    assert(failed_tiers == 0);
+    printf(
+        "Finished solving all tiers in %d second(s).\n"
+        "Number of canonical tiers tested: %" PRId64
+        "\nNumber of non-canonical tiers skipped: %" PRId64
+        "\nTotal tiers tested: %" PRId64 "\n",
+        (int)time_elapsed, processed_tiers, skipped_tiers,
+        processed_tiers + skipped_tiers);
+    printf("\n");
 }

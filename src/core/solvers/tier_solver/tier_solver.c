@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Tier Solver.
- * @version 1.3.0
- * @date 2024-02-15
+ * @version 1.4.1
+ * @date 2024-03-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -51,6 +51,10 @@
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path);
 static int TierSolverFinalize(void);
+
+static int TierSolverTest(long seed);
+static ReadOnlyString TierSolverExplainTestError(int error);
+
 static int TierSolverSolve(void *aux);
 static int TierSolverAnalyze(void *aux);
 static int TierSolverGetStatus(void);
@@ -66,6 +70,9 @@ const Solver kTierSolver = {
 
     .Init = &TierSolverInit,
     .Finalize = &TierSolverFinalize,
+
+    .Test = &TierSolverTest,
+    .ExplainTestError = &TierSolverExplainTestError,
 
     .Solve = &TierSolverSolve,
     .Analyze = &TierSolverAnalyze,
@@ -138,6 +145,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
+static int DefaultGetTierName(char *name, Tier tier);
 
 // -----------------------------------------------------------------------------
 
@@ -176,6 +184,43 @@ static int TierSolverFinalize(void) {
     num_options = 0;
 
     return kNoError;
+}
+
+static int TierSolverTest(long seed) {
+    TierWorkerInit(&current_api);  // TODO: check this logic.
+    return TierManagerTest(&current_api, seed);
+}
+
+static ReadOnlyString TierSolverExplainTestError(int error) {
+    switch (error) {
+        case kTierSolverTestNoError:
+            return "no error";
+        case kTierSolverTestDependencyError:
+            return "another error occurred before the test begins";
+        case kTierSolverTestGetTierNameError:
+            return "error reported from game-specific GetTierName function";
+        case kTierSolverTestIllegalChildError:
+            return "an illegal position was found to be a child position of "
+                   "some legal position";
+        case kTierSolverTestTierSymmetrySelfMappingError:
+            return "applying tier symmetry within the same tier returned a "
+                   "different position";
+        case kTierSolverTestTierSymmetryInconsistentError:
+            return "applying tier symmetry twice - first using a symmetric "
+                   "tier, then using the original tier - returned a different "
+                   "position";
+        case kTierSolverTestChildParentMismatchError:
+            return "one of the canonical child positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "parent";
+        case kTierSolverTestParentChildMismatchError:
+            return "one of the canonical parent positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "child";
+    }
+
+    return "unknown error, which usually indicates a bug in the tier solver "
+           "test code";
 }
 
 static int TierSolverSolve(void *aux) {
@@ -393,6 +438,11 @@ static bool SetCurrentApi(const TierSolverApi *api) {
         current_api.GetCanonicalChildPositions =
             &DefaultGetCanonicalChildPositions;
     }
+
+    if (current_api.GetTierName == NULL) {
+        current_api.GetTierName = &DefaultGetTierName;
+    }
+
     return true;
 }
 
@@ -466,4 +516,10 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
     return children;
+}
+
+static int DefaultGetTierName(char *name, Tier tier) {
+    sprintf(name, "%" PRITier, tier);
+
+    return kNoError;
 }

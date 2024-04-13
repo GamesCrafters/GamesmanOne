@@ -7,9 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The ReverseTierGraph type.
- *
- * @version 1.0.0
- * @date 2024-01-19
+ * @version 1.1.0
+ * @date 2024-03-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -96,5 +95,15 @@ int ReverseTierGraphAdd(ReverseTierGraph *graph, Tier child, Tier parent);
  * @return An array of parent tiers of tier CHILD.
  */
 TierArray ReverseTierGraphPopParentsOf(ReverseTierGraph *graph, Tier child);
+
+/**
+ * @brief Returns a copy of the parent tier array of tier CHILD from GRAPH. The
+ * caller of this function is responsible for destroying the TierArray returned.
+ *
+ * @param graph Tier graph to get the array from.
+ * @param child Child tier.
+ * @return An array of parent tiers of tier CHILD.
+ */
+TierArray ReverseTierGraphGetParentsOf(ReverseTierGraph *graph, Tier child);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_TIER_GRAPH_H_

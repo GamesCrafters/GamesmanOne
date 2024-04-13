@@ -34,7 +34,7 @@
 #include <limits.h>   // UCHAR_MAX
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
+#include <stdint.h>   // int64_t, uint64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memcpy
@@ -45,6 +45,7 @@
 #include "core/solvers/tier_solver/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
+#include "lib/mt19937/mt19937-64.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -52,13 +53,15 @@
 #include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR PRAGMA(omp for)
+#define PRAGMA_OMP_FOR_SCHEDULE_GUIDED(k) PRAGMA(omp for schedule(guided, k))
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
 #else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR
+#define PRAGMA_OMP_FOR_SCHEDULE_GUIDED(k)
+#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
@@ -79,10 +82,6 @@ static TierSolverApi current_api;
 
 // A frontier array will be created for each possible remoteness.
 static const int kFrontierSize = kRemotenessMax + 1;
-
-// Illegal positions are marked with this value, which should be chosen based on
-// the integer type of the num_undecided_children array.
-static const unsigned char kIllegalNumChildren = UCHAR_MAX;
 
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
@@ -152,6 +151,13 @@ static void Step6SaveValues(void);
 static void Step7Cleanup(void);
 static void DestroyFrontiers(void);
 
+static bool TestShouldSkip(Tier tier, Position position);
+static int TestChildPositions(Tier tier, Position position);
+static int TestChildToParentMatching(Tier tier, Position position);
+static int TestParentToChildMatching(Tier tier, Position position,
+                                     const TierArray *parent_tiers);
+static int TestPrintError(Tier tier, Position position);
+
 // -----------------------------------------------------------------------------
 
 void TierWorkerInit(const TierSolverApi *api) {
@@ -212,6 +218,97 @@ int TierWorkerMpiServe(void) {
     return kNoError;
 }
 #endif  // USE_MPI
+
+static int TestTierSymmetryRemoval(Tier tier, Position position,
+                                   Tier canonical_tier) {
+    Position (*ApplySymm)(TierPosition, Tier) =
+        current_api.GetPositionInSymmetricTier;
+
+    TierPosition self = {.tier = tier, .position = position};
+    TierPosition symm = {.tier = canonical_tier};
+    symm.position = ApplySymm(self, canonical_tier);
+
+    // Test if getting symmetric position from the same tier returns the
+    // position itself.
+    Position self_in_self_tier = ApplySymm(self, self.tier);
+    Position symm_in_symm_tier = ApplySymm(symm, symm.tier);
+    if (self_in_self_tier != self.position) {
+        return kTierSolverTestTierSymmetrySelfMappingError;
+    } else if (symm_in_symm_tier != symm.position) {
+        return kTierSolverTestTierSymmetrySelfMappingError;
+    }
+
+    // Skip the next test if both tiers are the same.
+    if (tier == canonical_tier) return kTierSolverTestNoError;
+
+    // Test if applying the symmetry twice returns the same position.
+    Position self_in_symm_tier = ApplySymm(self, symm.tier);
+    Position symm_in_self_tier = ApplySymm(symm, self.tier);
+    TierPosition self_in_symm_tier_tier_position = {
+        .tier = symm.tier, .position = self_in_symm_tier};
+    TierPosition symm_in_self_tier_tier_position = {
+        .tier = self.tier, .position = symm_in_self_tier};
+    Position new_self = ApplySymm(self_in_symm_tier_tier_position, self.tier);
+    Position new_symm = ApplySymm(symm_in_self_tier_tier_position, symm.tier);
+    if (new_self != self.position) {
+        return kTierSolverTestTierSymmetryInconsistentError;
+    } else if (new_symm != symm.position) {
+        return kTierSolverTestTierSymmetryInconsistentError;
+    }
+
+    return kTierSolverTestNoError;
+}
+
+int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed) {
+    static const int64_t kTestSizeMax = 1000;
+    init_genrand64(seed);
+
+    int64_t tier_size = current_api.GetTierSize(tier);
+    bool random_test = tier_size > kTestSizeMax;
+    int64_t test_size = random_test ? kTestSizeMax : tier_size;
+    Tier canonical_tier = current_api.GetCanonicalTier(tier);
+
+    for (int64_t i = 0; i < test_size; ++i) {
+        Position position = random_test ? genrand64_int63() % tier_size : i;
+        if (TestShouldSkip(tier, position)) continue;
+
+        // Check tier symmetry removal implementation.
+        int error = TestTierSymmetryRemoval(tier, position, canonical_tier);
+        if (error != kTierSolverTestNoError) {
+            TestPrintError(tier, position);
+            return error;
+        }
+
+        // Check if all child positions are legal.
+        error = TestChildPositions(tier, position);
+        if (error != kTierSolverTestNoError) {
+            TestPrintError(tier, position);
+            return error;
+        }
+
+        // Perform the following tests only if current game variant implements
+        // its own GetCanonicalParentPositions.
+        if (current_api.GetCanonicalParentPositions != NULL) {
+            // Check if all child positions of the current position has the
+            // current position as one of their parents.
+            error = TestChildToParentMatching(tier, position);
+            if (error != kTierSolverTestNoError) {
+                TestPrintError(tier, position);
+                return error;
+            }
+
+            // Check if all parent positions of the current position has the
+            // current position as one of their children.
+            error = TestParentToChildMatching(tier, position, parent_tiers);
+            if (error != kTierSolverTestNoError) {
+                TestPrintError(tier, position);
+                return error;
+            }
+        }
+    }
+
+    return kTierSolverTestNoError;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -321,7 +418,7 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
         TierPosition child_tier_position = {.tier = child_tier};
         int tid = GetThreadId();
 
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_GUIDED(1024)
         for (Position position = 0; position < child_tier_size; ++position) {
             child_tier_position.position = position;
             Value value = DbManagerProbeValue(&probe, child_tier_position);
@@ -352,7 +449,7 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
         TierPosition canonical_tier_position = {.tier = canonical_tier};
         int tid = GetThreadId();
 
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_GUIDED(1024)
         for (int64_t position = 0; position < child_tier_size; ++position) {
             canonical_tier_position.position = position;
             Value value = DbManagerProbeValue(&probe, canonical_tier_position);
@@ -362,10 +459,11 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
 
             int remoteness =
                 DbManagerProbeRemoteness(&probe, canonical_tier_position);
-            Position noncanonical_position =
+            Position position_in_noncanonical_tier =
                 current_api.GetPositionInSymmetricTier(canonical_tier_position,
                                                        original_tier);
-            if (!CheckAndLoadFrontier(child_index, noncanonical_position, value,
+            if (!CheckAndLoadFrontier(child_index,
+                                      position_in_noncanonical_tier, value,
                                       remoteness, tid)) {
                 success = false;
             }
@@ -430,7 +528,7 @@ static bool Step3ScanTier(void) {
 
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < this_tier_size; ++position) {
             TierPosition tier_position = {.tier = this_tier,
                                           .position = position};
@@ -438,7 +536,7 @@ static bool Step3ScanTier(void) {
             // Skip illegal positions and non-canonical positions.
             if (!current_api.IsLegalPosition(tier_position) ||
                 !IsCanonicalPosition(position)) {
-                num_undecided_children[position] = kIllegalNumChildren;
+                num_undecided_children[position] = 0;
                 continue;
             }
 
@@ -553,7 +651,7 @@ static bool PushFrontierHelper(
     bool success = true;
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_index = 0;
-        PRAGMA_OMP_FOR
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                           &child_index, remoteness,
@@ -736,9 +834,6 @@ static bool ProcessTiePosition(int remoteness, TierPosition tier_position) {
 static void Step5MarkDrawPositions(void) {
     PRAGMA_OMP_PARALLEL_FOR
     for (Position position = 0; position < this_tier_size; ++position) {
-        // Skip illegal positions.
-        if (num_undecided_children[position] == kIllegalNumChildren) continue;
-
         if (num_undecided_children[position] > 0) {
             // A position is drawing if it still has undecided children.
             DbManagerSetValue(position, kDraw);
@@ -789,7 +884,105 @@ static void DestroyFrontiers(void) {
     }
 }
 
+static bool TestShouldSkip(Tier tier, Position position) {
+    TierPosition tier_position = {.tier = tier, .position = position};
+    if (!current_api.IsLegalPosition(tier_position)) return true;
+    if (current_api.Primitive(tier_position) != kUndecided) return true;
+
+    return false;
+}
+
+static int TestChildPositions(Tier tier, Position position) {
+    TierPosition parent = {.tier = tier, .position = position};
+    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
+    int error = kTierSolverTestNoError;
+    for (int64_t i = 0; i < children.size; ++i) {
+        TierPosition child = children.array[i];
+        if (child.position < 0) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        } else if (child.position >= current_api.GetTierSize(child.tier)) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        } else if (!current_api.IsLegalPosition(child)) {
+            error = kTierSolverTestIllegalChildError;
+            break;
+        }
+    }
+
+    return error;
+}
+
+static int TestChildToParentMatching(Tier tier, Position position) {
+    TierPosition parent = {.tier = tier, .position = position};
+    TierPosition canonical_parent = parent;
+    canonical_parent.position =
+        current_api.GetCanonicalPosition(canonical_parent);
+    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
+    int error = kTierSolverTestNoError;
+    for (int64_t i = 0; i < children.size; ++i) {
+        // Check if all child positions have parent as one of their parents.
+        TierPosition child = children.array[i];
+        PositionArray parents =
+            current_api.GetCanonicalParentPositions(child, tier);
+        if (!PositionArrayContains(&parents, canonical_parent.position)) {
+            error = kTierSolverTestChildParentMismatchError;
+        }
+
+        PositionArrayDestroy(&parents);
+        if (error != kTierSolverTestNoError) break;
+    }
+    TierPositionArrayDestroy(&children);
+
+    return error;
+}
+
+static int TestParentToChildMatching(Tier tier, Position position,
+                                     const TierArray *parent_tiers) {
+    TierPosition child = {.tier = tier, .position = position};
+    TierPosition canonical_child = child;
+    canonical_child.position =
+        current_api.GetCanonicalPosition(canonical_child);
+
+    int error = kTierSolverTestNoError;
+    for (int64_t i = 0; i < parent_tiers->size; ++i) {
+        Tier parent_tier = parent_tiers->array[i];
+        PositionArray parents = current_api.GetCanonicalParentPositions(
+            canonical_child, parent_tier);
+        for (int64_t j = 0; j < parents.size; ++j) {
+            // Skip illegal and primitive parent positions as they are also
+            // skipped in solving.
+            TierPosition parent = {.tier = parent_tier,
+                                   .position = parents.array[j]};
+            if (!current_api.IsLegalPosition(parent)) continue;
+            if (current_api.Primitive(parent) != kUndecided) continue;
+            
+            // Check if all parent positions have child as one of their children.
+            TierPositionArray children =
+                current_api.GetCanonicalChildPositions(parent);
+            if (!TierPositionArrayContains(&children, canonical_child)) {
+                error = kTierSolverTestParentChildMismatchError;
+            }
+
+            TierPositionArrayDestroy(&children);
+            if (error != kTierSolverTestNoError) break;
+        }
+
+        PositionArrayDestroy(&parents);
+        if (error != kTierSolverTestNoError) break;
+    }
+
+    return error;
+}
+
+static int TestPrintError(Tier tier, Position position) {
+    return printf("\nTierWorkerTest: error detected at position %" PRIPos
+                  " of tier %" PRITier "\n",
+                  position, tier);
+}
+
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
-#undef PRAGMA_OMP_FOR
+#undef PRAGMA_OMP_FOR_SCHEDULE_GUIDED
+#undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_PARALLEL_FOR

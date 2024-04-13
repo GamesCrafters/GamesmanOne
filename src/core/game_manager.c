@@ -81,7 +81,11 @@ int GameManagerCurrentGameSupportsMpi(void) {
 }
 
 int GameManagerSetVariant(int variant_id) {
-    const GameVariant *variant = current_game->GetCurrentVariant();
+    const GameVariant *variant = NULL;
+    if (current_game->GetCurrentVariant != NULL) {
+        variant = current_game->GetCurrentVariant();
+    }
+    
     if (variant == NULL) {
         // If variants are not implemented, 0 is the only valid default variant
         // id.
