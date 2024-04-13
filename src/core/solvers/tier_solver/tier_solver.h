@@ -290,14 +290,23 @@ typedef struct TierSolverApi {
     int (*GetTierName)(char *name, Tier tier);
 } TierSolverApi;
 
+/** @brief All detectable error types by the tier solver test function. */
 enum TierSolverTestErrors {
-    kTierSolverTestNoError,
-    kTierSolverTestDependencyError,
-    kTierSolverTestGetTierNameError,
-    kTierSolverTestIllegalChildError,
+    kTierSolverTestNoError,           /**< No error. */
+    kTierSolverTestDependencyError,   /**< Test failed due to a prior error. */
+    kTierSolverTestGetTierNameError,  /**< Failed to get tier name. */
+    kTierSolverTestIllegalChildError, /**< Illegal child position detected. */
+    /** Applying tier symmetry within the same tier returned a different
+       position. */
     kTierSolverTestTierSymmetrySelfMappingError,
+    /** Applying tier symmetry twice - first using a symmetric tier, then using
+       the original tier - returned a different position */
     kTierSolverTestTierSymmetryInconsistentError,
+    /** One of the canonical child positions of a legal canonical position was
+       found not to have that legal position as its parent */
     kTierSolverTestChildParentMismatchError,
+    /** One of the canonical parent positions of a legal canonical position was
+       found not to have that legal position as its child. */
     kTierSolverTestParentChildMismatchError,
 };
 

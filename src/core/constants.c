@@ -4,7 +4,6 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definitions of global constants.
- * 
  * @version 1.1.1
  * @date 2024-01-24
  *
@@ -41,5 +40,5 @@ const TierPosition kIllegalTierPosition = {
     .position = kIllegalPosition,
 };
 
-ConstantReadOnlyString kGamesmanDate = "2024.02.29";
-ConstantReadOnlyString kGamesmanVersion = "0.6.1";
+ConstantReadOnlyString kGamesmanDate = "2024.04.12";
+ConstantReadOnlyString kGamesmanVersion = "1.0.0";
