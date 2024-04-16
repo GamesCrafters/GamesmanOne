@@ -1,11 +1,23 @@
-# Define the executable
+# Define the executable.
 add_executable(gamesman main.c)
 
-target_link_libraries(gamesman PRIVATE json-c::json-c ZLIB::ZLIB)
+# Check ZLIB.
+find_package(ZLIB REQUIRED)
+target_link_libraries(gamesman PRIVATE ZLIB::ZLIB)
 
-find_package(OpenMP)
-if(OpenMP_FOUND)
-  target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
+# Check json-c.
+list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res/lib64/cmake")
+find_package(json-c REQUIRED CONFIG)
+target_link_libraries(gamesman PRIVATE json-c::json-c)
+
+# Check OpenMP.
+if(NOT DISABLE_OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_FOUND)
+    target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
+  else()
+    message(WARNING "OpenMP not found. Building Gamesman without OpenMP.")
+  endif()
 endif()
 
 # Add subdirectories for each component
