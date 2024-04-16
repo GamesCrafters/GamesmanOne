@@ -4,4 +4,4 @@ set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/gz64.h
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/gz64.c
             ${CMAKE_CURRENT_SOURCE_DIR}/mgz.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+add_library(mgz STATIC ${HEADERS} ${SOURCES})

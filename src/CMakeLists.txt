@@ -12,5 +12,3 @@ endif()
 add_subdirectory(core)
 add_subdirectory(games)
 add_subdirectory(libs)
-
-set(LIBS core games libs)
