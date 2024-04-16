@@ -20,6 +20,13 @@ if(NOT DISABLE_OPENMP)
   endif()
 endif()
 
+# Check MPI.
+if(USE_MPI)
+  find_package(MPI REQUIRED)
+  target_link_libraries(gamesman PRIVATE MPI::MPI_C)
+  target_compile_definitions(gamesman PRIVATE USE_MPI)
+endif()
+
 # Add subdirectories for each component
 add_subdirectory(core)
 add_subdirectory(games)
