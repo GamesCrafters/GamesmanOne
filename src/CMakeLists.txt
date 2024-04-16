@@ -6,7 +6,7 @@ find_package(ZLIB REQUIRED)
 target_link_libraries(gamesman PRIVATE ZLIB::ZLIB)
 
 # Check json-c.
-list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res/lib64/cmake")
+list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res")
 find_package(json-c REQUIRED CONFIG)
 target_link_libraries(gamesman PRIVATE json-c::json-c)
 
