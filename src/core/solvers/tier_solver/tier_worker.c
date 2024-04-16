@@ -45,7 +45,7 @@
 #include "core/solvers/tier_solver/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
-#include "lib/mt19937/mt19937-64.h"
+#include "libs/mt19937/mt19937-64.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

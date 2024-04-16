@@ -1,5 +1,6 @@
 # Automatic directories
 bin
+build
 data*
 
 # Prerequisites
