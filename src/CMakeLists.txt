@@ -12,8 +12,10 @@ target_link_libraries(gamesman PRIVATE json-c::json-c)
 
 # Check OpenMP.
 if(NOT DISABLE_OPENMP)
-  find_package(OpenMP REQUIRED)
-  target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
+  find_package(OpenMP)
+  if(OpenMP_FOUND)
+    target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
+  endif()
 endif()
 
 # Check MPI.
