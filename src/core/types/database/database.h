@@ -113,6 +113,8 @@ typedef struct Database {
      */
     int (*FlushSolvingTier)(void *aux);
 
+    int (*LoadSolvingTier)(Tier tier, void *aux);
+
     /**
      * @brief Frees the in-memory DB.
      * @note This function is part of the Solving API.

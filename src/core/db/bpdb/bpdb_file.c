@@ -26,10 +26,12 @@
 
 #include "core/db/bpdb/bpdb_file.h"
 
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr, sprintf
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // strlen, strcat
+#include <fcntl.h>    // O_RDONLY
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdio.h>    // fprintf, stderr, sprintf, SEEK_CUR, SEEK_SET
+#include <stdlib.h>   // calloc, free
+#include <string.h>   // strlen, strcat
 
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
@@ -47,6 +49,11 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
                                  const BpdbFileHeader *header,
                                  const int32_t *decomp_dict, mgz_res_t result);
 
+static int LoadStep0ReadHeader(ReadOnlyString full_path,
+                               BpdbFileHeader *header);
+static int LoadStep1AllocateSpace(BpArray *records, BpdbFileHeader *header);
+static int LoadStep2ReadRecords(ReadOnlyString full_path, BpArray *records,
+                                const BpdbFileHeader *header);
 // -----------------------------------------------------------------------------
 
 char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
@@ -91,6 +98,20 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
     // Write compressed data to file.
     const int32_t *decomp_dict = BpArrayGetDecompDict(records);
     return FlushStep1WriteToFile(full_path, &header, decomp_dict, result);
+}
+
+int BpdbFileLoad(ReadOnlyString full_path, BpArray *records) {
+    BpdbFileHeader header;
+    int error = LoadStep0ReadHeader(full_path, &header);
+    if (error != 0) return error;
+
+    error = LoadStep1AllocateSpace(records, &header);
+    if (error != 0) return error;
+
+    error = LoadStep2ReadRecords(full_path, records, &header);
+    if (error != 0) return error;
+
+    return kNoError;
 }
 
 int BpdbFileGetBlockSize(int bits_per_entry) {
@@ -158,4 +179,90 @@ static int FlushStep1WriteToFile(ReadOnlyString full_path,
 
     // Close the file.
     return GuardedFclose(db_file);
+}
+
+static int LoadStep0ReadHeader(ReadOnlyString full_path,
+                               BpdbFileHeader *header) {
+    // Open file
+    FILE *db_file = GuardedFopen(full_path, "rb");
+    if (db_file == NULL) return kFileSystemError;
+
+    // Load header from file
+    int error = GuardedFread(header, sizeof(*header), 1, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
+
+    // Close file
+    return GuardedFclose(db_file);
+}
+
+static int LoadStep1AllocateSpace(BpArray *records, BpdbFileHeader *header) {
+    memset(records, 0, sizeof(*records));
+    bool success = true;
+    int error = kNoError;
+    records->meta = header->stream_meta;
+    records->stream = (uint8_t *)malloc(records->meta.stream_length);
+    if (records->stream == NULL) {
+        success = false;
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+    records->dict.num_unique = header->decomp_dict_meta.size / sizeof(int32_t);
+    records->dict.decomp_dict_capacity = records->dict.num_unique;
+    records->dict.decomp_dict =
+        (int32_t *)malloc(records->dict.decomp_dict_capacity * sizeof(int32_t));
+    if (records->dict.decomp_dict == NULL) {
+        success = false;
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+_bailout:
+    if (!success) {
+        free(records->stream);
+        free(records->dict.decomp_dict);
+        memset(records, 0, sizeof(*records));
+    }
+
+    return error;
+}
+
+static int LoadStep2ReadRecords(ReadOnlyString full_path, BpArray *records,
+                                const BpdbFileHeader *header) {
+    // Open file
+    FILE *db_file = GuardedFopen(full_path, "rb");
+    if (db_file == NULL) return kFileSystemError;
+
+    // Skip header
+    int error = GuardedFseek(db_file, sizeof(*header), SEEK_SET);
+    if (error != 0) return BailOutFclose(db_file, error);
+
+    // Read decompression dictionary
+    error = GuardedFread(records->dict.decomp_dict, 1,
+                         header->decomp_dict_meta.size, db_file);
+    if (error != 0) return BailOutFclose(db_file, error);
+
+    // Close FILE.
+    error = GuardedFclose(db_file);
+    if (error != 0) return error;
+
+    // Open database file using the open function.
+    int fd = GuardedOpen(full_path, O_RDONLY);
+    if (fd < 0) return kFileSystemError;
+
+    // Skip header, decompression dict, and lookup table.
+    long seek_length = sizeof(*header) + header->decomp_dict_meta.size +
+                       header->lookup_meta.size;
+    error = GuardedLseek(fd, seek_length, SEEK_SET);
+    if (error != 0) return BailOutClose(fd, error);
+
+    // Read compressed bit stream
+    gzFile gz_db_file = GuardedGzdopen(fd, "rb");
+    if (gz_db_file == Z_NULL) return BailOutClose(fd, kFileSystemError);
+    error = GuardedGz64Read(gz_db_file, records->stream,
+                            records->meta.stream_length, false);
+    if (error != 0) return BailOutGzclose(gz_db_file, error);
+
+    // Close file
+    return GuardedGzclose(gz_db_file);
 }

@@ -81,6 +81,8 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
  */
 int DbManagerFlushSolvingTier(void *aux);
 
+int DbManagerLoadSolvingTier(Tier tier, void *aux);
+
 /**
  * @brief Frees the solving tier in memory.
  *

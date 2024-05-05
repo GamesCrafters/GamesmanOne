@@ -80,6 +80,8 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
  */
 int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
 
+int BpdbFileLoad(ReadOnlyString full_path, BpArray *records);
+
 /**
  * @brief Returns the proper MGZ block size (in bytes) to use given the number
  * of bits used to store each entry in the BpArray.

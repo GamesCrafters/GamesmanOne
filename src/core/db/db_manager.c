@@ -80,6 +80,10 @@ int DbManagerFlushSolvingTier(void *aux) {
     return current_db->FlushSolvingTier(aux);
 }
 
+int DbManagerLoadSolvingTier(Tier tier, void *aux) {
+    return current_db->LoadSolvingTier(tier, aux);
+}
+
 int DbManagerFreeSolvingTier(void) { return current_db->FreeSolvingTier(); }
 
 int DbManagerSetValue(Position position, Value value) {

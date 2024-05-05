@@ -65,6 +65,7 @@ static void BpdbLiteFinalize(void);
 
 static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size);
 static int BpdbLiteFlushSolvingTier(void *aux);
+static int BpdbLiteLoadSolvingTier(Tier tier, void *aux);
 static int BpdbLiteFreeSolvingTier(void);
 
 static int BpdbLiteSetValue(Position position, Value value);
@@ -87,6 +88,7 @@ const Database kBpdbLite = {
     // Solving
     .CreateSolvingTier = &BpdbLiteCreateSolvingTier,
     .FlushSolvingTier = &BpdbLiteFlushSolvingTier,
+    .LoadSolvingTier = &BpdbLiteLoadSolvingTier,
     .FreeSolvingTier = &BpdbLiteFreeSolvingTier,
     .SetValue = &BpdbLiteSetValue,
     .SetRemoteness = &BpdbLiteSetRemoteness,
@@ -177,6 +179,20 @@ static int BpdbLiteFlushSolvingTier(void *aux) {
     return error;
 }
 
+static int BpdbLiteLoadSolvingTier(Tier tier, void *aux) {
+    (void)aux;  // Unused.
+    current_tier = tier;
+    char *full_path =
+        BpdbFileGetFullPath(sandbox_path, tier, CurrentGetTierName);
+    if (full_path == NULL) return kMallocFailureError;
+
+    int error = BpdbFileLoad(full_path, &records);
+    if (error != 0) fprintf(stderr, "BpdbLiteLoadSolvingTier: code %d", error);
+    free(full_path);
+
+    return error;
+}
+
 static int BpdbLiteFreeSolvingTier(void) {
     BpArrayDestroy(&records);
     current_tier = kIllegalTier;
@@ -187,7 +203,8 @@ static int BpdbLiteFreeSolvingTier(void) {
 
 static uint64_t GetRecord(Position position) {
     uint64_t record;
-    PRAGMA_OMP_CRITICAL(records) { record = BpArrayGet(&records, position); }
+    // PRAGMA_OMP_CRITICAL(records) { record = BpArrayGet(&records, position); }
+    record = BpArrayGet(&records, position);
 
     return record;
 }
