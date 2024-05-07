@@ -81,11 +81,11 @@ enum TierGraphErrorTypes {
 // because we need to create/modify some of the functions.
 static TierSolverApi current_api;
 
-// The tier tree that maps each tier to its value. The value of a tier contains
+// The tier graph that maps each tier to its value. The value of a tier contains
 // information about its number of undecided children (or undiscovered parents
-// if the tree is reversed) and discovery status. The discovery status is used
+// if the graph is reversed) and discovery status. The discovery status is used
 // to detect loops in the tier graph during topological sort.
-static TierHashMap tier_tree;
+static TierHashMap tier_graph;
 static TierQueue pending_tiers;  // Tiers ready to be solved/analyzed.
 
 // Cached reverse tier graph of the game.
@@ -222,7 +222,7 @@ static int InitGlobalVariables(int type) {
     skipped_tiers = 0;
     failed_tiers = 0;
     TierQueueInit(&pending_tiers);
-    TierHashMapInit(&tier_tree, 0.5);
+    TierHashMapInit(&tier_graph, 0.5);
     ReverseTierGraphInit(&reverse_tier_graph);
     if (type == kTierAnalyzing) {
         AnalysisInit(&game_analysis);
@@ -241,7 +241,7 @@ static TierArray GetParentTiers(Tier child) {
 }
 
 static void DestroyGlobalVariables(void) {
-    TierHashMapDestroy(&tier_tree);
+    TierHashMapDestroy(&tier_graph);
     ReverseTierGraphDestroy(&reverse_tier_graph);
     TierQueueDestroy(&pending_tiers);
 }
@@ -284,7 +284,7 @@ static int BuildTierGraph(int type) {
 _bailout:
     TierStackDestroy(&fringe);
     if (ret != 0) {
-        TierHashMapDestroy(&tier_tree);
+        TierHashMapDestroy(&tier_graph);
         ReverseTierGraphDestroy(&reverse_tier_graph);
         CreateTierGraphPrintError(ret);
     } else if (type == kTierSolving) {
@@ -336,7 +336,7 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
             TierArrayDestroy(&tier_children);
             return (int)kTierGraphOutOfMemory;
         }
-        if (!TierHashMapContains(&tier_tree, child)) {
+        if (!TierHashMapContains(&tier_graph, child)) {
             if (!TierGraphSetInitial(child)) {
                 TierArrayDestroy(&tier_children);
                 return (int)kTierGraphOutOfMemory;
@@ -356,7 +356,7 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
 }
 
 static int EnqueuePrimitiveTiers(void) {
-    TierHashMapIterator it = TierHashMapBegin(&tier_tree);
+    TierHashMapIterator it = TierHashMapBegin(&tier_graph);
     Tier tier;
     int64_t value;
     while (TierHashMapIteratorNext(&it, &tier, &value)) {
@@ -611,8 +611,9 @@ static int ValueToStatus(int64_t value) { return value % kNumStatus; }
 static int ValueToNumTiers(int64_t value) { return value / kNumStatus; }
 
 static int64_t GetValue(Tier tier) {
-    TierHashMapIterator it = TierHashMapGet(&tier_tree, tier);
-    if (!TierHashMapIteratorIsValid(&it)) return -1;
+    TierHashMapIterator it = TierHashMapGet(&tier_graph, tier);
+    assert(TierHashMapIteratorIsValid(&it));
+    
     return TierHashMapIteratorValue(&it);
 }
 
@@ -621,23 +622,23 @@ static int GetStatus(Tier tier) { return ValueToStatus(GetValue(tier)); }
 static int GetNumTiers(Tier tier) { return ValueToNumTiers(GetValue(tier)); }
 
 static bool TierGraphSetInitial(Tier tier) {
-    assert(!TierHashMapContains(&tier_tree, tier));
+    assert(!TierHashMapContains(&tier_graph, tier));
     int64_t value = NumTiersAndStatusToValue(0, kStatusNotVisited);
-    return TierHashMapSet(&tier_tree, tier, value);
+    return TierHashMapSet(&tier_graph, tier, value);
 }
 
 static bool TierGraphSetStatus(Tier tier, int status) {
     int64_t value = GetValue(tier);
     int num_tiers = ValueToNumTiers(value);
     value = NumTiersAndStatusToValue(num_tiers, status);
-    return TierHashMapSet(&tier_tree, tier, value);
+    return TierHashMapSet(&tier_graph, tier, value);
 }
 
 static bool TierGraphSetNumTiers(Tier tier, int num_tiers) {
     int64_t value = GetValue(tier);
     int status = ValueToStatus(value);
     value = NumTiersAndStatusToValue(num_tiers, status);
-    return TierHashMapSet(&tier_tree, tier, value);
+    return TierHashMapSet(&tier_graph, tier, value);
 }
 
 static bool IncrementNumParentTiers(Tier tier) {
@@ -647,7 +648,7 @@ static bool IncrementNumParentTiers(Tier tier) {
     int status = ValueToStatus(value);
     int num_tiers = ValueToNumTiers(value) + 1;
     value = NumTiersAndStatusToValue(num_tiers, status);
-    return TierHashMapSet(&tier_tree, tier, value);
+    return TierHashMapSet(&tier_graph, tier, value);
 }
 
 static bool IsCanonicalTier(Tier tier) {
