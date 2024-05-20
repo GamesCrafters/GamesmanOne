@@ -6,8 +6,8 @@
  *         Angela He,
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 1.0.0
- * @date 2024-04-12
+ * @version 1.0.1
+ * @date 2024-04-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -946,12 +946,13 @@ static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
 }
 
 static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
-    // Format: M_<src>_<dest>, where src is the center of the source tile and
+    // Format: M_<src>_<dest>_x, where src is the center of the source tile and
     // dest is an invisible center inside the source tile in the move direction.
     // The first board_size centers (indexed from 0 - board_size - 1) correspond
     // to the centers for the tiles. The next board_size centers (board_size - 2
     // * board_size - 1) correspond to the destinations for all upward arrows.
-    // Then follow left, downward, and right arrows.
+    // Then follow left, downward, and right arrows. The sound effect character
+    // is hard coded as an 'x'.
     (void)tier_position;  // Unused;
     int src, dest, dest_center, board_size = GetBoardSize();
     UnpackMove(move, &src, &dest);
@@ -970,7 +971,7 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     }
 
     char buf[16];
-    sprintf(buf, "M_%d_%d", src, dest_center);
+    sprintf(buf, "M_%d_%d_x", src, dest_center);
     CString ret;
     CStringInitCopy(&ret, buf);
 
