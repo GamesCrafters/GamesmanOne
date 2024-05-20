@@ -33,7 +33,7 @@ install_macos() {
 
 # Check if running as root, abort if yes.
 if [ "$(id -u)" -eq 0 ]; then
-    error_exit "Running the script as root is not supported. Please rerun the script as normal user."
+    error_exit "Running the script as root is dangerous. Please rerun the script as normal user."
 fi
 
 # Detect OS and architecture
@@ -41,10 +41,10 @@ OS="$(uname -s)"
 ARCH="$(uname -m)"
 
 # Prompt the user for dependency installation.
-read -p "Install dependencies (may require password for sudo on Linux) [Y]/n? " response
+read -p "Install dependencies (may require password for sudo on Linux) y/[N]? " response
 
-# Default to 'Y' if no response is given
-response=${response:-Y}
+# Default to 'N' if no response is given
+response=${response:-N}
 
 if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
     INSTALL_DEPENDENCIES=true
@@ -85,15 +85,21 @@ done
 git submodule update --init || error_exit "Failed to update git submodules."
 
 cd lib/json-c/ || error_exit "Failed to change directory to lib/json-c."
-mkdir build
-cd build || error_exit "Failed to create or change to the build directory."
+if [ ! -d "build" ]; then
+  mkdir build
+fi
+cd build || error_exit "Failed to create or change to the build directory under lib/json-c/."
 
-CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../../res -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../../res -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64 -DCMAKE_BUILD_TYPE=Release"
 cmake $CMAKE_FLAGS ../ || error_exit "Failed to configure json-c using cmake."
 make -j || error_exit "json-c make failed."
 make install -j || error_exit "json-c make install failed."
 cd ../../../ || error_exit "Failed to change directory back to project root."
 
-autoreconf --install || error_exit "autoreconf --install failed."
-./configure 'CFLAGS=-Wall -Wextra -g -O3 -DNDEBUG' || error_exit "configure script failed."
-make -j || error_exit "GamesmanOne make failed."
+if [ ! -d "build" ]; then
+  mkdir build
+fi
+cd build || error_exit "Failed to create or change to the build directory."
+cmake -DCMAKE_BUILD_TYPE=Release .. || error_exit "cmake failed to configure GamesmanOne."
+cd .. || error_exit "Failed to change directory back to project root."
+cmake --build build -- -j || error_exit "cmake failed to build GamesmanOne."

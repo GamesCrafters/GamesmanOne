@@ -1,0 +1,5 @@
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/play.h)
+
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/play.c)
+
+target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
