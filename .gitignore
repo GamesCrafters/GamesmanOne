@@ -1,6 +1,7 @@
 # Automatic directories
-bin
-data*
+/bin
+/build
+/data*
 
 # Prerequisites
 *.d
