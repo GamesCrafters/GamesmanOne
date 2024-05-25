@@ -72,11 +72,11 @@ char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
 /**
  * @brief Adds the given byte OFFSET to the given generic pointer P. Return
- * value is equivalent to (void *)((uint8_t *)P + offset)).
+ * value is equivalent to (void *)((uint8_t *)P + OFFSET)).
  *
  * @param p Generic pointer.
  * @param offset Byte offset.
- * @return Shifted pointer (void *)((uint8_t *)P + offset)).
+ * @return Shifted pointer (void *)((uint8_t *)P + OFFSET)).
  */
 void *GenericPointerAdd(const void *p, int64_t offset);
 

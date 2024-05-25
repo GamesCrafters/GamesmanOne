@@ -29,9 +29,9 @@
 
 #include <assert.h>    // assert
 #include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // fprintf, stderr, fopen, fseek, fclose
 #include <stdlib.h>    // malloc, calloc, free
-#include <string.h>    // memset
+#include <string.h>    // strcpy, memset
 
 #include "core/constants.h"
 #include "core/misc.h"
@@ -57,7 +57,6 @@ static int NaiveDbProbeInit(DbProbe *probe);
 static int NaiveDbProbeDestroy(DbProbe *probe);
 static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
-
 static int NaiveDbTierStatus(Tier tier);
 
 const Database kNaiveDb = {
@@ -97,7 +96,7 @@ typedef struct NaiveDbEntry {
 } NaiveDbEntry;
 
 // Probe buffer size, fixed at 1 MiB.
-static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
+static const int kBufferSize = (1 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -109,7 +108,7 @@ static NaiveDbEntry *records;
 
 /**
  * @brief Returns the full path to the DB file for the given tier. The user is
- * responsible for free()ing the pointer returned by this function. Returns
+ * responsible for freeing the pointer returned by this function. Returns
  * NULL on failure.
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
@@ -276,6 +275,7 @@ static int NaiveDbProbeInit(DbProbe *probe) {
 static int NaiveDbProbeDestroy(DbProbe *probe) {
     free(probe->buffer);
     memset(probe, 0, sizeof(*probe));
+
     return kNoError;
 }
 
@@ -299,15 +299,11 @@ static bool ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
     return true;
 }
 
-static void *VoidPointerShift(void *pointer, int64_t offset) {
-    return (void *)((int8_t *)pointer + offset);
-}
-
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
     int64_t offset = position * sizeof(NaiveDbEntry) - probe->begin;
     assert(offset >= 0);
     NaiveDbEntry entry;
-    memcpy(&entry, VoidPointerShift(probe->buffer, offset),
+    memcpy(&entry, GenericPointerAdd(probe->buffer, offset),
            sizeof(NaiveDbEntry));
     return entry;
 }
