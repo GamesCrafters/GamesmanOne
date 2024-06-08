@@ -1,4 +1,4 @@
-#include "core/db/bpdb/bpdb.h"
+#include "core/db/bpdb/bpdb_lite.h"
 
 #include <stddef.h>  // NULL
 
@@ -7,7 +7,7 @@
 // Database API.
 
 const Database kBpdbLite = {
-    .name = "bpdb",
+    .name = "bpdb_lite",
     .formal_name = "Bit-Perfect Database",
 
     .Init = NULL,

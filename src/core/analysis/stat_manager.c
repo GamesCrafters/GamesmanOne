@@ -143,7 +143,7 @@ BitStream StatManagerLoadDiscoveryMap(Tier tier) {
     if (fd < 0) goto _bailout;
 
     // Read BitStream size.
-    error = GuardedFread(&ret.size, sizeof(ret.size), 1, file);
+    error = GuardedFread(&ret.size, sizeof(ret.size), 1, file, false);
     if (error != 0) goto _bailout;
 
     // Initialize BitStream with size.

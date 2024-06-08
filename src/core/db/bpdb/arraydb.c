@@ -51,11 +51,11 @@ const Database kArrayDb = {
     .GetRemoteness = ArrayDbGetRemoteness,
 
     // Probing
-    .ProbeInit = NULL,
-    .ProbeDestroy = NULL,
-    .ProbeValue = NULL,
-    .ProbeRemoteness = NULL,
-    .TierStatus = NULL,
+    .ProbeInit = ArrayDbProbeInit,
+    .ProbeDestroy = ArrayDbProbeDestroy,
+    .ProbeValue = ArrayDbProbeValue,
+    .ProbeRemoteness = ArrayDbProbeRemoteness,
+    .TierStatus = ArrayDbTierStatus,
 };
 
 // Probe buffer size.
@@ -224,7 +224,7 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
     if (error != 0) return BailOutFclose(file, kFileSystemError);
 
     size_t num_entries = kBufferSize / sizeof(Record);
-    error = GuardedFread(buffer, sizeof(Record), num_entries, file);
+    error = GuardedFread(buffer, sizeof(Record), num_entries, file, true);
     if (error != 0 && error != 2) return BailOutFclose(file, kFileSystemError);
 
     error = GuardedFclose(file);

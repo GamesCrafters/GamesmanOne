@@ -40,7 +40,7 @@
 
 #include "core/analysis/stat_manager.h"
 #include "core/constants.h"
-#include "core/db/bpdb/bpdb_lite.h"
+#include "core/db/bpdb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/misc.h"
@@ -166,7 +166,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path,
+    ret = DbManagerInitDb(&kArrayDb, game_name, variant, data_path,
                           &DefaultGetTierName, NULL);
     if (ret != 0) goto _bailout;
 

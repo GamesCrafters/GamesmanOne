@@ -142,7 +142,7 @@ int GuardedFseek(FILE *stream, long off, int whence);
  * @return 0 on success; returns 2 if EOF is reached before N items are read, or
  * 3 if there is an error with STREAM.
  */
-int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream);
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok);
 
 /**
  * @brief Calls fwrite and returns 0 on success; calls perror and returns errno

@@ -3,12 +3,12 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 #include <stdint.h>  // int64_t
-#include <stdlib.h>  // malloc, free
+#include <stdlib.h>  // calloc, free
 
 #include "core/db/bpdb/record.h"
 
 int RecordArrayInit(RecordArray *array, int64_t size) {
-    array->records = (Record *)malloc(size * sizeof(Record));
+    array->records = (Record *)calloc(size, sizeof(Record));
     if (array->records == NULL) return kMallocFailureError;
     array->size = size;
 

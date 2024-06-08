@@ -200,10 +200,12 @@ int GuardedFseek(FILE *stream, long off, int whence) {
     return error;
 }
 
-int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream) {
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok) {
     size_t items_read = fread(ptr, size, n, stream);
     if (items_read == n) return 0;
     if (feof(stream)) {
+        if (eof_ok) return 0;
+        
         fprintf(
             stderr,
             "GuardedFread: end-of-file reached before reading %zd items, only "
