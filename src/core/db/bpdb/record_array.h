@@ -20,6 +20,9 @@ void RecordArraySetRemoteness(RecordArray *array, Position position,
 Value RecordArrayGetValue(const RecordArray *array, Position position);
 int RecordArrayGetRemoteness(const RecordArray *array, Position position);
 
-const void *RecordArrayGetData(const RecordArray *array);
+const void *RecordArrayGetReadOnlyData(const RecordArray *array);
+void *RecordArrayGetData(RecordArray *array);
+const int64_t RecordArrayGetSize(const RecordArray *array);
+const int64_t RecordArrayGetRawSize(const RecordArray *array);
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_RECORD_ARRAY_H_

@@ -40,6 +40,18 @@ int RecordArrayGetRemoteness(const RecordArray *array, Position position) {
     return RecordGetRemoteness(&array->records[position]);
 }
 
-const void *RecordArrayGetData(const RecordArray *array) {
+const void *RecordArrayGetReadOnlyData(const RecordArray *array) {
+    return (const void *)array->records;
+}
+
+void *RecordArrayGetData(RecordArray *array) {
     return (void *)array->records;
+}
+
+const int64_t RecordArrayGetSize(const RecordArray *array) {
+    return array->size;
+}
+
+const int64_t RecordArrayGetRawSize(const RecordArray *array) {
+    return array->size * sizeof(Record);
 }

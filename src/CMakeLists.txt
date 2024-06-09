@@ -7,7 +7,6 @@ target_link_libraries(gamesman PRIVATE ZLIB::ZLIB)
 
 # Check for LibLZMA.
 find_package(LibLZMA REQUIRED)
-target_link_libraries(gamesman PRIVATE LibLZMA::LibLZMA)
 
 # Check json-c.
 list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res")

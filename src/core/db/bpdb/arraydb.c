@@ -3,7 +3,7 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
-#include <stdio.h>    // fprintf, stderr, SEEK_SET
+#include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // strcpy
 
@@ -12,6 +12,16 @@
 #include "core/db/bpdb/record_array.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
+#include "libs/xzra/xzra.h"
+
+typedef struct {
+    XzraFile *file;
+    bool init;
+} AdbProbeInternal;
+
+static const int kBlockSize = 1 << 20;
+static const int kLzmaLevel = 9;
+static const bool kEnableExtremeCompression = true;
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
@@ -58,9 +68,6 @@ const Database kArrayDb = {
     .TierStatus = ArrayDbTierStatus,
 };
 
-// Probe buffer size.
-static const int kBufferSize = (1 << 19) * sizeof(Record);
-
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
@@ -87,7 +94,6 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
-    assert(records.records == NULL);
 
     return kNoError;
 }
@@ -100,7 +106,6 @@ static void ArrayDbFinalize(void) {
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
     assert(current_tier == kIllegalTier && current_tier_size == kIllegalSize);
-    assert(records.records == NULL);
     current_tier = tier;
     current_tier_size = size;
 
@@ -114,7 +119,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name><ext>", +2 for '/' and '\0'.
-    ConstantReadOnlyString extension = ".adb";
+    ConstantReadOnlyString extension = ".adb.xz";
     char *full_path = (char *)calloc(
         (strlen(sandbox_path) + kDbFileNameLengthMax + strlen(extension) + 2),
         sizeof(char));
@@ -141,17 +146,18 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
-    FILE *file = GuardedFopen(full_path, "wb");
+    int64_t compressed_size = XzraCompressStream(
+        full_path, false, kBlockSize, kLzmaLevel, kEnableExtremeCompression, 24,
+        RecordArrayGetData(&records), RecordArrayGetRawSize(&records));
     free(full_path);
-    if (file == NULL) return kFileSystemError;
-
-    // Write records
-    int error = GuardedFwrite(RecordArrayGetData(&records), sizeof(Record),
-                              current_tier_size, file);
-    if (error != kNoError) return kFileSystemError;
-
-    error = GuardedFclose(file);
-    if (error != 0) return kFileSystemError;
+    switch (compressed_size) {
+        case -2:
+            return kFileSystemError;
+        case -3:
+            return kRuntimeError;
+        default:
+            break;
+    }
 
     return kNoError;
 }
@@ -185,81 +191,66 @@ static int ArrayDbGetRemoteness(Position position) {
 }
 
 static int ArrayDbProbeInit(DbProbe *probe) {
-    probe->buffer = malloc(kBufferSize);
+    probe->buffer = calloc(1, sizeof(AdbProbeInternal));
     if (probe->buffer == NULL) return kMallocFailureError;
 
     probe->tier = kIllegalTier;
-    probe->begin = 0;
-    probe->size = kBufferSize;
+    // probe->begin and probe->size are unused.
 
     return kNoError;
 }
 
 static int ArrayDbProbeDestroy(DbProbe *probe) {
+    AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
+    XzraFileClose(probe_internal->file);
     free(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 
     return kNoError;
 }
 
-static bool ProbeBufferHit(const DbProbe *probe, TierPosition tier_position) {
-    if (probe->tier != tier_position.tier) return false;
-    int64_t record_offset = tier_position.position * sizeof(Record);
-    if (record_offset < probe->begin) return false;
-    if (record_offset >= probe->begin + probe->size) return false;
-
-    return true;
+static bool ProbeSameFile(const DbProbe *probe, TierPosition tier_position) {
+    return probe->tier == tier_position.tier;
 }
 
-static int ReadFromFile(TierPosition tier_position, void *buffer) {
-    char *full_path = GetFullPathToFile(tier_position.tier, CurrentGetTierName);
-    if (full_path == NULL) return kMallocFailureError;
-
-    FILE *file = GuardedFopen(full_path, "rb");
-    free(full_path);
-    if (file == NULL) return kFileSystemError;
-
-    int64_t offset = tier_position.position * sizeof(Record);
-    int error = GuardedFseek(file, offset, SEEK_SET);
-    if (error != 0) return BailOutFclose(file, kFileSystemError);
-
-    size_t num_entries = kBufferSize / sizeof(Record);
-    error = GuardedFread(buffer, sizeof(Record), num_entries, file, true);
-    if (error != 0 && error != 2) return BailOutFclose(file, kFileSystemError);
-
-    error = GuardedFclose(file);
-    if (error != 0) return kFileSystemError;
-
-    return kNoError;
-}
-
-static int ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
-    int error = ReadFromFile(tier_position, probe->buffer);
-    if (error != kNoError) {
-        fprintf(stderr, "ProbeFillBuffer: failed to read from file.\n");
-        return error;
+static int ProbeLoadNewTier(DbProbe *probe, Tier tier) {
+    AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
+    if (probe_internal->init) {
+        int error = XzraFileClose(probe_internal->file);
+        if (error != 0) return kRuntimeError;
     }
 
-    probe->tier = tier_position.tier;
-    probe->begin = tier_position.position * sizeof(Record);
+    char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
+    if (full_path == NULL) return kMallocFailureError;
 
+    probe_internal->file = XzraFileOpen(full_path);
+    free(full_path);
+    if (probe_internal->file == NULL) return kFileSystemError;
+
+    probe_internal->init = true;
     return kNoError;
 }
 
 static Record ProbeGetRecord(const DbProbe *probe, Position position) {
-    int64_t offset = position * sizeof(Record) - probe->begin;
-    assert(offset >= 0);
+    int64_t offset = position * sizeof(Record);
     Record rec;
-    memcpy(&rec, GenericPointerAdd(probe->buffer, offset), sizeof(rec));
+    AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
+    XzraFileSeek(probe_internal->file, offset, XZRA_SEEK_SET);
+    size_t bytes_read = XzraFileRead(&rec, sizeof(rec), probe_internal->file);
+    if (bytes_read != sizeof(rec)) {
+        fprintf(stderr, "ProbeGetRecord: (BUG) corrupt record\n");
+    }
 
     return rec;
 }
 
 static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeBufferHit(probe, tier_position)) {
-        int error = ProbeFillBuffer(probe, tier_position);
+    if (!ProbeSameFile(probe, tier_position)) {
+        int error = ProbeLoadNewTier(probe, tier_position.tier);
         if (error != kNoError) {
-            fprintf(stderr, "ArrayDbProbeValue: failed to load buffer\n");
+            fprintf(stderr,
+                    "ArrayDbProbeValue: failed to load tier %" PRITier "\n",
+                    tier_position.tier);
             return kErrorValue;
         }
     }
@@ -269,10 +260,13 @@ static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position) {
 }
 
 static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeBufferHit(probe, tier_position)) {
-        int error = ProbeFillBuffer(probe, tier_position);
+    if (!ProbeSameFile(probe, tier_position)) {
+        int error = ProbeLoadNewTier(probe, tier_position.tier);
         if (error != kNoError) {
-            fprintf(stderr, "ArrayDbProbeRemoteness: failed to load buffer\n");
+            fprintf(stderr,
+                    "ArrayDbProbeRemoteness: failed to load tier %" PRITier
+                    "\n",
+                    tier_position.tier);
             return kIllegalRemoteness;
         }
     }
