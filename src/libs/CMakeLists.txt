@@ -6,4 +6,3 @@ add_subdirectory(xzra)
 set(LIBS mgz mt19937 xzra)
 
 target_link_libraries(gamesman PRIVATE ${LIBS})
-target_link_libraries(gamesman PRIVATE LibLZMA::LibLZMA)

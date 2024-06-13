@@ -233,7 +233,7 @@ static const char *LzmaStreamDecoderMtRetDesc(lzma_ret ret) {
 }
 
 static bool InitDecoder(lzma_stream *strm, uint32_t num_threads,
-                         uint64_t memlimit) {
+                        uint64_t memlimit) {
     lzma_mt mt = {
         .flags = LZMA_CONCATENATED | LZMA_FAIL_FAST,
         .timeout = 0,
@@ -541,7 +541,8 @@ static bool DecodeBlockHeader(lzma_block *block, uint8_t *block_buf) {
     lzma_ret ret = lzma_block_header_decode(block, NULL, block_buf);
     if (ret != LZMA_OK) {
         const char *msg = LzmaBlockHeaderDecodeRetDesc(ret);
-        printf("lzma_block_header_decode failed with code %d: %s\n", ret, msg);
+        fprintf(stderr, "lzma_block_header_decode failed with code %d: %s\n",
+                ret, msg);
     }
 
     return ret == LZMA_OK;
@@ -622,37 +623,35 @@ static bool XzraFileBlockBufferHit(const XzraFile *file) {
                          file->iter.block.uncompressed_size) {
         return false;
     }
-
     return true;
 }
 
 // Loads the block that contains the byte at index file->pos, deallocating the
 // old block buffer if exists.
-static int XzraFileFillBlockBuffer(XzraFile *xzra_file, bool next) {
+static int XzraFileFillBlockBuffer(XzraFile *file, bool next) {
     if (next) {
         // lzma_index_iter_next returns true on failure or EOF.
-        if (lzma_index_iter_next(&xzra_file->iter, LZMA_INDEX_ITER_BLOCK)) {
+        if (lzma_index_iter_next(&file->iter, LZMA_INDEX_ITER_BLOCK)) {
             return 1;
         }
     } else {
-        int error = XzraRetrieveBlock(&xzra_file->iter, xzra_file->index,
-                                      xzra_file->pos);
+        int error = XzraRetrieveBlock(&file->iter, file->index, file->pos);
         // error == 1 is the only possibility for now.
         if (error != 0) return 1;
     }
 
     // Reallocate block data buffer if necessary
-    size_t new_block_size = xzra_file->iter.block.uncompressed_size;
-    if (xzra_file->block.capacity < new_block_size) {
-        uint8_t *tmp = (uint8_t *)realloc(xzra_file->block.uncompressed_data,
-                                          new_block_size);
+    size_t new_block_size = file->iter.block.uncompressed_size;
+    if (file->block.capacity < new_block_size) {
+        uint8_t *tmp =
+            (uint8_t *)realloc(file->block.uncompressed_data, new_block_size);
         if (tmp == NULL) return 2;
-        xzra_file->block.uncompressed_data = tmp;
-        xzra_file->block.capacity = new_block_size;
+        file->block.uncompressed_data = tmp;
+        file->block.capacity = new_block_size;
     }
 
-    return XzraDecodeBlock(xzra_file->block.uncompressed_data, &xzra_file->iter,
-                           xzra_file->file);
+    return XzraDecodeBlock(file->block.uncompressed_data, &file->iter,
+                           file->file);
 }
 
 static size_t MinSize(size_t a, size_t b) { return a < b ? a : b; }

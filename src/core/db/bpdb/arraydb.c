@@ -228,6 +228,7 @@ static int ProbeLoadNewTier(DbProbe *probe, Tier tier) {
     if (probe_internal->file == NULL) return kFileSystemError;
 
     probe_internal->init = true;
+    probe->tier = tier;
     return kNoError;
 }
 
