@@ -1,4 +1,5 @@
 # Add subdirectories for each component
+add_subdirectory(arraydb)
 add_subdirectory(bpdb)
 add_subdirectory(naivedb)
 

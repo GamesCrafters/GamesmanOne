@@ -411,26 +411,20 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
     // Scan child tier and load non-drawing positions into frontier.
     int64_t child_tier_size = current_api.GetTierSize(child_tier);
     bool success = true;
-
-    PRAGMA_OMP_PARALLEL {
-        DbProbe probe;
-        DbManagerProbeInit(&probe);
-        TierPosition child_tier_position = {.tier = child_tier};
-        int tid = GetThreadId();
-
-        PRAGMA_OMP_FOR_SCHEDULE_GUIDED(1024)
-        for (Position position = 0; position < child_tier_size; ++position) {
-            child_tier_position.position = position;
-            Value value = DbManagerProbeValue(&probe, child_tier_position);
-            int remoteness =
-                DbManagerProbeRemoteness(&probe, child_tier_position);
-            if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
-                                      tid)) {
-                success = false;
-            }
+    DbProbe probe;
+    DbManagerProbeInit(&probe);
+    TierPosition child_tier_position = {.tier = child_tier};
+    int tid = GetThreadId();
+    for (Position position = 0; position < child_tier_size; ++position) {
+        child_tier_position.position = position;
+        Value value = DbManagerProbeValue(&probe, child_tier_position);
+        int remoteness = DbManagerProbeRemoteness(&probe, child_tier_position);
+        if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
+                                  tid)) {
+            success = false;
         }
-        DbManagerProbeDestroy(&probe);
     }
+    DbManagerProbeDestroy(&probe);
 
     return success;
 }
@@ -443,33 +437,29 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
     int64_t child_tier_size = current_api.GetTierSize(canonical_tier);
     bool success = true;
 
-    PRAGMA_OMP_PARALLEL {
-        DbProbe probe;
-        DbManagerProbeInit(&probe);
-        TierPosition canonical_tier_position = {.tier = canonical_tier};
-        int tid = GetThreadId();
+    DbProbe probe;
+    DbManagerProbeInit(&probe);
+    TierPosition canonical_tier_position = {.tier = canonical_tier};
+    int tid = GetThreadId();
+    for (int64_t position = 0; position < child_tier_size; ++position) {
+        canonical_tier_position.position = position;
+        Value value = DbManagerProbeValue(&probe, canonical_tier_position);
 
-        PRAGMA_OMP_FOR_SCHEDULE_GUIDED(1024)
-        for (int64_t position = 0; position < child_tier_size; ++position) {
-            canonical_tier_position.position = position;
-            Value value = DbManagerProbeValue(&probe, canonical_tier_position);
+        // No need to convert hash if position does not need to be loaded.
+        if (value == kUndecided || value == kDraw) continue;
 
-            // No need to convert hash if position does not need to be loaded.
-            if (value == kUndecided || value == kDraw) continue;
-
-            int remoteness =
-                DbManagerProbeRemoteness(&probe, canonical_tier_position);
-            Position position_in_noncanonical_tier =
-                current_api.GetPositionInSymmetricTier(canonical_tier_position,
-                                                       original_tier);
-            if (!CheckAndLoadFrontier(child_index,
-                                      position_in_noncanonical_tier, value,
-                                      remoteness, tid)) {
-                success = false;
-            }
+        int remoteness =
+            DbManagerProbeRemoteness(&probe, canonical_tier_position);
+        Position position_in_noncanonical_tier =
+            current_api.GetPositionInSymmetricTier(canonical_tier_position,
+                                                   original_tier);
+        if (!CheckAndLoadFrontier(child_index, position_in_noncanonical_tier,
+                                  value, remoteness, tid)) {
+            success = false;
         }
-        DbManagerProbeDestroy(&probe);
     }
+    DbManagerProbeDestroy(&probe);
+
     return success;
 }
 
@@ -956,8 +946,9 @@ static int TestParentToChildMatching(Tier tier, Position position,
                                    .position = parents.array[j]};
             if (!current_api.IsLegalPosition(parent)) continue;
             if (current_api.Primitive(parent) != kUndecided) continue;
-            
-            // Check if all parent positions have child as one of their children.
+
+            // Check if all parent positions have child as one of their
+            // children.
             TierPositionArray children =
                 current_api.GetCanonicalChildPositions(parent);
             if (!TierPositionArrayContains(&children, canonical_child)) {

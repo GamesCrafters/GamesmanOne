@@ -40,7 +40,7 @@
 
 #include "core/analysis/stat_manager.h"
 #include "core/constants.h"
-#include "core/db/bpdb/arraydb.h"
+#include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/misc.h"

@@ -1,4 +1,4 @@
-#include "core/db/bpdb/arraydb.h"
+#include "core/db/arraydb/arraydb.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
@@ -8,8 +8,8 @@
 #include <string.h>   // strcpy
 
 #include "core/constants.h"
-#include "core/db/bpdb/record.h"
-#include "core/db/bpdb/record_array.h"
+#include "core/db/arraydb/record.h"
+#include "core/db/arraydb/record_array.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 #include "libs/xzra/xzra.h"

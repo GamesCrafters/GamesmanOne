@@ -1,11 +1,11 @@
-#include "core/db/bpdb/record_array.h"
+#include "core/db/arraydb/record_array.h"
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 #include <stdint.h>  // int64_t
 #include <stdlib.h>  // calloc, free
 
-#include "core/db/bpdb/record.h"
+#include "core/db/arraydb/record.h"
 
 int RecordArrayInit(RecordArray *array, int64_t size) {
     array->records = (Record *)calloc(size, sizeof(Record));

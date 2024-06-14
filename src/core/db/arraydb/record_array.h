@@ -3,7 +3,7 @@
 
 #include <stdint.h>  // int64_t
 
-#include "core/db/bpdb/record.h"
+#include "core/db/arraydb/record.h"
 
 typedef struct RecordArray {
     Record *records;

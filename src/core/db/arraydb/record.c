@@ -1,4 +1,4 @@
-#include "core/db/bpdb/record.h"
+#include "core/db/arraydb/record.h"
 
 #include <assert.h>  // assert
 #include <stdint.h>  // uint16_t
