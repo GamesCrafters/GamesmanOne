@@ -26,17 +26,18 @@
 
 #include "core/db/db_manager.h"
 
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // exit, EXIT_FAILURE
-#include <string.h>    // strlen
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // exit, EXIT_FAILURE
+#include <string.h>   // strlen
 
 #include "core/constants.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
 static const Database *current_db;
+static const Database *ref_db;
 
 static bool BasicDbApiImplemented(const Database *db);
 static bool IsValidDbName(ReadOnlyString name);
@@ -67,9 +68,36 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
     return error;
 }
 
+int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
+                       int variant, ReadOnlyString data_path,
+                       GetTierNameFunc GetTierName, void *aux) {
+    if (ref_db != NULL) ref_db->Finalize();
+    ref_db = NULL;
+
+    if (!BasicDbApiImplemented(db)) {
+        fprintf(stderr,
+                "DbManagerInitDb: The %s does not have all the required "
+                "functions implemented and cannot be used.\n",
+                db->formal_name);
+        return kNotImplementedError;
+    }
+    ref_db = db;
+
+    char *path = SetupDbPath(ref_db, game_name, variant, data_path);
+    int error = ref_db->Init(game_name, variant, path, GetTierName, aux);
+    free(path);
+
+    return error;
+}
+
 void DbManagerFinalizeDb(void) {
     if (current_db) current_db->Finalize();
     current_db = NULL;
+}
+
+void DbManagerFinalizeRefDb(void) {
+    if (ref_db) ref_db->Finalize();
+    ref_db = NULL;
 }
 
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
@@ -114,6 +142,18 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
 
+int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
+
+int DbManagerRefProbeDestroy(DbProbe *probe) {
+    return ref_db->ProbeDestroy(probe);
+}
+Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position) {
+    return ref_db->ProbeValue(probe, tier_position);
+}
+int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
+    return ref_db->ProbeRemoteness(probe, tier_position);
+}
+
 // -----------------------------------------------------------------------------
 
 static bool BasicDbApiImplemented(const Database *db) {
@@ -147,7 +187,6 @@ static bool IsValidDbName(ReadOnlyString name) {
     return true;
 }
 
-// Assumes current_db has been set.
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
                          int variant, ReadOnlyString data_path) {
     // path = "<data_path>/<game_name>/<variant>/<db_name>/"

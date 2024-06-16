@@ -148,6 +148,7 @@ static bool ProcessTiePosition(int remoteness, TierPosition tier_position);
 
 static void Step5MarkDrawPositions(void);
 static void Step6SaveValues(void);
+static bool CompareDb(void);
 static void Step7Cleanup(void);
 static void DestroyFrontiers(void);
 
@@ -164,7 +165,7 @@ void TierWorkerInit(const TierSolverApi *api) {
     memcpy(&current_api, api, sizeof(current_api));
 }
 
-int TierWorkerSolve(Tier tier, bool force, bool *solved) {
+int TierWorkerSolve(Tier tier, bool force, bool compare, bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
     if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
@@ -180,6 +181,7 @@ int TierWorkerSolve(Tier tier, bool force, bool *solved) {
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();
     Step6SaveValues();
+    if (compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
     ret = kNoError;  // Success.
 
@@ -204,7 +206,7 @@ int TierWorkerMpiServe(void) {
         } else {
             bool force = (msg.command == kTierMpiCommandForceSolve);
             bool solved;
-            int error = TierWorkerSolve(msg.tier, force, &solved);
+            int error = TierWorkerSolve(msg.tier, force, false, &solved);
             if (error != kNoError) {
                 TierMpiWorkerSendReportError(error);
             } else if (solved) {
@@ -849,6 +851,49 @@ static void Step6SaveValues(void) {
                 "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
+}
+
+static bool CompareDb(void) {
+    DbProbe probe, ref_probe;
+    if (DbManagerProbeInit(&probe)) return false;
+    if (DbManagerRefProbeInit(&ref_probe)) {
+        DbManagerProbeDestroy(&probe);
+        return false;
+    }
+
+    bool success = true;
+    for (Position p = 0; p < this_tier_size; ++p) {
+        TierPosition tp = {.tier = this_tier, .position = p};
+        Value ref_value = DbManagerRefProbeValue(&ref_probe, tp);
+        if (ref_value == kUndecided) continue;
+
+        Value actual_value = DbManagerProbeValue(&probe, tp);
+        if (actual_value != ref_value) {
+            printf("CompareDb: inconsistent value at tier " PRITier
+                   " position " PRIPos "\n",
+                   this_tier, p);
+            success = false;
+            goto _bailout;
+        }
+
+        int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
+        int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
+        if (actual_remoteness != ref_remoteness) {
+            printf("CompareDb: inconsistent remoteness at tier " PRITier
+                   " position " PRIPos "\n",
+                   this_tier, p);
+            success = false;
+            goto _bailout;
+        }
+    }
+
+_bailout:
+    DbManagerProbeDestroy(&probe);
+    DbManagerRefProbeDestroy(&ref_probe);
+    if (success)
+        printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
+
+    return success;
 }
 
 static void Step7Cleanup(void) {

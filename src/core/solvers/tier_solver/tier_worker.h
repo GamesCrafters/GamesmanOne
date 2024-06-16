@@ -51,12 +51,15 @@ void TierWorkerInit(const TierSolverApi *api);
  * @param force If set to true, the Module will perform the solving process
  * regardless of the current database status. Otherwise, the solving process is
  * skipped if the Module believes that TIER has been correctly solved already.
+ * @param compare If set to true, the Module will compare the newly solved
+ * database with the reference database, which is assumed to exist. The function
+ * will fail if there is a discrepancy.
  * @param solved If not NULL, a truth value indicating whether the given TIER is
  * actually solved instead of loaded from the existing database will be stored
  * in this variable.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierWorkerSolve(Tier tier, bool force, bool *solved);
+int TierWorkerSolve(Tier tier, bool force, bool compare, bool *solved);
 
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);

@@ -188,7 +188,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api);  // TODO: check this logic.
+    TierWorkerInit(&current_api);
     return TierManagerTest(&current_api, seed);
 }
 
@@ -234,7 +234,7 @@ static int TierSolverSolve(void *aux) {
 #ifndef USE_MPI
     TierWorkerInit(&current_api);
     return TierManagerSolve(&current_api, options->force, options->verbose);
-#else
+#else   // USE_MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
     int process_id, cluster_size;
     cluster_size = SafeMpiCommSize(MPI_COMM_WORLD);
