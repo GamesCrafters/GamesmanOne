@@ -156,7 +156,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kNaiveDb, game_name, variant, data_path,
+    ret = DbManagerInitDb(&kArrayDb, game_name, variant, data_path,
                           current_api.GetTierName, NULL);
     if (ret != 0) goto _bailout;
 

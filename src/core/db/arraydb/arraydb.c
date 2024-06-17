@@ -7,6 +7,10 @@
 #include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // strcpy
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif  // _OPENMP
+
 #include "core/constants.h"
 #include "core/db/arraydb/record.h"
 #include "core/db/arraydb/record_array.h"
@@ -146,9 +150,15 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
+#ifdef _OPENMP
+    int num_threads = omp_get_max_threads();
+#else   // _OPENMP
+    int num_threads = 1;
+#endif  // _OPENMP
     int64_t compressed_size = XzraCompressStream(
-        full_path, false, kBlockSize, kLzmaLevel, kEnableExtremeCompression, 24,
-        RecordArrayGetData(&records), RecordArrayGetRawSize(&records));
+        full_path, false, kBlockSize, kLzmaLevel, kEnableExtremeCompression,
+        num_threads, RecordArrayGetData(&records),
+        RecordArrayGetRawSize(&records));
     free(full_path);
     switch (compressed_size) {
         case -2:
