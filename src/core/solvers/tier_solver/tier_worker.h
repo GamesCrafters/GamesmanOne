@@ -42,7 +42,7 @@
  *
  * @param api Game-specific implementation of the Tier Solver API functions.
  */
-void TierWorkerInit(const TierSolverApi *api);
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
 
 /**
  * @brief Solves the given TIER.

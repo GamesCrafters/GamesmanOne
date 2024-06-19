@@ -53,14 +53,12 @@
 #include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_GUIDED(k) PRAGMA(omp for schedule(guided, k))
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 
 #else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_GUIDED(k)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
@@ -79,6 +77,8 @@
 // Copy of the API functions from tier_manager. Cannot use a reference here
 // because we need to create/modify some of the functions.
 static TierSolverApi current_api;
+
+static int64_t current_db_chunk_size;
 
 // A frontier array will be created for each possible remoteness.
 static const int kFrontierSize = kRemotenessMax + 1;
@@ -161,8 +161,10 @@ static int TestPrintError(Tier tier, Position position);
 
 // -----------------------------------------------------------------------------
 
-void TierWorkerInit(const TierSolverApi *api) {
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
     memcpy(&current_api, api, sizeof(current_api));
+    current_db_chunk_size = db_chunk_size;
+    assert(current_db_chunk_size > 0);
 }
 
 int TierWorkerSolve(Tier tier, bool force, bool compare, bool *solved) {
@@ -413,20 +415,25 @@ static bool Step1_0LoadCanonicalTier(int child_index) {
     // Scan child tier and load non-drawing positions into frontier.
     int64_t child_tier_size = current_api.GetTierSize(child_tier);
     bool success = true;
-    DbProbe probe;
-    DbManagerProbeInit(&probe);
-    TierPosition child_tier_position = {.tier = child_tier};
-    int tid = GetThreadId();
-    for (Position position = 0; position < child_tier_size; ++position) {
-        child_tier_position.position = position;
-        Value value = DbManagerProbeValue(&probe, child_tier_position);
-        int remoteness = DbManagerProbeRemoteness(&probe, child_tier_position);
-        if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
-                                  tid)) {
-            success = false;
+
+    PRAGMA_OMP_PARALLEL {
+        DbProbe probe;
+        DbManagerProbeInit(&probe);
+        TierPosition child_tier_position = {.tier = child_tier};
+        int tid = GetThreadId();
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(current_db_chunk_size)
+        for (Position position = 0; position < child_tier_size; ++position) {
+            child_tier_position.position = position;
+            Value value = DbManagerProbeValue(&probe, child_tier_position);
+            int remoteness =
+                DbManagerProbeRemoteness(&probe, child_tier_position);
+            if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
+                                      tid)) {
+                success = false;
+            }
         }
+        DbManagerProbeDestroy(&probe);
     }
-    DbManagerProbeDestroy(&probe);
 
     return success;
 }
@@ -439,28 +446,32 @@ static bool Step1_1LoadNonCanonicalTier(int child_index) {
     int64_t child_tier_size = current_api.GetTierSize(canonical_tier);
     bool success = true;
 
-    DbProbe probe;
-    DbManagerProbeInit(&probe);
-    TierPosition canonical_tier_position = {.tier = canonical_tier};
-    int tid = GetThreadId();
-    for (int64_t position = 0; position < child_tier_size; ++position) {
-        canonical_tier_position.position = position;
-        Value value = DbManagerProbeValue(&probe, canonical_tier_position);
+    PRAGMA_OMP_PARALLEL {
+        DbProbe probe;
+        DbManagerProbeInit(&probe);
+        TierPosition canonical_tier_position = {.tier = canonical_tier};
+        int tid = GetThreadId();
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(current_db_chunk_size)
+        for (int64_t position = 0; position < child_tier_size; ++position) {
+            canonical_tier_position.position = position;
+            Value value = DbManagerProbeValue(&probe, canonical_tier_position);
 
-        // No need to convert hash if position does not need to be loaded.
-        if (value == kUndecided || value == kDraw) continue;
+            // No need to convert hash if position does not need to be loaded.
+            if (value == kUndecided || value == kDraw) continue;
 
-        int remoteness =
-            DbManagerProbeRemoteness(&probe, canonical_tier_position);
-        Position position_in_noncanonical_tier =
-            current_api.GetPositionInSymmetricTier(canonical_tier_position,
-                                                   original_tier);
-        if (!CheckAndLoadFrontier(child_index, position_in_noncanonical_tier,
-                                  value, remoteness, tid)) {
-            success = false;
+            int remoteness =
+                DbManagerProbeRemoteness(&probe, canonical_tier_position);
+            Position position_in_noncanonical_tier =
+                current_api.GetPositionInSymmetricTier(canonical_tier_position,
+                                                       original_tier);
+            if (!CheckAndLoadFrontier(child_index,
+                                      position_in_noncanonical_tier, value,
+                                      remoteness, tid)) {
+                success = false;
+            }
         }
+        DbManagerProbeDestroy(&probe);
     }
-    DbManagerProbeDestroy(&probe);
 
     return success;
 }
@@ -1019,6 +1030,5 @@ static int TestPrintError(Tier tier, Position position) {
 
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
-#undef PRAGMA_OMP_FOR_SCHEDULE_GUIDED
 #undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_PARALLEL_FOR

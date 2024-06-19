@@ -18,14 +18,7 @@
 #include "core/types/gamesman_types.h"
 #include "libs/xzra/xzra.h"
 
-typedef struct {
-    XzraFile *file;
-    bool init;
-} AdbProbeInternal;
-
-static const int kBlockSize = 1 << 20;
-static const int kLzmaLevel = 9;
-static const bool kEnableExtremeCompression = true;
+// DB API
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
@@ -72,6 +65,30 @@ const Database kArrayDb = {
     .TierStatus = ArrayDbTierStatus,
 };
 
+// Types
+
+typedef struct {
+    XzraFile *file;
+    bool init;
+} AdbProbeInternal;
+
+// Constants
+
+const int kArrayDbRecordSize = sizeof(Record);
+const ArrayDbOptions kArrayDbOptionsInit = {
+    .block_size = 1 << 20,         // 1 MiB.
+    .compression_level = 6,        // LZMA level 6.
+    .extreme_compression = false,  // Extreme compression disabled.
+};
+
+// Global options
+
+static int block_size;  // For XZ compression.
+static int lzma_level;
+static bool enable_extreme_compression;
+
+// Global state variables
+
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
@@ -83,9 +100,13 @@ static RecordArray records;
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
                        void *aux) {
-    (void)aux;  // Unused.
-    assert(sandbox_path == NULL);
+    const ArrayDbOptions *options = (ArrayDbOptions *)aux;
+    if (options == NULL) options = &kArrayDbOptionsInit;
+    block_size = options->block_size;
+    lzma_level = options->compression_level;
+    enable_extreme_compression = options->extreme_compression;
 
+    assert(sandbox_path == NULL);
     sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
     if (sandbox_path == NULL) {
         fprintf(stderr, "ArrayDbInit: failed to malloc path.\n");
@@ -156,7 +177,7 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     int num_threads = 1;
 #endif  // _OPENMP
     int64_t compressed_size = XzraCompressStream(
-        full_path, false, kBlockSize, kLzmaLevel, kEnableExtremeCompression,
+        full_path, false, block_size, lzma_level, enable_extreme_compression,
         num_threads, RecordArrayGetData(&records),
         RecordArrayGetRawSize(&records));
     free(full_path);

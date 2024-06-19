@@ -86,6 +86,15 @@ const Solver kTierSolver = {
     .GetRemoteness = &TierSolverGetRemoteness,
 };
 
+// Size of each uncompressed XZ block for ArrayDb compression. Smaller block
+// sizes allows faster read of random tier positions at the cost of lower
+// compression ratio.
+static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+
+// Number of ArrayDb records in each uncompressed XZ block. This should be
+// treated as a constant, although its value is calculated at runtime.
+static int64_t kArrayDbRecordsPerBlock;
+
 static ConstantReadOnlyString kChoices[] = {"On", "Off"};
 static const SolverOption kTierSymmetryRemoval = {
     .name = "Tier Symmetry Removal",
@@ -152,6 +161,7 @@ static int DefaultGetTierName(char *name, Tier tier);
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path) {
+    kArrayDbRecordsPerBlock = kArrayDbBlockSize / kArrayDbRecordSize;
     int ret = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
@@ -188,7 +198,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerTest(&current_api, seed);
 }
 
@@ -232,7 +242,7 @@ static int TierSolverSolve(void *aux) {
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
 #ifndef USE_MPI
-    TierWorkerInit(&current_api);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerSolve(&current_api, options->force, options->verbose);
 #else   // USE_MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
@@ -242,14 +252,14 @@ static int TierSolverSolve(void *aux) {
     if (cluster_size < 1) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
-        TierWorkerInit(&current_api);
+        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
         return TierManagerSolve(&current_api, options->force, options->verbose);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
-            TierWorkerInit(&current_api);
+            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
             return TierWorkerMpiServe();
         }
     }

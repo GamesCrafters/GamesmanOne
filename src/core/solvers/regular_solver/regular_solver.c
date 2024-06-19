@@ -94,6 +94,15 @@ static const SolverOption kUseRetrograde = {
     .choices = kChoices,
 };
 
+// Size of each uncompressed XZ block for ArrayDb compression. Smaller block
+// sizes allows faster read of random tier positions at the cost of lower
+// compression ratio.
+static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+
+// Number of ArrayDb records in each uncompressed XZ block. This should be
+// treated as a constant, although its value is calculated at runtime.
+static int64_t kArrayDbRecordsPerBlock;
+
 // Copy of the original RegularSolverApi object.
 static RegularSolverApi original_api;
 
@@ -162,6 +171,7 @@ static int DefaultGetTierName(char *dest, Tier tier);
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path) {
+    kArrayDbRecordsPerBlock = kArrayDbBlockSize / kArrayDbRecordSize;
     int ret = -1;
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
@@ -209,7 +219,7 @@ static int RegularSolverSolve(void *aux) {
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
-    TierWorkerInit(&current_api);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierWorkerSolve(kDefaultTier, options->force, false, NULL);
 }
 
