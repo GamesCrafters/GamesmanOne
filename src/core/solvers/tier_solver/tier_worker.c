@@ -55,12 +55,14 @@
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
 
 #else  // _OPENMP not defined, the following macros do nothing.
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_PARALLEL_FOR
+#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
 #endif  // _OPENMP
 
 #ifdef USE_MPI
@@ -880,8 +882,8 @@ static bool CompareDb(void) {
 
         Value actual_value = DbManagerProbeValue(&probe, tp);
         if (actual_value != ref_value) {
-            printf("CompareDb: inconsistent value at tier " PRITier
-                   " position " PRIPos "\n",
+            printf("CompareDb: inconsistent value at tier %" PRITier
+                   " position %" PRIPos "\n",
                    this_tier, p);
             success = false;
             goto _bailout;
@@ -890,8 +892,8 @@ static bool CompareDb(void) {
         int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
         int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
         if (actual_remoteness != ref_remoteness) {
-            printf("CompareDb: inconsistent remoteness at tier " PRITier
-                   " position " PRIPos "\n",
+            printf("CompareDb: inconsistent remoteness at tier %" PRITier
+                   " position %" PRIPos "\n",
                    this_tier, p);
             success = false;
             goto _bailout;
@@ -911,6 +913,7 @@ static void Step7Cleanup(void) {
     this_tier = kIllegalTier;
     this_tier_size = kIllegalSize;
     TierArrayDestroy(&child_tiers);
+    DbManagerFreeSolvingTier();
     DestroyFrontiers();
     free(num_undecided_children);
     num_undecided_children = NULL;
@@ -1028,7 +1031,310 @@ static int TestPrintError(Tier tier, Position position) {
                   position, tier);
 }
 
+// ===========================================================================================
+
+static int largest_win_lose_remoteness;
+static int largest_tie_remoteness;
+
+static bool VIStep0Initialize(Tier tier) {
+    this_tier = tier;
+    child_tiers = current_api.GetChildTiers(this_tier);
+    if (child_tiers.size == kIllegalSize) return false;
+
+    this_tier_size = current_api.GetTierSize(tier);
+    largest_win_lose_remoteness = 0;
+    largest_tie_remoteness = 0;
+    return true;
+}
+
+static bool VIStep1LoadChildren(void) {
+    bool success = true;
+    for (int64_t i = 0; i < child_tiers.size; ++i) {
+        Tier child_tier = child_tiers.array[i];
+        int64_t size = current_api.GetTierSize(child_tier);
+        int error = DbManagerLoadTier(child_tier, size);
+        if (error != kNoError) {
+            success = false;
+            break;
+        }
+
+        // Scan for largest remotenesses
+        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+        for (Position pos = 0; pos < size; ++pos) {
+            Value val = DbManagerGetValueFromLoaded(child_tier, pos);
+            switch (val) {
+                case kWin:
+                case kLose: {
+                    int r = DbManagerGetRemotenessFromLoaded(child_tier, pos);
+                    if (r > largest_win_lose_remoteness) {
+                        largest_win_lose_remoteness = r;
+                    }
+                    break;
+                }
+
+                case kTie: {
+                    int r = DbManagerGetRemotenessFromLoaded(child_tier, pos);
+                    if (r > largest_tie_remoteness) {
+                        largest_tie_remoteness = r;
+                    }
+                    break;
+                }
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    return success;
+}
+
+static bool VIStep3SetupSolvingTier(void) {
+    int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
+    if (error != kNoError) return false;
+
+    return true;
+}
+
+static void VIStep4ScanTier(void) {
+    PRAGMA_OMP_PARALLEL {
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        for (Position pos = 0; pos < this_tier_size; ++pos) {
+            TierPosition tier_position = {.tier = this_tier, .position = pos};
+            if (!current_api.IsLegalPosition(tier_position) ||
+                !IsCanonicalPosition(pos)) {
+                // Temporarily mark illegal and non-canonical positions as
+                // drawing. These values will be changed to undecided later.
+                DbManagerSetValue(pos, kDraw);
+                continue;
+            }
+
+            Value value = current_api.Primitive(tier_position);
+            if (value != kUndecided) {  // If tier_position is primitive...
+                // Set its value immediately.
+                DbManagerSetValue(pos, value);
+                DbManagerSetRemoteness(pos, 0);
+            }  // Otherwise, do nothing.
+        }
+    }
+}
+
+static bool IterateWinLoseProcessPosition(int iteration, Position pos,
+                                          bool *updated) {
+    *updated = false;
+    bool all_children_winning = true;
+    int largest_win = -1;
+    TierPosition tier_position = {.tier = this_tier, .position = pos};
+    TierPositionArray child_positions =
+        current_api.GetCanonicalChildPositions(tier_position);
+    if (child_positions.size == kIllegalSize) return false;
+
+    for (int64_t i = 0; i < child_positions.size; ++i) {
+        TierPosition child_tier_position = child_positions.array[i];
+        Value child_value;
+        int child_remoteness;
+        if (child_tier_position.tier == this_tier) {
+            child_value = DbManagerGetValue(child_tier_position.position);
+            child_remoteness =
+                DbManagerGetRemoteness(child_tier_position.position);
+        } else {
+            child_value = DbManagerGetValueFromLoaded(
+                child_tier_position.tier, child_tier_position.position);
+            child_remoteness = DbManagerGetRemotenessFromLoaded(
+                child_tier_position.tier, child_tier_position.position);
+        }
+        switch (child_value) {
+            case kUndecided:
+            case kTie:
+                all_children_winning = false;
+                break;
+            case kLose:
+                all_children_winning = false;
+                if (child_remoteness == iteration - 1) {
+                    DbManagerSetValue(pos, kWin);
+                    DbManagerSetRemoteness(pos, iteration);
+                    *updated = true;
+                    TierPositionArrayDestroy(&child_positions);
+                    return true;
+                }
+                break;
+            case kWin:
+                if (child_remoteness > largest_win) {
+                    largest_win = child_remoteness;
+                }
+                break;
+            default:  // Do nothing about tying positions yet.
+                break;
+        }
+    }
+
+    if (all_children_winning && largest_win + 1 == iteration) {
+        DbManagerSetValue(pos, kLose);
+        DbManagerSetRemoteness(pos, iteration);
+        *updated = true;
+    }
+
+    TierPositionArrayDestroy(&child_positions);
+    return true;
+}
+
+static bool VIStep4_0IterateWinLose(void) {
+    bool updated = false;
+    bool failed = false;
+
+    for (int i = 1; updated || i <= largest_win_lose_remoteness + 1; ++i) {
+        updated = false;
+        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+        for (Position pos = 0; pos < this_tier_size; ++pos) {
+            bool pos_updated;
+            if (DbManagerGetValue(pos) != kUndecided) continue;
+            bool success = IterateWinLoseProcessPosition(i, pos, &pos_updated);
+            if (!success) failed = true;
+            if (pos_updated) updated = true;
+        }
+
+        if (failed) return false;
+    }
+
+    return true;
+}
+
+static bool IterateTieProcessPosition(int iteration, Position pos,
+                                      bool *updated) {
+    *updated = false;
+    TierPosition tier_position = {.tier = this_tier, .position = pos};
+    TierPositionArray child_positions =
+        current_api.GetCanonicalChildPositions(tier_position);
+    if (child_positions.size == kIllegalSize) return false;
+
+    for (int64_t i = 0; i < child_positions.size; ++i) {
+        TierPosition child_tier_position = child_positions.array[i];
+        Value child_value;
+        int child_remoteness;
+        if (child_tier_position.tier == this_tier) {
+            child_value = DbManagerGetValue(child_tier_position.position);
+            child_remoteness =
+                DbManagerGetRemoteness(child_tier_position.position);
+        } else {
+            child_value = DbManagerGetValueFromLoaded(
+                child_tier_position.tier, child_tier_position.position);
+            child_remoteness = DbManagerGetRemotenessFromLoaded(
+                child_tier_position.tier, child_tier_position.position);
+        }
+        if (child_value == kTie && child_remoteness == iteration - 1) {
+            DbManagerSetValue(pos, kTie);
+            DbManagerSetRemoteness(pos, iteration);
+            *updated = true;
+            break;
+        }
+    }
+
+    TierPositionArrayDestroy(&child_positions);
+    return true;
+}
+
+static bool VIStep4_1IterateTie(void) {
+    bool updated = false;
+    bool failed = false;
+
+    for (int i = 1; updated || i <= largest_tie_remoteness + 1; ++i) {
+        updated = false;
+        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+        for (Position pos = 0; pos < this_tier_size; ++pos) {
+            bool pos_updated;
+            if (DbManagerGetValue(pos) != kUndecided) continue;
+            bool success = IterateTieProcessPosition(i, pos, &pos_updated);
+            if (!success) failed = true;
+            if (pos_updated) updated = true;
+        }
+
+        if (failed) return false;
+    }
+
+    return true;
+}
+
+static bool VIStep4Iterate(void) {
+    bool success = VIStep4_0IterateWinLose();
+    if (!success) return false;
+
+    success = VIStep4_1IterateTie();
+    if (!success) return false;
+
+    // The child tiers are no longer needed.
+    for (int64_t i = 0; i < child_tiers.size; ++i) {
+        DbManagerUnloadTier(child_tiers.array[i]);
+    }
+
+    return true;
+}
+
+static void VIStep5MarkDrawPositions(void) {
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    for (Position pos = 0; pos < this_tier_size; ++pos) {
+        Value val = DbManagerGetValue(pos);
+        if (val == kUndecided)
+            DbManagerSetValue(pos, kDraw);
+        else if (val == kDraw)
+            DbManagerSetValue(pos, kUndecided);
+    }
+}
+
+static void VIStep6FlushDb(void) {
+    if (DbManagerFlushSolvingTier(NULL) != 0) {
+        fprintf(stderr,
+                "VIStep6FlushDb: an error has occurred while flushing of the "
+                "current tier. The database file for tier %" PRITier
+                " may be corrupt.\n",
+                this_tier);
+    }
+    if (DbManagerFreeSolvingTier() != 0) {
+        fprintf(stderr,
+                "VIStep6FlushDb: an error has occurred while freeing of the "
+                "current tier's in-memory database. Tier: %" PRITier "\n",
+                this_tier);
+    }
+}
+
+static void VIStep7Cleanup(void) {
+    this_tier = kIllegalTier;
+    this_tier_size = kIllegalSize;
+    for (int64_t i = 0; i < child_tiers.size; ++i) {
+        Tier child_tier = child_tiers.array[i];
+        if (DbManagerIsTierLoaded(child_tier)) DbManagerUnloadTier(child_tier);
+    }
+    TierArrayDestroy(&child_tiers);
+    DbManagerFreeSolvingTier();
+}
+
+int TierWorkerSolveValueIteration(Tier tier, bool force, bool compare,
+                                  bool *solved) {
+    if (solved != NULL) *solved = false;
+    int ret = kRuntimeError;
+    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+        ret = kNoError;  // Success.
+        goto _bailout;
+    }
+
+    /* Value Iteration main algorithm. */
+    if (!VIStep0Initialize(tier)) goto _bailout;
+    if (!VIStep1LoadChildren()) goto _bailout;
+    if (!VIStep3SetupSolvingTier()) goto _bailout;
+    VIStep4ScanTier();
+    if (!VIStep4Iterate()) goto _bailout;
+    VIStep5MarkDrawPositions();
+    VIStep6FlushDb();
+    if (compare && !CompareDb()) goto _bailout;
+    if (solved != NULL) *solved = true;
+    ret = kNoError;  // Success.
+
+_bailout:
+    VIStep7Cleanup();
+    return ret;
+}
+
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
 #undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_PARALLEL_FOR
+#undef PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC

@@ -65,7 +65,7 @@ void DbManagerFinalizeDb(void);
 
 void DbManagerFinalizeRefDb(void);
 
-// ---------------------------- Solving Interface. ----------------------------
+// ----------------------------- Solving Interface -----------------------------
 
 /**
  * @brief Creates a new TIER of size SIZE (measured in positions) for solving in
@@ -89,7 +89,8 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
 int DbManagerFlushSolvingTier(void *aux);
 
 /**
- * @brief Frees the solving tier in memory.
+ * @brief Frees the solving tier in memory. Does nothing if the solving tier has
+ * not been initialized.
  *
  * @return int 0 on success, non-zero otherwise.
  */
@@ -131,7 +132,15 @@ Value DbManagerGetValue(Position position);
  */
 int DbManagerGetRemoteness(Position position);
 
-// ---------------------------- Probing Interface. ----------------------------
+// ----------------------------- Loading Interface -----------------------------
+
+int DbManagerLoadTier(Tier tier, int64_t size);
+int DbManagerUnloadTier(Tier tier);
+bool DbManagerIsTierLoaded(Tier tier);
+Value DbManagerGetValueFromLoaded(Tier tier, Position position);
+int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
+
+// ----------------------------- Probing Interface -----------------------------
 
 /**
  * @brief Initializes PROBE using the method provided by the current database.
@@ -183,7 +192,7 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
  */
 int DbManagerTierStatus(Tier tier);
 
-// --------------------- (EXPERIMENTAL) Testing Interface. ---------------------
+// --------------------- (EXPERIMENTAL) Testing Interface ---------------------
 
 int DbManagerRefProbeInit(DbProbe *probe);
 int DbManagerRefProbeDestroy(DbProbe *probe);

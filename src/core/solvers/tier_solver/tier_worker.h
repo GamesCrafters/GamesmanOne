@@ -61,6 +61,9 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
  */
 int TierWorkerSolve(Tier tier, bool force, bool compare, bool *solved);
 
+int TierWorkerSolveValueIteration(Tier tier, bool force, bool compare,
+                                  bool *solved);
+
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI

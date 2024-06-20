@@ -34,6 +34,12 @@ static int ArrayDbSetRemoteness(Position position, int remoteness);
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 
+static int ArrayDbLoadTier(Tier tier, int64_t size);
+static int ArrayDbUnloadTier(Tier tier);
+static bool ArrayDbIsTierLoaded(Tier tier);
+static Value ArrayDbGetValueFromLoaded(Tier tier, Position position);
+static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position);
+
 static int ArrayDbProbeInit(DbProbe *probe);
 static int ArrayDbProbeDestroy(DbProbe *probe);
 static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position);
@@ -57,6 +63,13 @@ const Database kArrayDb = {
     .GetValue = ArrayDbGetValue,
     .GetRemoteness = ArrayDbGetRemoteness,
 
+    // Loading
+    .LoadTier = ArrayDbLoadTier,
+    .UnloadTier = ArrayDbUnloadTier,
+    .IsTierLoaded = ArrayDbIsTierLoaded,
+    .GetValueFromLoaded = ArrayDbGetValueFromLoaded,
+    .GetRemotenessFromLoaded = ArrayDbGetRemotenessFromLoaded,
+
     // Probing
     .ProbeInit = ArrayDbProbeInit,
     .ProbeDestroy = ArrayDbProbeDestroy,
@@ -74,6 +87,7 @@ typedef struct {
 
 // Constants
 
+enum { kArrayDbNumLoadedTiersMax = 256 };
 const int kArrayDbRecordSize = sizeof(Record);
 const ArrayDbOptions kArrayDbOptionsInit = {
     .block_size = 1 << 20,         // 1 MiB.
@@ -96,6 +110,8 @@ static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static RecordArray records;
+static TierHashMap loaded_tier_to_index;
+static RecordArray loaded_records[kArrayDbNumLoadedTiersMax];
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
@@ -119,6 +135,9 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
+    memset(&records, 0, sizeof(records));
+    TierHashMapInit(&loaded_tier_to_index, 0.5);
+    memset(&loaded_records, 0, sizeof(loaded_records));
 
     return kNoError;
 }
@@ -127,6 +146,10 @@ static void ArrayDbFinalize(void) {
     free(sandbox_path);
     sandbox_path = NULL;
     RecordArrayDestroy(&records);
+    TierHashMapDestroy(&loaded_tier_to_index);
+    for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
+        RecordArrayDestroy(&loaded_records[i]);
+    }
 }
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
@@ -164,6 +187,14 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     return full_path;
 }
 
+static int GetNumThreads(void) {
+#ifdef _OPENMP
+    return omp_get_max_threads();
+#else   // _OPENMP not defined
+    return 1;
+#endif  // _OPENMP
+}
+
 static int ArrayDbFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
@@ -171,14 +202,9 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
     if (full_path == NULL) return kMallocFailureError;
 
-#ifdef _OPENMP
-    int num_threads = omp_get_max_threads();
-#else   // _OPENMP
-    int num_threads = 1;
-#endif  // _OPENMP
     int64_t compressed_size = XzraCompressStream(
         full_path, false, block_size, lzma_level, enable_extreme_compression,
-        num_threads, RecordArrayGetData(&records),
+        GetNumThreads(), RecordArrayGetData(&records),
         RecordArrayGetRawSize(&records));
     free(full_path);
     switch (compressed_size) {
@@ -219,6 +245,84 @@ static Value ArrayDbGetValue(Position position) {
 
 static int ArrayDbGetRemoteness(Position position) {
     return RecordArrayGetRemoteness(&records, position);
+}
+
+static int ArrayDbLoadTier(Tier tier, int64_t size) {
+    // Find the first unused slot in the loaded records array.
+    int i;
+    for (i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
+        if (loaded_records[i].records == NULL) break;
+    }
+    if (i == kArrayDbNumLoadedTiersMax) {
+        fprintf(stderr,
+                "ArrayDbLoadTier: cannot load more than %d tiers at the same "
+                "time\n",
+                kArrayDbNumLoadedTiersMax);
+        return kRuntimeError;
+    }
+
+    int error = RecordArrayInit(&loaded_records[i], size);
+    if (error != kNoError) return kMallocFailureError;
+
+    char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
+    if (full_path == NULL) {
+        RecordArrayDestroy(&loaded_records[i]);
+        return kMallocFailureError;
+    }
+
+    // Set hash map last because this operation cannot be undone with the
+    // current implementation of hashmap.
+    if (!TierHashMapSet(&loaded_tier_to_index, tier, i)) {
+        RecordArrayDestroy(&loaded_records[i]);
+        free(full_path);
+        return kMallocFailureError;
+    }
+
+    // FIXME: implement memlimit and replace hard-coded value!!!
+    XzraDecompressFile(RecordArrayGetData(&loaded_records[i]),
+                       size * kArrayDbRecordSize, GetNumThreads(), 1 << 30,
+                       full_path);
+    free(full_path);
+
+    return kNoError;
+}
+
+static int GetLoadedTierIndex(Tier tier) {
+    TierHashMapIterator it = TierHashMapGet(&loaded_tier_to_index, tier);
+    if (!TierHashMapIteratorIsValid(&it)) return -1;
+
+    int index = TierHashMapIteratorValue(&it);
+    assert(index >= 0 && index < kArrayDbNumLoadedTiersMax);
+
+    return index;
+}
+
+static int ArrayDbUnloadTier(Tier tier) {
+    int index = GetLoadedTierIndex(tier);
+    if (index >= 0) RecordArrayDestroy(&loaded_records[index]);
+
+    return kNoError;
+}
+
+static bool ArrayDbIsTierLoaded(Tier tier) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return false;
+
+    return loaded_records[index].records != NULL;
+}
+
+static Value ArrayDbGetValueFromLoaded(Tier tier, Position position) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return kErrorValue;
+
+    return RecordArrayGetValue(&loaded_records[index], position);
+}
+
+static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return kErrorValue;
+
+    return RecordArrayGetRemoteness(&loaded_records[index], position);
 }
 
 static int ArrayDbProbeInit(DbProbe *probe) {

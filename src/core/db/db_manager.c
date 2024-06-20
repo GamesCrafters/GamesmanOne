@@ -126,6 +126,26 @@ int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
 }
 
+int DbManagerLoadTier(Tier tier, int64_t size) {
+    return current_db->LoadTier(tier, size);
+}
+
+int DbManagerUnloadTier(Tier tier) {
+    return current_db->UnloadTier(tier);
+}
+
+bool DbManagerIsTierLoaded(Tier tier) {
+    return current_db->IsTierLoaded(tier);
+}
+
+Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
+    return current_db->GetValueFromLoaded(tier, position);
+}
+
+int DbManagerGetRemotenessFromLoaded(Tier tier, Position position) {
+    return current_db->GetRemotenessFromLoaded(tier, position);
+}
+
 int DbManagerProbeInit(DbProbe *probe) { return current_db->ProbeInit(probe); }
 
 int DbManagerProbeDestroy(DbProbe *probe) {
