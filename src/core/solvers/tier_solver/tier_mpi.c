@@ -68,4 +68,8 @@ void TierMpiWorkerRecv(TierMpiManagerMessage *dest) {
                 kMpiDefaultTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
+#else  // USE_MPI not defined
+
+typedef int make_iso_compilers_happy;
+
 #endif  // USE_MPI
