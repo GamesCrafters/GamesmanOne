@@ -1,5 +1,9 @@
 # Define the executable.
 add_executable(gamesman main.c)
+target_compile_options(gamesman PRIVATE
+  $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+)
 
 # Check libraries.
 find_package(ZLIB REQUIRED)                                 # ZLIB
