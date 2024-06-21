@@ -1089,14 +1089,14 @@ static bool VIStep1LoadChildren(void) {
     return success;
 }
 
-static bool VIStep3SetupSolvingTier(void) {
+static bool VIStep2SetupSolvingTier(void) {
     int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
     return true;
 }
 
-static void VIStep4ScanTier(void) {
+static void VIStep3ScanTier(void) {
     PRAGMA_OMP_PARALLEL {
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
@@ -1146,6 +1146,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
         switch (child_value) {
             case kUndecided:
             case kTie:
+            case kDraw:
                 all_children_winning = false;
                 break;
             case kLose:
@@ -1163,7 +1164,10 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
                     largest_win = child_remoteness;
                 }
                 break;
-            default:  // Do nothing about tying positions yet.
+            default:
+                fprintf(stderr,
+                        "IterateWinLoseProcessPosition: unknown value %d\n",
+                        child_value);
                 break;
         }
     }
@@ -1179,7 +1183,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
 }
 
 static bool VIStep4_0IterateWinLose(void) {
-    bool updated = false;
+    bool updated = true;
     bool failed = false;
 
     for (int i = 1; updated || i <= largest_win_lose_remoteness + 1; ++i) {
@@ -1319,8 +1323,8 @@ int TierWorkerSolveValueIteration(Tier tier, bool force, bool compare,
     /* Value Iteration main algorithm. */
     if (!VIStep0Initialize(tier)) goto _bailout;
     if (!VIStep1LoadChildren()) goto _bailout;
-    if (!VIStep3SetupSolvingTier()) goto _bailout;
-    VIStep4ScanTier();
+    if (!VIStep2SetupSolvingTier()) goto _bailout;
+    VIStep3ScanTier();
     if (!VIStep4Iterate()) goto _bailout;
     VIStep5MarkDrawPositions();
     VIStep6FlushDb();

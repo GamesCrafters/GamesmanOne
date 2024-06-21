@@ -459,39 +459,32 @@ static bool Step4SaveChildMaps(void) {
 
 static bool Step5Analyze(Analysis *dest) {
     bool success = true;
+    int error = DbManagerLoadTier(this_tier, this_tier_size);
+    if (error != kNoError) return false;
 
-    PRAGMA_OMP_PARALLEL {
-        DbProbe probe;
-        int error = DbManagerProbeInit(&probe);
-        if (error == 0) {
-            PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(4096)
-            for (int64_t i = 0; i < this_tier_size; ++i) {
-                TierPosition tier_position = {.tier = this_tier, .position = i};
-                TierPosition canonical = {
-                    .tier = this_tier,
-                    .position =
-                        current_api->GetCanonicalPosition(tier_position),
-                };
-                if (!BitStreamGet(&this_tier_map, i)) continue;
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    for (int64_t i = 0; i < this_tier_size; ++i) {
+        // Skip if the current position is not reachable.
+        if (!BitStreamGet(&this_tier_map, i)) continue;
 
-                // Must probe canonical positions. Original might not be solved.
-                Value value = DbManagerProbeValue(&probe, canonical);
-                int remoteness = DbManagerProbeRemoteness(&probe, canonical);
-                bool is_canonical =
-                    (tier_position.position == canonical.position);
-                PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
-                    error = AnalysisCount(dest, tier_position, value,
-                                          remoteness, is_canonical);
-                }
-                if (error != 0) success = false;
-            }
-            DbManagerProbeDestroy(&probe);
-        } else {
-            success = false;
+        TierPosition tier_position = {.tier = this_tier, .position = i};
+        Position canonical = current_api->GetCanonicalPosition(tier_position);
+
+        // Must probe canonical positions. Original might not be solved.
+        Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
+        int remoteness = DbManagerGetRemotenessFromLoaded(this_tier, canonical);
+        bool is_canonical = (tier_position.position == canonical);
+        PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
+            error = AnalysisCount(dest, tier_position, value, remoteness,
+                                  is_canonical);
         }
+        if (error != 0) success = false;
     }
 
+    error = DbManagerUnloadTier(this_tier);
+    if (error != kNoError) success = false;
     BitStreamDestroy(&this_tier_map);
+
     return success;
 }
 
