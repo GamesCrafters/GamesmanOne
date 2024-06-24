@@ -69,7 +69,7 @@ static Int64HashMapIterator NewIterator(Int64HashMap *map, int64_t index) {
 Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key) {
     int64_t capacity = map->capacity;
     // Edge case: return invalid iterator if map is empty.
-    if (map->capacity == 0) return NewIterator(map, capacity);
+    if (capacity == 0) return NewIterator(map, capacity);
     int64_t index = Hash(key, capacity);
     while (map->entries[index].used) {
         if (map->entries[index].key == key) {
