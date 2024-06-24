@@ -110,7 +110,7 @@ static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static RecordArray records;
-static TierHashMap loaded_tier_to_index;
+static TierHashMapExt loaded_tier_to_index;
 static RecordArray loaded_records[kArrayDbNumLoadedTiersMax];
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
@@ -136,7 +136,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
     memset(&records, 0, sizeof(records));
-    TierHashMapInit(&loaded_tier_to_index, 0.5);
+    TierHashMapExtInit(&loaded_tier_to_index, 0.5);
     memset(&loaded_records, 0, sizeof(loaded_records));
 
     return kNoError;
@@ -146,7 +146,7 @@ static void ArrayDbFinalize(void) {
     free(sandbox_path);
     sandbox_path = NULL;
     RecordArrayDestroy(&records);
-    TierHashMapDestroy(&loaded_tier_to_index);
+    TierHashMapExtDestroy(&loaded_tier_to_index);
     for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
         RecordArrayDestroy(&loaded_records[i]);
     }
@@ -272,7 +272,7 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
 
     // Set hash map last because this operation cannot be undone with the
     // current implementation of hashmap.
-    if (!TierHashMapSet(&loaded_tier_to_index, tier, i)) {
+    if (!TierHashMapExtSet(&loaded_tier_to_index, tier, i)) {
         RecordArrayDestroy(&loaded_records[i]);
         free(full_path);
         return kMallocFailureError;
@@ -288,18 +288,19 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
 }
 
 static int GetLoadedTierIndex(Tier tier) {
-    TierHashMapIterator it = TierHashMapGet(&loaded_tier_to_index, tier);
-    if (!TierHashMapIteratorIsValid(&it)) return -1;
+    int64_t index;
+    if (!TierHashMapExtGet(&loaded_tier_to_index, tier, &index)) return -1;
 
-    int index = TierHashMapIteratorValue(&it);
     assert(index >= 0 && index < kArrayDbNumLoadedTiersMax);
-
-    return index;
+    return (int)index;
 }
 
 static int ArrayDbUnloadTier(Tier tier) {
     int index = GetLoadedTierIndex(tier);
-    if (index >= 0) RecordArrayDestroy(&loaded_records[index]);
+    if (index >= 0) {
+        RecordArrayDestroy(&loaded_records[index]);
+        TierHashMapExtRemove(&loaded_tier_to_index, tier);
+    }
 
     return kNoError;
 }
