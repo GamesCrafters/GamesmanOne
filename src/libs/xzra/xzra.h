@@ -8,6 +8,25 @@
 // ============================== Compression API ==============================
 
 /**
+ * @brief Returns the memory usage (in bytes) of the XZRA compressor using the
+ * given compression options.
+ *
+ * @param block_size Size of each uncompressed block.
+ * @param level Compression level from 0 (store) to 9 (ultra).
+ * @param extreme Extreme compression mode will be enabled if this is set to
+ * \c true. Enabling extreme compression slightly improves compression ratio at
+ * the cost of increased compression time.
+ * @param num_threads Number of threads to use for multithreaded compression.
+ * The function will automatically detect and use the number of physical threads
+ * available if this is set to 0.
+ * @return Number of bytes of memory required for compression using the given
+ * options, or
+ * @return UINT64_MAX if the given options are invalid.
+ */
+uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
+                                 bool extreme, int num_threads);
+
+/**
  * @brief Compresses input file of name \p ifname using a single LZMA2 filter
  * and stores the output XZ stream in output file of name \p ofname.
  *
@@ -85,6 +104,27 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
                            uint8_t *in, size_t in_size);
 
 // ============================= Decompression API =============================
+
+/**
+ * @brief Returns the memory usage (in bytes) of the XZRA decompressor.
+ *
+ * @param block_size Size of each uncompressed block. This is a property of the
+ * compressed stream set at the time of compression.
+ * @param level Compression level from 0 (store) to 9 (ultra). This is a
+ * property of the compressed stream set at the time of compression.
+ * @param extreme Extreme compression mode will be enabled if this is set to
+ * \c true. Enabling extreme compression slightly improves compression ratio at
+ * the cost of increased compression time. This is a property of the compressed
+ * stream set at the time of compression.
+ * @param num_threads Number of threads to use for multithreaded decompression.
+ * The function will automatically detect and use the number of physical threads
+ * available if this is set to 0.
+ * @return Number of bytes of memory required for decompression using the given
+ * options, or
+ * @return UINT64_MAX if the given options are invalid.
+ */
+uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
+                                   bool extreme, int num_threads);
 
 /**
  * @brief Decompresses at most \p size bytes of the input XZ file of name

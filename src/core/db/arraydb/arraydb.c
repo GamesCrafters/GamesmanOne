@@ -278,9 +278,10 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    // FIXME: implement memlimit and replace hard-coded value!!!
+    uint64_t mem = XzraDecompressionMemUsage(
+        block_size, lzma_level, enable_extreme_compression, GetNumThreads());
     XzraDecompressFile(RecordArrayGetData(&loaded_records[i]),
-                       size * kArrayDbRecordSize, GetNumThreads(), 1 << 30,
+                       size * kArrayDbRecordSize, GetNumThreads(), mem,
                        full_path);
     free(full_path);
 

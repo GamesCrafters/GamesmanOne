@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ======================= Common Compression Functions ========================
+// ========================= Common Helper Functions ==========================
 
 static const char *LzmaStreamEncoderMtRetDesc(lzma_ret ret) {
     switch (ret) {
@@ -25,33 +25,42 @@ static const char *LzmaStreamEncoderMtRetDesc(lzma_ret ret) {
     return "Unknown error, possibly a bug";
 }
 
-// https://github.com/tukaani-project/xz/blob/master/doc/examples/03_compress_custom.c.
-static bool InitEncoder(lzma_stream *strm, uint64_t block_size, uint32_t level,
-                        bool extreme, int num_threads) {
-    // Set up filters.
+static void InitFiltersForMt(lzma_filter filters[static 2], uint64_t block_size,
+                             uint32_t level, bool extreme) {
     lzma_options_lzma opt_lzma2;
     lzma_lzma_preset(&opt_lzma2, extreme ? level | LZMA_PRESET_EXTREME : level);
     opt_lzma2.dict_size = block_size;
-    lzma_filter filters[] = {
-        {.id = LZMA_FILTER_LZMA2, .options = &opt_lzma2},
-        {.id = LZMA_VLI_UNKNOWN, .options = NULL},
-    };
+    filters[0] = (lzma_filter){.id = LZMA_FILTER_LZMA2, .options = &opt_lzma2};
+    filters[1] = (lzma_filter){.id = LZMA_VLI_UNKNOWN, .options = NULL};
+}
 
-    // Set up LZMA multithreading options.
-    lzma_mt mt = {
-        .flags = 0,  // No flags are currently supported.
-        .block_size = block_size,
-        .timeout = 0,
-        .check = LZMA_CHECK_CRC64,
-    };
-    mt.filters = filters;
-    mt.threads = num_threads == 0 ? lzma_cputhreads() : num_threads;
-    if (mt.threads == 0) {
+static void InitMtForEncoder(lzma_mt *mt, uint64_t block_size, uint32_t level,
+                             bool extreme, int num_threads) {
+    // Set up filters.
+    lzma_filter filters[2];
+    InitFiltersForMt(filters, block_size, level, extreme);
+
+    // Set up MT.
+    mt->flags = 0;  // No flags are currently supported.
+    mt->block_size = block_size;
+    mt->timeout = 0;
+    mt->check = LZMA_CHECK_CRC64;
+    mt->filters = filters;
+    mt->threads = num_threads == 0 ? lzma_cputhreads() : num_threads;
+    if (mt->threads == 0) {
         fprintf(stderr,
                 "Warining: failed to get number of CPU threads, using a single "
                 "thread\n");
-        mt.threads = 1;
+        mt->threads = 1;
     }
+}
+
+// https://github.com/tukaani-project/xz/blob/master/doc/examples/03_compress_custom.c.
+static bool InitEncoder(lzma_stream *strm, uint64_t block_size, uint32_t level,
+                        bool extreme, int num_threads) {
+    // Set up LZMA multithreading options.
+    lzma_mt mt = {0};
+    InitMtForEncoder(&mt, block_size, level, extreme, num_threads);
 
     // Initialize the threaded encoder.
     lzma_ret ret = lzma_stream_encoder_mt(strm, &mt);
@@ -76,6 +85,16 @@ static const char *LzmaCompressRetDesc(lzma_ret ret) {
         default:
             return "Unknown error, possibly a bug";
     }
+}
+
+// ========================= XzraCompressionMemUsage ==========================
+
+uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
+                                 bool extreme, int num_threads) {
+    lzma_mt mt;
+    InitMtForEncoder(&mt, block_size, level, extreme, num_threads);
+
+    return lzma_stream_encoder_mt_memusage(&mt);
 }
 
 // ============================= XzraCompressFile ==============================
@@ -216,6 +235,16 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
     }
 
     return ret;
+}
+
+// ======================== XzraDecompressionMemUsage =========================
+
+uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
+                                   bool extreme, int num_threads) {
+    lzma_filter filters[2];
+    InitFiltersForMt(filters, block_size, level, extreme);
+    
+    return lzma_raw_decoder_memusage(filters) * num_threads;
 }
 
 // ============================ XzraDecompressFile =============================
