@@ -13,12 +13,12 @@
  *
  * @param block_size Size of each uncompressed block.
  * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this is set to
- * \c true. Enabling extreme compression slightly improves compression ratio at
- * the cost of increased compression time.
+ * @param extreme Extreme compression mode will be enabled if this parameter is
+ * set to \c true. Enabling extreme compression slightly improves compression
+ * ratio at the cost of increased compression time.
  * @param num_threads Number of threads to use for multithreaded compression.
  * The function will automatically detect and use the number of physical threads
- * available if this is set to 0.
+ * available if this parameter is set to 0.
  * @return Number of bytes of memory required for compression using the given
  * options, or
  * @return UINT64_MAX if the given options are invalid.
@@ -45,15 +45,15 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
  *
  * @param ofname Output file name.
  * @param append The compressed XZ stream will be appened to the end of the
- * output file if this is set to \c true.
+ * output file if this parameter is set to \c true.
  * @param block_size Size of each uncompressed block.
  * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this is set to
- * \c true. Enabling extreme compression slightly improves compression ratio at
- * the cost of increased compression time.
+ * @param extreme Extreme compression mode will be enabled if this parameter is
+ * set to \c true. Enabling extreme compression slightly improves compression
+ * ratio at the cost of increased compression time.
  * @param num_threads Number of threads to use for multithreaded compression.
  * The function will automatically detect and use the number of physical threads
- * available if this is set to 0.
+ * available if this parameter is set to 0.
  * @param ifname Input file name.
  * @return Size of the output file in bytes on success;
  * @return -1 if the input file cannot be opened;
@@ -84,15 +84,15 @@ int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
  *
  * @param ofname Output file name.
  * @param append The compressed XZ stream will be appened to the end of the
- * output file if this is set to \c true.
+ * output file if this parameter is set to \c true.
  * @param block_size Size of each uncompressed block.
  * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this is set to
- * \c true. Enabling extreme compression slightly improves compression ratio at
- * the cost of increased compression time.
+ * @param extreme Extreme compression mode will be enabled if this parameter is
+ * set to \c true. Enabling extreme compression slightly improves compression
+ * ratio at the cost of increased compression time.
  * @param num_threads Number of threads to use for multithreaded compression.
  * The function will automatically detect and use the number of physical threads
- * available if this is set to 0.
+ * available if this parameter is set to 0.
  * @param in Input stream.
  * @param in_size Size of the input stream in bytes.
  * @return Size of the output file in bytes on success;
@@ -112,13 +112,13 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
  * compressed stream set at the time of compression.
  * @param level Compression level from 0 (store) to 9 (ultra). This is a
  * property of the compressed stream set at the time of compression.
- * @param extreme Extreme compression mode will be enabled if this is set to
- * \c true. Enabling extreme compression slightly improves compression ratio at
- * the cost of increased compression time. This is a property of the compressed
- * stream set at the time of compression.
+ * @param extreme Extreme compression mode will be enabled if this parameter is
+ * set to \c true. Enabling extreme compression slightly improves compression
+ * ratio at the cost of increased compression time. This is a property of the
+ * compressed stream set at the time of compression.
  * @param num_threads Number of threads to use for multithreaded decompression.
  * The function will automatically detect and use the number of physical threads
- * available if this is set to 0.
+ * available if this parameter is set to 0.
  * @return Number of bytes of memory required for decompression using the given
  * options, or
  * @return UINT64_MAX if the given options are invalid.
@@ -147,7 +147,8 @@ uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
  * \p size bytes.
  * @param size Number of bytes to decompress.
  * @param num_threads Number of threads to use. The function will automatically
- * detect and use the number of physical threads available if this is set to 0.
+ * detect and use the number of physical threads available if this parameter is
+ * set to 0.
  * @param memlimit Memory limit of the function in bytes. The function is
  * guaranteed not to allocate more than this amount of heap memory during its
  * execution. Setting this value too small may cause the function to use fewer
