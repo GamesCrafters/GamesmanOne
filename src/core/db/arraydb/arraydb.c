@@ -270,8 +270,6 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    // Set hash map last because this operation cannot be undone with the
-    // current implementation of hashmap.
     if (!TierHashMapExtSet(&loaded_tier_to_index, tier, i)) {
         RecordArrayDestroy(&loaded_records[i]);
         free(full_path);
