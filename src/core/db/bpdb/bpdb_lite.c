@@ -249,12 +249,13 @@ static int BpdbLiteTierStatus(Tier tier) {
 static int BpdbLiteGameStatus(void) {
     static ConstantReadOnlyString kIndicatorFileName = ".finish";
     char *indicator = 
-        (char *)malloc(strlen(sandbox_path + strlen(kIndicatorFileName) + 1));
+        (char *)malloc(strlen(sandbox_path) + strlen(kIndicatorFileName) + 1);
     if (indicator == NULL) return kDbGameStatusCheckError;
 
     sprintf(indicator, "%s%s", sandbox_path, kIndicatorFileName);
-    printf("debug: indecator == %s\n", indicator);
-    if (FileExists(indicator)) return kDbGameStatusSolved;
+    bool solved = FileExists(indicator);
+    free(indicator);
+    if (solved) return kDbGameStatusSolved;
 
     return kDbGameStatusIncomplete;
 }

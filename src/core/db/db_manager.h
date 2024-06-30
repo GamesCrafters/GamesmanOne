@@ -39,6 +39,10 @@
  * undefined behavior.
  *
  * @param db DB to use.
+ * @param read_only True if initializing in read-only mode, false otherwise.
+ * If initialized in read-only mode, the database manager will assume that the
+ * current game has been solved and will not create a directory for the chosen
+ * database under the current data path.
  * @param game_name Internal name of the game.
  * @param variant Index of the game variant as an integer.
  * @param data_path Absolute or relative path to the data directory if non-NULL.
@@ -48,7 +52,8 @@
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero otherwise.
  */
-int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
+int DbManagerInitDb(const Database *db, bool read_only,
+                    ReadOnlyString game_name, int variant,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux);
 

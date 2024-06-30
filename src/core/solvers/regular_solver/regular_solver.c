@@ -176,7 +176,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kArrayDb, game_name, variant, data_path,
+    ret = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
                           &DefaultGetTierName, NULL);
     if (ret != 0) goto _bailout;
 

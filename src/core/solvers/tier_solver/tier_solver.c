@@ -143,6 +143,9 @@ static void ToggleRetrogradeAnalysis(bool on);
 
 static bool SetCurrentApi(const TierSolverApi *api);
 
+static int SetDb(ReadOnlyString game_name, int variant,
+                 ReadOnlyString data_path);
+
 static TierPosition GetCanonicalTierPosition(TierPosition tier_position);
 
 // Default API functions
@@ -162,27 +165,25 @@ static int DefaultGetTierName(char *name, Tier tier);
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path) {
     kArrayDbRecordsPerBlock = kArrayDbBlockSize / kArrayDbRecordSize;
-    int ret = -1;
+    int error = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
+    error = SetDb(game_name, variant, data_path);
+    if (error != kNoError) goto _bailout;
 
-    ret = DbManagerInitDb(&kArrayDb, game_name, variant, data_path,
-                          current_api.GetTierName, NULL);
-    if (ret != 0) goto _bailout;
-
-    ret = StatManagerInit(game_name, variant, data_path);
-    if (ret != 0) goto _bailout;
+    error = StatManagerInit(game_name, variant, data_path);
+    if (error != kNoError) goto _bailout;
 
     // Success.
-    ret = 0;
+    error = 0;
 
 _bailout:
-    if (ret != 0) {
+    if (error != kNoError) {
         DbManagerFinalizeDb();
         StatManagerFinalize();
         TierSolverFinalize();
     }
-    return ret;
+    return error;
 }
 
 static int TierSolverFinalize(void) {
@@ -455,6 +456,22 @@ static bool SetCurrentApi(const TierSolverApi *api) {
     }
 
     return true;
+}
+
+static int SetDb(ReadOnlyString game_name, int variant,
+                 ReadOnlyString data_path) {
+    // Look for existing bpdb_lite database.
+    int ret = DbManagerInitDb(&kBpdbLite, true, game_name, variant, data_path,
+                              current_api.GetTierName, NULL);
+    if (ret != 0) return ret;
+    int bpdb_status = DbManagerGameStatus();
+    if (bpdb_status == kDbGameStatusCheckError) return kRuntimeError;
+    if (bpdb_status == kDbGameStatusSolved) return kNoError;
+    DbManagerFinalizeDb();
+
+    // Initialize a R/W array database.
+    return DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
+                           current_api.GetTierName, NULL);
 }
 
 static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {

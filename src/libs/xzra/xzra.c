@@ -41,6 +41,7 @@ static void InitMtForEncoder(lzma_mt *mt, uint64_t block_size, uint32_t level,
     InitFiltersForMt(filters, block_size, level, extreme);
 
     // Set up MT.
+    memset(mt, 0, sizeof(*mt));
     mt->flags = 0;  // No flags are currently supported.
     mt->block_size = block_size;
     mt->timeout = 0;
@@ -59,7 +60,7 @@ static void InitMtForEncoder(lzma_mt *mt, uint64_t block_size, uint32_t level,
 static bool InitEncoder(lzma_stream *strm, uint64_t block_size, uint32_t level,
                         bool extreme, int num_threads) {
     // Set up LZMA multithreading options.
-    lzma_mt mt = {0};
+    lzma_mt mt;
     InitMtForEncoder(&mt, block_size, level, extreme, num_threads);
 
     // Initialize the threaded encoder.
