@@ -34,10 +34,10 @@ static void InitFiltersForMt(lzma_filter filters[static 2], uint64_t block_size,
     filters[1] = (lzma_filter){.id = LZMA_VLI_UNKNOWN, .options = NULL};
 }
 
-static void InitMtForEncoder(lzma_mt *mt, uint64_t block_size, uint32_t level,
-                             bool extreme, int num_threads) {
+static void InitMtForEncoder(lzma_mt *mt, lzma_filter filters[static 2],
+                             uint64_t block_size, uint32_t level, bool extreme,
+                             int num_threads) {
     // Set up filters.
-    lzma_filter filters[2];
     InitFiltersForMt(filters, block_size, level, extreme);
 
     // Set up MT.
@@ -60,8 +60,9 @@ static void InitMtForEncoder(lzma_mt *mt, uint64_t block_size, uint32_t level,
 static bool InitEncoder(lzma_stream *strm, uint64_t block_size, uint32_t level,
                         bool extreme, int num_threads) {
     // Set up LZMA multithreading options.
+    lzma_filter filters[2];
     lzma_mt mt;
-    InitMtForEncoder(&mt, block_size, level, extreme, num_threads);
+    InitMtForEncoder(&mt, filters, block_size, level, extreme, num_threads);
 
     // Initialize the threaded encoder.
     lzma_ret ret = lzma_stream_encoder_mt(strm, &mt);
@@ -92,8 +93,9 @@ static const char *LzmaCompressRetDesc(lzma_ret ret) {
 
 uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
                                  bool extreme, int num_threads) {
+    lzma_filter filters[2];
     lzma_mt mt;
-    InitMtForEncoder(&mt, block_size, level, extreme, num_threads);
+    InitMtForEncoder(&mt, filters, block_size, level, extreme, num_threads);
 
     return lzma_stream_encoder_mt_memusage(&mt);
 }
@@ -244,7 +246,7 @@ uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
                                    bool extreme, int num_threads) {
     lzma_filter filters[2];
     InitFiltersForMt(filters, block_size, level, extreme);
-    
+
     return lzma_raw_decoder_memusage(filters) * num_threads;
 }
 
