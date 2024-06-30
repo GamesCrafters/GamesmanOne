@@ -192,6 +192,16 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
  */
 int DbManagerTierStatus(Tier tier);
 
+/**
+ * @brief Returns the solving status of the current game.
+ *
+ * @return kDbGameStatusSolved if solved,
+ * @return kDbGameStatusIncomplete if not fully solved, or
+ * @return kDbGameStatusCheckError if an error occurred when checking the status
+ * of the current game.
+ */
+int DbManagerGameStatus(void);
+
 // --------------------- (EXPERIMENTAL) Testing Interface ---------------------
 
 int DbManagerRefProbeInit(DbProbe *probe);

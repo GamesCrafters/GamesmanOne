@@ -349,6 +349,16 @@ int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
     return 0;
 }
 
+bool FileExists(ReadOnlyString filename) {
+    FILE *file = fopen(filename, "r");
+    if (file) {
+        fclose(file);
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * @brief Makes a directory at the given path or does nothing if the directory
  * already exists.

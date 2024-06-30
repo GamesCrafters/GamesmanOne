@@ -42,11 +42,12 @@ static const Database *ref_db;
 static bool BasicDbApiImplemented(const Database *db);
 static bool IsValidDbName(ReadOnlyString name);
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path);
+                         int variant, ReadOnlyString data_path, bool read_only);
 
 // -----------------------------------------------------------------------------
 
-int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
+int DbManagerInitDb(const Database *db, bool read_only,
+                    ReadOnlyString game_name, int variant,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux) {
     if (current_db != NULL) current_db->Finalize();
@@ -61,7 +62,8 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
     }
     current_db = db;
 
-    char *path = SetupDbPath(current_db, game_name, variant, data_path);
+    char *path = SetupDbPath(current_db, game_name, variant, data_path,
+                             read_only);
     int error = current_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 
@@ -83,7 +85,7 @@ int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
     }
     ref_db = db;
 
-    char *path = SetupDbPath(ref_db, game_name, variant, data_path);
+    char *path = SetupDbPath(ref_db, game_name, variant, data_path, false);
     int error = ref_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 
@@ -130,13 +132,9 @@ int DbManagerLoadTier(Tier tier, int64_t size) {
     return current_db->LoadTier(tier, size);
 }
 
-int DbManagerUnloadTier(Tier tier) {
-    return current_db->UnloadTier(tier);
-}
+int DbManagerUnloadTier(Tier tier) { return current_db->UnloadTier(tier); }
 
-bool DbManagerIsTierLoaded(Tier tier) {
-    return current_db->IsTierLoaded(tier);
-}
+bool DbManagerIsTierLoaded(Tier tier) { return current_db->IsTierLoaded(tier); }
 
 Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
     return current_db->GetValueFromLoaded(tier, position);
@@ -161,6 +159,8 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 }
 
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
+
+int DbManagerGameStatus(void) { return current_db->GameStatus(); }
 
 int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
 
@@ -208,7 +208,8 @@ static bool IsValidDbName(ReadOnlyString name) {
 }
 
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path) {
+                         int variant, ReadOnlyString data_path,
+                         bool read_only) {
     // path = "<data_path>/<game_name>/<variant>/<db_name>/"
     if (data_path == NULL) data_path = "data";
     char *path = NULL;
@@ -222,6 +223,7 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
         return NULL;
     }
+
     int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
                                  game_name, variant, db->name);
     if (actual_length >= path_length) {
@@ -231,11 +233,13 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         free(path);
         return NULL;
     }
-    if (MkdirRecursive(path) != 0) {
+
+    if (!read_only && MkdirRecursive(path) != 0) {
         fprintf(stderr,
                 "SetupDbPath: failed to create path in the file system.\n");
         free(path);
         return NULL;
     }
+
     return path;
 }

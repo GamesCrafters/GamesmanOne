@@ -44,12 +44,19 @@ enum DatabaseConstants {
     kDbFileNameLengthMax = 63,
 };
 
-/** @brief Enumeration of all possible statuses of a tier's database file. */
+/** @brief Enumeration of all possible status of a tier's database file. */
 enum DatabaseTierStatus {
     kDbTierStatusSolved,     /**< Solved and correctly stored. */
     kDbTierStatusCorrupted,  /**< DB exists but corrupted. */
     kDbTierStatusMissing,    /**< DB file not found. */
     kDbTierStatusCheckError, /**< Error encountered. */
+};
+
+/** @brief Enumeration of all possible status of a tier's database file. */
+enum DatabaseGameStatus {
+    kDbGameStatusSolved,     /**< Solved. */
+    kDbGameStatusIncomplete, /**< Incomplete database. */
+    kDbGameStatusCheckError, /**< Error encountered. */
 };
 
 typedef int (*GetTierNameFunc)(char *dest, Tier tier);
@@ -222,6 +229,17 @@ typedef struct Database {
      * status of TIER.
      */
     int (*TierStatus)(Tier tier);
+
+    /**
+     * @brief Probes the current data path and returns the solving status of the
+     * current game.
+     *
+     * @return kDbGameStatusSolved if solved,
+     * @return kDbGameStatusIncomplete if not fully solved, or
+     * @return kDbGameStatusCheckError if an error occurred when checking the
+     * status of the current game.
+     */
+    int (*GameStatus)(void);
 } Database;
 
 #endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H

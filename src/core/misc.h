@@ -265,6 +265,12 @@ int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok);
 int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len);
 
 /**
+ * @brief Returns true if the file with the given \p filename exists, or false
+ * otherwise.
+ */
+bool FileExists(ReadOnlyString filename);
+
+/**
  * @brief Recursively makes all directories along the given path.
  * Equivalent to "mkdir -p <path>".
  *

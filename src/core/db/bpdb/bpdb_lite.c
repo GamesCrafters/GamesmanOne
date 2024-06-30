@@ -76,6 +76,7 @@ static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position);
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 static int BpdbLiteTierStatus(Tier tier);
+static int BpdbLiteGameStatus(void);
 
 const Database kBpdbLite = {
     .name = "bpdb_lite",
@@ -99,6 +100,7 @@ const Database kBpdbLite = {
     .ProbeValue = &BpdbLiteProbeValue,
     .ProbeRemoteness = &BpdbLiteProbeRemoteness,
     .TierStatus = &BpdbLiteTierStatus,
+    .GameStatus = &BpdbLiteGameStatus,
 };
 
 static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
@@ -242,6 +244,19 @@ static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 
 static int BpdbLiteTierStatus(Tier tier) {
     return BpdbFileGetTierStatus(sandbox_path, tier, CurrentGetTierName);
+}
+
+static int BpdbLiteGameStatus(void) {
+    static ConstantReadOnlyString kIndicatorFileName = ".finish";
+    char *indicator = 
+        (char *)malloc(strlen(sandbox_path + strlen(kIndicatorFileName) + 1));
+    if (indicator == NULL) return kDbGameStatusCheckError;
+
+    sprintf(indicator, "%s%s", sandbox_path, kIndicatorFileName);
+    printf("debug: indecator == %s\n", indicator);
+    if (FileExists(indicator)) return kDbGameStatusSolved;
+
+    return kDbGameStatusIncomplete;
 }
 
 // -----------------------------------------------------------------------------
