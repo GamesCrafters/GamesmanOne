@@ -242,10 +242,10 @@ static int TierSolverSolve(void *aux) {
     };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
-#ifndef USE_MPI
+#ifndef USE_MPI  // If not using MPI
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerSolve(&current_api, options->force, options->verbose);
-#else   // USE_MPI
+#else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
     int process_id, cluster_size;
     cluster_size = SafeMpiCommSize(MPI_COMM_WORLD);

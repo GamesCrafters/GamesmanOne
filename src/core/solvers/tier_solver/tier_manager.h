@@ -41,7 +41,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 
 /**
- * @brief Creates and solves the tier tree.
+ * @brief Creates and solves the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
  * @param force If set to true, the solver will solve each tier regardless of
@@ -54,7 +54,7 @@
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
 
 /**
- * @brief Creates and analyzes the tier tree.
+ * @brief Creates and analyzes the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
  * @param force If set to true, the analyzer will analyze each tier regardless
