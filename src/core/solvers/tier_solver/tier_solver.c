@@ -255,6 +255,13 @@ static ConstantReadOnlyString kTierSolverSolveSkipReadOnlyMsg =
     "database. To re-solve the current game, remove the old database "
     "or use a different data path and try again.";
 
+static ConstantReadOnlyString kTierSolverAnalyzeSkipReadOnlyMsg =
+    "TierSolverAnalyze: the current game was solved with a database of a "
+    "previous version that is no longer supported. The solver has skipped the "
+    "analysis because some functions are missing from the original database "
+    "implementation. To analyze the current game, remove the old database "
+    "or use a different data path to resolve the game and try again.";
+
 static ConstantReadOnlyString kTierSolverSolveSkipSolvedMsg =
     "TierSolverSolve: the current game variant has already been solved. Use -f "
     "in headless mode to force re-solve the game variant.";
@@ -303,6 +310,13 @@ static int TierSolverSolve(void *aux) {
 }
 
 static int TierSolverAnalyze(void *aux) {
+    // Now allowing analysis on old databases now for simplicity.
+    // Need to work on old db implementation to support new analyzer API calls.
+    if (read_only_db) {
+        printf("%s\n", kTierSolverAnalyzeSkipReadOnlyMsg);
+        return kNoError;
+    }
+
     static const TierSolverAnalyzeOptions kDefaultAnalyzeOptions = {
         .force = false,
         .verbose = 1,
