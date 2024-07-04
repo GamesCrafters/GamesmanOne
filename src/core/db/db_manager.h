@@ -101,6 +101,8 @@ int DbManagerFlushSolvingTier(void *aux);
  */
 int DbManagerFreeSolvingTier(void);
 
+int DbManagerSetGameSolved(void);
+
 /**
  * @brief Sets the value of POSITION in the solving tier to VALUE.
  *

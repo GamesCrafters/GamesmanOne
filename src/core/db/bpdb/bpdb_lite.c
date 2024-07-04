@@ -67,6 +67,7 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size);
 static int BpdbLiteFlushSolvingTier(void *aux);
 static int BpdbLiteFreeSolvingTier(void);
 
+static int BpdbLiteSetGameSolved(void);
 static int BpdbLiteSetValue(Position position, Value value);
 static int BpdbLiteSetRemoteness(Position position, int remoteness);
 static Value BpdbLiteGetValue(Position position);
@@ -89,6 +90,8 @@ const Database kBpdbLite = {
     .CreateSolvingTier = &BpdbLiteCreateSolvingTier,
     .FlushSolvingTier = &BpdbLiteFlushSolvingTier,
     .FreeSolvingTier = &BpdbLiteFreeSolvingTier,
+
+    .SetGameSolved = NULL,
     .SetValue = &BpdbLiteSetValue,
     .SetRemoteness = &BpdbLiteSetRemoteness,
     .GetValue = &BpdbLiteGetValue,
@@ -192,6 +195,20 @@ static uint64_t GetRecord(Position position) {
     PRAGMA_OMP_CRITICAL(records) { record = BpArrayGet(&records, position); }
 
     return record;
+}
+
+static int BpdbLiteSetGameSolved(void) {
+    char *flag_filename = BpdbFileGetFullPathToFinishFlag(sandbox_path);
+    if (flag_filename == NULL) return kMallocFailureError;
+    
+    FILE *flag_file = GuardedFopen(flag_filename, "w");
+    free(flag_filename);
+    if (flag_file == NULL) return kFileSystemError;
+
+    int error = GuardedFclose(flag_file);
+    if (error != 0) return kFileSystemError;
+
+    return kNoError;
 }
 
 static int BpdbLiteSetValue(Position position, Value value) {

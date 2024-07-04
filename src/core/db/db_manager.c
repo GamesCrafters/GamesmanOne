@@ -112,6 +112,10 @@ int DbManagerFlushSolvingTier(void *aux) {
 
 int DbManagerFreeSolvingTier(void) { return current_db->FreeSolvingTier(); }
 
+int DbManagerSetGameSolved(void) {
+    return current_db->SetGameSolved();
+}
+
 int DbManagerSetValue(Position position, Value value) {
     return current_db->SetValue(position, value);
 }

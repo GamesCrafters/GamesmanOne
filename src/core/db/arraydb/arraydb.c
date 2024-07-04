@@ -29,6 +29,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size);
 static int ArrayDbFlushSolvingTier(void *aux);
 static int ArrayDbFreeSolvingTier(void);
 
+static int ArrayDbSetGameSolved(void);
 static int ArrayDbSetValue(Position position, Value value);
 static int ArrayDbSetRemoteness(Position position, int remoteness);
 static Value ArrayDbGetValue(Position position);
@@ -45,6 +46,7 @@ static int ArrayDbProbeDestroy(DbProbe *probe);
 static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbTierStatus(Tier tier);
+static int ArrayDbGameStatus(void);
 
 const Database kArrayDb = {
     .name = "arraydb",
@@ -58,6 +60,7 @@ const Database kArrayDb = {
     .FlushSolvingTier = ArrayDbFlushSolvingTier,
     .FreeSolvingTier = ArrayDbFreeSolvingTier,
 
+    .SetGameSolved = ArrayDbSetGameSolved,
     .SetValue = ArrayDbSetValue,
     .SetRemoteness = ArrayDbSetRemoteness,
     .GetValue = ArrayDbGetValue,
@@ -76,6 +79,7 @@ const Database kArrayDb = {
     .ProbeValue = ArrayDbProbeValue,
     .ProbeRemoteness = ArrayDbProbeRemoteness,
     .TierStatus = ArrayDbTierStatus,
+    .GameStatus = ArrayDbGameStatus,
 };
 
 // Types
@@ -187,6 +191,21 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     return full_path;
 }
 
+static char *GetFullPathToFinishFlag(void) {
+    // Full path: "<path>/.finish", +2 for '/' and '\0'.
+    ConstantReadOnlyString finish_flag_name = ".finish";
+    char *full_path = (char *)calloc(
+        (strlen(sandbox_path) + strlen(finish_flag_name) + 2), sizeof(char));
+    if (full_path == NULL) {
+        fprintf(stderr,
+                "GetFullPathToFinishFlag: failed to calloc full_path.\n");
+        return NULL;
+    }
+
+    sprintf(full_path, "%s/%s", sandbox_path, finish_flag_name);
+    return full_path;
+}
+
 static int GetNumThreads(void) {
 #ifdef _OPENMP
     return omp_get_max_threads();
@@ -223,6 +242,20 @@ static int ArrayDbFreeSolvingTier(void) {
     RecordArrayDestroy(&records);
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
+
+    return kNoError;
+}
+
+static int ArrayDbSetGameSolved(void) {
+    char *flag_filename = GetFullPathToFinishFlag();
+    if (flag_filename == NULL) return kMallocFailureError;
+    
+    FILE *flag_file = GuardedFopen(flag_filename, "w");
+    free(flag_filename);
+    if (flag_file == NULL) return kFileSystemError;
+
+    int error = GuardedFclose(flag_file);
+    if (error != 0) return kFileSystemError;
 
     return kNoError;
 }
@@ -423,4 +456,14 @@ static int ArrayDbTierStatus(Tier tier) {
     if (error != 0) return kDbTierStatusCheckError;
 
     return kDbTierStatusSolved;
+}
+
+static int ArrayDbGameStatus(void) {
+    char *full_path = GetFullPathToFinishFlag();
+    if (full_path == NULL) return kDbGameStatusCheckError;
+
+    bool exists = FileExists(full_path);
+    free(full_path);
+
+    return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }

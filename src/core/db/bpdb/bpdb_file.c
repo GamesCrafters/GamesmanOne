@@ -26,10 +26,10 @@
 
 #include "core/db/bpdb/bpdb_file.h"
 
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr, sprintf
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // strlen, strcat
+#include <stddef.h>  // NULL
+#include <stdio.h>   // fprintf, stderr, sprintf
+#include <stdlib.h>  // calloc, free
+#include <string.h>  // strlen, strcat
 
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
@@ -69,6 +69,22 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
     }
     strcat(full_path, kBpdbExtension);
 
+    return full_path;
+}
+
+char *BpdbFileGetFullPathToFinishFlag(ConstantReadOnlyString sandbox_path) {
+    // Full path: "<path>/.finish".
+    static ConstantReadOnlyString kFinishFlagFileName = ".finish";
+    int path_length = strlen(sandbox_path) + strlen(kFinishFlagFileName) + 2;
+    char *full_path = (char *)malloc(path_length * sizeof(char));
+    if (full_path == NULL) {
+        fprintf(
+            stderr,
+            "BpdbFileGetFullPathToFinishFlag: failed to malloc full_path.\n");
+        return NULL;
+    }
+    
+    sprintf(full_path, "%s/%s", sandbox_path, kFinishFlagFileName);
     return full_path;
 }
 

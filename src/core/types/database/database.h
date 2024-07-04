@@ -130,6 +130,8 @@ typedef struct Database {
      */
     int (*FreeSolvingTier)(void);
 
+    int (*SetGameSolved)(void);
+
     /**
      * @brief Sets the value of POSITION to VALUE.
      * @note This function is part of the Solving API.

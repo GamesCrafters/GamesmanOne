@@ -70,6 +70,8 @@ typedef struct BpdbFileHeader {
 char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
                           GetTierNameFunc GetTierName);
 
+char *BpdbFileGetFullPathToFinishFlag(ConstantReadOnlyString sandbox_path);
+
 /**
  * @brief Flushes the RECORDS to a bpdb file under FULL_PATH.
  *

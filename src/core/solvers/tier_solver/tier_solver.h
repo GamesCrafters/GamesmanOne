@@ -322,4 +322,9 @@ typedef struct TierSolverAnalyzeOptions {
     bool force;  /**< Whether to force (re)analyze the game. */
 } TierSolverAnalyzeOptions;
 
+enum TierSolverSolveStatus {
+    kTierSolverSolveStatusNotSolved,  /**< Not fully solved. */
+    kTierSolverSolveStatusSolved,     /**< Fully solved. */
+};
+
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_

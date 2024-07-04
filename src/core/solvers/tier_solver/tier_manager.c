@@ -46,6 +46,7 @@
 #include <time.h>      // time_t, time, difftime
 
 #include "core/analysis/analysis.h"
+#include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/reverse_tier_graph.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
@@ -406,8 +407,7 @@ static int SolveTierGraph(bool force, int verbose) {
         if (IsCanonicalTier(tier)) {  // Only solve canonical tiers.
             time_t begin = time(NULL);
             bool solved;
-            int error =
-                TierWorkerSolveValueIteration(tier, force, false, &solved);
+            int error = TierWorkerSolve(tier, force, false, &solved);
             if (error == 0) {
                 // Solve succeeded.
                 SolveUpdateTierGraph(tier);
@@ -425,6 +425,16 @@ static int SolveTierGraph(bool force, int verbose) {
         }
     }
     if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (failed_tiers == 0) {
+        int error = DbManagerSetGameSolved();
+        if (error != kNoError) {
+            fprintf(stderr,
+                    "SolveTierGraph: DB manager failed to set current game as "
+                    "solved (code %d)\n",
+                    error);
+            return error;
+        }
+    }
 
     return kNoError;
 }
