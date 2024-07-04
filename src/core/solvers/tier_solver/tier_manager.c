@@ -453,6 +453,17 @@ static int SolveTierGraphMpi(bool force, int verbose) {
     SolveTierGraphMpiTerminateWorkers();
     double time_elapsed = difftime(time(NULL), begin_time);
     if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (failed_tiers == 0) {
+        int error = DbManagerSetGameSolved();
+        if (error != kNoError) {
+            fprintf(
+                stderr,
+                "SolveTierGraphMpi: DB manager failed to set current game as "
+                "solved (code %d)\n",
+                error);
+            return error;
+        }
+    }
 
     return kNoError;
 }
