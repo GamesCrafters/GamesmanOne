@@ -220,7 +220,22 @@ static int RegularSolverSolve(void *aux) {
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-    return TierWorkerSolve(kDefaultTier, options->force, false, NULL);
+    int error = TierWorkerSolve(kDefaultTier, options->force, false, NULL);
+    if (error != kNoError) {
+        fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
+                error);
+        return error;
+    }
+
+    error = DbManagerSetGameSolved();
+    if (error != kNoError) {
+        fprintf(stderr,
+                "RegularSolverSolve: DB manager failed to set current game as "
+                "solved (code %d)\n",
+                error);
+    }
+
+    return error;
 }
 
 static int RegularSolverAnalyze(void *aux) {
