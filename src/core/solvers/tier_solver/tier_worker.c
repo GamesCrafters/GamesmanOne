@@ -41,14 +41,11 @@
 #include "core/constants.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 #include "core/types/gamesman_types.h"
-#include "libs/mt19937/mt19937-64.h"
 
-// Copy of the API functions from tier_manager. Cannot use a reference here
-// because we need to create/modify some of the functions.
-static TierSolverApi current_api;
-
+static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
 
 #ifdef USE_MPI
@@ -57,17 +54,10 @@ static int64_t current_db_chunk_size;
 #include "core/solvers/tier_solver/tier_mpi.h"
 #endif  // USE_MPI
 
-static bool TestShouldSkip(Tier tier, Position position);
-static int TestChildPositions(Tier tier, Position position);
-static int TestChildToParentMatching(Tier tier, Position position);
-static int TestParentToChildMatching(Tier tier, Position position,
-                                     const TierArray *parent_tiers);
-static int TestPrintError(Tier tier, Position position);
-
 // -----------------------------------------------------------------------------
 
 void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
-    memcpy(&current_api, api, sizeof(current_api));
+    api_internal = api;
     current_db_chunk_size = db_chunk_size;
     assert(current_db_chunk_size > 0);
 }
@@ -76,12 +66,12 @@ int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
                     bool *solved) {
     switch (method) {
         case kTierWorkerSolveMethodBackwardInduction:
-            return TierWorkerSolveBIInternal(&current_api,
+            return TierWorkerSolveBIInternal(api_internal,
                                              current_db_chunk_size, tier, force,
                                              compare, solved);
 
         case kTierWorkerSolveMethodValueIteration:
-            return TierWorkerSolveVIInternal(&current_api,
+            return TierWorkerSolveVIInternal(api_internal,
                                              current_db_chunk_size, tier, force,
                                              compare, solved);
         default:
@@ -124,193 +114,6 @@ int TierWorkerMpiServe(void) {
 }
 #endif  // USE_MPI
 
-static int TestTierSymmetryRemoval(Tier tier, Position position,
-                                   Tier canonical_tier) {
-    Position (*ApplySymm)(TierPosition, Tier) =
-        current_api.GetPositionInSymmetricTier;
-
-    TierPosition self = {.tier = tier, .position = position};
-    TierPosition symm = {.tier = canonical_tier};
-    symm.position = ApplySymm(self, canonical_tier);
-
-    // Test if getting symmetric position from the same tier returns the
-    // position itself.
-    Position self_in_self_tier = ApplySymm(self, self.tier);
-    Position symm_in_symm_tier = ApplySymm(symm, symm.tier);
-    if (self_in_self_tier != self.position) {
-        return kTierSolverTestTierSymmetrySelfMappingError;
-    } else if (symm_in_symm_tier != symm.position) {
-        return kTierSolverTestTierSymmetrySelfMappingError;
-    }
-
-    // Skip the next test if both tiers are the same.
-    if (tier == canonical_tier) return kTierSolverTestNoError;
-
-    // Test if applying the symmetry twice returns the same position.
-    Position self_in_symm_tier = ApplySymm(self, symm.tier);
-    Position symm_in_self_tier = ApplySymm(symm, self.tier);
-    TierPosition self_in_symm_tier_tier_position = {
-        .tier = symm.tier, .position = self_in_symm_tier};
-    TierPosition symm_in_self_tier_tier_position = {
-        .tier = self.tier, .position = symm_in_self_tier};
-    Position new_self = ApplySymm(self_in_symm_tier_tier_position, self.tier);
-    Position new_symm = ApplySymm(symm_in_self_tier_tier_position, symm.tier);
-    if (new_self != self.position) {
-        return kTierSolverTestTierSymmetryInconsistentError;
-    } else if (new_symm != symm.position) {
-        return kTierSolverTestTierSymmetryInconsistentError;
-    }
-
-    return kTierSolverTestNoError;
-}
-
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed) {
-    static const int64_t kTestSizeMax = 1000;
-    init_genrand64(seed);
-
-    int64_t tier_size = current_api.GetTierSize(tier);
-    bool random_test = tier_size > kTestSizeMax;
-    int64_t test_size = random_test ? kTestSizeMax : tier_size;
-    Tier canonical_tier = current_api.GetCanonicalTier(tier);
-
-    for (int64_t i = 0; i < test_size; ++i) {
-        Position position = random_test ? genrand64_int63() % tier_size : i;
-        if (TestShouldSkip(tier, position)) continue;
-
-        // Check tier symmetry removal implementation.
-        int error = TestTierSymmetryRemoval(tier, position, canonical_tier);
-        if (error != kTierSolverTestNoError) {
-            TestPrintError(tier, position);
-            return error;
-        }
-
-        // Check if all child positions are legal.
-        error = TestChildPositions(tier, position);
-        if (error != kTierSolverTestNoError) {
-            TestPrintError(tier, position);
-            return error;
-        }
-
-        // Perform the following tests only if current game variant implements
-        // its own GetCanonicalParentPositions.
-        if (current_api.GetCanonicalParentPositions != NULL) {
-            // Check if all child positions of the current position has the
-            // current position as one of their parents.
-            error = TestChildToParentMatching(tier, position);
-            if (error != kTierSolverTestNoError) {
-                TestPrintError(tier, position);
-                return error;
-            }
-
-            // Check if all parent positions of the current position has the
-            // current position as one of their children.
-            error = TestParentToChildMatching(tier, position, parent_tiers);
-            if (error != kTierSolverTestNoError) {
-                TestPrintError(tier, position);
-                return error;
-            }
-        }
-    }
-
-    return kTierSolverTestNoError;
-}
-
-// -----------------------------------------------------------------------------
-
-static bool TestShouldSkip(Tier tier, Position position) {
-    TierPosition tier_position = {.tier = tier, .position = position};
-    if (!current_api.IsLegalPosition(tier_position)) return true;
-    if (current_api.Primitive(tier_position) != kUndecided) return true;
-
-    return false;
-}
-
-static int TestChildPositions(Tier tier, Position position) {
-    TierPosition parent = {.tier = tier, .position = position};
-    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
-    int error = kTierSolverTestNoError;
-    for (int64_t i = 0; i < children.size; ++i) {
-        TierPosition child = children.array[i];
-        if (child.position < 0) {
-            error = kTierSolverTestIllegalChildError;
-            break;
-        } else if (child.position >= current_api.GetTierSize(child.tier)) {
-            error = kTierSolverTestIllegalChildError;
-            break;
-        } else if (!current_api.IsLegalPosition(child)) {
-            error = kTierSolverTestIllegalChildError;
-            break;
-        }
-    }
-
-    return error;
-}
-
-static int TestChildToParentMatching(Tier tier, Position position) {
-    TierPosition parent = {.tier = tier, .position = position};
-    TierPosition canonical_parent = parent;
-    canonical_parent.position =
-        current_api.GetCanonicalPosition(canonical_parent);
-    TierPositionArray children = current_api.GetCanonicalChildPositions(parent);
-    int error = kTierSolverTestNoError;
-    for (int64_t i = 0; i < children.size; ++i) {
-        // Check if all child positions have parent as one of their parents.
-        TierPosition child = children.array[i];
-        PositionArray parents =
-            current_api.GetCanonicalParentPositions(child, tier);
-        if (!PositionArrayContains(&parents, canonical_parent.position)) {
-            error = kTierSolverTestChildParentMismatchError;
-        }
-
-        PositionArrayDestroy(&parents);
-        if (error != kTierSolverTestNoError) break;
-    }
-    TierPositionArrayDestroy(&children);
-
-    return error;
-}
-
-static int TestParentToChildMatching(Tier tier, Position position,
-                                     const TierArray *parent_tiers) {
-    TierPosition child = {.tier = tier, .position = position};
-    TierPosition canonical_child = child;
-    canonical_child.position =
-        current_api.GetCanonicalPosition(canonical_child);
-
-    int error = kTierSolverTestNoError;
-    for (int64_t i = 0; i < parent_tiers->size; ++i) {
-        Tier parent_tier = parent_tiers->array[i];
-        PositionArray parents = current_api.GetCanonicalParentPositions(
-            canonical_child, parent_tier);
-        for (int64_t j = 0; j < parents.size; ++j) {
-            // Skip illegal and primitive parent positions as they are also
-            // skipped in solving.
-            TierPosition parent = {.tier = parent_tier,
-                                   .position = parents.array[j]};
-            if (!current_api.IsLegalPosition(parent)) continue;
-            if (current_api.Primitive(parent) != kUndecided) continue;
-
-            // Check if all parent positions have child as one of their
-            // children.
-            TierPositionArray children =
-                current_api.GetCanonicalChildPositions(parent);
-            if (!TierPositionArrayContains(&children, canonical_child)) {
-                error = kTierSolverTestParentChildMismatchError;
-            }
-
-            TierPositionArrayDestroy(&children);
-            if (error != kTierSolverTestNoError) break;
-        }
-
-        PositionArrayDestroy(&parents);
-        if (error != kTierSolverTestNoError) break;
-    }
-
-    return error;
-}
-
-static int TestPrintError(Tier tier, Position position) {
-    return printf("\nTierWorkerTest: error detected at position %" PRIPos
-                  " of tier %" PRITier "\n",
-                  position, tier);
+    return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed);
 }

@@ -2,7 +2,6 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stdio.h>    // fprintf, stderr
-#include <string.h>   // memcpy
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
@@ -32,7 +31,7 @@
 
 // Copy of the API functions from tier_manager. Cannot use a reference here
 // because we need to create/modify some of the functions.
-static TierSolverApi current_api;
+static const TierSolverApi *api_internal;
 
 static int64_t current_db_chunk_size;
 
@@ -49,14 +48,14 @@ static int largest_tie_remoteness;
 static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
                             Tier tier) {
     // Copy solver API function pointers and set db chunk size.
-    memcpy(&current_api, api, sizeof(current_api));
+    api_internal = api;
     current_db_chunk_size = db_chunk_size;
 
     this_tier = tier;
-    child_tiers = current_api.GetChildTiers(this_tier);
+    child_tiers = api_internal->GetChildTiers(this_tier);
     if (child_tiers.size == kIllegalSize) return false;
 
-    this_tier_size = current_api.GetTierSize(tier);
+    this_tier_size = api_internal->GetTierSize(tier);
     largest_win_lose_remoteness = 0;
     largest_tie_remoteness = 0;
     return true;
@@ -68,7 +67,7 @@ static bool Step1LoadChildren(void) {
     bool success = true;
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         Tier child_tier = child_tiers.array[i];
-        int64_t size = current_api.GetTierSize(child_tier);
+        int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
         if (error != kNoError) {
             success = false;
@@ -117,7 +116,7 @@ static bool Step2SetupSolvingTier(void) {
 
 static bool IsCanonicalPosition(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
-    return current_api.GetCanonicalPosition(tier_position) == position;
+    return api_internal->GetCanonicalPosition(tier_position) == position;
 }
 
 // ------------------------------- Step3ScanTier -------------------------------
@@ -127,7 +126,7 @@ static void Step3ScanTier(void) {
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(256)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             TierPosition tier_position = {.tier = this_tier, .position = pos};
-            if (!current_api.IsLegalPosition(tier_position) ||
+            if (!api_internal->IsLegalPosition(tier_position) ||
                 !IsCanonicalPosition(pos)) {
                 // Temporarily mark illegal and non-canonical positions as
                 // drawing. These values will be changed to undecided later.
@@ -135,7 +134,7 @@ static void Step3ScanTier(void) {
                 continue;
             }
 
-            Value value = current_api.Primitive(tier_position);
+            Value value = api_internal->Primitive(tier_position);
             if (value != kUndecided) {  // If tier_position is primitive...
                 // Set its value immediately.
                 DbManagerSetValue(pos, value);
@@ -154,7 +153,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     int largest_win = -1;
     TierPosition tier_position = {.tier = this_tier, .position = pos};
     TierPositionArray child_positions =
-        current_api.GetCanonicalChildPositions(tier_position);
+        api_internal->GetCanonicalChildPositions(tier_position);
     if (child_positions.size == kIllegalSize) return false;
 
     for (int64_t i = 0; i < child_positions.size; ++i) {
@@ -236,7 +235,7 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
     *updated = false;
     TierPosition tier_position = {.tier = this_tier, .position = pos};
     TierPositionArray child_positions =
-        current_api.GetCanonicalChildPositions(tier_position);
+        api_internal->GetCanonicalChildPositions(tier_position);
     if (child_positions.size == kIllegalSize) return false;
 
     for (int64_t i = 0; i < child_positions.size; ++i) {
