@@ -1,5 +1,3 @@
-#ifdef USE_MPI
-
 #include "core/solvers/tier_solver/tier_mpi.h"
 
 #include <mpi.h>
@@ -67,9 +65,3 @@ void TierMpiWorkerRecv(TierMpiManagerMessage *dest) {
     SafeMpiRecv(dest, sizeof(*dest), MPI_UINT8_T, kMpiManagerRank,
                 kMpiDefaultTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
-
-#else  // USE_MPI not defined
-
-typedef int make_iso_compilers_happy;
-
-#endif  // USE_MPI

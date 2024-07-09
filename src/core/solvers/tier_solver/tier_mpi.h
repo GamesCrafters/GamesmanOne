@@ -1,5 +1,3 @@
-#ifdef USE_MPI
-
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
 
@@ -48,5 +46,3 @@ void TierMpiWorkerSendReportError(int error);
 void TierMpiWorkerRecv(TierMpiManagerMessage *dest);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
-
-#endif  // USE_MPI

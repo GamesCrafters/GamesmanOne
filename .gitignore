@@ -120,3 +120,6 @@ Makefile
 
 # GCC
 *.gcda
+
+# Python venv
+.venv

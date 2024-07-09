@@ -91,7 +91,7 @@ const Database kBpdbLite = {
     .FlushSolvingTier = &BpdbLiteFlushSolvingTier,
     .FreeSolvingTier = &BpdbLiteFreeSolvingTier,
 
-    .SetGameSolved = NULL,
+    .SetGameSolved = &BpdbLiteSetGameSolved,
     .SetValue = &BpdbLiteSetValue,
     .SetRemoteness = &BpdbLiteSetRemoteness,
     .GetValue = &BpdbLiteGetValue,
