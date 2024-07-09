@@ -44,9 +44,15 @@
  */
 void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
 
+enum TierWorkerSolveMethod {
+    kTierWorkerSolveMethodBackwardInduction,
+    kTierWorkerSolveMethodValueIteration,
+};
+
 /**
- * @brief Solves the given TIER.
+ * @brief Solves the given \p tier using the given \p method.
  *
+ * @param method Method to use. See \c TierWorkerSolveMethod for details.
  * @param tier Tier to solve.
  * @param force If set to true, the Module will perform the solving process
  * regardless of the current database status. Otherwise, the solving process is
@@ -59,10 +65,7 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
  * in this variable.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierWorkerSolve(Tier tier, bool force, bool compare, bool *solved);
-
-int TierWorkerSolveValueIteration(Tier tier, bool force, bool compare,
-                                  bool *solved);
+int TierWorkerSolve(int method, Tier tier, bool force, bool compare, bool *solved);
 
 #ifdef USE_MPI
 int TierWorkerMpiServe(void);

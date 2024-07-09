@@ -1,3 +1,5 @@
+add_subdirectory(tier_worker)
+
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/frontier.h
     ${CMAKE_CURRENT_SOURCE_DIR}/reverse_graph.h
