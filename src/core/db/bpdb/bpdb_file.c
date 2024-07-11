@@ -1,11 +1,11 @@
 /**
- * @file bpdb_file.c
+ * @file bpdb_file.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of Bit-Perfect Database file utilities.
- * @version 1.1.1
- * @date 2024-02-15
+ * @brief Bit-Perfect Database file utilities.
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

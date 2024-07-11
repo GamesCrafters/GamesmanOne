@@ -1,4 +1,33 @@
-#include "core/data_structures/int64_hash_map_ext.h"
+/**
+ * @file int64_hash_map_sc.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Separate chaining int64_t to int64_t hash map.
+ * @details This hash map implementation allows removal of map entries at the
+ * cost of being considerably slower than the regular open addressing hash map
+ * provided by int64_hash_map.h.
+ * @version 1.0.0
+ * @date 2024-07-10
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "core/data_structures/int64_hash_map_sc.h"
 
 #include <math.h>     // INFINITY
 #include <stdbool.h>  // bool, true, false
@@ -9,7 +38,7 @@
 
 #include "core/misc.h"  // NextPrime
 
-void Int64HashMapExtInit(Int64HashMapExt *map, double max_load_factor) {
+void Int64HashMapSCInit(Int64HashMapSC *map, double max_load_factor) {
     map->buckets = NULL;
     map->num_buckets = 0;
     map->num_entries = 0;
@@ -18,11 +47,11 @@ void Int64HashMapExtInit(Int64HashMapExt *map, double max_load_factor) {
     map->max_load_factor = max_load_factor;
 }
 
-void Int64HashMapExtDestroy(Int64HashMapExt *map) {
+void Int64HashMapSCDestroy(Int64HashMapSC *map) {
     for (int64_t i = 0; i < map->num_buckets; ++i) {
-        Int64HashMapExtEntry *walker = map->buckets[i];
+        Int64HashMapSCEntry *walker = map->buckets[i];
         while (walker) {
-            Int64HashMapExtEntry *next = walker->next;
+            Int64HashMapSCEntry *next = walker->next;
             free(walker);
             walker = next;
         }
@@ -35,11 +64,11 @@ static int64_t Hash(int64_t key, int64_t num_buckets) {
     return ((uint64_t)key) % num_buckets;
 }
 
-bool Int64HashMapExtContains(const Int64HashMapExt *map, int64_t key) {
+bool Int64HashMapSCContains(const Int64HashMapSC *map, int64_t key) {
     if (map->num_buckets == 0) return false;
 
     int64_t index = Hash(key, map->num_buckets);
-    const Int64HashMapExtEntry *walker = map->buckets[index];
+    const Int64HashMapSCEntry *walker = map->buckets[index];
     while (walker != NULL) {
         if (walker->key == key) return true;
         walker = walker->next;
@@ -48,12 +77,12 @@ bool Int64HashMapExtContains(const Int64HashMapExt *map, int64_t key) {
     return false;
 }
 
-bool Int64HashMapExtGet(const Int64HashMapExt *map, int64_t key,
+bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key,
                         int64_t *value) {
     if (map->num_buckets == 0) return false;
 
     int64_t index = Hash(key, map->num_buckets);
-    const Int64HashMapExtEntry *walker = map->buckets[index];
+    const Int64HashMapSCEntry *walker = map->buckets[index];
     while (walker != NULL) {
         if (walker->key == key) {
             *value = walker->value;
@@ -65,17 +94,17 @@ bool Int64HashMapExtGet(const Int64HashMapExt *map, int64_t key,
     return false;
 }
 
-static bool Expand(Int64HashMapExt *map) {
+static bool Expand(Int64HashMapSC *map) {
     int64_t new_num_buckets = NextPrime(map->num_buckets * 2);
-    Int64HashMapExtEntry **new_buckets = (Int64HashMapExtEntry **)calloc(
-        new_num_buckets, sizeof(Int64HashMapExtEntry *));
+    Int64HashMapSCEntry **new_buckets = (Int64HashMapSCEntry **)calloc(
+        new_num_buckets, sizeof(Int64HashMapSCEntry *));
     if (new_buckets == NULL) return false;
 
     for (int64_t i = 0; i < map->num_buckets; ++i) {
-        Int64HashMapExtEntry *entry = map->buckets[i];
+        Int64HashMapSCEntry *entry = map->buckets[i];
         while (entry) {
             int64_t new_index = Hash(entry->key, new_num_buckets);
-            Int64HashMapExtEntry *next = entry->next;
+            Int64HashMapSCEntry *next = entry->next;
             entry->next = new_buckets[new_index];
             new_buckets[new_index] = entry;
             entry = next;
@@ -89,7 +118,7 @@ static bool Expand(Int64HashMapExt *map) {
     return true;
 }
 
-bool Int64HashMapExtSet(Int64HashMapExt *map, int64_t key, int64_t value) {
+bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
     // Check if resizing is needed.
     double load_factor;
     if (map->num_buckets == 0) {
@@ -103,7 +132,7 @@ bool Int64HashMapExtSet(Int64HashMapExt *map, int64_t key, int64_t value) {
 
     // Look for existing key to replace its value.
     int64_t index = Hash(key, map->num_buckets);
-    Int64HashMapExtEntry *entry = map->buckets[index];  // Find the bucket.
+    Int64HashMapSCEntry *entry = map->buckets[index];  // Find the bucket.
     while (entry) {
         if (entry->key == key) {  // If key already exists, replace old value.
             entry->value = value;
@@ -113,7 +142,7 @@ bool Int64HashMapExtSet(Int64HashMapExt *map, int64_t key, int64_t value) {
     }
 
     // Key does not exist. Create a new entry.
-    entry = malloc(sizeof(Int64HashMapExtEntry));
+    entry = (Int64HashMapSCEntry *)malloc(sizeof(Int64HashMapSCEntry));
     if (!entry) return false;
 
     entry->key = key;
@@ -125,10 +154,10 @@ bool Int64HashMapExtSet(Int64HashMapExt *map, int64_t key, int64_t value) {
     return true;
 }
 
-void Int64HashMapExtRemove(Int64HashMapExt *map, int64_t key) {
+void Int64HashMapSCRemove(Int64HashMapSC *map, int64_t key) {
     int64_t index = Hash(key, map->num_buckets);
-    Int64HashMapExtEntry *entry = map->buckets[index];
-    Int64HashMapExtEntry **prev_next = &map->buckets[index];
+    Int64HashMapSCEntry *entry = map->buckets[index];
+    Int64HashMapSCEntry **prev_next = &map->buckets[index];
 
     while (entry) {
         if (entry->key == key) {

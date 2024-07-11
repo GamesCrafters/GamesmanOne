@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 1.2.1
- * @date 2024-02-15
+ * @version 2.0.0a1
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -68,6 +68,7 @@ int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
  */
 void DbManagerFinalizeDb(void);
 
+// (EXPERIMENTAL) Finalizes the reference database.
 void DbManagerFinalizeRefDb(void);
 
 // ----------------------------- Solving Interface -----------------------------
@@ -139,7 +140,7 @@ Value DbManagerGetValue(Position position);
  */
 int DbManagerGetRemoteness(Position position);
 
-// ----------------------------- Loading Interface -----------------------------
+// --------------------- (EXPERIMENTAL) Loading Interface ---------------------
 
 int DbManagerLoadTier(Tier tier, int64_t size);
 int DbManagerUnloadTier(Tier tier);

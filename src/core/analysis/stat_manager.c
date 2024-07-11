@@ -6,6 +6,8 @@
  * @brief Implementation of the Statistics Manager Module for game analysis.
  * @version 1.1.1
  * @date 2024-02-15
+ * 
+ * @todo Replace mgz with lz4.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

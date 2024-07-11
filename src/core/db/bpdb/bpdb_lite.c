@@ -1,5 +1,5 @@
 /**
- * @file bpdb_lite.c
+ * @file bpdb_lite.h
  * @author Dan Garcia: designed the "lookup table" compression algorithm
  * @author Max Fierro: improved the algorithm for BpArray compression
  * @author Sameer Nayyar: improved the algorithm for BpArray compression
@@ -7,9 +7,9 @@
  *         compression algorithms and bpdb.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of Bit-Perfect Database Lite.
- * @version 1.1.0
- * @date 2024-02-15
+ * @brief Bit-Perfect Database Lite.
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

@@ -31,7 +31,6 @@
 #include <stdbool.h>   // bool, true, false
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // FILE, sprintf, fprintf, stderr
-#include <stdlib.h>    // malloc, free
 #include <string.h>    // memset
 
 #include "core/constants.h"

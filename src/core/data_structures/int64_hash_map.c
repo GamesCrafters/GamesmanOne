@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing int64_t to int64_t hash map implementation.
+ * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
  * @version 1.0.0
  * @date 2023-08-19
  *

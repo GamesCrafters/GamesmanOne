@@ -1,3 +1,34 @@
+/**
+ * @file arraydb.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Simple array database which stores value-remoteness pairs in a 16-bit
+ * record array.
+ * @details The in-memory database is an uncompressed 16-bit record array of
+ * length equal to the size of the given tier. The array is block-compressed
+ * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
+ * random access) library.
+ * @version 1.0.0
+ * @date 2024-07-10
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/db/arraydb/arraydb.h"
 
 #include <assert.h>   // assert
@@ -114,7 +145,7 @@ static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static RecordArray records;
-static TierHashMapExt loaded_tier_to_index;
+static TierHashMapSC loaded_tier_to_index;
 static RecordArray loaded_records[kArrayDbNumLoadedTiersMax];
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
@@ -140,7 +171,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
     memset(&records, 0, sizeof(records));
-    TierHashMapExtInit(&loaded_tier_to_index, 0.5);
+    TierHashMapSCInit(&loaded_tier_to_index, 0.5);
     memset(&loaded_records, 0, sizeof(loaded_records));
 
     return kNoError;
@@ -150,7 +181,7 @@ static void ArrayDbFinalize(void) {
     free(sandbox_path);
     sandbox_path = NULL;
     RecordArrayDestroy(&records);
-    TierHashMapExtDestroy(&loaded_tier_to_index);
+    TierHashMapSCDestroy(&loaded_tier_to_index);
     for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
         RecordArrayDestroy(&loaded_records[i]);
     }
@@ -303,7 +334,7 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    if (!TierHashMapExtSet(&loaded_tier_to_index, tier, i)) {
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, i)) {
         RecordArrayDestroy(&loaded_records[i]);
         free(full_path);
         return kMallocFailureError;
@@ -321,7 +352,7 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
 
 static int GetLoadedTierIndex(Tier tier) {
     int64_t index;
-    if (!TierHashMapExtGet(&loaded_tier_to_index, tier, &index)) return -1;
+    if (!TierHashMapSCGet(&loaded_tier_to_index, tier, &index)) return -1;
 
     assert(index >= 0 && index < kArrayDbNumLoadedTiersMax);
     return (int)index;
@@ -331,7 +362,7 @@ static int ArrayDbUnloadTier(Tier tier) {
     int index = GetLoadedTierIndex(tier);
     if (index >= 0) {
         RecordArrayDestroy(&loaded_records[index]);
-        TierHashMapExtRemove(&loaded_tier_to_index, tier);
+        TierHashMapSCRemove(&loaded_tier_to_index, tier);
     }
 
     return kNoError;
@@ -353,7 +384,7 @@ static Value ArrayDbGetValueFromLoaded(Tier tier, Position position) {
 
 static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position) {
     int index = GetLoadedTierIndex(tier);
-    if (index < 0) return kErrorValue;
+    if (index < 0) return -1;
 
     return RecordArrayGetRemoteness(&loaded_records[index], position);
 }
