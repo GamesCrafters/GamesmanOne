@@ -1,3 +1,29 @@
+/**
+ * @file vi.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Value iteration tier worker algorithm.
+ * @version 1.0.0
+ * @date 2024-07-11
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 
 #include <stdbool.h>  // bool, true, false
@@ -29,11 +55,8 @@
 //   "success &= condition" or "success = condition". The former creates a race
 //   condition whereas the latter may overwrite an already failing result.
 
-// Copy of the API functions from tier_manager. Cannot use a reference here
-// because we need to create/modify some of the functions.
+// Reference to the set of tier solver API functions for the current game.
 static const TierSolverApi *api_internal;
-
-static int64_t current_db_chunk_size;
 
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
@@ -45,12 +68,8 @@ static int largest_tie_remoteness;
 
 // ------------------------------ Step0Initialize ------------------------------
 
-static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
-                            Tier tier) {
-    // Copy solver API function pointers and set db chunk size.
+static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
     api_internal = api;
-    current_db_chunk_size = db_chunk_size;
-
     this_tier = tier;
     child_tiers = api_internal->GetChildTiers(this_tier);
     if (child_tiers.size == kIllegalSize) return false;
@@ -394,9 +413,8 @@ static void Step7Cleanup(void) {
 // ------------------------- TierWorkerSolveVIInternal -------------------------
 // -----------------------------------------------------------------------------
 
-int TierWorkerSolveVIInternal(const TierSolverApi *api, int64_t db_chunk_size,
-                              Tier tier, bool force, bool compare,
-                              bool *solved) {
+int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier, bool force,
+                              bool compare, bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
     if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
@@ -405,7 +423,7 @@ int TierWorkerSolveVIInternal(const TierSolverApi *api, int64_t db_chunk_size,
     }
 
     /* Value Iteration main algorithm. */
-    if (!Step0Initialize(api, db_chunk_size, tier)) goto _bailout;
+    if (!Step0Initialize(api, tier)) goto _bailout;
     if (!Step1LoadChildren()) goto _bailout;
     if (!Step2SetupSolvingTier()) goto _bailout;
     Step3ScanTier();

@@ -4,12 +4,13 @@
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
  * solving of a single tier into its own module, implemented multithreading
- * using OpenMP, and reformatted functions for readability.
+ * using OpenMP, and reformatted functions for readability. New algorithm
+ * using value iteration.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.2.1
- * @date 2024-02-29
+ * @version 1.3.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,13 +33,8 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, uint64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, free
-#include <string.h>   // memcpy
+#include <stdint.h>   // int64_t
 
-#include "core/constants.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
@@ -71,9 +67,8 @@ int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
                                              compare, solved);
 
         case kTierWorkerSolveMethodValueIteration:
-            return TierWorkerSolveVIInternal(api_internal,
-                                             current_db_chunk_size, tier, force,
-                                             compare, solved);
+            return TierWorkerSolveVIInternal(api_internal, tier, force, compare,
+                                             solved);
         default:
             break;
     }

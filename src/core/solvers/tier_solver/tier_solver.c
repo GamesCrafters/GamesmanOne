@@ -6,9 +6,9 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the Tier Solver.
- * @version 1.4.1
- * @date 2024-03-22
+ * @brief Implementation of the loopy tier solver.
+ * @version 1.5.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

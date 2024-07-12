@@ -1,3 +1,33 @@
+/**
+ * @file bi.c
+ * @author Max Delgadillo: designed and implemented the original version
+ * of the backward induction algorithm (solveretrograde.c in GamesmanClassic.)
+ * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
+ * solving of a single tier into its own module, implemented multithreading
+ * using OpenMP, and reformatted functions for readability.
+ *         GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Backward induction tier worker algorithm implementation.
+ * @version 1.0.0
+ * @date 2024-07-11
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "core/solvers/tier_solver/tier_worker/bi.h"
 
 #include <assert.h>   // assert

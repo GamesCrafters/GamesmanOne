@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.2.0
- * @date 2024-03-18
+ * @version 1.3.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,10 +37,10 @@
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
+#include <stdbool.h>   // bool, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // printf, fprintf, stderr
 #include <stdlib.h>    // malloc, free
 #include <string.h>    // memcpy
 #include <time.h>      // time_t, time, difftime
