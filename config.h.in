@@ -1,0 +1,2 @@
+#define GAMESMAN_VERSION "@GamesmanOne_VERSION@"  // Version
+#define GAMESMAN_DATE "@GamesmanOne_DESCRIPTION@"  // Date

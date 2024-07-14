@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing int64_t to int64_t hash map.
+ * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
  * @version 1.0.0
  * @date 2023-08-19
  *
@@ -31,14 +31,14 @@
 #include <stdint.h>   // int64_t
 
 /**
- * @brief Entry object of an Int64HashMap. This struct is not meant to be
- * used by the user of this library. Always use accessor and
- * mutator functions instead.
+ * @brief Entry object of an \c Int64HashMap. This struct is not meant to be
+ * used by the user of this library. Always use accessor and mutator functions
+ * instead.
  */
 typedef struct Int64HashMapEntry {
-    int64_t key;
-    int64_t value;
-    bool used; /**< True iff this bucket contains an actual record. */
+    int64_t key;   /**< Key to the entry. */
+    int64_t value; /**< Value of the entry. */
+    bool used;     /**< True iff this bucket contains an actual record. */
 } Int64HashMapEntry;
 
 /**

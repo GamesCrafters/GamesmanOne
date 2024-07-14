@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.1.0
- * @date 2023-10-18
+ * @version 1.2.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -200,10 +200,12 @@ int GuardedFseek(FILE *stream, long off, int whence) {
     return error;
 }
 
-int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream) {
+int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok) {
     size_t items_read = fread(ptr, size, n, stream);
     if (items_read == n) return 0;
     if (feof(stream)) {
+        if (eof_ok) return 0;
+        
         fprintf(
             stderr,
             "GuardedFread: end-of-file reached before reading %zd items, only "
@@ -236,6 +238,13 @@ int GuardedOpen(const char *filename, int flags) {
 int GuardedClose(int fd) {
     int error = close(fd);
     if (error == -1) perror("close");
+
+    return error;
+}
+
+int GuardedRemove(const char *pathname) {
+    int error = remove(pathname);
+    if (error == -1) perror("remove");
 
     return error;
 }
@@ -345,6 +354,16 @@ int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
         return error;
     }
     return 0;
+}
+
+bool FileExists(ReadOnlyString filename) {
+    FILE *file = fopen(filename, "r");
+    if (file) {
+        fclose(file);
+        return true;
+    }
+
+    return false;
 }
 
 /**

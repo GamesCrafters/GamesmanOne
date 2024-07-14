@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -57,7 +57,7 @@
 #define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
-static const TierSolverApi *current_api;
+static const TierSolverApi *api_internal;
 
 static Tier this_tier;          // The tier being analyzed.
 static int64_t this_tier_size;  // Size of the tier being analyzed.
@@ -110,15 +110,15 @@ static void InitFringe(PositionArray *target);
 
 // -----------------------------------------------------------------------------
 
-void TierAnalyzerInit(const TierSolverApi *api) { current_api = api; }
+void TierAnalyzerInit(const TierSolverApi *api) { api_internal = api; }
 
 int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     int ret = -1;
 
     this_tier = tier;
-    if (current_api == NULL) goto _bailout;
+    if (api_internal == NULL) goto _bailout;
     if (!force) {
-        Tier canonical = current_api->GetCanonicalTier(tier);
+        Tier canonical = api_internal->GetCanonicalTier(tier);
         int status = AnalysisStatus(canonical);
         if (status == kAnalysisTierCheckError) {
             ret = kAnalysisTierCheckError;
@@ -145,7 +145,7 @@ _bailout:
     return ret;
 }
 
-void TierAnalyzerFinalize(void) { current_api = NULL; }
+void TierAnalyzerFinalize(void) { api_internal = NULL; }
 
 // -----------------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ static bool Step0Initialize(Analysis *dest) {
 #else   // _OPENMP not defined.
     num_threads = 1;
 #endif  // _OPENMP
-    this_tier_size = current_api->GetTierSize(this_tier);
+    this_tier_size = api_internal->GetTierSize(this_tier);
     child_tiers = GetCanonicalChildTiers(this_tier);
     if (child_tiers.size < 0) return false;
 
@@ -188,7 +188,7 @@ static bool Step0Initialize(Analysis *dest) {
 
 static TierArray GetCanonicalChildTiers(Tier tier) {
     static const TierArray kInvalidTierArray;
-    TierArray children = current_api->GetChildTiers(tier);
+    TierArray children = api_internal->GetChildTiers(tier);
     TierArray canonical_children;
     TierHashSet deduplication;
 
@@ -198,7 +198,7 @@ static TierArray GetCanonicalChildTiers(Tier tier) {
 
     // Convert child tiers to canonical and deduplicate.
     for (int64_t i = 0; i < children.size; ++i) {
-        Tier canonical = current_api->GetCanonicalTier(children.array[i]);
+        Tier canonical = api_internal->GetCanonicalTier(children.array[i]);
         if (TierHashSetContains(&deduplication, canonical)) continue;
         TierHashSetAdd(&deduplication, canonical);
         TierArrayAppend(&canonical_children, canonical);
@@ -223,9 +223,13 @@ static bool Step1LoadDiscoveryMaps(void) {
 #endif  // _OPENMP
 
     this_tier_map = LoadDiscoveryMap(this_tier);
+    if (this_tier_map.size == 0) return false;
+
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         child_tier_maps[i] = LoadDiscoveryMap(child_tiers.array[i]);
+        if (child_tier_maps[i].size == 0) return false;
     }
+
     return true;
 }
 
@@ -233,19 +237,20 @@ static bool Step1LoadDiscoveryMaps(void) {
 // on disk. IF TIER IS THE INITIAL TIER, ALSO SETS THE INITIAL POSITION BIT.
 static BitStream LoadDiscoveryMap(Tier tier) {
     // Try to load from disk first.
-    BitStream ret = StatManagerLoadDiscoveryMap(tier);
-    if (ret.stream != NULL) return ret;
+    int64_t tier_size = api_internal->GetTierSize(tier);
+    BitStream ret = {0};
+    int error = StatManagerLoadDiscoveryMap(tier, tier_size, &ret);
+    if (error != kFileSystemError) return ret;
 
     // Create a discovery map for the tier.
-    int64_t tier_size = current_api->GetTierSize(tier);
-    int error = BitStreamInit(&ret, tier_size);
+    error = BitStreamInit(&ret, tier_size);
     if (error != 0) {
         fprintf(stderr, "LoadDiscoveryMap: failed to initialize stream\n");
         return ret;
     }
 
-    if (tier == current_api->GetInitialTier()) {
-        BitStreamSet(&ret, current_api->GetInitialPosition());
+    if (tier == api_internal->GetInitialTier()) {
+        BitStreamSet(&ret, api_internal->GetInitialPosition());
     }
 
     return ret;
@@ -293,7 +298,7 @@ static bool Step3Discover(Analysis *dest) {
 }
 
 static bool IsPrimitive(TierPosition tier_position) {
-    return current_api->Primitive(tier_position) != kUndecided;
+    return api_internal->Primitive(tier_position) != kUndecided;
 }
 
 static void UpdateFringeId(int *fringe_id, int64_t i,
@@ -367,9 +372,9 @@ static bool DiscoverHelperProcessThisTier(Position child, int tid) {
 
 static bool DiscoverHelperProcessChildTier(TierPosition child) {
     // Convert child to the symmetric position in canonical tier.
-    Tier canonical_tier = current_api->GetCanonicalTier(child.tier);
+    Tier canonical_tier = api_internal->GetCanonicalTier(child.tier);
     child.position =
-        current_api->GetPositionInSymmetricTier(child, canonical_tier);
+        api_internal->GetPositionInSymmetricTier(child, canonical_tier);
     child.tier = canonical_tier;
 
     TierHashMapIterator it = TierHashMapGet(&child_tier_to_index, child.tier);
@@ -397,16 +402,16 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
 static TierPositionArray GetChildPositions(TierPosition tier_position,
                                            Analysis *dest) {
     TierPositionArray ret = {.array = NULL, .capacity = -1, .size = -1};
-    MoveArray moves = current_api->GenerateMoves(tier_position);
+    MoveArray moves = api_internal->GenerateMoves(tier_position);
     if (moves.size < 0) return ret;
 
     TierPositionArrayInit(&ret);
     TierPositionHashSet deduplication_set;
     TierPositionHashSetInit(&deduplication_set, 0.5);
     for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = current_api->DoMove(tier_position, moves.array[i]);
+        TierPosition child = api_internal->DoMove(tier_position, moves.array[i]);
         TierPositionArrayAppend(&ret, child);
-        child.position = current_api->GetCanonicalPosition(child);
+        child.position = api_internal->GetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
             bool success = TierPositionHashSetAdd(&deduplication_set, child);
             if (!success) {
@@ -432,7 +437,7 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
 }
 
 static bool IsCanonicalPosition(TierPosition tier_position) {
-    return current_api->GetCanonicalPosition(tier_position) ==
+    return api_internal->GetCanonicalPosition(tier_position) ==
            tier_position.position;
 }
 
@@ -459,44 +464,41 @@ static bool Step4SaveChildMaps(void) {
 
 static bool Step5Analyze(Analysis *dest) {
     bool success = true;
+    int error = DbManagerLoadTier(this_tier, this_tier_size);
+    if (error != kNoError) return false;
 
-    PRAGMA_OMP_PARALLEL {
-        DbProbe probe;
-        int error = DbManagerProbeInit(&probe);
-        if (error == 0) {
-            PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(4096)
-            for (int64_t i = 0; i < this_tier_size; ++i) {
-                TierPosition tier_position = {.tier = this_tier, .position = i};
-                TierPosition canonical = {
-                    .tier = this_tier,
-                    .position =
-                        current_api->GetCanonicalPosition(tier_position),
-                };
-                if (!BitStreamGet(&this_tier_map, i)) continue;
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    for (int64_t i = 0; i < this_tier_size; ++i) {
+        // Skip if the current position is not reachable.
+        if (!BitStreamGet(&this_tier_map, i)) continue;
 
-                // Must probe canonical positions. Original might not be solved.
-                Value value = DbManagerProbeValue(&probe, canonical);
-                int remoteness = DbManagerProbeRemoteness(&probe, canonical);
-                bool is_canonical =
-                    (tier_position.position == canonical.position);
-                PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
-                    error = AnalysisCount(dest, tier_position, value,
-                                          remoteness, is_canonical);
-                }
-                if (error != 0) success = false;
-            }
-            DbManagerProbeDestroy(&probe);
-        } else {
-            success = false;
+        TierPosition tier_position = {.tier = this_tier, .position = i};
+        Position canonical = api_internal->GetCanonicalPosition(tier_position);
+
+        // Must probe canonical positions. Original might not be solved.
+        Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
+        int remoteness = DbManagerGetRemotenessFromLoaded(this_tier, canonical);
+        bool is_canonical = (tier_position.position == canonical);
+        PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
+            error = AnalysisCount(dest, tier_position, value, remoteness,
+                                  is_canonical);
         }
+        if (error != 0) success = false;
     }
 
+    error = DbManagerUnloadTier(this_tier);
+    if (error != kNoError) success = false;
     BitStreamDestroy(&this_tier_map);
+
     return success;
 }
 
 static bool Step6SaveAnalysis(const Analysis *dest) {
-    return StatManagerSaveAnalysis(this_tier, dest) == 0;
+    bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
+    if (!success) return false;
+
+    StatManagerRemoveDiscoveryMap(this_tier);
+    return true;
 }
 
 static void Step7CleanUp(void) {

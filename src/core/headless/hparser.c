@@ -33,7 +33,7 @@
 #include <stdlib.h>  // exit
 #include <string.h>  // strcmp
 
-#include "core/constants.h"
+#include "config.h"
 #include "core/gamesman_headless.h"
 #include "core/types/gamesman_types.h"
 
@@ -155,7 +155,8 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
 // -----------------------------------------------------------------------------
 
 static void PrintVersion(FILE *stream) {
-    fprintf(stream, "GamesmanOne version %s\n", kGamesmanVersion);
+    fprintf(stream, "GamesmanOne version %s (%s)\n", GAMESMAN_VERSION,
+            GAMESMAN_DATE);
 }
 
 static void ParseOption(int key, int option_index) {
@@ -268,8 +269,7 @@ static void ValidateArguments(int arg_num) {
 }
 
 static void PrintUsage(void) {
-    printf("Usage: %s\n%s\n", "gamesman [OPTION...] <command> [<args>]",
-           kDoc);
+    printf("Usage: %s\n%s\n", "gamesman [OPTION...] <command> [<args>]", kDoc);
 }
 
 static void ParserError(const char *format, ...) {

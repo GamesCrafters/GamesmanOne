@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.2.0
- * @date 2024-03-18
+ * @version 1.3.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,15 +37,16 @@
 
 #include <assert.h>    // assert
 #include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
+#include <stdbool.h>   // bool, false
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
+#include <stdio.h>     // printf, fprintf, stderr
 #include <stdlib.h>    // malloc, free
 #include <string.h>    // memcpy
 #include <time.h>      // time_t, time, difftime
 
 #include "core/analysis/analysis.h"
+#include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/reverse_tier_graph.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
@@ -71,17 +72,17 @@ typedef enum TierGraphNodeStatus {
     kNumStatus
 } TierGraphNodeStatus;
 
-enum TierTreeErrorTypes {
-    kTierTreeNoError,
-    kTierTreeOutOfMemory,
-    kTierTreeLoopDetected,
+enum TierGraphErrorTypes {
+    kTierGraphNoError,
+    kTierGraphOutOfMemory,
+    kTierGraphLoopDetected,
 };
 
 // Copy of the API functions from tier_solver. Cannot use a reference here
 // because we need to create/modify some of the functions.
 static TierSolverApi current_api;
 
-// The tier tree that maps each tier to its value. The value of a tier contains
+// The tier graph that maps each tier to its value. The value of a tier contains
 // information about its number of undecided children (or undiscovered parents
 // if the tree is reversed) and discovery status. The discovery status is used
 // to detect loops in the tier graph during topological sort.
@@ -108,24 +109,24 @@ static TierArray PopParentTiers(Tier child);
 static TierArray GetParentTiers(Tier child);
 static void DestroyGlobalVariables(void);
 
-static int BuildTierTree(int type);
-static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
-                                        int type);
+static int BuildTierGraph(int type);
+static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
+                                         int type);
 static int EnqueuePrimitiveTiers(void);
-static void CreateTierTreePrintError(int error);
+static void CreateTierGraphPrintError(int error);
 
 #ifndef USE_MPI
-static int SolveTierTree(bool force, int verbose);
+static int SolveTierGraph(bool force, int verbose);
 #else   // USE_MPI
-static int SolveTierTreeMpi(bool force, int verbose);
-static void SolveTierTreeMpiTerminateWorkers(void);
-static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
-                                     int verbose);
+static int SolveTierGraphMpi(bool force, int verbose);
+static void SolveTierGraphMpiTerminateWorkers(void);
+static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
+                                      int verbose);
 static void PrintDispatchMessage(Tier tier, int worker_rank);
 #endif  // USE_MPI
-static void SolveUpdateTierTree(Tier solved_tier);
-static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
-                                   bool solved, bool verbose);
+static void SolveUpdateTierGraph(Tier solved_tier);
+static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
+                                    bool solved, bool verbose);
 static void PrintSolverResult(double time_elapsed);
 
 static int64_t NumTiersAndStatusToValue(int num_tiers, int status);
@@ -136,19 +137,19 @@ static int64_t GetValue(Tier tier);
 static int GetStatus(Tier tier);
 static int GetNumTiers(Tier tier);
 
-static bool TierTreeSetInitial(Tier tier);
-static bool TierTreeSetStatus(Tier tier, int status);
-static bool TierTreeSetNumTiers(Tier tier, int num_tiers);
+static bool TierGraphSetInitial(Tier tier);
+static bool TierGraphSetStatus(Tier tier, int status);
+static bool TierGraphSetNumTiers(Tier tier, int num_tiers);
 static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
-static int DiscoverTierTree(bool force, int verbose);
+static int DiscoverTierGraph(bool force, int verbose);
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
-static void AnalyzeUpdateTierTree(Tier analyzed_tier);
+static void AnalyzeUpdateTierGraph(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
-static int TestTierTree(long seed);
+static int TestTierGraph(long seed);
 static void PrintTestResult(double time_elapsed);
 
 // -----------------------------------------------------------------------------
@@ -164,16 +165,16 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
         return error;
     }
 
-#ifndef USE_MPI
-    int ret = SolveTierTree(force, verbose);
-#else   // USE_MPI
-    int ret = SolveTierTreeMpi(force, verbose);
+#ifndef USE_MPI  // If not using MPI
+    int ret = SolveTierGraph(force, verbose);
+#else   // Using MPI
+    int ret = SolveTierGraphMpi(force, verbose);
 #endif  // USE_MPI
     DestroyGlobalVariables();
 
     time_t end = time(NULL);
     if (verbose > 0) {
-        printf("Time Elapsed: %f seconds\n", difftime(end, begin));
+        printf("Time Elapsed: %d seconds\n", (int)difftime(end, begin));
     }
 
     return ret;
@@ -189,7 +190,7 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
         return error;
     }
 
-    int ret = DiscoverTierTree(force, verbose);
+    int ret = DiscoverTierGraph(force, verbose);
     DestroyGlobalVariables();
 
     return ret;
@@ -205,7 +206,7 @@ int TierManagerTest(const TierSolverApi *api, long seed) {
         return kTierSolverTestDependencyError;
     }
 
-    int ret = TestTierTree(seed);
+    int ret = TestTierGraph(seed);
     DestroyGlobalVariables();
 
     return ret;
@@ -229,7 +230,7 @@ static int InitGlobalVariables(int type) {
         AnalysisSetHashSize(&game_analysis, 0);
     }
 
-    return BuildTierTree(type);
+    return BuildTierGraph(type);
 }
 
 static TierArray PopParentTiers(Tier child) {
@@ -253,28 +254,28 @@ static void DestroyGlobalVariables(void) {
  * marking). Algorithm by Ctrl, stackoverflow.com.
  * @link https://stackoverflow.com/a/73210346
  */
-static int BuildTierTree(int type) {
+static int BuildTierGraph(int type) {
     int ret = 1;
     TierStack fringe;
     TierStackInit(&fringe);
     Tier initial_tier = current_api.GetInitialTier();
     if (!TierStackPush(&fringe, initial_tier)) goto _bailout;
-    if (!TierTreeSetInitial(initial_tier)) goto _bailout;
+    if (!TierGraphSetInitial(initial_tier)) goto _bailout;
 
     while (!TierStackEmpty(&fringe)) {
         Tier parent = TierStackTop(&fringe);
         int status = GetStatus(parent);
         if (status == kStatusInProgress) {
-            if (!TierTreeSetStatus(parent, kStatusClosed)) goto _bailout;
+            if (!TierGraphSetStatus(parent, kStatusClosed)) goto _bailout;
             TierStackPop(&fringe);
             continue;
         } else if (status == kStatusClosed) {
             TierStackPop(&fringe);
             continue;
         }
-        if (!TierTreeSetStatus(parent, kStatusInProgress)) goto _bailout;
-        int error = BuildTierTreeProcessChildren(parent, &fringe, type);
-        if (error != kTierTreeNoError) {
+        if (!TierGraphSetStatus(parent, kStatusInProgress)) goto _bailout;
+        int error = BuildTierGraphProcessChildren(parent, &fringe, type);
+        if (error != kTierGraphNoError) {
             ret = error;
             goto _bailout;
         }
@@ -286,7 +287,7 @@ _bailout:
     if (ret != 0) {
         TierHashMapDestroy(&tier_tree);
         ReverseTierGraphDestroy(&reverse_tier_graph);
-        CreateTierTreePrintError(ret);
+        CreateTierGraphPrintError(ret);
     } else if (type == kTierSolving) {
         EnqueuePrimitiveTiers();
     } else {  // type == kTierAnalyzing
@@ -304,8 +305,8 @@ static int GetNumCanonicalTiers(const TierArray *array) {
     return ret;
 }
 
-static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
-                                        int type) {
+static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
+                                         int type) {
     // Add tier size to total if it is canonical.
     ++total_tiers;
     if (IsCanonicalTier(parent)) {
@@ -316,16 +317,16 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
     TierArray tier_children = current_api.GetChildTiers(parent);
     int num_canonical_tier_children = GetNumCanonicalTiers(&tier_children);
     if (type == kTierSolving) {
-        if (!TierTreeSetNumTiers(parent, num_canonical_tier_children)) {
+        if (!TierGraphSetNumTiers(parent, num_canonical_tier_children)) {
             TierArrayDestroy(&tier_children);
-            return (int)kTierTreeOutOfMemory;
+            return (int)kTierGraphOutOfMemory;
         }
     } else {  // type == kTierAnalyzing
         for (int64_t i = 0; i < tier_children.size; ++i) {
             Tier child = tier_children.array[i];
             if (!IncrementNumParentTiers(child)) {
                 TierArrayDestroy(&tier_children);
-                return (int)kTierTreeOutOfMemory;
+                return (int)kTierGraphOutOfMemory;
             }
         }
     }
@@ -334,12 +335,12 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
         Tier child = tier_children.array[i];
         if (ReverseTierGraphAdd(&reverse_tier_graph, child, parent) != 0) {
             TierArrayDestroy(&tier_children);
-            return (int)kTierTreeOutOfMemory;
+            return (int)kTierGraphOutOfMemory;
         }
         if (!TierHashMapContains(&tier_tree, child)) {
-            if (!TierTreeSetInitial(child)) {
+            if (!TierGraphSetInitial(child)) {
                 TierArrayDestroy(&tier_children);
-                return (int)kTierTreeOutOfMemory;
+                return (int)kTierGraphOutOfMemory;
             }
         }
         int status = GetStatus(child);
@@ -347,12 +348,12 @@ static int BuildTierTreeProcessChildren(Tier parent, TierStack *fringe,
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
             TierArrayDestroy(&tier_children);
-            return (int)kTierTreeLoopDetected;
+            return (int)kTierGraphLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
     TierArrayDestroy(&tier_children);
-    return (int)kTierTreeNoError;
+    return (int)kTierGraphNoError;
 }
 
 static int EnqueuePrimitiveTiers(void) {
@@ -376,24 +377,24 @@ static int EnqueuePrimitiveTiers(void) {
     return kNoError;
 }
 
-static void CreateTierTreePrintError(int error) {
+static void CreateTierGraphPrintError(int error) {
     switch (error) {
         case kNoError:
             break;
 
-        case kTierTreeOutOfMemory:
-            fprintf(stderr, "BuildTierTree: out of memory.\n");
+        case kTierGraphOutOfMemory:
+            fprintf(stderr, "BuildTierGraph: out of memory.\n");
             break;
 
-        case kTierTreeLoopDetected:
+        case kTierGraphLoopDetected:
             fprintf(stderr,
-                    "BuildTierTree: a loop is detected in the tier graph.\n");
+                    "BuildTierGraph: a loop is detected in the tier graph.\n");
             break;
     }
 }
 
 #ifndef USE_MPI
-static int SolveTierTree(bool force, int verbose) {
+static int SolveTierGraph(bool force, int verbose) {
     double time_elapsed = 0.0;
     if (verbose > 0) {
         printf("Begin solving all %" PRId64 " tiers (%" PRId64
@@ -406,10 +407,11 @@ static int SolveTierTree(bool force, int verbose) {
         if (IsCanonicalTier(tier)) {  // Only solve canonical tiers.
             time_t begin = time(NULL);
             bool solved;
-            int error = TierWorkerSolve(tier, force, &solved);
+            int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
+                                        tier, force, false, &solved);
             if (error == 0) {
                 // Solve succeeded.
-                SolveUpdateTierTree(tier);
+                SolveUpdateTierGraph(tier);
                 ++processed_tiers;
             } else {
                 printf("Failed to solve tier %" PRITier ", code %d\n", tier,
@@ -418,19 +420,29 @@ static int SolveTierTree(bool force, int verbose) {
             }
             time_t end = time(NULL);
             time_elapsed += difftime(end, begin);
-            SolveTierTreePrintTime(tier, time_elapsed, solved, verbose);
+            SolveTierGraphPrintTime(tier, time_elapsed, solved, verbose);
         } else {
             ++skipped_tiers;
         }
     }
     if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (failed_tiers == 0) {
+        int error = DbManagerSetGameSolved();
+        if (error != kNoError) {
+            fprintf(stderr,
+                    "SolveTierGraph: DB manager failed to set current game as "
+                    "solved (code %d)\n",
+                    error);
+            return error;
+        }
+    }
 
     return kNoError;
 }
 
 #else  // USE_MPI
 
-static int SolveTierTreeMpi(bool force, int verbose) {
+static int SolveTierGraphMpi(bool force, int verbose) {
     if (verbose > 0) {
         printf("Begin solving all %" PRId64 " tiers (%" PRId64
                " canonical) of total size %" PRId64 " (positions)\n",
@@ -438,15 +450,26 @@ static int SolveTierTreeMpi(bool force, int verbose) {
     }
 
     time_t begin_time = time(NULL);
-    SolveTierTreeMpiSolveAll(begin_time, force, verbose);
-    SolveTierTreeMpiTerminateWorkers();
+    SolveTierGraphMpiSolveAll(begin_time, force, verbose);
+    SolveTierGraphMpiTerminateWorkers();
     double time_elapsed = difftime(time(NULL), begin_time);
     if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (failed_tiers == 0) {
+        int error = DbManagerSetGameSolved();
+        if (error != kNoError) {
+            fprintf(
+                stderr,
+                "SolveTierGraphMpi: DB manager failed to set current game as "
+                "solved (code %d)\n",
+                error);
+            return error;
+        }
+    }
 
     return kNoError;
 }
 
-static void SolveTierTreeMpiTerminateWorkers(void) {
+static void SolveTierGraphMpiTerminateWorkers(void) {
     int num_workers = SafeMpiCommSize(MPI_COMM_WORLD) - 1, num_terminated = 0;
 
     while (num_terminated < num_workers) {
@@ -458,8 +481,8 @@ static void SolveTierTreeMpiTerminateWorkers(void) {
     }
 }
 
-static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
-                                     int verbose) {
+static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
+                                      int verbose) {
     static Tier job_list[kMpiNumNodesMax];
     static TierArray solving_tiers;
     TierArrayInit(&solving_tiers);
@@ -476,13 +499,13 @@ static void SolveTierTreeMpiSolveAll(time_t begin_time, bool force,
                        worker_msg.error);
                 ++failed_tiers;
             } else {  // Successfully solved or loaded.
-                SolveUpdateTierTree(tier);
+                SolveUpdateTierGraph(tier);
                 ++processed_tiers;
             }
             TierArrayRemove(&solving_tiers, tier);
 
             double time_elapsed = difftime(time(NULL), begin_time);
-            SolveTierTreePrintTime(tier, time_elapsed, solved, verbose);
+            SolveTierGraphPrintTime(tier, time_elapsed, solved, verbose);
         }
         // The worker node that we received a message from is now idle.
 
@@ -520,7 +543,7 @@ static void PrintDispatchMessage(Tier tier, int worker_rank) {
 
 #endif  // USE_MPI
 
-static void SolveUpdateTierTree(Tier solved_tier) {
+static void SolveUpdateTierGraph(Tier solved_tier) {
     TierArray parent_tiers = PopParentTiers(solved_tier);
     TierHashSet canonical_parents;
     TierHashSetInit(&canonical_parents, 0.5);
@@ -537,7 +560,7 @@ static void SolveUpdateTierTree(Tier solved_tier) {
         int num_unsolved_child_tiers = GetNumTiers(canonical);
         assert(num_unsolved_child_tiers > 0);
         bool success =
-            TierTreeSetNumTiers(canonical, num_unsolved_child_tiers - 1);
+            TierGraphSetNumTiers(canonical, num_unsolved_child_tiers - 1);
         assert(success);
         (void)success;
         if (num_unsolved_child_tiers == 1) {
@@ -548,8 +571,8 @@ static void SolveUpdateTierTree(Tier solved_tier) {
     TierArrayDestroy(&parent_tiers);
 }
 
-static void SolveTierTreePrintTime(Tier tier, double time_elapsed_seconds,
-                                   bool solved, bool verbose) {
+static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
+                                    bool solved, bool verbose) {
     int64_t tier_size = current_api.GetTierSize(tier);
     if (verbose > 0) printf("%s: ", GetTimeStampString());
     ReadOnlyString operation;
@@ -620,20 +643,20 @@ static int GetStatus(Tier tier) { return ValueToStatus(GetValue(tier)); }
 
 static int GetNumTiers(Tier tier) { return ValueToNumTiers(GetValue(tier)); }
 
-static bool TierTreeSetInitial(Tier tier) {
+static bool TierGraphSetInitial(Tier tier) {
     assert(!TierHashMapContains(&tier_tree, tier));
     int64_t value = NumTiersAndStatusToValue(0, kStatusNotVisited);
     return TierHashMapSet(&tier_tree, tier, value);
 }
 
-static bool TierTreeSetStatus(Tier tier, int status) {
+static bool TierGraphSetStatus(Tier tier, int status) {
     int64_t value = GetValue(tier);
     int num_tiers = ValueToNumTiers(value);
     value = NumTiersAndStatusToValue(num_tiers, status);
     return TierHashMapSet(&tier_tree, tier, value);
 }
 
-static bool TierTreeSetNumTiers(Tier tier, int num_tiers) {
+static bool TierGraphSetNumTiers(Tier tier, int num_tiers) {
     int64_t value = GetValue(tier);
     int status = ValueToStatus(value);
     value = NumTiersAndStatusToValue(num_tiers, status);
@@ -654,7 +677,7 @@ static bool IsCanonicalTier(Tier tier) {
     return current_api.GetCanonicalTier(tier) == tier;
 }
 
-static int DiscoverTierTree(bool force, int verbose) {
+static int DiscoverTierGraph(bool force, int verbose) {
     TierAnalyzerInit(&current_api);
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -672,7 +695,7 @@ static int DiscoverTierTree(bool force, int verbose) {
         if (error == 0) {
             // Analyzer succeeded.
             PrintAnalyzed(tier, tier_analysis, verbose);
-            AnalyzeUpdateTierTree(tier);
+            AnalyzeUpdateTierGraph(tier);
             ++processed_tiers;
 
             // If tier is non-canonical, we must convert the analysis to non-
@@ -707,15 +730,15 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
     }
 }
 
-static void AnalyzeUpdateTierTree(Tier analyzed_tier) {
+static void AnalyzeUpdateTierGraph(Tier analyzed_tier) {
     TierArray child_tiers = current_api.GetChildTiers(analyzed_tier);
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         Tier child = child_tiers.array[i];
         int num_undiscovered_parent_tiers = GetNumTiers(child);
         assert(num_undiscovered_parent_tiers > 0);
-        if (!TierTreeSetNumTiers(child, num_undiscovered_parent_tiers - 1)) {
+        if (!TierGraphSetNumTiers(child, num_undiscovered_parent_tiers - 1)) {
             NotReached(
-                "AnalyzeUpdateTierTree: unexpected error while resetting an "
+                "AnalyzeUpdateTierGraph: unexpected error while resetting an "
                 "existing entry in tier hash map");
         }
         if (num_undiscovered_parent_tiers == 1) {
@@ -735,14 +758,14 @@ static void PrintAnalyzerResult(void) {
 
     if (failed_tiers > 0) {
         printf(
-            "DiscoverTierTree: (WARNING) At least one tier failed to be "
+            "DiscoverTierGraph: (WARNING) At least one tier failed to be "
             "analyzed and the analysis of the game may be inaccurate.\n");
     }
 
     AnalysisPrintEverything(stdout, &game_analysis);
 }
 
-static int TestTierTree(long seed) {
+static int TestTierGraph(long seed) {
     double time_elapsed = 0.0;
     printf("Begin random sanity testing of all %" PRId64 " tiers (%" PRId64
            " canonical) of total size %" PRId64 " (positions). %" PRId64
@@ -769,7 +792,7 @@ static int TestTierTree(long seed) {
             TierArrayDestroy(&parent_tiers);
             if (error == kTierSolverTestNoError) {
                 // Test passed.
-                SolveUpdateTierTree(tier);
+                SolveUpdateTierGraph(tier);
                 ++processed_tiers;
             } else {
                 printf("FAILED\n");

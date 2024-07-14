@@ -29,7 +29,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
 #define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
 
-#include <stdint.h>  // int64_t
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/data_structures/int64_hash_map.h"
 #include "core/types/base.h"

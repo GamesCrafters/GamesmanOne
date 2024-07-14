@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-07-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,15 +31,15 @@
 #include <stddef.h>    // NULL
 #include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
 #include <stdlib.h>    // calloc, free
-#include <string.h>    // strlen
+#include <string.h>    // strlen, memset
 #include <sys/stat.h>  // S_IRWXU, S_IRWXG, S_IRWXO
 #include <zlib.h>      // gzread, gzFile, Z_NULL
 
 #include "core/analysis/analysis.h"
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
 #include "core/misc.h"
-#include "libs/mgz/mgz.h"
+#include "core/types/gamesman_types.h"
+#include "libs/lz4_utils/lz4_utils.h"
 
 static char *sandbox_path;
 
@@ -126,78 +126,70 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
     return error;
 }
 
-BitStream StatManagerLoadDiscoveryMap(Tier tier) {
-    BitStream ret = {0};
-    int error = -1;
-    FILE *file = NULL;
-    int fd = -1;
-    gzFile gzfile = Z_NULL;
-
-    char *filename = GetPathToTierDiscoveryMap(tier);
-    if (filename == NULL) goto _bailout;
-
-    file = fopen(filename, "rb");
-    if (file == NULL) goto _bailout;
-
-    fd = GuardedOpen(filename, O_RDONLY);
-    if (fd < 0) goto _bailout;
-
-    // Read BitStream size.
-    error = GuardedFread(&ret.size, sizeof(ret.size), 1, file);
-    if (error != 0) goto _bailout;
-
-    // Initialize BitStream with size.
-    error = BitStreamInit(&ret, ret.size);
-    if (error != 0) goto _bailout;
-
-    // Read compressed stream.
-    error = GuardedLseek(fd, sizeof(ret.size), SEEK_SET);
-    if (error != 0) goto _bailout;
-
-    gzfile = GuardedGzdopen(fd, "rb");
-    if (gzfile == Z_NULL) goto _bailout;
-    fd = -1;  // Prevent double closing.
-
-    error = GuardedGz64Read(gzfile, ret.stream, ret.num_bytes, false);
-    if (error != 0) goto _bailout;
-
-    // Success.
-    error = 0;
-
-_bailout:
-    free(filename);
-    if (file != NULL) GuardedFclose(file);
-    if (fd >= 0) GuardedClose(fd);
-    if (gzfile != Z_NULL) GuardedGzclose(gzfile);
-    if (error != 0) {
-        BitStreamDestroy(&ret);
-        ret = (BitStream){0};
-    }
-    return ret;
-}
-
-int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
-    mgz_res_t res =
-        MgzParallelDeflate(stream->stream, stream->num_bytes, 9, 0, false);
-    if (res.out == NULL) return kMallocFailureError;
-
+int StatManagerLoadDiscoveryMap(Tier tier, int64_t size, BitStream *dest) {
     char *filename = GetPathToTierDiscoveryMap(tier);
     if (filename == NULL) return kMallocFailureError;
 
-    FILE *file = GuardedFopen(filename, "wb");
+    int error = BitStreamInit(dest, size);
+    if (error != 0) {
+        free(filename);
+        return kMallocFailureError;
+    }
+
+    int64_t res =
+        Lz4UtilsDecompressFile(filename, dest->stream, dest->num_bytes);
     free(filename);
-    if (file == NULL) return kFileSystemError;
+    switch (res) {
+        case -1:
+            return kFileSystemError;
+        case -2:
+            return kMallocFailureError;
+        case -3:
+            fprintf(stderr,
+                    "StatManagerLoadDiscoveryMap: discovery map appears to be "
+                    "corrupt for tier %" PRITier "\n",
+                    tier);
+            return kRuntimeError;
+        case -4:
+            NotReached(
+                "StatManagerLoadDiscoveryMap: not enough space for "
+                "destination bit stream allocated, likely a bug\n");
+            break;
+        default:
+            break;
+    }
 
-    int error = GuardedFwrite(&stream->size, sizeof(stream->size), 1, file);
-    if (error != 0) return error;
+    return kNoError;
+}
 
-    error = GuardedFwrite(res.out, 1, res.size, file);
-    if (error != 0) return error;
-    free(res.out);
-    assert(res.lookup == NULL);
+int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
+    char *filename = GetPathToTierDiscoveryMap(tier);
+    if (filename == NULL) return kMallocFailureError;
 
-    error = GuardedFclose(file);
-    if (error != 0) return error;
+    int64_t res =
+        Lz4UtilsCompressStream(stream->stream, stream->num_bytes, 0, filename);
+    free(filename);
+    switch (res) {
+        case -1:
+            return kIllegalArgumentError;
+        case -2:
+            return kMallocFailureError;
+        case -3:
+            return kFileSystemError;
+        default:
+            break;
+    }
+
+    return kNoError;
+}
+
+int StatManagerRemoveDiscoveryMap(Tier tier) {
+    char *filename = GetPathToTierDiscoveryMap(tier);
+    if (filename == NULL) return kMallocFailureError;
+
+    int error = GuardedRemove(filename);
+    free(filename);
+    if (error != 0) return kFileSystemError;
 
     return kNoError;
 }
@@ -246,7 +238,7 @@ static char *GetPathToTierAnalysis(Tier tier) {
 
 static char *GetPathToTierDiscoveryMap(Tier tier) {
     // path = "<path>/<tier>.map"
-    static ConstantReadOnlyString kMapExtension = ".map";
+    static ConstantReadOnlyString kMapExtension = ".map.lz4";
     return GetPathTo(tier, kMapExtension);
 }
 

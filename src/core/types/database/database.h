@@ -30,7 +30,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 #define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 
-#include <stdint.h>  // int64_t
+#include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
@@ -40,15 +41,22 @@ enum DatabaseConstants {
     kDbNameLengthMax = 31,       /**< Maximum length of a DB's internal name. */
     kDbFormalNameLengthMax = 63, /**< Max length of a DB's formal name. */
     /** Max length of a DB file's name not including the extension. */
-    kDbFileNameLengthMax = 63, 
+    kDbFileNameLengthMax = 63,
 };
 
-/** @brief Enumeration of all possible statuses of a tier's database file. */
+/** @brief Enumeration of all possible status of a tier's database file. */
 enum DatabaseTierStatus {
     kDbTierStatusSolved,     /**< Solved and correctly stored. */
     kDbTierStatusCorrupted,  /**< DB exists but corrupted. */
     kDbTierStatusMissing,    /**< DB file not found. */
     kDbTierStatusCheckError, /**< Error encountered. */
+};
+
+/** @brief Enumeration of all possible status of a tier's database file. */
+enum DatabaseGameStatus {
+    kDbGameStatusSolved,     /**< Solved. */
+    kDbGameStatusIncomplete, /**< Incomplete database. */
+    kDbGameStatusCheckError, /**< Error encountered. */
 };
 
 typedef int (*GetTierNameFunc)(char *dest, Tier tier);
@@ -114,12 +122,15 @@ typedef struct Database {
     int (*FlushSolvingTier)(void *aux);
 
     /**
-     * @brief Frees the in-memory DB.
+     * @brief Frees the in-memory DB. Does nothing if the solving tier has not
+     * been created.
      * @note This function is part of the Solving API.
      *
      * @return 0 on success, non-zero error code otherwise.
      */
     int (*FreeSolvingTier)(void);
+
+    int (*SetGameSolved)(void);
 
     /**
      * @brief Sets the value of POSITION to VALUE.
@@ -152,6 +163,14 @@ typedef struct Database {
      * @return 0 on success, non-zero error code otherwise.
      */
     int (*GetRemoteness)(Position position);
+
+    // Loading API
+
+    int (*LoadTier)(Tier tier, int64_t size);
+    int (*UnloadTier)(Tier tier);
+    bool (*IsTierLoaded)(Tier tier);
+    Value (*GetValueFromLoaded)(Tier tier, Position position);
+    int (*GetRemotenessFromLoaded)(Tier tier, Position position);
 
     // Probing API
 
@@ -212,6 +231,17 @@ typedef struct Database {
      * status of TIER.
      */
     int (*TierStatus)(Tier tier);
+
+    /**
+     * @brief Probes the current data path and returns the solving status of the
+     * current game.
+     *
+     * @return kDbGameStatusSolved if solved,
+     * @return kDbGameStatusIncomplete if not fully solved, or
+     * @return kDbGameStatusCheckError if an error occurred when checking the
+     * status of the current game.
+     */
+    int (*GameStatus)(void);
 } Database;
 
 #endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H

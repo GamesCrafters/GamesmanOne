@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 1.2.1
- * @date 2024-02-15
+ * @version 2.0.0a1
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,6 +39,10 @@
  * undefined behavior.
  *
  * @param db DB to use.
+ * @param read_only True if initializing in read-only mode, false otherwise.
+ * If initialized in read-only mode, the database manager will assume that the
+ * current game has been solved and will not create a directory for the chosen
+ * database under the current data path.
  * @param game_name Internal name of the game.
  * @param variant Index of the game variant as an integer.
  * @param data_path Absolute or relative path to the data directory if non-NULL.
@@ -48,9 +52,15 @@
  * @param aux Auxiliary parameter.
  * @return 0 on success, non-zero otherwise.
  */
-int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
+int DbManagerInitDb(const Database *db, bool read_only,
+                    ReadOnlyString game_name, int variant,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux);
+
+// (EXPERIMENTAL) Initializes the reference database for db comparison.
+int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
+                       int variant, ReadOnlyString data_path,
+                       GetTierNameFunc GetTierName, void *aux);
 
 /**
  * @brief Finalizes the database system, freeing all dynamically allocated
@@ -58,7 +68,10 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
  */
 void DbManagerFinalizeDb(void);
 
-// ---------------------------- Solving Interface. ----------------------------
+// (EXPERIMENTAL) Finalizes the reference database.
+void DbManagerFinalizeRefDb(void);
+
+// ----------------------------- Solving Interface -----------------------------
 
 /**
  * @brief Creates a new TIER of size SIZE (measured in positions) for solving in
@@ -82,11 +95,14 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
 int DbManagerFlushSolvingTier(void *aux);
 
 /**
- * @brief Frees the solving tier in memory.
+ * @brief Frees the solving tier in memory. Does nothing if the solving tier has
+ * not been initialized.
  *
  * @return int 0 on success, non-zero otherwise.
  */
 int DbManagerFreeSolvingTier(void);
+
+int DbManagerSetGameSolved(void);
 
 /**
  * @brief Sets the value of POSITION in the solving tier to VALUE.
@@ -124,7 +140,15 @@ Value DbManagerGetValue(Position position);
  */
 int DbManagerGetRemoteness(Position position);
 
-// ---------------------------- Probing Interface. ----------------------------
+// --------------------- (EXPERIMENTAL) Loading Interface ---------------------
+
+int DbManagerLoadTier(Tier tier, int64_t size);
+int DbManagerUnloadTier(Tier tier);
+bool DbManagerIsTierLoaded(Tier tier);
+Value DbManagerGetValueFromLoaded(Tier tier, Position position);
+int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
+
+// ----------------------------- Probing Interface -----------------------------
 
 /**
  * @brief Initializes PROBE using the method provided by the current database.
@@ -175,5 +199,22 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
  * of TIER.
  */
 int DbManagerTierStatus(Tier tier);
+
+/**
+ * @brief Returns the solving status of the current game.
+ *
+ * @return kDbGameStatusSolved if solved,
+ * @return kDbGameStatusIncomplete if not fully solved, or
+ * @return kDbGameStatusCheckError if an error occurred when checking the status
+ * of the current game.
+ */
+int DbManagerGameStatus(void);
+
+// --------------------- (EXPERIMENTAL) Testing Interface ---------------------
+
+int DbManagerRefProbeInit(DbProbe *probe);
+int DbManagerRefProbeDestroy(DbProbe *probe);
+Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position);
+int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 #endif  // GAMESMANONE_CORE_DB_DB_MANAGER_H_

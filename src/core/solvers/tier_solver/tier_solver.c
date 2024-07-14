@@ -6,9 +6,9 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the Tier Solver.
- * @version 1.4.1
- * @date 2024-03-22
+ * @brief Implementation of the loopy tier solver.
+ * @version 1.5.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,6 +38,7 @@
 #endif  // USE_MPI
 
 #include "core/analysis/stat_manager.h"
+#include "core/db/arraydb/arraydb.h"
 #include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
@@ -85,6 +86,15 @@ const Solver kTierSolver = {
     .GetRemoteness = &TierSolverGetRemoteness,
 };
 
+// Size of each uncompressed XZ block for ArrayDb compression. Smaller block
+// sizes allows faster read of random tier positions at the cost of lower
+// compression ratio.
+static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+
+// Number of ArrayDb records in each uncompressed XZ block. This should be
+// treated as a constant, although its value is calculated at runtime.
+static int64_t kArrayDbRecordsPerBlock;
+
 static ConstantReadOnlyString kChoices[] = {"On", "Off"};
 static const SolverOption kTierSymmetryRemoval = {
     .name = "Tier Symmetry Removal",
@@ -120,6 +130,14 @@ static SolverOption current_options[NUM_OPTIONS_MAX];
 static int current_selections[NUM_OPTIONS_MAX];
 #undef NUM_OPTIONS_MAX
 
+// Whether the current game was solved and stored with an older database
+// version. Solving, including force re-solving, are disabled to prevent
+// damage to the old database.
+static bool read_only_db;
+
+// Solver status: 0 if not solved, 1 if solved.
+static int solver_status;
+
 // Helper Functions
 
 static bool RequiredApiFunctionsImplemented(const TierSolverApi *api);
@@ -132,6 +150,9 @@ static void TogglePositionSymmetryRemoval(bool on);
 static void ToggleRetrogradeAnalysis(bool on);
 
 static bool SetCurrentApi(const TierSolverApi *api);
+
+static int SetDb(ReadOnlyString game_name, int variant,
+                 ReadOnlyString data_path);
 
 static TierPosition GetCanonicalTierPosition(TierPosition tier_position);
 
@@ -151,30 +172,34 @@ static int DefaultGetTierName(char *name, Tier tier);
 
 static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path) {
-    int ret = -1;
+    kArrayDbRecordsPerBlock = kArrayDbBlockSize / kArrayDbRecordSize;
+    read_only_db = false;
+    solver_status = kTierSolverSolveStatusNotSolved;
+
+    int error = -1;
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
+    error = SetDb(game_name, variant, data_path);
+    if (error != kNoError) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path,
-                          current_api.GetTierName, NULL);
-    if (ret != 0) goto _bailout;
-
-    ret = StatManagerInit(game_name, variant, data_path);
-    if (ret != 0) goto _bailout;
+    error = StatManagerInit(game_name, variant, data_path);
+    if (error != kNoError) goto _bailout;
 
     // Success.
-    ret = 0;
+    error = 0;
 
 _bailout:
-    if (ret != 0) {
+    if (error != kNoError) {
         DbManagerFinalizeDb();
         StatManagerFinalize();
         TierSolverFinalize();
     }
-    return ret;
+    return error;
 }
 
 static int TierSolverFinalize(void) {
+    read_only_db = false;
+    solver_status = kTierSolverSolveStatusNotSolved;
     DbManagerFinalizeDb();
     memset(&default_api, 0, sizeof(default_api));
     memset(&current_api, 0, sizeof(current_api));
@@ -187,7 +212,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api);  // TODO: check this logic.
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerTest(&current_api, seed);
 }
 
@@ -223,17 +248,44 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
            "test code";
 }
 
+static ConstantReadOnlyString kTierSolverSolveSkipReadOnlyMsg =
+    "TierSolverSolve: the current game was solved with a database of a "
+    "previous version that is no longer supported. The solver has "
+    "skipped the solving process to prevent damage to the existing "
+    "database. To re-solve the current game, remove the old database "
+    "or use a different data path and try again.";
+
+static ConstantReadOnlyString kTierSolverAnalyzeSkipReadOnlyMsg =
+    "TierSolverAnalyze: the current game was solved with a database of a "
+    "previous version that is no longer supported. The solver has skipped the "
+    "analysis because some functions are missing from the original database "
+    "implementation. To analyze the current game, remove the old database "
+    "or use a different data path to resolve the game and try again.";
+
+static ConstantReadOnlyString kTierSolverSolveSkipSolvedMsg =
+    "TierSolverSolve: the current game variant has already been solved. Use -f "
+    "in headless mode to force re-solve the game variant.";
+
 static int TierSolverSolve(void *aux) {
+    if (read_only_db) {  // Skip solving if database is in read-only mode.
+        printf("%s\n", kTierSolverSolveSkipReadOnlyMsg);
+        return kNoError;
+    }
+
     static const TierSolverSolveOptions kDefaultSolveOptions = {
         .force = false,
         .verbose = 1,
     };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
-#ifndef USE_MPI
-    TierWorkerInit(&current_api);
+    if (!options->force && solver_status == kTierSolverSolveStatusSolved) {
+        printf("%s\n", kTierSolverSolveSkipSolvedMsg);
+        return kNoError;
+    }
+#ifndef USE_MPI  // If not using MPI
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerSolve(&current_api, options->force, options->verbose);
-#else
+#else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
     int process_id, cluster_size;
     cluster_size = SafeMpiCommSize(MPI_COMM_WORLD);
@@ -241,14 +293,14 @@ static int TierSolverSolve(void *aux) {
     if (cluster_size < 1) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
-        TierWorkerInit(&current_api);
+        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
         return TierManagerSolve(&current_api, options->force, options->verbose);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
-            TierWorkerInit(&current_api);
+            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
             return TierWorkerMpiServe();
         }
     }
@@ -258,6 +310,13 @@ static int TierSolverSolve(void *aux) {
 }
 
 static int TierSolverAnalyze(void *aux) {
+    // Now allowing analysis on old databases now for simplicity.
+    // Need to work on old db implementation to support new analyzer API calls.
+    if (read_only_db) {
+        printf("%s\n", kTierSolverAnalyzeSkipReadOnlyMsg);
+        return kNoError;
+    }
+
     static const TierSolverAnalyzeOptions kDefaultAnalyzeOptions = {
         .force = false,
         .verbose = 1,
@@ -267,10 +326,7 @@ static int TierSolverAnalyze(void *aux) {
     return TierManagerAnalyze(&current_api, options->force, options->verbose);
 }
 
-static int TierSolverGetStatus(void) {
-    // TODO
-    return kNotImplementedError;
-}
+static int TierSolverGetStatus(void) { return solver_status; }
 
 static const SolverConfig *TierSolverGetCurrentConfig(void) {
     return &current_config;
@@ -444,6 +500,32 @@ static bool SetCurrentApi(const TierSolverApi *api) {
     }
 
     return true;
+}
+
+static int SetDb(ReadOnlyString game_name, int variant,
+                 ReadOnlyString data_path) {
+    // Look for existing bpdb_lite database.
+    int error = DbManagerInitDb(&kBpdbLite, true, game_name, variant, data_path,
+                                current_api.GetTierName, NULL);
+    if (error != kNoError) return error;
+    int bpdb_status = DbManagerGameStatus();
+    if (bpdb_status == kDbGameStatusCheckError) return kRuntimeError;
+    if (bpdb_status == kDbGameStatusSolved) {
+        read_only_db = true;
+        solver_status = kTierSolverSolveStatusSolved;
+        return kNoError;
+    }
+    DbManagerFinalizeDb();
+
+    // Initialize a R/W array database.
+    error = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
+                            current_api.GetTierName, NULL);
+    if (error != kNoError) return error;
+    int arraydb_status = DbManagerGameStatus();
+    if (arraydb_status == kDbGameStatusCheckError) return kRuntimeError;
+    solver_status = (arraydb_status == kDbGameStatusSolved);
+
+    return kNoError;
 }
 
 static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {

@@ -40,6 +40,7 @@
 #include "core/types/solver/solver_option.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_map.h"
+#include "core/types/tier_hash_map_sc.h"
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_array.h"
 #include "core/types/tier_position_hash_set.h"

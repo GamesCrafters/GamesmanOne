@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 1.2.1
- * @date 2024-02-15
+ * @version 2.0.0a1
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,26 +26,28 @@
 
 #include "core/db/db_manager.h"
 
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // exit, EXIT_FAILURE
-#include <string.h>    // strlen
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // exit, EXIT_FAILURE
+#include <string.h>   // strlen
 
 #include "core/constants.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
 static const Database *current_db;
+static const Database *ref_db;
 
 static bool BasicDbApiImplemented(const Database *db);
 static bool IsValidDbName(ReadOnlyString name);
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path);
+                         int variant, ReadOnlyString data_path, bool read_only);
 
 // -----------------------------------------------------------------------------
 
-int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
+int DbManagerInitDb(const Database *db, bool read_only,
+                    ReadOnlyString game_name, int variant,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux) {
     if (current_db != NULL) current_db->Finalize();
@@ -60,8 +62,31 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
     }
     current_db = db;
 
-    char *path = SetupDbPath(current_db, game_name, variant, data_path);
+    char *path = SetupDbPath(current_db, game_name, variant, data_path,
+                             read_only);
     int error = current_db->Init(game_name, variant, path, GetTierName, aux);
+    free(path);
+
+    return error;
+}
+
+int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
+                       int variant, ReadOnlyString data_path,
+                       GetTierNameFunc GetTierName, void *aux) {
+    if (ref_db != NULL) ref_db->Finalize();
+    ref_db = NULL;
+
+    if (!BasicDbApiImplemented(db)) {
+        fprintf(stderr,
+                "DbManagerInitDb: The %s does not have all the required "
+                "functions implemented and cannot be used.\n",
+                db->formal_name);
+        return kNotImplementedError;
+    }
+    ref_db = db;
+
+    char *path = SetupDbPath(ref_db, game_name, variant, data_path, false);
+    int error = ref_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 
     return error;
@@ -70,6 +95,11 @@ int DbManagerInitDb(const Database *db, ReadOnlyString game_name, int variant,
 void DbManagerFinalizeDb(void) {
     if (current_db) current_db->Finalize();
     current_db = NULL;
+}
+
+void DbManagerFinalizeRefDb(void) {
+    if (ref_db) ref_db->Finalize();
+    ref_db = NULL;
 }
 
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
@@ -81,6 +111,10 @@ int DbManagerFlushSolvingTier(void *aux) {
 }
 
 int DbManagerFreeSolvingTier(void) { return current_db->FreeSolvingTier(); }
+
+int DbManagerSetGameSolved(void) {
+    return current_db->SetGameSolved();
+}
 
 int DbManagerSetValue(Position position, Value value) {
     return current_db->SetValue(position, value);
@@ -98,6 +132,22 @@ int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
 }
 
+int DbManagerLoadTier(Tier tier, int64_t size) {
+    return current_db->LoadTier(tier, size);
+}
+
+int DbManagerUnloadTier(Tier tier) { return current_db->UnloadTier(tier); }
+
+bool DbManagerIsTierLoaded(Tier tier) { return current_db->IsTierLoaded(tier); }
+
+Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
+    return current_db->GetValueFromLoaded(tier, position);
+}
+
+int DbManagerGetRemotenessFromLoaded(Tier tier, Position position) {
+    return current_db->GetRemotenessFromLoaded(tier, position);
+}
+
 int DbManagerProbeInit(DbProbe *probe) { return current_db->ProbeInit(probe); }
 
 int DbManagerProbeDestroy(DbProbe *probe) {
@@ -113,6 +163,20 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 }
 
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
+
+int DbManagerGameStatus(void) { return current_db->GameStatus(); }
+
+int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
+
+int DbManagerRefProbeDestroy(DbProbe *probe) {
+    return ref_db->ProbeDestroy(probe);
+}
+Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position) {
+    return ref_db->ProbeValue(probe, tier_position);
+}
+int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
+    return ref_db->ProbeRemoteness(probe, tier_position);
+}
 
 // -----------------------------------------------------------------------------
 
@@ -147,9 +211,9 @@ static bool IsValidDbName(ReadOnlyString name) {
     return true;
 }
 
-// Assumes current_db has been set.
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path) {
+                         int variant, ReadOnlyString data_path,
+                         bool read_only) {
     // path = "<data_path>/<game_name>/<variant>/<db_name>/"
     if (data_path == NULL) data_path = "data";
     char *path = NULL;
@@ -163,6 +227,7 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
         return NULL;
     }
+
     int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
                                  game_name, variant, db->name);
     if (actual_length >= path_length) {
@@ -172,11 +237,13 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         free(path);
         return NULL;
     }
-    if (MkdirRecursive(path) != 0) {
+
+    if (!read_only && MkdirRecursive(path) != 0) {
         fprintf(stderr,
                 "SetupDbPath: failed to create path in the file system.\n");
         free(path);
         return NULL;
     }
+
     return path;
 }

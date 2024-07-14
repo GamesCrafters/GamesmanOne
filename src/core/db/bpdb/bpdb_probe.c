@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the probe for the Bit-Perfect Database.
- * @version 1.1.0
- * @date 2024-02-15
+ * @version 1.1.1
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -151,7 +151,7 @@ static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
     if (db_file == NULL) return kFileSystemError;
 
     // Read header. Assumes probe->buffer has enough space to store the header.
-    int error = GuardedFread(probe->buffer, kHeaderSize, 1, db_file);
+    int error = GuardedFread(probe->buffer, kHeaderSize, 1, db_file, false);
     if (error != 0) return BailOutFclose(db_file, error);
 
     // Make sure probe->buffer has enough space for the next read.
@@ -167,7 +167,7 @@ static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
 
     // Read decompression dictionary.
     error = GuardedFread(GenericPointerAdd(probe->buffer, kHeaderSize),
-                         decomp_dict_size, 1, db_file);
+                         decomp_dict_size, 1, db_file, false);
     if (error != 0) return BailOutFclose(db_file, error);
 
     // Uninitialize probe->begin so that a cache miss is triggered.
@@ -308,7 +308,7 @@ static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
 
     // Read offset into the compressed bit stream.
     int64_t compressed_offset;
-    error = GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file);
+    error = GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file, false);
     if (error) return BailOutFclose(db_file, -1);
 
     // Finalize.

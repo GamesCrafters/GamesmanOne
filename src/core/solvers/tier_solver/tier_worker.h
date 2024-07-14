@@ -4,12 +4,13 @@
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
  * solving of a single tier into its own module, implemented multithreading
- * using OpenMP, and reformatted functions for readability.
+ * using OpenMP, and reformatted functions for readability. New algorithm
+ * using value iteration.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
- * @version 1.2.1
- * @date 2024-02-29
+ * @version 1.3.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,7 +33,6 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // uint64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -42,23 +42,73 @@
  *
  * @param api Game-specific implementation of the Tier Solver API functions.
  */
-void TierWorkerInit(const TierSolverApi *api);
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
+
+/** @brief Solving methods for \c TierWorkerSolve. */
+enum TierWorkerSolveMethod {
+    /**
+     * @brief Method of backward induction.
+     *
+     * @details Starts with all primitive positions and solved positions in
+     * child tiers as the frontier. Solve by pushing the frontier up using
+     * the reverse position graph of the tier being solved.
+     *
+     * Worst case runtime: O(V + E), where V is the number of vertices in the
+     * reverse position graph of the tier being solved, and E is the number of
+     * edges in the said graph.
+     *
+     * Worst case memory (implicit reverse position graph): O(V).
+     * Worst case memory (generated reverse position graph): O(V + E).
+     */
+    kTierWorkerSolveMethodBackwardInduction,
+
+    /**
+     * @brief Method of value iteration.
+     *
+     * @details Starts with all legal positions marked as drawing. The first
+     * iteration assigns values and remotenesses to all primitive positions.
+     * Then, for each subsequent iteration, each legal position is scanned
+     * for a possible update on its value and remoteness by examining their
+     * child positions. Terminates when the previous iteration makes no update
+     * on any position.
+     *
+     * Worst case runtime: O(R * E), where R is the maximum remoteness of the
+     * tier being solved, and E is the number of edges in the position graph of
+     * the said tier.
+     *
+     * Worst case memory: O(V). Note that although the asymptotic memory is the
+     * same as the method of backward induction, the actual memory usage is much
+     * less in practice due to smaller constant factors.
+     */
+    kTierWorkerSolveMethodValueIteration,
+};
 
 /**
- * @brief Solves the given TIER.
+ * @brief Solves the given \p tier using the given \p method.
  *
+ * @param method Method to use. See \c TierWorkerSolveMethod for details.
  * @param tier Tier to solve.
  * @param force If set to true, the Module will perform the solving process
  * regardless of the current database status. Otherwise, the solving process is
  * skipped if the Module believes that TIER has been correctly solved already.
+ * @param compare If set to true, the Module will compare the newly solved
+ * database with the reference database, which is assumed to exist. The function
+ * will fail if there is a discrepancy.
  * @param solved If not NULL, a truth value indicating whether the given TIER is
  * actually solved instead of loaded from the existing database will be stored
  * in this variable.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierWorkerSolve(Tier tier, bool force, bool *solved);
+int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
+                    bool *solved);
 
 #ifdef USE_MPI
+/**
+ * @brief Serve as a MPI worker until terminated.
+ * 
+ * @return kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 int TierWorkerMpiServe(void);
 #endif  // USE_MPI
 

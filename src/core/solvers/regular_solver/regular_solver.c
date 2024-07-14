@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.3.1
- * @date 2024-02-15
+ * @version 1.4.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,7 +40,7 @@
 
 #include "core/analysis/stat_manager.h"
 #include "core/constants.h"
-#include "core/db/bpdb/bpdb_lite.h"
+#include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
 #include "core/misc.h"
@@ -93,6 +93,15 @@ static const SolverOption kUseRetrograde = {
     .num_choices = 2,
     .choices = kChoices,
 };
+
+// Size of each uncompressed XZ block for ArrayDb compression. Smaller block
+// sizes allows faster read of random tier positions at the cost of lower
+// compression ratio.
+static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+
+// Number of ArrayDb records in each uncompressed XZ block. This should be
+// treated as a constant, although its value is calculated at runtime.
+static int64_t kArrayDbRecordsPerBlock;
 
 // Copy of the original RegularSolverApi object.
 static RegularSolverApi original_api;
@@ -162,11 +171,12 @@ static int DefaultGetTierName(char *dest, Tier tier);
 
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path) {
+    kArrayDbRecordsPerBlock = kArrayDbBlockSize / kArrayDbRecordSize;
     int ret = -1;
     bool success = SetCurrentApi((const RegularSolverApi *)solver_api);
     if (!success) goto _bailout;
 
-    ret = DbManagerInitDb(&kBpdbLite, game_name, variant, data_path,
+    ret = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
                           &DefaultGetTierName, NULL);
     if (ret != 0) goto _bailout;
 
@@ -209,8 +219,24 @@ static int RegularSolverSolve(void *aux) {
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
-    TierWorkerInit(&current_api);
-    return TierWorkerSolve(kDefaultTier, options->force, NULL);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
+                                kDefaultTier, options->force, false, NULL);
+    if (error != kNoError) {
+        fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
+                error);
+        return error;
+    }
+
+    error = DbManagerSetGameSolved();
+    if (error != kNoError) {
+        fprintf(stderr,
+                "RegularSolverSolve: DB manager failed to set current game as "
+                "solved (code %d)\n",
+                error);
+    }
+
+    return error;
 }
 
 static int RegularSolverAnalyze(void *aux) {

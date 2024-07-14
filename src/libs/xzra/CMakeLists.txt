@@ -1,0 +1,5 @@
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/xzra.h)
+
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/xzra.c)
+
+add_library(xzra STATIC ${HEADERS} ${SOURCES})

@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.2.0
- * @date 2024-03-18
+ * @version 1.3.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,7 +41,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 
 /**
- * @brief Creates and solves the tier tree.
+ * @brief Creates and solves the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
  * @param force If set to true, the solver will solve each tier regardless of
@@ -54,7 +54,7 @@
 int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
 
 /**
- * @brief Creates and analyzes the tier tree.
+ * @brief Creates and analyzes the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
  * @param force If set to true, the analyzer will analyze each tier regardless

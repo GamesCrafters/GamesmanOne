@@ -1,5 +1,5 @@
 /**
- * @file bpdb_lite.c
+ * @file bpdb_lite.h
  * @author Dan Garcia: designed the "lookup table" compression algorithm
  * @author Max Fierro: improved the algorithm for BpArray compression
  * @author Sameer Nayyar: improved the algorithm for BpArray compression
@@ -7,9 +7,9 @@
  *         compression algorithms and bpdb.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of Bit-Perfect Database Lite.
- * @version 1.1.0
- * @date 2024-02-15
+ * @brief Bit-Perfect Database Lite.
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -67,6 +67,7 @@ static int BpdbLiteCreateSolvingTier(Tier tier, int64_t size);
 static int BpdbLiteFlushSolvingTier(void *aux);
 static int BpdbLiteFreeSolvingTier(void);
 
+static int BpdbLiteSetGameSolved(void);
 static int BpdbLiteSetValue(Position position, Value value);
 static int BpdbLiteSetRemoteness(Position position, int remoteness);
 static Value BpdbLiteGetValue(Position position);
@@ -76,6 +77,7 @@ static Value BpdbLiteProbeValue(DbProbe *probe, TierPosition tier_position);
 static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 static int BpdbLiteTierStatus(Tier tier);
+static int BpdbLiteGameStatus(void);
 
 const Database kBpdbLite = {
     .name = "bpdb_lite",
@@ -88,6 +90,8 @@ const Database kBpdbLite = {
     .CreateSolvingTier = &BpdbLiteCreateSolvingTier,
     .FlushSolvingTier = &BpdbLiteFlushSolvingTier,
     .FreeSolvingTier = &BpdbLiteFreeSolvingTier,
+
+    .SetGameSolved = &BpdbLiteSetGameSolved,
     .SetValue = &BpdbLiteSetValue,
     .SetRemoteness = &BpdbLiteSetRemoteness,
     .GetValue = &BpdbLiteGetValue,
@@ -99,6 +103,7 @@ const Database kBpdbLite = {
     .ProbeValue = &BpdbLiteProbeValue,
     .ProbeRemoteness = &BpdbLiteProbeRemoteness,
     .TierStatus = &BpdbLiteTierStatus,
+    .GameStatus = &BpdbLiteGameStatus,
 };
 
 static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
@@ -192,6 +197,20 @@ static uint64_t GetRecord(Position position) {
     return record;
 }
 
+static int BpdbLiteSetGameSolved(void) {
+    char *flag_filename = BpdbFileGetFullPathToFinishFlag(sandbox_path);
+    if (flag_filename == NULL) return kMallocFailureError;
+    
+    FILE *flag_file = GuardedFopen(flag_filename, "w");
+    free(flag_filename);
+    if (flag_file == NULL) return kFileSystemError;
+
+    int error = GuardedFclose(flag_file);
+    if (error != 0) return kFileSystemError;
+
+    return kNoError;
+}
+
 static int BpdbLiteSetValue(Position position, Value value) {
     uint64_t record = GetRecord(position);
     int remoteness = GetRemotenessFromRecord(record);
@@ -242,6 +261,20 @@ static int BpdbLiteProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 
 static int BpdbLiteTierStatus(Tier tier) {
     return BpdbFileGetTierStatus(sandbox_path, tier, CurrentGetTierName);
+}
+
+static int BpdbLiteGameStatus(void) {
+    static ConstantReadOnlyString kIndicatorFileName = ".finish";
+    char *indicator = 
+        (char *)malloc(strlen(sandbox_path) + strlen(kIndicatorFileName) + 1);
+    if (indicator == NULL) return kDbGameStatusCheckError;
+
+    sprintf(indicator, "%s%s", sandbox_path, kIndicatorFileName);
+    bool solved = FileExists(indicator);
+    free(indicator);
+    if (solved) return kDbGameStatusSolved;
+
+    return kDbGameStatusIncomplete;
 }
 
 // -----------------------------------------------------------------------------

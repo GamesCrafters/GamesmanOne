@@ -6,9 +6,9 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The Tier Solver API.
- * @version 1.4.1
- * @date 2024-03-22
+ * @brief The loopy tier solver.
+ * @version 1.5.0
+ * @date 2024-07-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -321,5 +321,10 @@ typedef struct TierSolverAnalyzeOptions {
     int verbose; /**< Level of details to output. */
     bool force;  /**< Whether to force (re)analyze the game. */
 } TierSolverAnalyzeOptions;
+
+enum TierSolverSolveStatus {
+    kTierSolverSolveStatusNotSolved, /**< Not fully solved. */
+    kTierSolverSolveStatusSolved,    /**< Fully solved. */
+};
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_

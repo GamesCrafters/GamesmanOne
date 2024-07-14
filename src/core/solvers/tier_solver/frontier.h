@@ -128,6 +128,17 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
  */
 void FrontierAccumulateDividers(Frontier *frontier);
 
+/**
+ * @brief Returns the \p i -th position of remoteness \p remoteness in
+ * \p frontier.
+ *
+ * @param frontier Source frontier.
+ * @param remoteness Remoteness of the position.
+ * @param i Index of the position of the given \p remoteness inside the
+ * frontier, which is assumed to be valid.
+ * @return The \p i -th position of remoteness \p remoteness in
+ * \p frontier.
+ */
 Position FrontierGetPosition(const Frontier *frontier, int remoteness,
                              int64_t i);
 

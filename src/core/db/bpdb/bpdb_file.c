@@ -1,11 +1,11 @@
 /**
- * @file bpdb_file.c
+ * @file bpdb_file.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of Bit-Perfect Database file utilities.
- * @version 1.1.1
- * @date 2024-02-15
+ * @brief Bit-Perfect Database file utilities.
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,10 +26,10 @@
 
 #include "core/db/bpdb/bpdb_file.h"
 
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr, sprintf
-#include <stdlib.h>    // calloc, free
-#include <string.h>    // strlen, strcat
+#include <stddef.h>  // NULL
+#include <stdio.h>   // fprintf, stderr, sprintf
+#include <stdlib.h>  // calloc, free
+#include <string.h>  // strlen, strcat
 
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
@@ -69,6 +69,22 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
     }
     strcat(full_path, kBpdbExtension);
 
+    return full_path;
+}
+
+char *BpdbFileGetFullPathToFinishFlag(ConstantReadOnlyString sandbox_path) {
+    // Full path: "<path>/.finish".
+    static ConstantReadOnlyString kFinishFlagFileName = ".finish";
+    int path_length = strlen(sandbox_path) + strlen(kFinishFlagFileName) + 2;
+    char *full_path = (char *)malloc(path_length * sizeof(char));
+    if (full_path == NULL) {
+        fprintf(
+            stderr,
+            "BpdbFileGetFullPathToFinishFlag: failed to malloc full_path.\n");
+        return NULL;
+    }
+    
+    sprintf(full_path, "%s/%s", sandbox_path, kFinishFlagFileName);
     return full_path;
 }
 

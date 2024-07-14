@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,11 +27,11 @@
 
 #include "core/db/naivedb/naivedb.h"
 
-#include <assert.h>    // assert
-#include <stddef.h>    // NULL
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // malloc, calloc, free
-#include <string.h>    // memset
+#include <assert.h>  // assert
+#include <stddef.h>  // NULL
+#include <stdio.h>   // fprintf, stderr, fopen, fseek, fclose
+#include <stdlib.h>  // malloc, calloc, free
+#include <string.h>  // strcpy, memset
 
 #include "core/constants.h"
 #include "core/misc.h"
@@ -48,17 +48,24 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size);
 static int NaiveDbFlushSolvingTier(void *aux);
 static int NaiveDbFreeSolvingTier(void);
 
+static int NaiveDbSetGameSolved(void);
 static int NaiveDbSetValue(Position position, Value value);
 static int NaiveDbSetRemoteness(Position position, int remoteness);
 static Value NaiveDbGetValue(Position position);
 static int NaiveDbGetRemoteness(Position position);
 
+static int NaiveDbLoadTier(Tier tier, int64_t size);
+static int NaiveDbUnloadTier(Tier tier);
+static bool NaiveDbIsTierLoaded(Tier tier);
+static Value NaiveDbGetValueFromLoaded(Tier tier, Position position);
+static int NaiveDbGetRemotenessFromLoaded(Tier tier, Position position);
+
 static int NaiveDbProbeInit(DbProbe *probe);
 static int NaiveDbProbeDestroy(DbProbe *probe);
 static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
-
 static int NaiveDbTierStatus(Tier tier);
+static int NaiveDbGameStatus(void);
 
 const Database kNaiveDb = {
     .name = "naivedb",
@@ -71,10 +78,19 @@ const Database kNaiveDb = {
     .CreateSolvingTier = &NaiveDbCreateSolvingTier,
     .FlushSolvingTier = &NaiveDbFlushSolvingTier,
     .FreeSolvingTier = &NaiveDbFreeSolvingTier,
+
+    .SetGameSolved = &NaiveDbSetGameSolved,
     .SetValue = &NaiveDbSetValue,
     .SetRemoteness = &NaiveDbSetRemoteness,
     .GetValue = &NaiveDbGetValue,
     .GetRemoteness = &NaiveDbGetRemoteness,
+
+    // Loading
+    .LoadTier = &NaiveDbLoadTier,
+    .UnloadTier = &NaiveDbUnloadTier,
+    .IsTierLoaded = &NaiveDbIsTierLoaded,
+    .GetValueFromLoaded = &NaiveDbGetValueFromLoaded,
+    .GetRemotenessFromLoaded = &NaiveDbGetRemotenessFromLoaded,
 
     // Probing
     .ProbeInit = &NaiveDbProbeInit,
@@ -82,6 +98,7 @@ const Database kNaiveDb = {
     .ProbeValue = &NaiveDbProbeValue,
     .ProbeRemoteness = &NaiveDbProbeRemoteness,
     .TierStatus = &NaiveDbTierStatus,
+    .GameStatus = &NaiveDbGameStatus,
 };
 
 // -----------------------------------------------------------------------------
@@ -96,8 +113,9 @@ typedef struct NaiveDbEntry {
     int remoteness;
 } NaiveDbEntry;
 
+enum { kNaiveDbNumLoadedTiersMax = 256 };
 // Probe buffer size, fixed at 1 MiB.
-static const int kBufferSize = (2 << 17) * sizeof(NaiveDbEntry);
+static const int kBufferSize = (1 << 17) * sizeof(NaiveDbEntry);
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -106,10 +124,12 @@ static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static NaiveDbEntry *records;
+static TierHashMapSC loaded_tier_to_index;
+static NaiveDbEntry *loaded_records[kNaiveDbNumLoadedTiersMax];
 
 /**
  * @brief Returns the full path to the DB file for the given tier. The user is
- * responsible for free()ing the pointer returned by this function. Returns
+ * responsible for freeing the pointer returned by this function. Returns
  * NULL on failure.
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
@@ -128,6 +148,21 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
         sprintf(full_path + count, "%" PRITier, tier);
     }
 
+    return full_path;
+}
+
+static char *GetFullPathToFinishFlag(void) {
+    // Full path: "<path>/.finish", +2 for '/' and '\0'.
+    ConstantReadOnlyString kFinishFlagFilename = ".finish";
+    char *full_path = (char *)calloc(
+        (strlen(sandbox_path) + strlen(kFinishFlagFilename) + 2), sizeof(char));
+    if (full_path == NULL) {
+        fprintf(stderr,
+                "GetFullPathToFinishFlag: failed to calloc full_path.\n");
+        return NULL;
+    }
+
+    sprintf(full_path, "%s/%s", sandbox_path, kFinishFlagFilename);
     return full_path;
 }
 
@@ -185,6 +220,8 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
     assert(records == NULL);
+    TierHashMapSCInit(&loaded_tier_to_index, 0.5);
+    memset(&loaded_records, 0, sizeof(loaded_records));
 
     return kNoError;
 }
@@ -194,6 +231,10 @@ static void NaiveDbFinalize(void) {
     sandbox_path = NULL;
     free(records);
     records = NULL;
+    TierHashMapSCDestroy(&loaded_tier_to_index);
+    for (int i = 0; i < kNaiveDbNumLoadedTiersMax; ++i) {
+        free(loaded_records[i]);
+    }
 }
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
@@ -244,6 +285,19 @@ static int NaiveDbFreeSolvingTier(void) {
     return kNoError;
 }
 
+static int NaiveDbSetGameSolved(void) {
+    char *full_path = GetFullPathToFinishFlag();
+    if (full_path == NULL) return kMallocFailureError;
+
+    FILE *f = fopen(full_path, "w");
+    free(full_path);
+    if (f == NULL) return kFileSystemError;
+
+    if (fclose(f) != 0) return kFileSystemError;
+
+    return kNoError;
+}
+
 static int NaiveDbSetValue(Position position, Value value) {
     records[position].value = value;
     return kNoError;
@@ -262,6 +316,92 @@ static int NaiveDbGetRemoteness(Position position) {
     return records[position].remoteness;
 }
 
+static int NaiveDbLoadTier(Tier tier, int64_t size) {
+    // Find the first unused slot in the loaded records array.
+    int i;
+    for (i = 0; i < kNaiveDbNumLoadedTiersMax; ++i) {
+        if (loaded_records[i] == NULL) break;
+    }
+    if (i == kNaiveDbNumLoadedTiersMax) {
+        fprintf(stderr,
+                "NaiveDbLoadTier: cannot load more than %d tiers at the same "
+                "time\n",
+                kNaiveDbNumLoadedTiersMax);
+        return kRuntimeError;
+    }
+
+    loaded_records[i] = (NaiveDbEntry *)calloc(size, sizeof(NaiveDbEntry));
+    if (loaded_records[i] == NULL) {
+        return kMallocFailureError;
+    }
+
+    char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
+    if (full_path == NULL) {
+        free(loaded_records[i]);
+        loaded_records[i] = NULL;
+        return kMallocFailureError;
+    }
+
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, i)) {
+        free(loaded_records[i]);
+        loaded_records[i] = NULL;
+        free(full_path);
+        return kMallocFailureError;
+    }
+
+    FILE *db_file = fopen(full_path, "rb");
+    free(full_path);
+    if (db_file == NULL) {
+        free(loaded_records[i]);
+        loaded_records[i] = NULL;
+        return kFileSystemError;
+    }
+
+    size_t n = fread(loaded_records[i], sizeof(NaiveDbEntry), size, db_file);
+    fclose(db_file);
+
+    return n == (size_t)size ? kNoError : kFileSystemError;
+}
+
+static int GetLoadedTierIndex(Tier tier) {
+    int64_t index;
+    if (!TierHashMapSCGet(&loaded_tier_to_index, tier, &index)) return -1;
+
+    return (int)index;
+}
+
+static int NaiveDbUnloadTier(Tier tier) {
+    int index = GetLoadedTierIndex(tier);
+    if (index >= 0) {
+        free(loaded_records[index]);
+        loaded_records[index] = NULL;
+        TierHashMapSCRemove(&loaded_tier_to_index, tier);
+    }
+
+    return kNoError;
+}
+
+static bool NaiveDbIsTierLoaded(Tier tier) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return false;
+
+    return loaded_records[index] != NULL;
+}
+
+static Value NaiveDbGetValueFromLoaded(Tier tier, Position position) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return kErrorValue;
+
+    return loaded_records[index][position].value;
+}
+
+static int NaiveDbGetRemotenessFromLoaded(Tier tier, Position position) {
+    int index = GetLoadedTierIndex(tier);
+    if (index < 0) return -1;
+
+    return loaded_records[index][position].remoteness;
+}
+
 static int NaiveDbProbeInit(DbProbe *probe) {
     probe->buffer = malloc(kBufferSize);
     if (probe->buffer == NULL) return kMallocFailureError;
@@ -276,6 +416,7 @@ static int NaiveDbProbeInit(DbProbe *probe) {
 static int NaiveDbProbeDestroy(DbProbe *probe) {
     free(probe->buffer);
     memset(probe, 0, sizeof(*probe));
+
     return kNoError;
 }
 
@@ -299,15 +440,11 @@ static bool ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
     return true;
 }
 
-static void *VoidPointerShift(void *pointer, int64_t offset) {
-    return (void *)((int8_t *)pointer + offset);
-}
-
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
     int64_t offset = position * sizeof(NaiveDbEntry) - probe->begin;
     assert(offset >= 0);
     NaiveDbEntry entry;
-    memcpy(&entry, VoidPointerShift(probe->buffer, offset),
+    memcpy(&entry, GenericPointerAdd(probe->buffer, offset),
            sizeof(NaiveDbEntry));
     return entry;
 }
@@ -336,4 +473,14 @@ static int NaiveDbTierStatus(Tier tier) {
     if (error != 0) return kDbTierStatusCheckError;
 
     return kDbTierStatusSolved;
+}
+
+static int NaiveDbGameStatus(void) {
+    char *full_path = GetFullPathToFinishFlag();
+    if (full_path == NULL) return kDbGameStatusCheckError;
+
+    bool exists = FileExists(full_path);
+    free(full_path);
+
+    return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }

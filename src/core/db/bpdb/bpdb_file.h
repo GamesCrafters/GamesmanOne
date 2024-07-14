@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database file utilities.
- * @version 1.1.1
- * @date 2024-02-15
+ * @version 1.2.0
+ * @date 2024-07-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -49,26 +49,42 @@ typedef struct LookupTableMeta {
 
 /** @brief In-memory bpdb file header. */
 typedef struct BpdbFileHeader {
+    /** Metadata for the decompression dictionary. */
     DecompDictMeta decomp_dict_meta;
+
+    /** Metadata for the block compression lookup table. */
     LookupTableMeta lookup_meta;
+
+    /** Metadata for the data stream. */
     BpArrayMeta stream_meta;
 } BpdbFileHeader;
 
 /**
- * @brief Returns the full path to the bpdb file for the given TIER given the
- * SANDBOX_PATH for bpdb and an optional function which converts TIER to its
- * file name. The user is responsible for free()ing the pointer returned by this
- * function.
+ * @brief Returns a malloc'ed full path to the bpdb file for the given \p tier
+ * given \p sandbox_path for bpdb and an optional function which converts
+ * \p tier to its file name. The user is responsible for freeing the pointer
+ * returned by this function using the \c free function.
  *
  * @param sandbox_path Path to a sandbox directory for bpdb.
- * @param tier Get path to the db file of this TIER.
+ * @param tier Get path to the db file of this \p tier.
  * @param GetTierName Function that converts a tier to its name. If set to
- * NULL, a fallback method will be used instead.
+ * \c NULL, a fallback method will be used instead.
  * @return Full path to the bpdb file on success, or
- * @return NULL on failure.
+ * @return \c NULL on failure.
  */
 char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
                           GetTierNameFunc GetTierName);
+
+/**
+ * @brief Returns a malloc'ed full path to the finish flag for the current game
+ * given \p sandbox_path. The user is responsible for freeing the pointer
+ * returned by this function using the \c free function.
+ *
+ * @param sandbox_path Path to a sandbox directory for bpdb.
+ * @return Full path to the the finish flag on success, or
+ * @return \c NULL on failure.
+ */
+char *BpdbFileGetFullPathToFinishFlag(ConstantReadOnlyString sandbox_path);
 
 /**
  * @brief Flushes the RECORDS to a bpdb file under FULL_PATH.
