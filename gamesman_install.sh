@@ -16,19 +16,19 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git autoconf automake cmake liblzma-dev zlib1g zlib1g-dev
+    sudo apt update && sudo apt install -y git autoconf automake cmake liblz4-dev liblzma-dev zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git autoconf automake cmake xz-devel zlib zlib-devel
+    sudo dnf update && sudo dnf install -y git autoconf automake cmake lz4-devel xz-devel zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git autoconf automake cmake xz zlib || error_exit "brew install failed"
+    brew install git autoconf automake cmake lz4 xz zlib || error_exit "brew install failed"
 }
 
 # Check if running as root, abort if yes.
