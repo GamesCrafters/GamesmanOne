@@ -165,6 +165,13 @@ int GuardedOpen(const char *filename, int flags);
 int GuardedClose(int fd);
 
 /**
+ * @brief Same behavior as remove on success; calls perror and returns -1
+ * otherwise.
+ * @link https://man7.org/linux/man-pages/man3/remove.3.html
+ */
+int GuardedRemove(const char *pathname);
+
+/**
  * @brief Calls close on FD and returns error.
  * @details This function is typically called when an error occurred in the
  * middle of a function call and the function needs to close the given FD before
@@ -350,7 +357,7 @@ int64_t RoundUpDivide(int64_t n, int64_t d);
 #ifdef USE_MPI
 /**
  * @brief Bail-on-error \c MPI_Init.
- * 
+ *
  * @param argc Pointer to the number of arguments.
  * @param argv Pointer to the argument vector.
  */
@@ -358,7 +365,7 @@ void SafeMpiInit(int *argc, char ***argv);
 
 /**
  * @brief Bail-on-error \c MPI_Init_thread.
- * 
+ *
  * @param argc Pointer to the number of arguments.
  * @param argv Pointer to the argument vector.
  * @param required Level of desired thread support.
@@ -373,7 +380,7 @@ void SafeMpiFinalize(void);
 
 /**
  * @brief Bail-on-error \c MPI_Comm_size.
- * 
+ *
  * @param comm Communicator (handle).
  * @return Number of processes in the group of \p comm.
  */
@@ -381,7 +388,7 @@ int SafeMpiCommSize(MPI_Comm comm);
 
 /**
  * @brief Bail-on-error \c MPI_Comm_rank.
- * 
+ *
  * @param comm Communicator (handle).
  * @return Rank of the calling process in the group of \c comm.
  */
@@ -389,7 +396,7 @@ int SafeMpiCommRank(MPI_Comm comm);
 
 /**
  * @brief Bail-on-error \c MPI_Send.
- * 
+ *
  * @param buf Initial address of send buffer (choice).
  * @param count Number of elements in send buffer (non-negative integer).
  * @param datatype Datatype of each send buffer element (handle).
@@ -402,7 +409,7 @@ void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
 
 /**
  * @brief Bail-on-error \c MPI_Recv.
- * 
+ *
  * @param buf (Output parameter) initial address of receive buffer (choice).
  * @param count Communicator (handle).
  * @param datatype Maximum number of elements in receive buffer (integer).

@@ -223,9 +223,13 @@ static bool Step1LoadDiscoveryMaps(void) {
 #endif  // _OPENMP
 
     this_tier_map = LoadDiscoveryMap(this_tier);
+    if (this_tier_map.size == 0) return false;
+
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         child_tier_maps[i] = LoadDiscoveryMap(child_tiers.array[i]);
+        if (child_tier_maps[i].size == 0) return false;
     }
+
     return true;
 }
 
@@ -233,12 +237,13 @@ static bool Step1LoadDiscoveryMaps(void) {
 // on disk. IF TIER IS THE INITIAL TIER, ALSO SETS THE INITIAL POSITION BIT.
 static BitStream LoadDiscoveryMap(Tier tier) {
     // Try to load from disk first.
-    BitStream ret = StatManagerLoadDiscoveryMap(tier);
-    if (ret.stream != NULL) return ret;
+    int64_t tier_size = api_internal->GetTierSize(tier);
+    BitStream ret = {0};
+    int error = StatManagerLoadDiscoveryMap(tier, tier_size, &ret);
+    if (error != kFileSystemError) return ret;
 
     // Create a discovery map for the tier.
-    int64_t tier_size = api_internal->GetTierSize(tier);
-    int error = BitStreamInit(&ret, tier_size);
+    error = BitStreamInit(&ret, tier_size);
     if (error != 0) {
         fprintf(stderr, "LoadDiscoveryMap: failed to initialize stream\n");
         return ret;
@@ -489,7 +494,11 @@ static bool Step5Analyze(Analysis *dest) {
 }
 
 static bool Step6SaveAnalysis(const Analysis *dest) {
-    return StatManagerSaveAnalysis(this_tier, dest) == 0;
+    bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
+    if (!success) return false;
+
+    StatManagerRemoveDiscoveryMap(this_tier);
+    return true;
 }
 
 static void Step7CleanUp(void) {

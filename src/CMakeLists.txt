@@ -6,6 +6,8 @@ target_compile_options(gamesman PRIVATE
 )
 
 # Check libraries.
+find_package(PkgConfig REQUIRED)                            # pkg-config
+pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)      # (pkg-config check) liblz4
 find_package(ZLIB REQUIRED)                                 # ZLIB
 find_package(LibLZMA REQUIRED)                              # LibLZMA (XZ Utils)
 list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res")  # (add) json-c
@@ -24,6 +26,7 @@ add_subdirectory(games)
 add_subdirectory(libs)
 
 # Link libraries.
+target_link_libraries(gamesman PRIVATE PkgConfig::lz4)      # PkgConfig::lz4
 target_link_libraries(gamesman PRIVATE ZLIB::ZLIB)          # ZLIB
 target_link_libraries(gamesman PRIVATE LibLZMA::LibLZMA)    # LibLZMA (XZ Utils)
 target_link_libraries(gamesman PRIVATE json-c::json-c)      # json-c

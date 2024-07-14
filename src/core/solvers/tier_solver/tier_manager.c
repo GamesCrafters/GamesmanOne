@@ -407,7 +407,7 @@ static int SolveTierGraph(bool force, int verbose) {
         if (IsCanonicalTier(tier)) {  // Only solve canonical tiers.
             time_t begin = time(NULL);
             bool solved;
-            int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
+            int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
                                         tier, force, false, &solved);
             if (error == 0) {
                 // Solve succeeded.

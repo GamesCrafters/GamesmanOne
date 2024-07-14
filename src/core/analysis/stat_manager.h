@@ -83,18 +83,18 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis);
 int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
 
 /**
- * @brief Loads the discovery map for TIER as a BitStream from disk.
- * @details A discovery map is a bit stream of length equal to the size of TIER,
- * with the i-th bit turned on if and only if the position i has been discovered
- * as reachable in TIER.
+ * @brief Loads the discovery map for \p tier as a \c BitStream from disk.
+ * @details A discovery map is a bit stream of length equal to the size of
+ * \p tier with the i-th bit turned on if and only if the position i has been
+ * discovered as reachable in \p tier.
  *
  * @param tier Tier to load.
- * @return Discovery map of TIER as a BitStream if TIER has been at least
- * partially discovered and store on disk. Returns an invalid BitStream all
- * fields set to 0 if the discovery map is not found on disk.
- *
+ * @param size Size of \p tier.
+ * @param dest Destination bit stream.
+ * @return kNoError on success, or
+ * @return non-zero error code otherwise.
  */
-BitStream StatManagerLoadDiscoveryMap(Tier tier);
+int StatManagerLoadDiscoveryMap(Tier tier, int64_t size, BitStream *dest);
 
 /**
  * @brief Saves the discovery map of TIER as a BitStream STREAM to disk.
@@ -107,5 +107,7 @@ BitStream StatManagerLoadDiscoveryMap(Tier tier);
  * @return 0 on success, non-zero error code otherwise.
  */
 int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier);
+
+int StatManagerRemoveDiscoveryMap(Tier tier);
 
 #endif  // GAMESMANONE_CORE_ANALYSIS_STAT_MANAGER_H_

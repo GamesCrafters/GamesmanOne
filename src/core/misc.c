@@ -242,6 +242,13 @@ int GuardedClose(int fd) {
     return error;
 }
 
+int GuardedRemove(const char *pathname) {
+    int error = remove(pathname);
+    if (error == -1) perror("remove");
+
+    return error;
+}
+
 int BailOutClose(int fd, int error) {
     int new_error = close(fd);
     if (new_error == -1) perror("close");
