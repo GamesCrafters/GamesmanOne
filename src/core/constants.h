@@ -105,10 +105,4 @@ extern const Position kIllegalPosition;
 /** @brief Illegal tier position which can be returned as an error. */
 extern const TierPosition kIllegalTierPosition;
 
-/** @brief Date of the current version of GAMESMAN. */
-extern ConstantReadOnlyString kGamesmanDate;
-
-/** @brief Current version of GAMESMAN. */
-extern ConstantReadOnlyString kGamesmanVersion;
-
 #endif  // GAMESMANONE_CORE_CONSTANTS_H_

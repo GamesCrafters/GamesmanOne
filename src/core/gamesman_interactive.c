@@ -32,7 +32,7 @@
 #include <string.h>  // strlen
 #include <unistd.h>  // usleep
 
-#include "core/constants.h"
+#include "config.h"
 #include "core/types/gamesman_types.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
@@ -63,15 +63,15 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage = "      MPI Enabled    
 #endif  // USE_MPI
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(kGamesmanDate) + 
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(GAMESMAN_DATE) + 
                     kOpeningCreditsMessageSize;
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
 #ifndef USE_MPI
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
-            kGamesmanDate);
+            GAMESMAN_DATE);
 #else  // USE_MPI defined.
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
-            kGamesmanDate);
+            GAMESMAN_DATE);
 #endif  // USE_MPI
 
     int i = 0;

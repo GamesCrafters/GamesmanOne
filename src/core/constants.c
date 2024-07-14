@@ -39,6 +39,3 @@ const TierPosition kIllegalTierPosition = {
     .tier = kIllegalTier,
     .position = kIllegalPosition,
 };
-
-ConstantReadOnlyString kGamesmanDate = "2024.04.12";
-ConstantReadOnlyString kGamesmanVersion = "1.0.0";
