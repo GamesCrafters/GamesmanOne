@@ -73,9 +73,9 @@ ReadOnlyString SolverManagerExplainTestError(int error) {
     if (current_solver->ExplainTestError == NULL) {
         printf(
             "%s does not have explanations available for its test error codes. "
-            "The error code is %d",
+            "The error code is %d\n",
             current_solver->name, error);
-        return "SolverManagerExplainTestError: no explanation available";
+        return "no explanation available";
     }
 
     return current_solver->ExplainTestError(error);
