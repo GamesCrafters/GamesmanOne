@@ -49,6 +49,7 @@ enum GamesmanError {
     kUseBeforeInitializationError,  /**< Module used before initialization. */
     kMpiError,                      /**< Error in MPI function. */
     kHeadlessError,                 /**< Headless command parsing error. */
+    kGenericHashError,              /**< Generic Hash system error. */
     kRuntimeError,                  /**< Generic runtime error. */
 };
 
