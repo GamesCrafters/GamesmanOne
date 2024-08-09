@@ -220,7 +220,7 @@ static int RegularSolverSolve(void *aux) {
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &kDefaultSolveOptions;
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-    int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
+    int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
                                 kDefaultTier, options->force, false, NULL);
     if (error != kNoError) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",

@@ -1,12 +1,13 @@
 /**
  * @file context.h
  * @author Scott Lindeneau: designer of the original version.
- * @author Optimized and adapted by Robert Shi (robertyishi@berkeley.edu)
+ * @author Robert Shi (robertyishi@berkeley.edu): Adaptation to GamesmanOne,
+ *         optimizations, and additional features.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
- * @version 1.1.0
- * @date 2024-02-18
+ * @version 1.2.0
+ * @date 2024-07-27
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -43,19 +44,37 @@
  * GenericHashContext.
  *
  * @par
- * Piece array: a fixed-length char array representing each type of piece.
+ * Board pieces: pieces that appear on the board. Each slot on the game board is
+ * considered unique, thus different orderings of the board pieces correspond to
+ * different positions.
+ *
+ * @par
+ * Unordered pieces: collection of pieces whose order does not matter. An
+ * example would be pieces that are removed from the board and waiting to be put
+ * back on in Dōbutsu shōgi.
+ *
+ * @par
+ * Pieces array: a fixed-length char array representing each type of piece.
  * Predefined by the user of the Generic Hash system.
  *
  * @par
  * Piece configuration: an array of integers representing the number of each
  * type of piece on board. The length of the array is equal to the length of the
- * piece array and piece_config[i] represents the number of pieces[i].
+ * piece array (n) plus the number of types of pieces in the unordered section
+ * (m-n). For 0 <= i < n, \c piece_config[i] represents the number of pieces[i].
+ * For n <= i <= m, \c piece_config[i] corresponds to the number of the
+ * (i-n)-th unordered piece.
  *
  * @par
  * Valid piece configuration: a piece configuration is valid for a hash context
- * if and only if 1. the total number of pieces is equal to board_size and
- * 2. context.IsValidConfig(configuration) returns true. Note that the user may
- * choose not to enforce the first rule in their own IsValidConfig() function.
+ * if and only if
+ * 1. the total number of board pieces is equal to \c board_size, and
+ * 2. \c context.IsValidConfig(configuration) returns \c true. Note that the
+ * user may choose not to enforce the first rule in their own \c IsValidConfig
+ * function and assume that Generic Hash system performs the check for them.
+ * Also note that the piece configurations are generated based on the
+ * user-provided lower and upper bounds of each type of piece. Hence there is no
+ * need to check the boundaries.
  *
  * @par
  * Piece configuration index: an unique integer assigned to a piece
@@ -81,6 +100,12 @@ typedef struct GenericHashContext {
     /** @brief Number of types of pieces. */
     int num_pieces;
 
+    /**
+     * @brief Number of types of pieces that may appear in the unordered
+     * section.
+     */
+    int num_unordered_pieces;
+
     /** @brief Array of all possible pieces, length == num_pieces. */
     char *pieces;
 
@@ -91,13 +116,23 @@ typedef struct GenericHashContext {
      */
     char piece_index_mapping[128];
 
-    /** @brief Min number of each type of piece, aligned to the pieces array. */
+    /**
+     * @brief Minimum number of each type of piece, including board pieces and
+     * unordered pieces. The first n values are aligned to the
+     * \c GenericHashContext::pieces array. The last (m-n) values correspond to
+     * the unordered pieces.
+     */
     int *mins;
 
-    /** @brief Max number of each type of piece, aligned to the pieces array. */
+    /**
+     * @brief Maximum number of each type of piece, including board pieces and
+     * unordered pieces. The first n values are aligned to the
+     * \c GenericHashContext::pieces array. The last (m-n) values correspond to
+     * the unordered pieces.
+     */
     int *maxs;
 
-    /** @brief Returns true iff the given CONFIG is valid. */
+    /** @brief Returns \c true if and only if the given \p config is valid. */
     bool (*IsValidConfig)(const int *config);
 
     /**
@@ -133,10 +168,10 @@ typedef struct GenericHashContext {
     int64_t *config_index_to_valid_index;
 
     /**
-     * @brief An exclusive multiplicative scan of the GenericHashContext::maxs
-     * array with each entry incremented by 1. That is, the value at index 0 is
-     * 1, and the value at any other index i is the product of the value at i-1
-     * and (GenericHashContext::maxs[i-1] + 1).
+     * @brief An exclusive multiplicative scan of the
+     * \c GenericHashContext::maxs array with each entry incremented by 1. That
+     * is, the value at index 0 is 1, and the value at any other index i is the
+     * product of the value at i-1 and (GenericHashContext::maxs[i-1] + 1).
      *
      * @details This is cached for generating rearrangement values in constant
      * time.
@@ -144,50 +179,79 @@ typedef struct GenericHashContext {
     int64_t *max_piece_mult_scan;
 
     /**
-     * @brief Rearrangement-indexed cache for the Rearrange function. See
-     * definition of Rearrange for details in context.c.
+     * @brief Rearrangement-indexed cache for the \c Rearrange function. See
+     * definition of \c Rearrange in \link context.c for details.
      */
     int64_t *rearranger_cache;
 } GenericHashContext;
 
 /**
- * @brief Initializes the given Generic Hash CONTEXT and returns true. Zeros out
- * the contents in CONTEXT and returns false on failure.
+ * @brief Initializes the given Generic Hash \p context. Zeros out the contents
+ * in \p context and returns \c false on failure.
  *
- * @note Initializing an already initialized CONTEXT results in undefined
- * behavior.
+ * @note Initializing an already initialized \p context results in undefined
+ * behavior and may cause memory leak.
  *
  * @param context Context to initialize, which is assumed to be uninitialized.
  * @param board_size Size of the game board. E.g. board_size == 9 in
  * Tic-Tac-Toe.
  * @param player May take values 0, 1, or 2. If set to 0, a two-player hash
- * context will be initialized, and GenericHashContextGetTurn() will return the
+ * context will be initialized, and \c GenericHashContextGetTurn will return the
  * turn based on the given hash value. If set to either 1 or 2, a single-player
- * hash context will be initialized, and GenericHashContextGetTurn() will always
- * return that player's index regardless of the given hash value. E.g. set this
- * to 0 for the game of Chess.
+ * hash context will be initialized, and \c GenericHashContextGetTurn will
+ * always return that player's index regardless of the given hash value. E.g.
+ * set this to 0 for the game of Chess, and set this to 1 for all tiers that
+ * correspond to player X's turn in Tic-Tac-Toe.
  * @param pieces_init_array An integer array of the following format:
- * {p_1, L_1, U_1, p_2, L_2, U_2, ... , p_n, L_n, U_n, -1} where
- * - The $p_i$'s are the characters associated with the pieces (including
- * blanks)
- * - The $L_i$'s are the minimum allowable number of occurrences of each piece
- *   type on the board.
- * - The $U_i$'s are the maximum allowable number of occurrences of each piece
- *   type on the board.
- * - The $-1$ is used to mark the end of the array.
- * E.g., set this to {'-', 0, 9, 'O', 0, 4, 'X', 0, 5, -1} for the game of
+ * [p_1, L_1, U_1, p_2, L_2, U_2, ..., p_n, L_n, U_n,
+ * (-2, L_{n+1}, U_{n+1}, L_{n+2}, U_{n+2}, ..., L_m, U_m,) -1] where
+ * - The \c p_i 's are the characters associated with the pieces (including
+ * blanks.) Min: 0; Max: 127.
+ * - The \c L_i 's for i in range(1, n+1) are the minimum allowable number of
+ * occurrences of each piece type on the board. Min: 0; Max: \c U_i.
+ * - The \c U_i 's for i in range(1, n+1) are the maximum allowable number of
+ * occurrences of each piece type on the board. Min: \c L_i; Max: board_size.
+ * - (Optional, v1.2.0+) The value -2 is used to separate the board pieces from
+ * the unordered pieces, if exist.
+ * - (Optional, v1.2.0+) The \c L_j 's for j in range(n+1, m) are the minimum
+ * allowable number of occurrences of each piece type that may appear in the
+ * unordered section of the game. Min: 0; Max: \c U_j.
+ * - (Optional, v1.2.0+) The \c U_j 's for j in range(n+1, m) are the maximum
+ * allowable number of occurrences of each piece type that may appear in the
+ * unordered section of the game. Min: \c L_j; Max: 127.
+ * - The value \c -1 is used to mark the end of the array.
+ * \example 1: set this to {'-', 0, 9, 'O', 0, 4, 'X', 0, 5, -1} for the game of
  * Tic-Tac-Toe. Explanation: there can be at least 0 or at most 9 blank slots,
- * there can be at least 0 or at most 4 O's on the board, and there can be at
- * least 0 or at most 5 X's on the board, assuming X always goes first.
+ * at least 0 or at most 4 O's on the board, and at least 0 or at most 5 X's on
+ * the board, assuming X always goes first.
+ * \example 2: one may set this to {'L', 0, 1, 'l', 0, 1, 'G', 0, 2, 'g', 0, 2,
+ * 'E', 0, 2, 'e', 0, 2, 'H', 0, 2, 'h', 0, 2, 'C', 0, 2, 'c', 0, 2, '-', 4, 11,
+ * -2, 0, 2, 0, 2, 0, 2, -1} for the game of Dōbutsu shōgi. The triplets before
+ * the -2 denote the pieces that may appear on the board, whereas each pair
+ * between the -2 and the -1 denotes a type of piece that the forest player may
+ * have captured and not yet placed back into the board. Since the total number
+ * of each type of piece is fixed, there is no need to store the number of
+ * pieces held by the sky player since we can figure it out by looking at the
+ * board.
  * @param IsValidConfig Pointer to a user-defined configuration validation
  * function which returns true if the given piece configuration is valid based
  * on game rules. The system will determine if configuration is valid using this
  * function while performing an additional check on the total number of pieces,
  * which should add up to board_size. If NULL is passed to this value, a piece
  * configuration will be considered valid as long as the numbers of each type of
- * piece add up to board_size.
- * @return true on success,
- * @return false otherwise.
+ * piece add up to board_size. \note A piece configuration is an integer array
+ * of size \c m (number of board pieces plus number of unordered pieces.) Each
+ * value in this array denotes the number of that type of piece currently
+ * appearing in the game. The first \c n (number of board pieces) values in a
+ * piece configuration array denotes the number of board pieces of each type.
+ * These values have a one-to-one correspondance with the first \c n pieces in
+ * the \p pieces_init_array in the same order. The rest of the \c (m-n) pieces
+ * correspond to the unordered pieces initialized by the last \c (m-n) pairs of
+ * values in the \p pieces_init_array. As in example 2, one valid piece
+ * configuration would be the array [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 4, 0, 0, 0],
+ * where the last three zeros correspond to the unordered pieces.
+ * @return \c true on success,
+ * @return \c false otherwise.
  */
 bool GenericHashContextInit(GenericHashContext *context, int board_size,
                             int player, const int *pieces_init_array,

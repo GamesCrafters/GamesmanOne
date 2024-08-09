@@ -1,20 +1,20 @@
 /**
- * @file generic_hash.c
- * @author Dan Garcia: Designer of the original (3-variable only) version
- * @author Attila Gyulassy: Developer of the original (3-variable only) version
+ * @file generic_hash.h
+ * @author Dan Garcia: Designer of the original (3-variable only) version.
+ * @author Attila Gyulassy: Developer of the original (3-variable only) version.
  * @author Michel D'Sa: Designer and developer of user-specified variables
- * version
+ * version.
  * @author Scott Lindeneau: Designer and developer of multiple contexts;
  * optimized for efficiency and readability.
  * @author Robert Shi (robertyishi@berkeley.edu): further optimized for
  * efficiency and readability, adapted to the new system and implemented
- * thread-safety
+ * thread-safety and unordered pieces.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash system for finite board games with
  * fixed sets of pieces.
- * @version 1.0.2
- * @date 2024-03-08
+ * @version 1.1.0
+ * @date 2024-07-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -75,9 +75,10 @@ void GenericHashReinitialize(void) {
     multi_context_warning_shown = false;
 }
 
-bool GenericHashAddContext(
-    int player, int board_size, const int *pieces_init_array,
-    bool (*IsValidConfiguration)(const int *configuration), int64_t label) {
+bool GenericHashAddContext(int player, int board_size,
+                           const int *pieces_init_array,
+                           bool (*IsValidConfig)(const int *config),
+                           int64_t label) {
     // Return false if label already exists.
     if (Int64HashMapContains(&manager.labels, label)) return false;
 
@@ -87,8 +88,8 @@ bool GenericHashAddContext(
     assert(manager.capacity > manager.size);
 
     GenericHashContext *target = &manager.contexts[manager.size];
-    bool success = GenericHashContextInit(
-        target, board_size, player, pieces_init_array, IsValidConfiguration);
+    bool success = GenericHashContextInit(target, board_size, player,
+                                          pieces_init_array, IsValidConfig);
     if (!success) return false;
     return Int64HashMapSet(&manager.labels, label, manager.size++);
 }

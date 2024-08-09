@@ -141,6 +141,8 @@ static bool IsCanonicalPosition(Position position) {
 // ------------------------------- Step3ScanTier -------------------------------
 
 static void Step3ScanTier(void) {
+    printf("Value iteration: scanning tier... ");
+    fflush(stdout);
     PRAGMA_OMP_PARALLEL {
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(256)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
@@ -161,6 +163,8 @@ static void Step3ScanTier(void) {
             }  // Otherwise, do nothing.
         }
     }
+
+    printf("done\n");
 }
 
 // ------------------------------- Step4Iterate -------------------------------
@@ -232,6 +236,8 @@ static bool Step4_0IterateWinLose(void) {
     bool updated = true;
     bool failed = false;
 
+    printf("Value iteration: begin iterations for W/L positions");
+    fflush(stdout);
     for (int i = 1; updated || i <= largest_win_lose_remoteness + 1; ++i) {
         updated = false;
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(128)
@@ -244,8 +250,11 @@ static bool Step4_0IterateWinLose(void) {
         }
 
         if (failed) return false;
+        printf(".");
+        fflush(stdout);
     }
 
+    printf("done\n");
     return true;
 }
 
@@ -287,6 +296,8 @@ static bool Step4_1IterateTie(void) {
     bool updated = false;
     bool failed = false;
 
+    printf("Value iteration: begin iterations for T positions");
+    fflush(stdout);
     for (int i = 1; updated || i <= largest_tie_remoteness + 1; ++i) {
         updated = false;
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
@@ -299,8 +310,11 @@ static bool Step4_1IterateTie(void) {
         }
 
         if (failed) return false;
+        printf(".");
+        fflush(stdout);
     }
 
+    printf("done\n");
     return true;
 }
 
@@ -322,6 +336,8 @@ static bool Step4Iterate(void) {
 // -------------------------- Step5MarkDrawPositions --------------------------
 
 static void Step5MarkDrawPositions(void) {
+    printf("Value iteration: begin marking D positions... ");
+    fflush(stdout);
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         Value val = DbManagerGetValue(pos);
@@ -331,11 +347,14 @@ static void Step5MarkDrawPositions(void) {
             DbManagerSetValue(pos, kUndecided);
         }
     }
+    printf("done\n");
 }
 
 // ------------------------------- Step6FlushDb -------------------------------
 
 static void Step6FlushDb(void) {
+    printf("Value iteration: flusing DB... ");
+    fflush(stdout);
     if (DbManagerFlushSolvingTier(NULL) != 0) {
         fprintf(stderr,
                 "Step6FlushDb: an error has occurred while flushing of the "
@@ -349,6 +368,7 @@ static void Step6FlushDb(void) {
                 "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
+    printf("done\n");
 }
 
 // --------------------------------- CompareDb ---------------------------------
