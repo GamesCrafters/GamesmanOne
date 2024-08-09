@@ -40,9 +40,8 @@
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
-#include "games/dshogi/dshogi_constants.h"
 
-// ========================== kDobutsuShogiSolverApi ==========================
+// Global Constants
 
 enum {
     /** @brief Size of the game board. */
@@ -58,7 +57,199 @@ enum {
 
     /** @brief Number of positive signed characters in total. */
     kNumChars = 128,
+
+    /** @brief Length of the formal position string. */
+    kDobutsuShogiFormalPositionStrlen = 22,
+
+    /** @brief Length of the AutoGui position string. */
+    kDobutsuShogiAutoGuiPositionStrlen = 20,
 };
+
+static bool constants_initialized;
+
+/** G -> 0, g -> 0, E -> 1, e -> 1, C -> 2, c -> 2, H -> 2, h -> 2, all others
+ * are mapped to 3. Initialized by InitPieceTypeToIndex */
+static int8_t kPieceTypeToIndex[kNumChars];
+
+/** 0 -> G, 1 -> E, 2 -> C. */
+static const char kIndexToPieceType[3] = {'G', 'E', 'C'};
+
+/** L -> 0, l -> 1, G -> 2, g -> 3, E -> 4, e -> 5, H -> 6, h -> 7, C -> 8,
+ *  c -> 9, - -> 10, all others are mapped to -1. Initialized by
+ *  InitPieceToIndex. */
+static int8_t kPieceToIndex[kNumChars];
+
+/** kMoveMatrix[i][j][k] stores the k-th possible destination of piece of index
+ *  i at the j-th slot of the board. The three dimensions correspond to piece
+ *  index, board slot index, and available move index, respectively. Initialized
+ *  by InitMoveMatrix. */
+static int8_t kMoveMatrix[10][12][8];
+
+/** kMoveMatrixNumMoves[i][j] is the size of kMoveMatrix[i][j].
+ *  The two dimensions correspond to piece index and board slot index.
+ *  Initialized by InitMoveMatrix. */
+static int8_t kMoveMatrixNumMoves[10][12];
+
+/** kPromoteMatrix[i][j] is true if and only if the piece of index i can be
+ *  promoted once it moves to the j-th slot on the board. The two dimensions
+ *  correspond to piece index and board slot index. Initialized by
+ *  InitPromoteMatrix. */
+static bool kPromoteMatrix[10][12];
+
+/** Number of symmetries. For simplicity, side-swapping symmetry is not
+ * implemented. */
+static const int kNumSymmetries = 2;
+
+/** The symmetry matrix. */
+static const int8_t kSymmetryMatrix[2][12] = {
+    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+    {2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9},
+};
+
+/** Move rule for each type of piece. */
+static const bool kPieceMoveRuleMatrix[10][3][3] = {
+    // Forest lion (L)
+    {
+        {1, 1, 1},
+        {1, 0, 1},
+        {1, 1, 1},
+    },
+    // Sky lion (l)
+    {
+        {1, 1, 1},
+        {1, 0, 1},
+        {1, 1, 1},
+    },
+    // Forest giraffe (G)
+    {
+        {0, 1, 0},
+        {1, 0, 1},
+        {0, 1, 0},
+    },
+    // Sky giraffe (g)
+    {
+        {0, 1, 0},
+        {1, 0, 1},
+        {0, 1, 0},
+    },
+    // Forest elephant (E)
+    {
+        {1, 0, 1},
+        {0, 0, 0},
+        {1, 0, 1},
+    },
+    // Sky elephant (e)
+    {
+        {1, 0, 1},
+        {0, 0, 0},
+        {1, 0, 1},
+    },
+    // Forest hen (H)
+    {
+        {1, 1, 1},
+        {1, 0, 1},
+        {0, 1, 0},
+    },
+    // Sky hen (h)
+    {
+        {0, 1, 0},
+        {1, 0, 1},
+        {1, 1, 1},
+    },
+    // Forest chick (C)
+    {
+        {0, 1, 0},
+        {0, 0, 0},
+        {0, 0, 0},
+    },
+    // Sky chick (c)
+    {
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 1, 0},
+    },
+};
+
+static void InitPieceTypeToIndex(void) {
+    for (int i = 0; i < kNumChars; ++i) {
+        kPieceTypeToIndex[i] = 3;
+    }
+    kPieceTypeToIndex[(int)'G'] = kPieceTypeToIndex[(int)'g'] = 0;
+    kPieceTypeToIndex[(int)'E'] = kPieceTypeToIndex[(int)'e'] = 1;
+    kPieceTypeToIndex[(int)'H'] = kPieceTypeToIndex[(int)'h'] = 2;
+    kPieceTypeToIndex[(int)'C'] = kPieceTypeToIndex[(int)'c'] = 2;
+}
+
+static void InitPieceToIndex(void) {
+    for (int i = 0; i < kNumChars; ++i) {
+        kPieceToIndex[i] = -1;
+    }
+
+    kPieceToIndex[(int)'L'] = 0;
+    kPieceToIndex[(int)'l'] = 1;
+    kPieceToIndex[(int)'G'] = 2;
+    kPieceToIndex[(int)'g'] = 3;
+    kPieceToIndex[(int)'E'] = 4;
+    kPieceToIndex[(int)'e'] = 5;
+    kPieceToIndex[(int)'H'] = 6;
+    kPieceToIndex[(int)'h'] = 7;
+    kPieceToIndex[(int)'C'] = 8;
+    kPieceToIndex[(int)'c'] = 9;
+    kPieceToIndex[(int)'-'] = 10;
+}
+
+static bool OnBoard(int i, int j) {
+    if (i < 0) return false;
+    if (j < 0) return false;
+    if (i > 3) return false;
+    if (j > 2) return false;
+
+    return true;
+}
+
+static void InitMoveMatrix(void) {
+    // Assumes kMoveMatrixNumMoves contain all zeros.
+    for (int piece = 0; piece < 10; ++piece) {
+        for (int slot = 0; slot < 12; ++slot) {
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 3; ++j) {
+                    // Skip if this piece cannot move in that direction.
+                    if (!kPieceMoveRuleMatrix[piece][i][j]) continue;
+
+                    // Skip if this the destination is outside of the board.
+                    int i_off = i - 1, j_off = j - 1;
+                    if (!OnBoard(slot / 3 + i_off, slot % 3 + j_off)) continue;
+
+                    int dest = slot + i_off * 3 + j_off;
+                    kMoveMatrix[piece][slot]
+                               [kMoveMatrixNumMoves[piece][slot]++] = dest;
+                }
+            }
+        }
+    }
+}
+
+static void InitPromoteMatrix(void) {
+    // Assumes kPieceToIndex has already been initialized.
+    for (int i = 0; i < 3; ++i) {
+        kPromoteMatrix[kPieceToIndex[(int)'C']][i] = true;
+    }
+    for (int i = 9; i < 12; ++i) {
+        kPromoteMatrix[kPieceToIndex[(int)'c']][i] = true;
+    }
+}
+
+static void DobutsuShogiInitGlobalVariables(void) {
+    if (constants_initialized) return;
+
+    InitPieceTypeToIndex();
+    InitPieceToIndex();
+    InitMoveMatrix();
+    InitPromoteMatrix();
+    constants_initialized = true;
+}
+
+// ========================== kDobutsuShogiSolverApi ==========================
 
 static int64_t DobutsuShogiGetNumPositions(void) {
     return (int64_t)GenericHashNumPositions();
@@ -542,6 +733,183 @@ static const GameplayApi kDobutsuShogiGameplayApi = {
     .regular = &kDobutsuShogiGameplayApiRegular,
 };
 
+// ========================= kDobutsuShogiUwapiRegular =========================
+
+// Formal position format:
+// """
+// [turn]_[board (12x)]_[G count][E count][C count]_[g count][e count][c count]
+// """
+
+// This function is implemented in the code section for DobutsuShogiInit.
+static bool DobutsuShogiIsValidConfig(const int *config);
+
+static bool DobutsuShogiIsLegalFormalPosition(ReadOnlyString formal_position) {
+    // String length must match regular format.
+    if (strlen(formal_position) != kDobutsuShogiFormalPositionStrlen) {
+        return false;
+    }
+
+    // The first char must be either 1 or 2.
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+
+    int config[14] = {0};
+    char board[kBoardStrSize];
+    for (int i = 0; i < kBoardSize; ++i) {
+        board[i] = formal_position[i + 2];
+        // Each board piece char must be valid.
+        if (kPieceToIndex[(int)board[i]] < 0) return false;
+        ++config[kPieceToIndex[(int)board[i]]];
+    }
+    for (int i = kBoardSize; i < kBoardStrSize; ++i) {
+        board[i] = config[i - 1] = formal_position[i + 3] - '0';
+    }
+
+    // The piece configuration must be valid.
+    if (!DobutsuShogiIsValidConfig(config)) return false;
+
+    // Check the number of pieces captured by the sky player.
+    ConvertCapturedToSky(board);
+    for (int i = 0; i < 3; ++i) {
+        if (board[i + kBoardSize] != formal_position[19 + i] - '0') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static Position DobutsuShogiFormalPositionToPosition(
+    ReadOnlyString formal_position) {
+    //
+    char board[kBoardStrSize];
+    memcpy(board, formal_position + 2, kBoardSize);
+    for (int i = kBoardSize; i < kBoardStrSize; ++i) {
+        board[i] = formal_position[i + 3] - '0';
+    }
+
+    return GenericHashHash(board, formal_position[0] - '0');
+}
+
+static CString DobutsuShogiPositionToFormalPosition(Position position) {
+    // Unhash
+    char board[kBoardStrSize];
+    bool success = GenericHashUnhash(position, board);
+    assert(success);
+    (void)success;
+    int turn = GenericHashGetTurn(position);
+    char formal_position[] = "1_------------_000_000";  // Placeholder.
+    formal_position[0] = '0' + turn;
+    memcpy(formal_position + 2, board, kBoardSize);
+    for (int i = kBoardSize; i < kBoardStrSize; ++i) {
+        formal_position[i + 3] = board[i] + '0';
+    }
+    ConvertCapturedToSky(board);
+    for (int i = kBoardSize; i < kBoardStrSize; ++i) {
+        formal_position[i + 7] = board[i] + '0';
+    }
+
+    CString ret;
+    CStringInitCopy(&ret, formal_position);
+
+    return ret;
+}
+
+// AutoGui position format:
+// """
+// [turn]_[board (12x)][-/G/B][-/E/A][-/C/D][-/g/b][-/e/a][-/c/d]
+// """
+
+static const char kAutoGuiCapturedCharMap[6][3] = {
+    {'-', 'G', 'B'}, {'-', 'E', 'A'}, {'-', 'C', 'D'},
+    {'-', 'g', 'b'}, {'-', 'e', 'a'}, {'-', 'c', 'd'},
+};
+
+static CString DobutsuShogiPositionToAutoGuiPosition(Position position) {
+    // Unhash
+    char board[kBoardStrSize];
+    bool success = GenericHashUnhash(position, board);
+    assert(success);
+    (void)success;
+    int turn = GenericHashGetTurn(position);
+    char autogui_position[] = "1_------------GECgec";  // Placeholder.
+    autogui_position[0] = '0' + turn;
+    memcpy(autogui_position + 2, board, kBoardSize);
+    for (int i = 0; i < 3; ++i) {
+        autogui_position[2 + kBoardSize + i] =
+            kAutoGuiCapturedCharMap[i][(int)board[kBoardSize + i]];
+    }
+    ConvertCapturedToSky(board);
+    for (int i = 0; i < 3; ++i) {
+        autogui_position[2 + kBoardSize + 3 + i] =
+            kAutoGuiCapturedCharMap[i + 3][(int)board[kBoardSize + i]];
+    }
+
+    CString ret;
+    CStringInitCopy(&ret, autogui_position);
+
+    return ret;
+}
+
+static const ConstantReadOnlyString kFormalMoveMap[12] = {
+    "A1", "B1", "C1", "A2", "B2", "C2", "A3", "B3", "C3", "A4", "B4", "C4",
+};
+
+static CString DobutsuShogiMoveToFormalMove(Position position, Move move) {
+    int src = 0, dest = 0;
+    ExpandMove(move, &src, &dest);
+    char src_str[kInt32Base10StringLengthMax + 2];
+    if (src < kBoardSize) {
+        sprintf(src_str, "%s",
+                kFormalMoveMap[src]);  // Print in 1-index format.
+    } else {
+        char piece_type = kIndexToPieceType[src - kBoardSize];
+        if (GenericHashGetTurn(position) == 2) piece_type = tolower(piece_type);
+        sprintf(src_str, "%c", piece_type);
+    }
+
+    char buffer[kInt32Base10StringLengthMax + 5];
+    sprintf(buffer, "%s %s", src_str, kFormalMoveMap[dest]);
+    CString ret;
+    CStringInitCopy(&ret, buffer);
+
+    return ret;
+}
+
+static CString DobutsuShogiMoveToAutoGuiMove(Position position, Move move) {
+    (void)position;
+    int src = 0, dest = 0;
+    ExpandMove(move, &src, &dest);
+    CString ret;
+    char autogui_move[6 + 2 * kInt32Base10StringLengthMax];
+    if (src < kBoardSize) {  // M-Type move from src to dest.
+        sprintf(autogui_move, "M_%d_%d_x", src, dest);
+    } else {  // A-Type move adding piece to dest.
+        // This is the center index in the AutoGUI coordinate system.
+        int center = (src - kBoardSize) * kBoardSize + dest + kBoardSize + 6;
+        sprintf(autogui_move, "A_%d_%d_y", src - kBoardSize, center);
+    }
+    CStringInitCopy(&ret, autogui_move);
+
+    return ret;
+}
+
+static const UwapiRegular kDobutsuShogiUwapiRegular = {
+    .GenerateMoves = DobutsuShogiGenerateMoves,
+    .DoMove = DobutsuShogiDoMove,
+    .Primitive = DobutsuShogiPrimitive,
+
+    .IsLegalFormalPosition = DobutsuShogiIsLegalFormalPosition,
+    .FormalPositionToPosition = DobutsuShogiFormalPositionToPosition,
+    .PositionToFormalPosition = DobutsuShogiPositionToFormalPosition,
+    .PositionToAutoGuiPosition = DobutsuShogiPositionToAutoGuiPosition,
+    .MoveToFormalMove = DobutsuShogiMoveToFormalMove,
+    .MoveToAutoGuiMove = DobutsuShogiMoveToAutoGuiMove,
+    .GetInitialPosition = DobutsuShogiGetInitialPosition,
+    .GetRandomLegalPosition = NULL,  // Not available for this game.
+};
+
+static const Uwapi kQuixoUwapi = {.regular = &kDobutsuShogiUwapiRegular};
+
 // ============================= DobutsuShogiInit =============================
 
 static bool DobutsuShogiIsValidConfig(const int *config) {
@@ -603,7 +971,7 @@ const Game kDobutsuShogi = {
     .solver = &kRegularSolver,
     .solver_api = &kDobutsuShogiSolverApi,
     .gameplay_api = &kDobutsuShogiGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kQuixoUwapi,
 
     .Init = DobutsuShogiInit,
     .Finalize = DobutsuShogiFinalize,
