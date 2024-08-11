@@ -908,7 +908,7 @@ static const UwapiRegular kDobutsuShogiUwapiRegular = {
     .GetRandomLegalPosition = NULL,  // Not available for this game.
 };
 
-static const Uwapi kQuixoUwapi = {.regular = &kDobutsuShogiUwapiRegular};
+static const Uwapi kDobutsuShogiUwapi = {.regular = &kDobutsuShogiUwapiRegular};
 
 // ============================= DobutsuShogiInit =============================
 
@@ -971,7 +971,7 @@ const Game kDobutsuShogi = {
     .solver = &kRegularSolver,
     .solver_api = &kDobutsuShogiSolverApi,
     .gameplay_api = &kDobutsuShogiGameplayApi,
-    .uwapi = &kQuixoUwapi,
+    .uwapi = &kDobutsuShogiUwapi,
 
     .Init = DobutsuShogiInit,
     .Finalize = DobutsuShogiFinalize,
