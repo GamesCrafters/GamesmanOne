@@ -34,6 +34,7 @@
 #include <stdlib.h>   // atoi
 #include <string.h>   // strlen
 
+#include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -71,12 +72,12 @@ static const int kPatterns[kNumStdPatterns][4] = {
     {0, 1, 5, 6},     {1, 2, 6, 7},     {2, 3, 7, 8},     {3, 4, 8, 9},
     {5, 6, 10, 11},   {6, 7, 11, 12},   {7, 8, 12, 13},   {8, 9, 13, 14},
     {10, 11, 15, 16}, {11, 12, 16, 17}, {12, 13, 17, 18}, {13, 14, 18, 19},
-    {15, 16, 20, 21}, {16, 17, 20, 21}, {17, 18, 22, 23}, {18, 19, 23, 24},
+    {15, 16, 20, 21}, {16, 17, 21, 22}, {17, 18, 22, 23}, {18, 19, 23, 24},
 };
 
 /**
  * @brief 14 additional winning patterns in the advanced game variant. Grouped
- * in 3x3 squares, 4x4 squares, and one 5x5 square.
+ * in 3x3, 4x4, and 5x5 squares.
  */
 static const int kExtPatterns[kNumExtPatterns][4] = {
     {0, 2, 10, 12},   {1, 3, 11, 13}, {2, 4, 12, 14},   {5, 7, 15, 17},
@@ -349,7 +350,7 @@ static const TierSolverApi kTeekoSolverApi = {
 
 // ============================= kTeekoGameplayApi =============================
 
-// Simple automatic board formatting from Quixo.
+// Simple automatic board string formatting from Teeko.
 static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     char board[kBoardSize];
@@ -554,6 +555,109 @@ static int TeekoInit(void *aux) {
 
 static int TeekoFinalize(void) { return kNoError; }
 
+// ================================ kTeekoUwapi ================================
+
+static bool TeekoIsLegalFormalPosition(ReadOnlyString formal_position) {
+    // Format: "[turn]_[board]"
+    if (strlen(formal_position) != 27) return false;
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+
+    int num_x = 0, num_o = 0, num_blanks = 0;
+    for (int i = 0; i < kBoardSize; ++i) {
+        num_x += formal_position[i + 2] == 'X';
+        num_o += formal_position[i + 2] == 'O';
+        num_blanks += formal_position[i + 2] == '-';
+    }
+    if (num_x + num_o + num_blanks != 25) return false;
+    if (num_x != num_o && num_x != num_o + 1) return false;
+    if (num_x + num_o > 8) return false;
+
+    return true;
+}
+
+static TierPosition TeekoFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    // Format: "[turn]_[board]"
+    int turn = formal_position[0] - '0';
+    // Count the number of pieces on board
+    int num_pieces = 0;
+    for (int i = 0; i < kBoardSize; ++i) {
+        num_pieces += formal_position[i + 2] != '-';
+    }
+    TierPosition ret;
+    ret.tier = num_pieces;
+    ret.position = GenericHashHashLabel(num_pieces, formal_position + 2, turn);
+
+    return ret;
+}
+
+static CString TeekoTierPositionToFormalPosition(TierPosition tier_position) {
+    char formal_position[] = "1_-------------------------";  // placeholder
+    int turn =
+        GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    formal_position[0] = turn + '0';
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position,
+                           formal_position + 2);
+    CString ret;
+    CStringInitCopy(&ret, formal_position);
+
+    return ret;
+}
+
+static CString TeekoTierPositionToAutoGuiPosition(TierPosition tier_position) {
+    return TeekoTierPositionToFormalPosition(tier_position);
+}
+
+static CString TeekoMoveToFormalMove(TierPosition tier_position, Move move) {
+    CString ret;
+    char formal_move[kInt32Base10StringLengthMax * 2 + 2];
+    if (tier_position.tier < 8) {  // Dropping
+        sprintf(formal_move, "%d", (int)move);
+    } else {  // Moving
+        int src, dest;
+        ExpandMove(move, &src, &dest);
+        sprintf(formal_move, "%d %d", src, dest);
+    }
+    CStringInitCopy(&ret, formal_move);
+
+    return ret;
+}
+
+static CString TeekoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    CString ret;
+    char autogui_move[kInt32Base10StringLengthMax * 2 + 6];
+    if (tier_position.tier < 8) {  // Dropping, A-type move
+        sprintf(autogui_move, "A_-_%d_y", (int)move);
+    } else {  // Moving, M-type move
+        int src, dest;
+        ExpandMove(move, &src, &dest);
+        sprintf(autogui_move, "M_%d_%d_x", src, dest);
+    }
+    CStringInitCopy(&ret, autogui_move);
+
+    return ret;
+}
+
+static const UwapiTier kTeekoUwapiTier = {
+    .GetInitialTier = TeekoGetInitialTier,
+    .GetInitialPosition = TeekoGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+
+    .GenerateMoves = TeekoGenerateMoves,
+    .DoMove = TeekoDoMove,
+    .Primitive = TeekoPrimitive,
+
+    .IsLegalFormalPosition = TeekoIsLegalFormalPosition,
+    .FormalPositionToTierPosition = TeekoFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = TeekoTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = TeekoTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = TeekoMoveToFormalMove,
+    .MoveToAutoGuiMove = TeekoMoveToAutoGuiMove,
+};
+
+static const Uwapi kTeekoUwapi = {.tier = &kTeekoUwapiTier};
+
 // ================================== kTeeko ==================================
 
 const Game kTeeko = {
@@ -562,7 +666,7 @@ const Game kTeeko = {
     .solver = &kTierSolver,
     .solver_api = &kTeekoSolverApi,
     .gameplay_api = &kTeekoGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kTeekoUwapi,
 
     .Init = TeekoInit,
     .Finalize = TeekoFinalize,
