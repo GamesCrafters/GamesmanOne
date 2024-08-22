@@ -37,7 +37,6 @@
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>        // OpenMP pragmas
-#include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))

@@ -47,8 +47,8 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>        // OpenMP pragmas
-#include <stdatomic.h>  // atomic_uchar, atomic functions, memory_order_relaxed
+#include <omp.h>  // OpenMP pragmas
+#include <stdatomic.h>  // AtomicChildPosCounterType, atomic functions, memory_order_relaxed
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
@@ -93,10 +93,12 @@ static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 // integer to save memory. If this assumption no longer holds for any new
 // games in the future, the programmer should change this type to a wider
 // integer type such as int16_t.
+typedef unsigned char ChildPosCounterType;
 #ifdef _OPENMP
-static atomic_uchar *num_undecided_children = NULL;
+typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
+static AtomicChildPosCounterType *num_undecided_children = NULL;
 #else   // _OPENMP not defined
-static unsigned char *num_undecided_children = NULL;
+static ChildPosCounterType *num_undecided_children = NULL;
 #endif  // _OPENMP
 
 // Cached reverse position graph of the current tier. This is only initialized
@@ -315,12 +317,18 @@ static bool Step2SetupSolverArrays(void) {
     if (error != 0) return false;
 
 #ifdef _OPENMP
-    num_undecided_children =
-        (atomic_uchar *)calloc(this_tier_size, sizeof(atomic_uchar));
+    num_undecided_children = (AtomicChildPosCounterType *)malloc(
+        this_tier_size * sizeof(AtomicChildPosCounterType));
+    if (num_undecided_children == NULL) return false;
+
+    for (int64_t i = 0; i < this_tier_size; ++i) {
+        atomic_init(&num_undecided_children[i], 0);
+    }
 #else   // _OPENMP not defined
-    num_undecided_children =
-        (unsigned char *)calloc(this_tier_size, sizeof(unsigned char));
+    num_undecided_children = (ChildPosCounterType *)calloc(
+        this_tier_size, sizeof(ChildPosCounterType));
 #endif  // _OPENMP
+
     return (num_undecided_children != NULL);
 }
 
@@ -331,7 +339,7 @@ static bool IsCanonicalPosition(Position position) {
     return current_api.GetCanonicalPosition(tier_position) == position;
 }
 
-static int Step3_0CountChildren(Position position) {
+static ChildPosCounterType Step3_0CountChildren(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
     if (!use_reverse_graph) {
         return current_api.GetNumberOfCanonicalChildPositions(tier_position);
@@ -346,9 +354,19 @@ static int Step3_0CountChildren(Position position) {
             return -1;
         }
     }
-    int num_children = (int)children.size;
+    ChildPosCounterType num_children = (ChildPosCounterType)children.size;
     TierPositionArrayDestroy(&children);
+
     return num_children;
+}
+
+static void SetNumUndecidedChildren(Position pos, ChildPosCounterType value) {
+#ifdef _OPENMP
+    atomic_store_explicit(&num_undecided_children[pos], value,
+                          memory_order_relaxed);
+#else   // _OPENMP not defined
+    num_undecided_children[pos] = value;
+#endif  // _OPENMP
 }
 
 /**
@@ -368,7 +386,7 @@ static bool Step3ScanTier(void) {
             // Skip illegal positions and non-canonical positions.
             if (!current_api.IsLegalPosition(tier_position) ||
                 !IsCanonicalPosition(position)) {
-                num_undecided_children[position] = 0;
+                SetNumUndecidedChildren(position, 0);
                 continue;
             }
 
@@ -382,13 +400,13 @@ static bool Step3ScanTier(void) {
                                           tid)) {
                     success = false;
                 }
-                num_undecided_children[position] = 0;
+                SetNumUndecidedChildren(position, 0);
                 continue;
             }  // Execute the following lines if tier_position is not primitive.
-            int num_children = Step3_0CountChildren(position);
+            ChildPosCounterType num_children = Step3_0CountChildren(position);
             if (num_children <= 0)
                 success = false;  // Either OOM or no children.
-            num_undecided_children[position] = num_children;
+            SetNumUndecidedChildren(position, num_children);
         }
     }
 
@@ -508,10 +526,10 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
 #ifdef _OPENMP
         // Atomically fetch num_undecided_children[parents.array[i]] into
         // child_remaining and set it to zero.
-        unsigned char child_remaining = atomic_exchange_explicit(
+        ChildPosCounterType child_remaining = atomic_exchange_explicit(
             &num_undecided_children[parents.array[i]], 0, memory_order_relaxed);
 #else                                        // _OPENMP not defined
-        unsigned char child_remaining =
+        ChildPosCounterType child_remaining =
             num_undecided_children[parents.array[i]];
         num_undecided_children[parents.array[i]] = 0;
 #endif                                       // _OPENMP
@@ -546,11 +564,11 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
  *
  * @note This is a helper function that is only used by ProcessWinPosition.
  *
- * @param obj Atomic unsigned char object to be decremented.
+ * @param obj Atomic ChildPosCounterType object to be decremented.
  * @return Original value of OBJ.
  */
-static unsigned char DecrementIfNonZero(atomic_uchar *obj) {
-    unsigned char current_value =
+static ChildPosCounterType DecrementIfNonZero(AtomicChildPosCounterType *obj) {
+    ChildPosCounterType current_value =
         atomic_load_explicit(obj, memory_order_relaxed);
     while (current_value != 0) {
         // This function will set OBJ to current_value - 1 if OBJ is still equal
@@ -582,13 +600,13 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     int tid = GetThreadId();
     for (int64_t i = 0; i < parents.size; ++i) {
 #ifdef _OPENMP
-        unsigned char child_remaining =
+        ChildPosCounterType child_remaining =
             DecrementIfNonZero(&num_undecided_children[parents.array[i]]);
 #else   // _OPENMP not defined
         // If this parent has been solved already, skip it.
         if (num_undecided_children[parents.array[i]] == 0) continue;
         // Must perform the above check before decrementing to prevent overflow.
-        unsigned char child_remaining =
+        ChildPosCounterType child_remaining =
             num_undecided_children[parents.array[i]]--;
 #endif  // _OPENMP
         // If this child position is the last undecided child of parent
@@ -650,15 +668,23 @@ static bool Step4PushFrontierUp(void) {
 
 // -------------------------- Step5MarkDrawPositions --------------------------
 
+static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
+#ifdef _OPENMP
+    return atomic_load_explicit(&num_undecided_children[pos],
+                                memory_order_relaxed);
+#else   // _OPENMP not defined
+    return num_undecided_children[pos];
+#endif  // _OPENMP
+}
+
 static void Step5MarkDrawPositions(void) {
     PRAGMA_OMP_PARALLEL_FOR
     for (Position position = 0; position < this_tier_size; ++position) {
-        if (num_undecided_children[position] > 0) {
+        if (GetNumUndecidedChildren(position) > 0) {
             // A position is drawing if it still has undecided children.
             DbManagerSetValue(position, kDraw);
             continue;
         }
-        assert(num_undecided_children[position] == 0);
     }
     free(num_undecided_children);
     num_undecided_children = NULL;
