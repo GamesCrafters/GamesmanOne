@@ -182,6 +182,35 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
 int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                   int remoteness, bool is_canonical);
 
+/**
+ * @brief Merges all counters and examples except for those that are related to
+ * moves of \p part into \p dest:
+ *
+ * @details This function is for reducing multiple thread-local analyses in a
+ * multithreading context. The expected usage is to initialize an exclusive
+ * \c Analysis structs for each thread and merge the results at the end of the
+ * counting phase of an analysis. The counters of \p dest are simply incremented
+ * by the amount of the corresponding fields of \p part, and the examples are
+ * only replaced if \p dest does not have those examples available yet.
+ *
+ * The counters and examples merged include the following fields of the
+ * \c Analysis struct:
+ *
+ * win_count, lose_count, tie_count, draw_count, canonical_win_count,
+ * canonical_lose_count, canonical_tie_count, canonical_draw_count, win_summary,
+ * lose_summary, tie_summary, win_examples, lose_examples, tie_examples,
+ * draw_example, canonical_win_summary, canonical_lose_summary,
+ * canonical_tie_summary, canonical_win_examples, canonical_lose_examples,
+ * canonical_tie_examples, canonical_draw_example, longest_win_position,
+ * longest_lose_position, longest_tie_position, largest_win_remoteness,
+ * largest_lose_remoteness, largest_tie_remoteness.
+ *
+ * @param dest Destination \c Analysis.
+ * @param part A partial \c Analysis whose counters and examples should be
+ * merged into \p dest.
+ */
+void AnalysisMergeCounts(Analysis *dest, const Analysis *part);
+
 // Aggregating (analysis of each tier into the analysis of the entire game)
 
 /**

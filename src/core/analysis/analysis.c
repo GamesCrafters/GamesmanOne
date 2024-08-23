@@ -153,10 +153,90 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
             break;
 
         default:
-            fprintf(stderr, "AnalysisCount: unknown value %d\n", value);
+            fprintf(stderr,
+                    "AnalysisCount: unknown value %d encountered at position "
+                    "%" PRIPos " in tier %" PRITier
+                    "; the position is believed to be %s\n",
+                    value, tier_position.position, tier_position.tier,
+                    is_canonical ? "canonical" : "non-canonical");
             return kIllegalGamePositionValueError;
     }
     return kNoError;
+}
+
+static void MergeWinCounts(Analysis *dest, const Analysis *part) {
+    dest->win_count += part->win_count;
+    dest->canonical_win_count += part->canonical_win_count;
+    for (int i = 0; i <= kRemotenessMax; ++i) {
+        dest->win_summary[i] += part->win_summary[i];
+        dest->canonical_win_summary[i] += part->canonical_win_summary[i];
+        if (dest->win_examples[i].tier == kIllegalTier) {
+            dest->win_examples[i] = part->win_examples[i];
+        }
+        if (dest->canonical_win_examples[i].tier == kIllegalTier) {
+            dest->canonical_win_examples[i] = part->canonical_win_examples[i];
+        }
+    }
+    if (dest->largest_win_remoteness < part->largest_win_remoteness) {
+        dest->largest_win_remoteness = part->largest_win_remoteness;
+        dest->longest_win_position = part->longest_win_position;
+    }
+}
+
+static void MergeLoseCounts(Analysis *dest, const Analysis *part) {
+    dest->lose_count += part->lose_count;
+    dest->canonical_lose_count += part->canonical_lose_count;
+    for (int i = 0; i <= kRemotenessMax; ++i) {
+        dest->lose_summary[i] += part->lose_summary[i];
+        dest->canonical_lose_summary[i] += part->canonical_lose_summary[i];
+        if (dest->lose_examples[i].tier == kIllegalTier) {
+            dest->lose_examples[i] = part->lose_examples[i];
+        }
+        if (dest->canonical_lose_examples[i].tier == kIllegalTier) {
+            dest->canonical_lose_examples[i] = part->canonical_lose_examples[i];
+        }
+    }
+    if (dest->largest_lose_remoteness < part->largest_lose_remoteness) {
+        dest->largest_lose_remoteness = part->largest_lose_remoteness;
+        dest->longest_lose_position = part->longest_lose_position;
+    }
+}
+
+static void MergeTieCounts(Analysis *dest, const Analysis *part) {
+    dest->tie_count += part->tie_count;
+    dest->canonical_tie_count += part->canonical_tie_count;
+    for (int i = 0; i <= kRemotenessMax; ++i) {
+        dest->tie_summary[i] += part->tie_summary[i];
+        dest->canonical_tie_summary[i] += part->canonical_tie_summary[i];
+        if (dest->tie_examples[i].tier == kIllegalTier) {
+            dest->tie_examples[i] = part->tie_examples[i];
+        }
+        if (dest->canonical_tie_examples[i].tier == kIllegalTier) {
+            dest->canonical_tie_examples[i] = part->canonical_tie_examples[i];
+        }
+    }
+    if (dest->largest_tie_remoteness < part->largest_tie_remoteness) {
+        dest->largest_tie_remoteness = part->largest_tie_remoteness;
+        dest->longest_tie_position = part->longest_tie_position;
+    }
+}
+
+static void MergeDrawCounts(Analysis *dest, const Analysis *part) {
+    dest->draw_count += part->draw_count;
+    dest->canonical_draw_count += part->canonical_draw_count;
+    if (dest->draw_example.tier == kIllegalTier) {
+        dest->draw_example = part->draw_example;
+    }
+    if (dest->canonical_draw_example.tier == kIllegalTier) {
+        dest->canonical_draw_example = part->canonical_draw_example;
+    }
+}
+
+void AnalysisMergeCounts(Analysis *dest, const Analysis *part) {
+    MergeWinCounts(dest, part);
+    MergeLoseCounts(dest, part);
+    MergeTieCounts(dest, part);
+    MergeDrawCounts(dest, part);
 }
 
 // Aggregating
@@ -191,7 +271,7 @@ void AnalysisAggregate(Analysis *dest, const Analysis *src) {
     dest->canonical_draw_count += src->canonical_draw_count;
     dest->canonical_move_count += src->canonical_move_count;
 
-    for (int remoteness = 0; remoteness < kRemotenessMax; ++remoteness) {
+    for (int remoteness = 0; remoteness <= kRemotenessMax; ++remoteness) {
         AggregatePositions(dest, src, remoteness);
         AggregateCanonicalPositions(dest, src, remoteness);
     }
