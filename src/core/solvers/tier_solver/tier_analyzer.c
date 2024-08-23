@@ -258,17 +258,15 @@ static BitStream LoadDiscoveryMap(Tier tier) {
 
 static bool Step2LoadFringe(void) {
     bool success = true;
-
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
-
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < this_tier_size; ++position) {
             if (!success) continue;
             if (BitStreamGet(&this_tier_map, position)) {
-                bool append_success;
-                append_success = PositionArrayAppend(&fringe[tid], position);
-                if (!append_success) success = false;
+                if (!PositionArrayAppend(&fringe[tid], position)) {
+                    success = false;
+                }
             }
         }
     }
@@ -278,7 +276,6 @@ static bool Step2LoadFringe(void) {
 
 static bool Step3Discover(Analysis *dest) {
     bool success = true;
-
     while (GetFringeSize() > 0) {
         success = DiscoverHelper(dest);
         if (!success) break;
@@ -319,22 +316,20 @@ static bool DiscoverHelper(Analysis *dest) {
 
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
-            if (!success) continue;
-
+            if (!success) continue;  // Fail fast.
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
             TierPosition parent;
             parent.tier = this_tier;
             parent.position = fringe[fringe_id].array[index_in_fringe];
-
-            if (IsPrimitive(parent)) continue;  // Skip primitive positions.
+            // Do not generate children of primitive positions.
+            if (IsPrimitive(parent)) continue;
 
             TierPositionArray children = GetChildPositions(parent, dest);
             if (children.size < 0) {
                 success = false;
                 continue;
             }
-
             for (int64_t j = 0; j < children.size; ++j) {
                 TierPosition child = children.array[j];
                 if (child.tier == this_tier) {
@@ -367,6 +362,7 @@ static bool DiscoverHelperProcessThisTier(Position child, int tid) {
     if (!child_is_discovered) {
         error = !PositionArrayAppend(&discovered[tid], child);
     }
+
     return error == 0;
 }
 
@@ -409,7 +405,8 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     TierPositionHashSet deduplication_set;
     TierPositionHashSetInit(&deduplication_set, 0.5);
     for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = api_internal->DoMove(tier_position, moves.array[i]);
+        TierPosition child =
+            api_internal->DoMove(tier_position, moves.array[i]);
         TierPositionArrayAppend(&ret, child);
         child.position = api_internal->GetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
@@ -467,24 +464,38 @@ static bool Step5Analyze(Analysis *dest) {
     int error = DbManagerLoadTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
-    for (int64_t i = 0; i < this_tier_size; ++i) {
-        // Skip if the current position is not reachable.
-        if (!BitStreamGet(&this_tier_map, i)) continue;
-
-        TierPosition tier_position = {.tier = this_tier, .position = i};
-        Position canonical = api_internal->GetCanonicalPosition(tier_position);
-
-        // Must probe canonical positions. Original might not be solved.
-        Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
-        int remoteness = DbManagerGetRemotenessFromLoaded(this_tier, canonical);
-        bool is_canonical = (tier_position.position == canonical);
-        PRAGMA_OMP_CRITICAL(tier_analyzer_step_5_dest) {
-            error = AnalysisCount(dest, tier_position, value, remoteness,
-                                  is_canonical);
-        }
-        if (error != 0) success = false;
+    Analysis *parts = (Analysis *)malloc(num_threads * sizeof(Analysis));
+    if (parts == NULL) return false;
+    for (int i = 0; i < num_threads; ++i) {
+        AnalysisInit(&parts[i]);
     }
+
+    // PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    PRAGMA_OMP_PARALLEL {
+        int tid = GetThreadId();
+        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        for (int64_t i = 0; i < this_tier_size; ++i) {
+            // Skip if the current position is not reachable.
+            if (!BitStreamGet(&this_tier_map, i)) continue;
+
+            TierPosition tier_position = {.tier = this_tier, .position = i};
+            Position canonical =
+                api_internal->GetCanonicalPosition(tier_position);
+
+            // Must probe canonical positions. Original might not be solved.
+            Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
+            int remoteness =
+                DbManagerGetRemotenessFromLoaded(this_tier, canonical);
+            bool is_canonical = (tier_position.position == canonical);
+            error = AnalysisCount(&parts[tid], tier_position, value, remoteness,
+                                  is_canonical);
+            if (error != 0) success = false;
+        }
+    }
+    for (int i = 0; i < num_threads; ++i) {
+        AnalysisMergeCounts(dest, &parts[i]);
+    }
+    free(parts);
 
     error = DbManagerUnloadTier(this_tier);
     if (error != kNoError) success = false;

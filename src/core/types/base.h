@@ -43,7 +43,7 @@ typedef int64_t Position;
 /** @brief Game move as a 64-bit integer. */
 typedef int64_t Move;
 
-#define PRIMove PRId64;  // Print format macro for the Move type.
+#define PRIMove PRId64  // Print format macro for the Move type.
 
 /**
  * @brief Tier and Position. In Tier games, a position is uniquely identified by

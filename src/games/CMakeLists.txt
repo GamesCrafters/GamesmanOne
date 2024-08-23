@@ -5,6 +5,7 @@ add_subdirectory(mallqueenschess)
 add_subdirectory(mttt)
 add_subdirectory(mtttier)
 add_subdirectory(quixo)
+add_subdirectory(teeko)
 
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/game_list.h)
