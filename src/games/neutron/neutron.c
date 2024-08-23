@@ -268,7 +268,9 @@ static Value NeutronPrimitive(Position position) {
 
     // Check if the current player is in a stalemate.
     MoveArray moves = NeutronGenerateMoves(position);
-    if (moves.size == 0) return kLose;
+    bool no_moves = (moves.size == 0);
+    MoveArrayDestroy(&moves);
+    if (no_moves) return kLose;
 
     return kUndecided;
 }
@@ -306,7 +308,7 @@ static Position NeutronGetCanonicalPosition(Position position) {
 
     // Unhash
     char board[kBoardSize], sym_board[kBoardSize];
-    // This call to GenericHashUnhash is safe because we already checked for the
+    // This call to GenericHashUnhash is safe because we already dealt with the
     // initial position.
     bool success = GenericHashUnhash(position, board);
     assert(success);
