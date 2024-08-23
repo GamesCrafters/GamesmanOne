@@ -132,12 +132,12 @@ static bool Step2SetupSolvingTier(void) {
     return true;
 }
 
+// ------------------------------- Step3ScanTier -------------------------------
+
 static bool IsCanonicalPosition(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
     return api_internal->GetCanonicalPosition(tier_position) == position;
 }
-
-// ------------------------------- Step3ScanTier -------------------------------
 
 static void Step3ScanTier(void) {
     printf("Value iteration: scanning tier... ");
