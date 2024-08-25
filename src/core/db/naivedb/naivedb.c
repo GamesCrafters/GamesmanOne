@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.0
- * @date 2024-07-10
+ * @version 1.2.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -143,7 +143,7 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
 
     int count = sprintf(full_path, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(full_path + count, tier);
+        GetTierName(tier, full_path + count);
     } else {
         sprintf(full_path + count, "%" PRITier, tier);
     }

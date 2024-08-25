@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
- * @version 1.0.5
- * @date 2024-03-18
+ * @version 1.0.6
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -64,7 +64,8 @@ static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
 
-static int MtttierGetTierName(char *dest, Tier tier);
+static int MtttierGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
@@ -346,8 +347,9 @@ static TierArray MtttierGetChildTiers(Tier tier) {
     return children;
 }
 
-static int MtttierGetTierName(char *dest, Tier tier) {
-    return sprintf(dest, "%" PRITier "p", tier);
+static int MtttierGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]) {
+    return sprintf(name, "%" PRITier "p", tier);
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {

@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The loopy tier solver.
- * @version 1.5.0
- * @date 2024-07-11
+ * @version 1.5.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -282,12 +282,12 @@ typedef struct TierSolverApi {
      * @note This function is OPTIONAL. If set to NULL, the tier database files
      * will use the TIER value as their file names.
      *
-     * @param name Tier name output buffer.
      * @param tier Get name of this tier.
+     * @param name Tier name output buffer.
      * @return 0 on success, or
      * @return non-zero error code on failure.
      */
-    int (*GetTierName)(char *name, Tier tier);
+    int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax]);
 } TierSolverApi;
 
 /** @brief All detectable error types by the tier solver test function. */

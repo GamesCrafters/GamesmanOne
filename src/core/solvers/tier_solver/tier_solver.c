@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the loopy tier solver.
- * @version 1.5.0
- * @date 2024-07-11
+ * @version 1.5.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -166,7 +166,8 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
-static int DefaultGetTierName(char *name, Tier tier);
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]);
 
 // -----------------------------------------------------------------------------
 
@@ -600,7 +601,8 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     return children;
 }
 
-static int DefaultGetTierName(char *name, Tier tier) {
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]) {
     sprintf(name, "%" PRITier, tier);
 
     return kNoError;

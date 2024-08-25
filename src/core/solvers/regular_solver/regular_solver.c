@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.4.0
- * @date 2024-07-11
+ * @version 1.4.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -165,7 +165,8 @@ static int DefaultGetNumberOfCanonicalChildPositions(
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
 
-static int DefaultGetTierName(char *dest, Tier tier);
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]);
 
 // -----------------------------------------------------------------------------
 
@@ -554,9 +555,10 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     return children;
 }
 
-static int DefaultGetTierName(char *dest, Tier tier) {
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax]) {
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    return sprintf(dest, "%s_%d", current_game_name, current_variant_id);
+    return sprintf(name, "%s_%d", current_game_name, current_variant_id);
 }

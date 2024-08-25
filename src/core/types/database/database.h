@@ -7,8 +7,8 @@
  * @details A Database is an abstract type of a database. To implement a new
  * Database, fully implement all member functions and set function pointers.
  * All member functions are required unless otherwise noted.
- * @version 1.1.0
- * @date 2024-02-15
+ * @version 1.1.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -59,7 +59,8 @@ enum DatabaseGameStatus {
     kDbGameStatusCheckError, /**< Error encountered. */
 };
 
-typedef int (*GetTierNameFunc)(char *dest, Tier tier);
+typedef int (*GetTierNameFunc)(Tier tier,
+                               char name[static kDbFileNameLengthMax]);
 
 /**
  * @brief Generic Tier Database type.

@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.3.0
- * @date 2024-07-11
+ * @version 1.3.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -535,7 +535,7 @@ static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
 
 static void PrintDispatchMessage(Tier tier, int worker_rank) {
     char tier_name[kDbFileNameLengthMax + 1];
-    current_api.GetTierName(tier_name, tier);
+    current_api.GetTierName(tier, tier_name);
     printf("Dispatching tier [%s] (#%" PRITier ") to worker %d.\n", tier_name,
            tier, worker_rank);
     fflush(stdout);
@@ -585,7 +585,7 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
     }
     if (verbose > 0) {
         char tier_name[kDbFileNameLengthMax + 1];
-        current_api.GetTierName(tier_name, tier);
+        current_api.GetTierName(tier, tier_name);
         printf("Finished %s tier [%s] ", operation, tier_name);
         printf("(#%" PRITier ") of size %" PRId64 ", ", tier, tier_size);
 
@@ -718,7 +718,7 @@ static int DiscoverTierGraph(bool force, int verbose) {
 
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
     char tier_name[kDbFileNameLengthMax + 1];
-    current_api.GetTierName(tier_name, tier);
+    current_api.GetTierName(tier, tier_name);
     if (verbose > 0) {
         printf("\n--- Tier [%s] (#%" PRITier ") analyzed ---\n", tier_name,
                tier);
@@ -778,7 +778,7 @@ static int TestTierGraph(long seed) {
         Tier tier = TierQueuePop(&pending_tiers);
         if (IsCanonicalTier(tier)) {  // Only test canonical tiers.
             time_t begin = time(NULL);
-            int error = current_api.GetTierName(tier_name, tier);
+            int error = current_api.GetTierName(tier, tier_name);
             if (error != kNoError) {
                 printf("Failed to get name of tier %" PRITier "\n", tier);
                 return kTierSolverTestGetTierNameError;
