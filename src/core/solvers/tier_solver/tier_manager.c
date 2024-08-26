@@ -401,6 +401,7 @@ static int SolveTierGraph(bool force, int verbose) {
                " canonical) of total size %" PRId64 " (positions)\n",
                total_tiers, total_canonical_tiers, total_size);
     }
+    GamesmanExit();
 
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);

@@ -1,11 +1,13 @@
 /**
- * @file game_list.c
+ * @file gates.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Definition for the list of all games.
+ * @brief Gates by Miller Hollinger.
+ * @details
+ * https://docs.google.com/document/d/1bO9u9SVl0fTIkzRTdT3Fae1z0N2VqYL9nt97a8M5l0U
  * @version 1.0.0
- * @date 2024-01-24
+ * @date 2024-08-24
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,27 +26,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_list.h"
-
-#include <stddef.h>  // NULL
+#ifndef GAMESMANONE_GAMES_GATES_GATES_H_
+#define GAMESMANONE_GAMES_GATES_GATES_H_
 
 #include "core/types/gamesman_types.h"
 
-// 1. To add a new game, include the game header here.
+extern const Game kGates;
 
-#include "games/dshogi/dshogi.h"
-#include "games/fsvp/fsvp.h"
-#include "games/gates/gates.h"
-#include "games/mallqueenschess/mallqueenschess.h"
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-#include "games/quixo/quixo.h"
-#include "games/teeko/teeko.h"
-
-// 2. Then add the new game object to the list. Note that the list must be
-// NULL-terminated.
-
-const Game *const kAllGames[] = {
-    &kGates,   &kTeeko, &kDobutsuShogi,    &kQuixo, &kFsvp,
-    &kMtttier, &kMttt,  &kMallqueenschess, NULL,
-};
+#endif  // GAMESMANONE_GAMES_GATES_GATES_H_
