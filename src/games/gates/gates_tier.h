@@ -6,30 +6,35 @@
 
 #include "core/types/gamesman_types.h"
 
+enum {
+    kBoardSize = 18,
+};
+
 typedef uint8_t GatesTierField;
 
 enum GatesPhase {
     kPlacement,
     kMovement,
-    kGateMoving,
+    kGate1Moving,
+    kGate2Moving,
 };
 
+enum GatesPieces { G, g, A, a, Z, z, kNumPieceTypes };
+
 typedef struct {
-    GatesTierField phase;  // [0, 2]
-    GatesTierField n_G;    // [0, 2]
-    GatesTierField n_g;    // [0, 2]
-    GatesTierField n_A;    // [0, 2]
-    GatesTierField n_a;    // [0, 2]
-    GatesTierField n_Z;    // [0, 2]
-    GatesTierField n_z;    // [0, 2]
-    GatesTierField G1;     // [0, 17]
-    GatesTierField G2;     // [G1 + 1, 17]
+    GatesTierField n[kNumPieceTypes];  // [0, 2] each
+    GatesTierField phase;              // [0, 3]
+    GatesTierField G1;                 // [0, 17]
+    GatesTierField G2;                 // [G1 + 1, 17]
 } GatesTier;
 
 Tier GatesTierHash(const GatesTier *t);
 void GatesTierUnhash(Tier hash, GatesTier *dest);
 
+GatesTierField GatesTierGetNumPieces(const GatesTier *t);
+
 Tier GatesGetInitialTier(void);
+Tier GatesGetCanonicalTier(Tier tier);
 TierArray GatesGetChildTiers(Tier tier);
 int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax]);
 
