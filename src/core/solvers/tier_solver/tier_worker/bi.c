@@ -637,6 +637,9 @@ static void DestroyFrontiers(void) {
         FrontierDestroy(&lose_frontiers[i]);
         FrontierDestroy(&tie_frontiers[i]);
     }
+    free(win_frontiers);
+    free(lose_frontiers);
+    free(tie_frontiers);
 }
 
 /**
