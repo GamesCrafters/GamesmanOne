@@ -1,9 +1,21 @@
 # Define the executable.
 add_executable(gamesman main.c)
+
+# Add compiler warning flags.
 target_compile_options(gamesman PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
 )
+
+# Check and enable link-time optimizations if possible.
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
+if(ipo_supported)
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET gamesman PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")
+endif()
 
 # Check libraries.
 find_package(PkgConfig REQUIRED)                            # pkg-config
