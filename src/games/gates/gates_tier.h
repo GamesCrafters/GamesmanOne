@@ -2,15 +2,16 @@
 #define GAMESMANONE_GAMES_GATES_GATES_TIER_H_
 
 #include <inttypes.h>  // PRIu8
-#include <stdint.h>    // uint8_t
+#include <stdint.h>    // int8_t
 
 #include "core/types/gamesman_types.h"
 
 enum {
     kBoardSize = 18,
+    kNumSymmetries = 12,
 };
 
-typedef uint8_t GatesTierField;
+typedef int8_t GatesTierField;
 
 enum GatesPhase {
     kPlacement,
@@ -28,9 +29,12 @@ typedef struct {
     GatesTierField G2;                 // [G1 + 1, 17]
 } GatesTier;
 
+GatesTierField GatesTierGetSymmetryMatrixEntry(int8_t symm, GatesTierField i);
+
 Tier GatesTierHash(const GatesTier *t);
 void GatesTierUnhash(Tier hash, GatesTier *dest);
 
+void SwapG(GatesTier *t);
 GatesTierField GatesTierGetNumPieces(const GatesTier *t);
 
 Tier GatesGetInitialTier(void);

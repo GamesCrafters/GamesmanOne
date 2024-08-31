@@ -2,11 +2,33 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // uint8_t
+#include <stdint.h>   // int8_t
 #include <stdio.h>    // sprintf
 
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
+
+// ====================== GatesTierGetSymmetryMatrixEntry ======================
+
+static const GatesTierField kSymmetryMatrix[kNumSymmetries][kBoardSize] = {
+    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17},  // original
+    {7, 3, 0, 11, 8, 4, 1, 15, 12, 5, 2, 16, 13, 9, 6, 17, 14, 10},  // cw60
+    {15, 11, 7, 16, 12, 8, 3, 17, 13, 4, 0, 14, 9, 5, 1, 10, 6, 2},  // cw120
+    {17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},  // 180
+    {10, 14, 17, 6, 9, 13, 16, 2, 5, 12, 15, 1, 4, 8, 11, 0, 3, 7},  // cw240
+    {2, 6, 10, 1, 5, 9, 14, 0, 4, 13, 17, 3, 8, 12, 16, 7, 11, 15},  // cw300
+
+    {2, 1, 0, 6, 5, 4, 3, 10, 9, 8, 7, 14, 13, 12, 11, 17, 16, 15},  // reflect
+    {10, 6, 2, 14, 9, 5, 1, 17, 13, 4, 0, 16, 12, 8, 3, 15, 11, 7},  // rcw60
+    {17, 14, 10, 16, 13, 9, 6, 15, 12, 5, 2, 11, 8, 4, 1, 7, 3, 0},  // rcw120
+    {15, 16, 17, 11, 12, 13, 14, 7, 8, 9, 10, 3, 4, 5, 6, 0, 1, 2},  // r180
+    {7, 11, 15, 3, 8, 12, 16, 0, 4, 13, 17, 1, 5, 9, 14, 2, 6, 10},  // rcw240
+    {0, 3, 7, 1, 4, 8, 11, 2, 5, 12, 15, 6, 9, 13, 16, 10, 14, 17},  // rcw300
+};
+
+GatesTierField GatesTierGetSymmetryMatrixEntry(int8_t symm, GatesTierField i) {
+    return kSymmetryMatrix[symm][i];
+}
 
 // =============================== GatesTierHash ===============================
 
@@ -34,6 +56,14 @@ void GatesTierUnhash(Tier hash, GatesTier *dest) {
     dest->G2 = (GatesTierField)((hash >> 19) & 0x1F);     // 5 bits.
 }
 
+// =================================== SwapG ===================================
+
+void SwapG(GatesTier *t) {
+    GatesTierField tmp = t->G1;
+    t->G1 = t->G2;
+    t->G2 = tmp;
+}
+
 // =========================== GatesTierGetNumPieces ===========================
 
 GatesTierField GatesTierGetNumPieces(const GatesTier *t) {
@@ -49,30 +79,7 @@ Tier GatesGetInitialTier(void) {
     return GatesTierHash(&t);
 }
 
-// ============================== kSymmetryMatrix ==============================
-
-enum { kNumSymmetries = 12 };
-static const int kSymmetryMatrix[kNumSymmetries][kBoardSize] = {
-    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17},  // original
-    {7, 3, 0, 11, 8, 4, 1, 15, 12, 5, 2, 16, 13, 9, 6, 17, 14, 10},  // cw60
-    {15, 11, 7, 16, 12, 8, 3, 17, 13, 4, 0, 14, 9, 5, 1, 10, 6, 2},  // cw120
-    {17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},  // 180
-    {10, 14, 17, 6, 9, 13, 16, 2, 5, 12, 15, 1, 4, 8, 11, 0, 3, 7},  // cw240
-    {2, 6, 10, 1, 5, 9, 14, 0, 4, 13, 17, 3, 8, 12, 16, 7, 11, 15},  // cw300
-
-    {2, 1, 0, 6, 5, 4, 3, 10, 9, 8, 7, 14, 13, 12, 11, 17, 16, 15},  // reflect
-    {10, 6, 2, 14, 9, 5, 1, 17, 13, 4, 0, 16, 12, 8, 3, 15, 11, 7},  // rcw60
-    {17, 14, 10, 16, 13, 9, 6, 15, 12, 5, 2, 11, 8, 4, 1, 7, 3, 0},  // rcw120
-    {15, 16, 17, 11, 12, 13, 14, 7, 8, 9, 10, 3, 4, 5, 6, 0, 1, 2},  // r180
-    {7, 11, 15, 3, 8, 12, 16, 0, 4, 13, 17, 1, 5, 9, 14, 2, 6, 10},  // rcw240
-    {0, 3, 7, 1, 4, 8, 11, 2, 5, 12, 15, 6, 9, 13, 16, 10, 14, 17},  // rcw300
-};
-
-static void SwapG(GatesTier *t) {
-    GatesTierField tmp = t->G1;
-    t->G1 = t->G2;
-    t->G2 = tmp;
-}
+// =========================== GatesGetCanonicalTier ===========================
 
 Tier GatesGetCanonicalTier(Tier tier) {
     Tier ret = tier;
@@ -177,14 +184,14 @@ static void GetChildTiersPlacement11AddImmediateScoring(GatesTier *ct,
     assert(ct->n[Z] == 2 && ct->n[z] == 2);
 
     // Since it's black's turn, only black spikes may be scored.
-    ct->n[a] = 1;               // Case A: scoring black triangle.
+    ct->n[a] = 1;              // Case A: scoring black triangle.
     ct->phase = kGate1Moving;  // Case A.1: into the first gate
     TierArrayAppend(ret, GatesTierHash(ct));
     ct->phase = kGate2Moving;  // Case A.2: into the second gate
     TierArrayAppend(ret, GatesTierHash(ct));
     ct->n[a] = 2;  // Revert changes.
 
-    ct->n[z] = 1;               // Case B: scoring black trapezoid.
+    ct->n[z] = 1;              // Case B: scoring black trapezoid.
     ct->phase = kGate1Moving;  // Case B.1: into the first gate
     TierArrayAppend(ret, GatesTierHash(ct));
     ct->phase = kGate2Moving;  // Case B.2: into the second gate
@@ -276,11 +283,8 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
     GatesTier ct = *t;  // Child GatesTier.
 
     // Scoring must occur if there is a tier transition from the movement phase.
-    static_assert(kGate1Moving + 1 == kGate2Moving,
-                  "kGate1Moving must be 1 smaller than kGate2Moving");
-    static_assert(g == 1 && A == 2,
-                  "g must be of index 1 and all other pieces must be of "
-                  "indices greater than 1");
+    static_assert(kGate1Moving + 1 == kGate2Moving);
+    static_assert(g == 1 && A == 2);
     for (ct.phase = kGate1Moving; ct.phase <= kGate2Moving; ++ct.phase) {
         for (int p = A; p < kNumPieceTypes; ++p) {
             if (t->n[p] > 0) {
@@ -305,10 +309,7 @@ static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
     TierArrayAppend(ret, GatesTierHash(ct));
 
     // Scoring must occur if there is a tier transition from the movement phase.
-    static_assert(
-        kGate1Moving + 1 == kGate2Moving,
-        "GetChildTiersAfterGateMovement relies on the assumption that "
-        "kGate1Moving + 1 == kGate2Moving");
+    static_assert(kGate1Moving + 1 == kGate2Moving);
     for (ct->phase = kGate1Moving; ct->phase <= kGate2Moving; ++ct->phase) {
         if (white_turn) {
             // Case B: white immediately scores.
