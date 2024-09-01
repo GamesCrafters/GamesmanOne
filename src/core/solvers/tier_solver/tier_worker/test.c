@@ -101,6 +101,7 @@ static int TestChildPositions(Tier tier, Position position) {
             break;
         }
     }
+    TierPositionArrayDestroy(&children);
 
     return error;
 }
