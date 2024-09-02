@@ -167,7 +167,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
 static int DefaultGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]);
+                              char name[static kDbFileNameLengthMax + 1]);
 
 // -----------------------------------------------------------------------------
 
@@ -602,7 +602,7 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 }
 
 static int DefaultGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]) {
+                              char name[static kDbFileNameLengthMax + 1]) {
     sprintf(name, "%" PRITier, tier);
 
     return kNoError;

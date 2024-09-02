@@ -60,7 +60,7 @@ enum DatabaseGameStatus {
 };
 
 typedef int (*GetTierNameFunc)(Tier tier,
-                               char name[static kDbFileNameLengthMax]);
+                               char name[static kDbFileNameLengthMax + 1]);
 
 /**
  * @brief Generic Tier Database type.

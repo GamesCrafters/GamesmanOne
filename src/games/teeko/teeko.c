@@ -321,7 +321,7 @@ static TierArray TeekoGetChildTiers(Tier tier) {
     return ret;
 }
 
-static int TeekoGetTierName(Tier tier, char name[static kDbFileNameLengthMax]) {
+static int TeekoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     assert(tier >= 0 && tier <= 8);
     if (tier < 8) {
         sprintf(name, "%" PRITier "_dropped", tier);

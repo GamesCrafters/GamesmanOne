@@ -287,7 +287,7 @@ typedef struct TierSolverApi {
      * @return 0 on success, or
      * @return non-zero error code on failure.
      */
-    int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax]);
+    int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 } TierSolverApi;
 
 /** @brief All detectable error types by the tier solver test function. */

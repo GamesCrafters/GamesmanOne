@@ -166,7 +166,7 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
 
 static int DefaultGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]);
+                              char name[static kDbFileNameLengthMax + 1]);
 
 // -----------------------------------------------------------------------------
 
@@ -556,7 +556,7 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 }
 
 static int DefaultGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]) {
+                              char name[static kDbFileNameLengthMax + 1]) {
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.

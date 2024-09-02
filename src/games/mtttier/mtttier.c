@@ -65,7 +65,7 @@ static PositionArray MtttierGetCanonicalParentPositions(
 static TierArray MtttierGetChildTiers(Tier tier);
 
 static int MtttierGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]);
+                              char name[static kDbFileNameLengthMax + 1]);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
@@ -348,7 +348,7 @@ static TierArray MtttierGetChildTiers(Tier tier) {
 }
 
 static int MtttierGetTierName(Tier tier,
-                              char name[static kDbFileNameLengthMax]) {
+                              char name[static kDbFileNameLengthMax + 1]) {
     return sprintf(name, "%" PRITier "p", tier);
 }
 
