@@ -10,11 +10,13 @@ target_compile_options(gamesman PRIVATE
 # Check and enable link-time optimizations if possible.
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
-if(ipo_supported)
-    message(STATUS "IPO / LTO enabled")
-    set_property(TARGET gamesman PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(NOT ipo_supported)
+  message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  message(STATUS "IPO / LTO disabled for debugging")
 else()
-    message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")
+  message(STATUS "IPO / LTO enabled")
+  set_property(TARGET gamesman PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 # Check libraries.
@@ -26,9 +28,17 @@ list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res")  # (add) json-c
 find_package(json-c REQUIRED CONFIG)                        # (check) json-c
 if(NOT DISABLE_OPENMP)                                      # OpenMP
   find_package(OpenMP)
+  if(OpenMP_FOUND)
+    message(STATUS "OpenMP multithreading enabled")
+  else()
+    message(STATUS "OpenMP not found, configuring without multithreading")
+  endif()
+else()
+  message(STATUS "OpenMP multithreading disabled")
 endif()
 if(USE_MPI)                                                 # MPI
   find_package(MPI REQUIRED)
+  message(STATUS "MPI enabled")
   target_compile_definitions(gamesman PRIVATE USE_MPI)
 endif()
 
@@ -46,5 +56,5 @@ if(OpenMP_FOUND)                                            # OpenMP
   target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
 endif()
 if(USE_MPI)                                                 # MPI
-target_link_libraries(gamesman PRIVATE MPI::MPI_C)
+  target_link_libraries(gamesman PRIVATE MPI::MPI_C)
 endif()
