@@ -332,10 +332,12 @@ static TierArray GetCanonicalChildTiers(Tier parent) {
     for (int64_t i = 0; i < children.size; ++i) {
         Tier canonical = current_api.GetCanonicalTier(children.array[i]);
         if (TierHashSetContains(&dedup, canonical)) continue;
+
         TierHashSetAdd(&dedup, canonical);
         TierArrayAppend(&ret, canonical);
     }
     TierArrayDestroy(&children);
+    TierHashSetDestroy(&dedup);
 
     return ret;
 }
@@ -396,36 +398,36 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
         total_size += current_api.GetTierSize(parent);
     }
 
-    TierArray tier_children = current_api.GetChildTiers(parent);
+    TierArray children = current_api.GetChildTiers(parent);
     BuildTierGraphUpdateAnalysis(parent);
     int num_canonical_tier_children =
-        GetNumCanonicalChildTiers(parent, &tier_children);
+        GetNumCanonicalChildTiers(parent, &children);
     if (num_canonical_tier_children < 0) return kIllegalGameTierGraphError;
 
     if (type == kTierSolving) {
         if (!TierGraphSetNumTiers(parent, num_canonical_tier_children)) {
-            TierArrayDestroy(&tier_children);
+            TierArrayDestroy(&children);
             return (int)kTierGraphOutOfMemory;
         }
     } else {  // type == kTierAnalyzing
-        for (int64_t i = 0; i < tier_children.size; ++i) {
-            Tier child = tier_children.array[i];
+        for (int64_t i = 0; i < children.size; ++i) {
+            Tier child = children.array[i];
             if (!IncrementNumParentTiers(child)) {
-                TierArrayDestroy(&tier_children);
+                TierArrayDestroy(&children);
                 return (int)kTierGraphOutOfMemory;
             }
         }
     }
 
-    for (int64_t i = 0; i < tier_children.size; ++i) {
-        Tier child = tier_children.array[i];
+    for (int64_t i = 0; i < children.size; ++i) {
+        Tier child = children.array[i];
         if (ReverseTierGraphAdd(&reverse_tier_graph, child, parent) != 0) {
-            TierArrayDestroy(&tier_children);
+            TierArrayDestroy(&children);
             return (int)kTierGraphOutOfMemory;
         }
         if (!TierHashMapContains(&tier_graph, child)) {
             if (!TierGraphSetInitial(child)) {
-                TierArrayDestroy(&tier_children);
+                TierArrayDestroy(&children);
                 return (int)kTierGraphOutOfMemory;
             }
         }
@@ -433,12 +435,12 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
         if (status == kStatusNotVisited) {
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
-            TierArrayDestroy(&tier_children);
+            TierArrayDestroy(&children);
             return (int)kTierGraphLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
-    TierArrayDestroy(&tier_children);
+    TierArrayDestroy(&children);
     return (int)kTierGraphNoError;
 }
 
@@ -510,7 +512,6 @@ static int SolveTierGraph(bool force, int verbose) {
                " canonical) of total size %" PRId64 " (positions)\n",
                total_tiers, total_canonical_tiers, total_size);
     }
-    GamesmanExit();
 
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -824,7 +825,11 @@ static int DiscoverTierGraph(bool force, int verbose) {
             // If tier is non-canonical, we must convert the analysis to non-
             // cannonical. Note that the analysis here is the analysis of the
             // canonical tier on disk.
-            if (tier != canonical) AnalysisConvertToNoncanonical(tier_analysis);
+            if (tier != canonical) {
+                AnalysisConvertToNoncanonical(
+                    tier_analysis, tier,
+                    current_api.GetPositionInSymmetricTier);
+            }
             AnalysisAggregate(&game_analysis, tier_analysis);
         } else {
             printf("Failed to analyze tier %" PRITier ", code %d\n", tier,

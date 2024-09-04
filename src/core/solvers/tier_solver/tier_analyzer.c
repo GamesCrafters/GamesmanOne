@@ -118,8 +118,7 @@ int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     this_tier = tier;
     if (api_internal == NULL) goto _bailout;
     if (!force) {
-        Tier canonical = api_internal->GetCanonicalTier(tier);
-        int status = AnalysisStatus(canonical);
+        int status = AnalysisStatus(tier);
         if (status == kAnalysisTierCheckError) {
             ret = kAnalysisTierCheckError;
             goto _bailout;
@@ -508,7 +507,9 @@ static bool Step6SaveAnalysis(const Analysis *dest) {
     bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
     if (!success) return false;
 
-    StatManagerRemoveDiscoveryMap(this_tier);
+    if (this_tier != api_internal->GetInitialTier()) {
+        StatManagerRemoveDiscoveryMap(this_tier);
+    }
     return true;
 }
 
