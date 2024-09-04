@@ -36,10 +36,10 @@ void GatesTierUnhash(Tier hash, GatesTier *dest);
 
 void SwapG(GatesTier *t);
 GatesTierField GatesTierGetNumPieces(const GatesTier *t);
-
+void gtprintdebug(void);
 Tier GatesGetInitialTier(void);
 Tier GatesGetCanonicalTier(Tier tier);
 TierArray GatesGetChildTiers(Tier tier);
-int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax]);
+int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 
 #endif  // GAMESMANONE_GAMES_GATES_GATES_TIER_H_

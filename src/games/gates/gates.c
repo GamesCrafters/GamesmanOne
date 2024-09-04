@@ -4,6 +4,7 @@
 #include <ctype.h>   // islower
 #include <stddef.h>  // NULL
 #include <stdio.h>   // sprintf
+#include <stdlib.h>  // atoi
 #include <string.h>  // memcpy
 
 #include "core/constants.h"
@@ -310,7 +311,7 @@ static int64_t GatesGetTierSize(Tier tier) {
 
 static void InsertWhiteGate(char board[static kBoardSize],
                             GatesTierField index) {
-    for (GatesTierField i = kBoardSize - 1; i > index; ++i) {
+    for (GatesTierField i = kBoardSize - 1; i > index; --i) {
         board[i] = board[i - 1];
     }
     board[index] = 'G';
@@ -341,18 +342,18 @@ static void UnhashTierAndPosition(TierPosition tier_position, GatesTier *t,
 }
 
 static void GenerateMovesTriangle(const char board[static kBoardSize],
-                                  int8_t src, GatesMove *move, MoveArray *ret) {
+                                  int8_t src, GatesMove move, MoveArray *ret) {
     assert(board[src] == 'A' || board[src] == 'a');
     const char gate = 'G' + board[src] - 'A';
-    move->unpacked.move_src = src;
+    move.unpacked.move_src = src;
 
     // For all first level adjacencies, the destination can be reached if it is
     // blank or has a friendly gate on it.
     for (int i = 0; i < kBoardAdjacency1Size[src]; ++i) {
         int8_t dest = kBoardAdjacency1[src][i];
         if (board[dest] == '-' || board[dest] == gate) {
-            move->unpacked.move_dest = dest;
-            MoveArrayAppend(ret, move->hashed);
+            move.unpacked.move_dest = dest;
+            MoveArrayAppend(ret, move.hashed);
         }
     }
 
@@ -362,47 +363,48 @@ static void GenerateMovesTriangle(const char board[static kBoardSize],
     for (int i = 0; i < kBoardAdjacency2Size[src]; ++i) {
         int8_t dest = kBoardAdjacency2[src][i];
         bool unoccupied = board[dest] == '-' || board[dest] == gate;
-        bool reachable = kBoardAdjacency2BlockingPoints[src][i][0] == '-' ||
-                         kBoardAdjacency2BlockingPoints[src][i][1] == '-';
+        bool reachable =
+            board[kBoardAdjacency2BlockingPoints[src][i][0]] == '-' ||
+            board[kBoardAdjacency2BlockingPoints[src][i][1]] == '-';
         if (unoccupied && reachable) {
-            move->unpacked.move_dest = dest;
-            MoveArrayAppend(ret, move->hashed);
+            move.unpacked.move_dest = dest;
+            MoveArrayAppend(ret, move.hashed);
         }
     }
 }
 
 static void GenerateMovesTrapezoid(const char board[static kBoardSize],
-                                   int8_t src, GatesMove *move,
-                                   MoveArray *ret) {
+                                   int8_t src, GatesMove move, MoveArray *ret) {
     assert(board[src] == 'Z' || board[src] == 'z');
     const char offset =
         (board[src] - 'Z');  // 0 if white's turn, 32 if black's turn.
     const char friendly_gate = 'G' + offset;
     const char opponent_triangle = 'a' - offset;
     const char opponent_trapezoid = 'z' - offset;
-    move->unpacked.move_src = src;
+    move.unpacked.move_src = src;
 
     // For all first level adjacencies, the destination can be reached if it is
     // blank, a friendly gate, or an opponent's spike.
     for (int8_t i = 0; i < kBoardAdjacency1Size[src]; ++i) {
         int8_t dest = kBoardAdjacency1[src][i];
-        move->unpacked.move_dest = dest;
+        move.unpacked.move_dest = dest;
         if (board[dest] == '-' || board[dest] == friendly_gate) {
             // Move only, no teleporting.
-            MoveArrayAppend(ret, move->hashed);
+            move.unpacked.teleport_dest = -1;
+            MoveArrayAppend(ret, move.hashed);
         } else if (board[dest] == opponent_triangle ||
                    board[dest] == opponent_trapezoid) {
             // Teleporting  to any existing blank spaces:
             for (int8_t j = 0; j < kBoardSize; ++j) {
                 if (board[j] == '-') {
-                    move->unpacked.teleport_dest = j;
-                    MoveArrayAppend(ret, move->hashed);
+                    move.unpacked.teleport_dest = j;
+                    MoveArrayAppend(ret, move.hashed);
                 }
             }
 
             // Teleport to where the trapezoid came from:
-            move->unpacked.teleport_dest = src;
-            MoveArrayAppend(ret, move->hashed);
+            move.unpacked.teleport_dest = src;
+            MoveArrayAppend(ret, move.hashed);
         }
     }
 }
@@ -416,7 +418,7 @@ static void GenerateMovesTrapezoid(const char board[static kBoardSize],
  * These fields are not modified by this function.
  */
 static void GenerateMovesOfPlayer(const char board[static kBoardSize], int turn,
-                                  GatesMove *move, MoveArray *ret) {
+                                  GatesMove move, MoveArray *ret) {
     char triangle = 'A' + ('a' - 'A') * (turn - 1);
     char trapezoid = 'Z' + ('z' - 'Z') * (turn - 1);
     for (int8_t i = 0; i < kBoardSize; ++i) {
@@ -460,7 +462,7 @@ static MoveArray GenerateMovesPlacement(const GatesTier *pt,
             if (board[i] == '-') {
                 board[i] = kPieces[p];  // Temporarily add piece to the board.
                 m.unpacked.placement_dest = i;
-                GenerateMovesOfPlayer(board, 2, &m, &ret);
+                GenerateMovesOfPlayer(board, 2, m, &ret);
                 board[i] = '-';  // Revert the change to the board.
             }
         }
@@ -474,7 +476,7 @@ static MoveArray GenerateMovesMovement(char board[static kBoardSize],
     MoveArray ret;
     MoveArrayInit(&ret);
     GatesMove move = kGatesMoveInit;
-    GenerateMovesOfPlayer(board, turn, &move, &ret);
+    GenerateMovesOfPlayer(board, turn, move, &ret);
 
     return ret;
 }
@@ -517,7 +519,7 @@ static MoveArray GenerateMovesGateMoving(const GatesTier *pt,
             SwapPieces(&board[move.unpacked.gate_src], &board[dest]);
 
             // Generate all subsequent moves on top of the gate move.
-            GenerateMovesOfPlayer(board, turn, &move, &ret);
+            GenerateMovesOfPlayer(board, turn, move, &ret);
 
             // Revert the gate move.
             SwapPieces(&board[move.unpacked.gate_src], &board[dest]);
@@ -592,13 +594,14 @@ static Position HashWrapper(Tier tier, const GatesTier *t,
     char cleaned_board[kBoardSize];
     memcpy(cleaned_board, board, kBoardSize);
     switch (t->n[G]) {
+        case 2:
+            // Note that if we don't need to adjust the subsequent piece removal
+            // indices only if we remove from back to front.
+            RemovePiece(cleaned_board, t->G2);
+            // Fall through
+
         case 1:
             RemovePiece(cleaned_board, t->G1);
-            break;
-
-        case 2:
-            RemovePiece(cleaned_board, t->G1);
-            RemovePiece(cleaned_board, t->G2);
             break;
     }
 
@@ -657,6 +660,7 @@ static void PerformPieceMove(GatesTier *t, char board[static kBoardSize],
 
         // Moving and perhaps teleporting.
         default: {
+            t->phase = kMovement;
             char hold = board[m.unpacked.move_dest];
             board[m.unpacked.move_dest] = board[m.unpacked.move_src];
             board[m.unpacked.move_src] = '-';
@@ -700,7 +704,7 @@ static TierPosition DoMovePlacement(GatesTier *t, char board[static kBoardSize],
         PerformPieceMove(t, board, m);
     }  // Otherwise, t->phase should remain as kPlacement.
 
-    return HashTierAndPosition(t, board, turn);
+    return HashTierAndPosition(t, board, 3 - turn);
 }
 
 static TierPosition DoMoveMovement(GatesTier *t, char board[static kBoardSize],
@@ -711,7 +715,7 @@ static TierPosition DoMoveMovement(GatesTier *t, char board[static kBoardSize],
     // set by this function call.
     PerformPieceMove(t, board, m);
 
-    return HashTierAndPosition(t, board, turn);
+    return HashTierAndPosition(t, board, 3 - turn);
 }
 
 static TierPosition DoMoveGateMoving(GatesTier *t,
@@ -720,7 +724,7 @@ static TierPosition DoMoveGateMoving(GatesTier *t,
     assert(t->phase == kGate1Moving || t->phase == kGate2Moving);
     GatesMove m = {.hashed = move};
     assert((board[m.unpacked.gate_src] == 'G' && turn == 2) ||
-           board[m.unpacked.gate_src] == 'g' && turn == 1);
+           (board[m.unpacked.gate_src] == 'g' && turn == 1));
     assert(board[m.unpacked.gate_dest] == '-' ||
            m.unpacked.gate_dest == m.unpacked.gate_src);
 
@@ -744,7 +748,7 @@ static TierPosition DoMoveGateMoving(GatesTier *t,
     // decided by the subsequent piece move and set by this function call.
     PerformPieceMove(t, board, m);
 
-    return HashTierAndPosition(t, board, turn);
+    return HashTierAndPosition(t, board, 3 - turn);
 }
 
 static TierPosition GatesDoMove(TierPosition tier_position, Move move) {
@@ -829,9 +833,163 @@ static const TierSolverApi kGatesSolverApi = {
 
 // ============================= kGatesGameplayApi =============================
 
+static const char kGatesPositionStringFormat[] =
+    "            LEGEND                            TOTAL\n"
+    "\n"
+    "|        1     2     3       |  :          %c     %c     %c\n"
+    "|                            |  :\n"
+    "|     4     5     6     7    |  :       %c     %c     %c     %c\n"
+    "|                            |  :\n"
+    "|  8     9          10    11 |  :    %c     %c           %c     %c\n"
+    "|                            |  :\n"
+    "|    12    13    14    15    |  :       %c     %c     %c     %c\n"
+    "|                            |  :\n"
+    "|       16    17    18       |  :          %c     %c     %c";
+
+#ifndef NDEBUG
+static void DebugPrintTierPosition(TierPosition tier_position) {
+    GatesTier t;
+    char board[kBoardSize];
+    UnhashTierAndPosition(tier_position, &t, board);
+    printf("Tier %" PRITier ", Position %" PRIPos "\n", tier_position.tier,
+           tier_position.position);
+    printf("Phase: ");
+    switch (t.phase) {
+        case kPlacement:
+            printf("Placement\n");
+            break;
+        case kMovement:
+            printf("Movement\n");
+            break;
+        case kGate1Moving:
+            printf("Gate 1 Moving\n");
+            break;
+        case kGate2Moving:
+            printf("Gate 2 Moving\n");
+            break;
+    }
+    printf(
+        "According to tier label, there are \n"
+        "%d G, %d g,\n"
+        "%d A, %d a,\n"
+        "%d Z, %d z.\n",
+        t.n[G], t.n[g], t.n[A], t.n[a], t.n[Z], t.n[z]);
+    printf("The two white gates are at indices %d and %d\n", t.G1, t.G2);
+}
+#endif
+
+static int GatesTierPositionToString(TierPosition tier_position, char *buffer) {
+    GatesTier t;
+    char board[kBoardSize];
+    UnhashTierAndPosition(tier_position, &t, board);
+#ifndef NDEBUG
+    DebugPrintTierPosition(tier_position);
+#endif
+    sprintf(buffer, kGatesPositionStringFormat, board[0], board[1], board[2],
+            board[3], board[4], board[5], board[6], board[7], board[8],
+            board[9], board[10], board[11], board[12], board[13], board[14],
+            board[15], board[16], board[17]);
+
+    return kNoError;
+}
+
+static int GatesMoveToString(Move move, char *buffer) {
+    GatesMove m = {.hashed = move};
+    bool placement = m.unpacked.placement_type >= 0;
+    bool movement = m.unpacked.move_src >= 0;
+    bool gate_movement = m.unpacked.gate_src >= 0;
+    bool teleport = m.unpacked.teleport_dest >= 0;
+    bool first_chunk = true;
+    int count = 0;
+    if (placement) {
+        count += sprintf(buffer + count, "p %c %" PRId8,
+                         kPieces[m.unpacked.placement_type],
+                         m.unpacked.placement_dest + 1);
+        first_chunk = false;
+    }
+    if (gate_movement) {
+        count += sprintf(buffer + count, "g %" PRId8 " %" PRId8,
+                         m.unpacked.gate_src + 1, m.unpacked.gate_dest + 1);
+        first_chunk = false;
+    }
+    if (movement) {
+        count += sprintf(buffer + count, "%sm %" PRId8 " %" PRId8,
+                         first_chunk ? "" : " ", m.unpacked.move_src + 1,
+                         m.unpacked.move_dest + 1);
+        first_chunk = false;
+    }
+    if (teleport) {
+        count +=
+            sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
+    }
+
+    return kNoError;
+}
+
+static bool GatesIsValidMoveString(ReadOnlyString move_string) {
+    (void)move_string;
+
+    return true;  // TODO
+}
+
+static Move GatesStringToMove(ReadOnlyString move_string) {
+    static ConstantReadOnlyString delim = " ";
+    char move_string_copy[20];
+    strcpy(move_string_copy, move_string);
+    char *tokens[8] = {strtok(move_string_copy, delim)};
+    for (int i = 1; i < 8; ++i) {
+        tokens[i] = strtok(NULL, delim);
+    }
+
+    GatesMove m = kGatesMoveInit;
+    int i = 0;
+    while (i < 8 && tokens[i] != NULL) {
+        if (strcmp(tokens[i], "p") == 0) {
+            m.unpacked.placement_type =
+                kPieceToTypeIndex[(int8_t)tokens[i + 1][0]];
+            m.unpacked.placement_dest = atoi(tokens[i + 2]) - 1;
+            i += 3;
+        } else if (strcmp(tokens[i], "g") == 0) {
+            m.unpacked.gate_src = atoi(tokens[i + 1]) - 1;
+            m.unpacked.gate_dest = atoi(tokens[i + 2]) - 1;
+            i += 3;
+        } else if (strcmp(tokens[i], "m")) {
+            m.unpacked.move_src = atoi(tokens[i + 1]) - 1;
+            m.unpacked.move_dest = atoi(tokens[i + 2]) - 1;
+            i += 3;
+        } else {  // "t"
+            m.unpacked.teleport_dest = atoi(tokens[i + 1]) - 1;
+            i += 2;
+        }
+    }
+
+    return m.hashed;
+}
+
+static const GameplayApiCommon GatesGameplayApiCommon = {
+    .GetInitialPosition = GatesGetInitialPosition,
+    .position_string_length_max = sizeof(kGatesPositionStringFormat),
+
+    .move_string_length_max = 19,
+    .MoveToString = GatesMoveToString,
+
+    .IsValidMoveString = GatesIsValidMoveString,
+    .StringToMove = GatesStringToMove,
+};
+
+static const GameplayApiTier GatesGameplayApiTier = {
+    .GetInitialTier = GatesGetInitialTier,
+
+    .TierPositionToString = GatesTierPositionToString,
+
+    .GenerateMoves = GatesGenerateMoves,
+    .DoMove = GatesDoMove,
+    .Primitive = GatesPrimitive,
+};
+
 static const GameplayApi kGatesGameplayApi = {
-    .common = NULL,  // TODO
-    .tier = NULL,    // TODO
+    .common = &GatesGameplayApiCommon,
+    .tier = &GatesGameplayApiTier,
 };
 
 // ================================= GatesInit =================================
@@ -988,7 +1146,9 @@ static void InitOneWhiteGateSymmIndex(void) {
     for (GatesTierField G1 = 0; G1 < kBoardSize; ++G1) {
         for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
             GatesTierField sG1 = GatesTierGetSymmetryMatrixEntry(symm, G1);
-            kOneWhiteGateSymmIndex[G1][sG1] = symm;
+            if (kOneWhiteGateSymmIndex[G1][sG1] < 0) {
+                kOneWhiteGateSymmIndex[G1][sG1] = symm;
+            }
         }
     }
 }
@@ -1012,7 +1172,9 @@ static void InitTwoWhiteGatesSymmIndex(void) {
             for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
                 GatesTierField sG1 = GatesTierGetSymmetryMatrixEntry(symm, G1);
                 GatesTierField sG2 = GatesTierGetSymmetryMatrixEntry(symm, G2);
-                kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] = symm;
+                if (kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] < 0) {
+                    kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] = symm;
+                }
             }
         }
     }

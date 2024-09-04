@@ -103,9 +103,17 @@ Tier GatesGetCanonicalTier(Tier tier) {
             symm.G1 = kSymmetryMatrix[i][original.G1];
             symm.G2 = kSymmetryMatrix[i][original.G2];
             assert(symm.G1 != symm.G2);
-            if (symm.G1 > symm.G2) SwapG(&symm);  // Enforce G1 < G2.
+            if (symm.G1 > symm.G2) {
+                SwapG(&symm);  // Enforce G1 < G2.
+                if (symm.phase == kGate1Moving) {
+                    symm.phase = kGate2Moving;
+                } else if (symm.phase == kGate2Moving) {
+                    symm.phase = kGate1Moving;
+                }
+            }
             Tier symm_hash = GatesTierHash(&symm);
             if (symm_hash < ret) ret = symm_hash;
+            symm = original;
         }
     }
 
@@ -232,23 +240,17 @@ static TierArray GetChildTiersPlacement11ByAddingWhiteGate(const GatesTier *t) {
 
     // Add the second white gate.
     ct.n[G] = 2;
-
-    // Case A: do not score and enter movement phase.
-    ct.phase = kMovement;
     for (ct.G2 = 0; ct.G2 < kBoardSize; ++ct.G2) {
         if (ct.G1 == ct.G2) continue;  // Cannot overlap.
         bool swap = ct.G1 > ct.G2;
         if (swap) SwapG(&ct);  // Enforce G1 < G2.
+
+        // Case A: do not score and enter movement phase.
+        ct.phase = kMovement;
         TierArrayAppend(&ret, GatesTierHash(&ct));
-        if (swap) SwapG(&ct);  // Revert swap.
-    }
 
-    // Case B: score immediately after placing the second white gate and
-    // enter gate-moving phase.
-    for (ct.G2 = 0; ct.G2 < kBoardSize; ++ct.G2) {
-        if (ct.G1 == ct.G2) continue;  // Cannot overlap.
-        bool swap = ct.G1 > ct.G2;
-        if (swap) SwapG(&ct);  // Enforce G1 < G2.
+        // Case B: score immediately after placing the second white gate and
+        // enter gate-moving phase.
         GetChildTiersPlacement11AddImmediateScoring(&ct, &ret);
         if (swap) SwapG(&ct);  // Revert swap.
     }
@@ -300,7 +302,6 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
 
 static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
                                            bool white_turn) {
-    //
     assert(ct->n[A] + ct->n[Z] > 0 && ct->n[a] + ct->n[z] > 0);
     assert(ct->G1 < ct->G2);
 
@@ -308,7 +309,6 @@ static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
     ct->phase = kMovement;
     TierArrayAppend(ret, GatesTierHash(ct));
 
-    // Scoring must occur if there is a tier transition from the movement phase.
     static_assert(kGate1Moving + 1 == kGate2Moving);
     for (ct->phase = kGate1Moving; ct->phase <= kGate2Moving; ++ct->phase) {
         if (white_turn) {
@@ -357,24 +357,26 @@ static TierArray GetChildTiersGateMovingWhiteTurn(const GatesTier *t) {
 static void GetChildTiersGateMovingBlackTurnHelper(const GatesTier *pt,
                                                    GatesTier *ct,
                                                    TierArray *ret) {
-    // All possible G1 movements.
-    for (ct->G1 = 0; ct->G1 < kBoardSize; ++ct->G1) {
-        if (ct->G1 == ct->G2) continue;  // Cannot overlap with the other gate.
-        bool swap = ct->G1 > ct->G2;
-        if (swap) SwapG(ct);
-        GetChildTiersAfterGateMovement(ct, ret, false);
-        if (swap) SwapG(ct);
-    }
-    *ct = *pt;  // Revert all changes.
-
-    // All possible G2 movements.
-    for (ct->G2 = 0; ct->G2 < kBoardSize; ++ct->G2) {
-        if (ct->G1 == ct->G2) continue;  // Cannot overlap with the other gate.
-        if (ct->G2 == pt->G2) continue;  // (G1, G2) is double counted.
-        bool swap = ct->G1 > ct->G2;
-        if (swap) SwapG(ct);
-        GetChildTiersAfterGateMovement(ct, ret, false);
-        if (swap) SwapG(ct);
+    if (pt->phase == kGate1Moving) {
+        // All possible G1 movements.
+        for (ct->G1 = 0; ct->G1 < kBoardSize; ++ct->G1) {
+            // Cannot overlap with the other gate.
+            if (ct->G1 == ct->G2) continue;
+            bool swap = ct->G1 > ct->G2;
+            if (swap) SwapG(ct);
+            GetChildTiersAfterGateMovement(ct, ret, false);
+            if (swap) SwapG(ct);
+        }
+    } else {
+        // All possible G2 movements.
+        for (ct->G2 = 0; ct->G2 < kBoardSize; ++ct->G2) {
+            // Cannot overlap with the other gate.
+            if (ct->G1 == ct->G2) continue;
+            bool swap = ct->G1 > ct->G2;
+            if (swap) SwapG(ct);
+            GetChildTiersAfterGateMovement(ct, ret, false);
+            if (swap) SwapG(ct);
+        }
     }
     *ct = *pt;  // Revert all changes.
 }
@@ -390,20 +392,35 @@ static TierArray GetChildTiersGateMovingBlackTurn(const GatesTier *t) {
     return ret;
 }
 
+static void DeduplicateTierArray(TierArray *dest, const TierArray *src) {
+    TierHashSet dedup;
+    TierHashSetInit(&dedup, 0.5);
+    for (int64_t i = 0; i < src->size; ++i) {
+        if (TierHashSetContains(&dedup, src->array[i])) continue;
+        TierHashSetAdd(&dedup, src->array[i]);
+        TierArrayAppend(dest, src->array[i]);
+    }
+    TierHashSetDestroy(&dedup);
+}
+
 static TierArray GetChildTiersGateMovingEitherTurn(const GatesTier *t) {
     assert(t->n[A] + t->n[Z] < 4 && t->n[A] + t->n[Z] > 0);
     assert(t->n[a] + t->n[z] < 4 && t->n[a] + t->n[z] > 0);
-    TierArray ret;
-    TierArrayInit(&ret);
+    TierArray raw, deduplicated;
+    TierArrayInit(&raw);
+    TierArrayInit(&deduplicated);
     GatesTier ct = *t;  // Child GatesTier.
 
     // Case A: white's turn, no white gate movement.
-    GetChildTiersAfterGateMovement(&ct, &ret, true);
+    GetChildTiersAfterGateMovement(&ct, &raw, true);
 
     // Case B: black's turn, possible white gate movement.
-    GetChildTiersGateMovingBlackTurnHelper(t, &ct, &ret);
+    GetChildTiersGateMovingBlackTurnHelper(t, &ct, &raw);
 
-    return ret;
+    DeduplicateTierArray(&deduplicated, &raw);
+    TierArrayDestroy(&raw);
+
+    return deduplicated;
 }
 
 static TierArray GetChildTiersGateMoving(const GatesTier *t) {
@@ -469,18 +486,28 @@ void gtprintdebug(void) {
     printf("placement: %" PRId64 "\n", placement_set.size);
     printf("movement: %" PRId64 "\n", movement_set.size);
     printf("gate moving: %" PRId64 "\n", gate_moving_set.size);
+    // TierArray c = GatesGetChildTiers(8415578);
+    // printf("child tiers of #8415578: \n");
+    // for (int i = 0; i < c.size;++i) {
+    //     char name[64];
+    //     GatesGetTierName(c.array[i], name);
+    //     printf("[%s]\n", name);
+    // }
+    // TierArrayDestroy(&c);
 }
 
 // ============================= GatesGetTierName =============================
 
-#define PRIField PRIu8
-int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax]) {
+#define PRIField PRId8
+int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     GatesTier t;
     GatesTierUnhash(tier, &t);
     int count = 0;
     switch (t.phase) {
         case kPlacement:
             count += sprintf(name + count, "p_");
+            count += sprintf(name + count, "%" PRIField "%" PRIField, t.n[G],
+                             t.n[g]);
             break;
 
         case kMovement:
@@ -500,9 +527,8 @@ int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax]) {
     }
 
     count += sprintf(name + count,
-                     "%" PRIField "%" PRIField "%" PRIField "%" PRIField
-                     "%" PRIField "%" PRIField,
-                     t.n[G], t.n[g], t.n[A], t.n[a], t.n[Z], t.n[z]);
+                     "%" PRIField "%" PRIField "%" PRIField "%" PRIField,
+                     t.n[A], t.n[a], t.n[Z], t.n[z]);
     if (t.n[G] > 0) count += sprintf(name + count, "_%" PRIField, t.G1);
     if (t.n[G] > 1) count += sprintf(name + count, "_%" PRIField, t.G2);
 
