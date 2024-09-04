@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of linear-probing Tier hash map.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-09-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -46,7 +45,7 @@ bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value) {
     return Int64HashMapSet(map, tier, value);
 }
 
-bool TierHashMapContains(TierHashMap *map, Tier tier) {
+bool TierHashMapContains(const TierHashMap *map, Tier tier) {
     return Int64HashMapContains(map, tier);
 }
 

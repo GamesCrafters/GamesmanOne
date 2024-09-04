@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 1.0.1
+ * @date 2024-09-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -59,14 +59,14 @@ void Int64HashMapDestroy(Int64HashMap *map) {
     map->size = 0;
 }
 
-static Int64HashMapIterator NewIterator(Int64HashMap *map, int64_t index) {
+static Int64HashMapIterator NewIterator(const Int64HashMap *map, int64_t index) {
     Int64HashMapIterator iterator;
     iterator.map = map;
     iterator.index = index;
     return iterator;
 }
 
-Int64HashMapIterator Int64HashMapGet(Int64HashMap *map, int64_t key) {
+Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
     int64_t capacity = map->capacity;
     // Edge case: return invalid iterator if map is empty.
     if (capacity == 0) return NewIterator(map, capacity);
@@ -129,7 +129,7 @@ bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value) {
     return true;
 }
 
-bool Int64HashMapContains(Int64HashMap *map, int64_t key) {
+bool Int64HashMapContains(const Int64HashMap *map, int64_t key) {
     Int64HashMapIterator it = Int64HashMapGet(map, key);
     return Int64HashMapIteratorIsValid(&it);
 }
@@ -152,7 +152,7 @@ bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it) {
 
 bool Int64HashMapIteratorNext(Int64HashMapIterator *it, int64_t *key,
                               int64_t *value) {
-    Int64HashMap *map = it->map;
+    const Int64HashMap *map = it->map;
     for (int64_t i = it->index + 1; i < map->capacity; ++i) {
         if (map->entries[i].used) {
             it->index = i;

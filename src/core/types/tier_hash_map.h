@@ -5,9 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash map that maps Tiers to 64-bit signed
  * integers.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-09-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -90,7 +89,7 @@ bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value);
  * @brief Returns true if the given MAP contains an entry with key equal to
  * TIER, or false otherwise.
  */
-bool TierHashMapContains(TierHashMap *map, Tier tier);
+bool TierHashMapContains(const TierHashMap *map, Tier tier);
 
 /**
  * @brief Returns an invalid iterator to the entry before the first entry of
