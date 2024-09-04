@@ -295,7 +295,10 @@ enum TierSolverTestErrors {
     kTierSolverTestNoError,           /**< No error. */
     kTierSolverTestDependencyError,   /**< Test failed due to a prior error. */
     kTierSolverTestGetTierNameError,  /**< Failed to get tier name. */
-    kTierSolverTestIllegalChildError, /**< Illegal child position detected. */
+    /** Illegal child tier detected. */
+    kTierSolverTestIllegalChildTierError,
+    /** Illegal child position detected. */
+    kTierSolverTestIllegalChildPosError,
     /** Applying tier symmetry within the same tier returned a different
        position. */
     kTierSolverTestTierSymmetrySelfMappingError,
