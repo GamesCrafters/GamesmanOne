@@ -28,7 +28,6 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
