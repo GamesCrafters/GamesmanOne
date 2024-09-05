@@ -59,7 +59,8 @@ static const TierSolverApi *api_internal;
 
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
-// Array of child tiers with this_tier appended to the back.
+
+// Child tiers of the tier being solved.
 static TierArray child_tiers;
 
 static int largest_win_lose_remoteness;
