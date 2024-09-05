@@ -47,3 +47,8 @@ bool TierArrayRemove(TierArray *array, Tier tier) {
 }
 
 bool TierArrayEmpty(const TierArray *array) { return Int64ArrayEmpty(array); }
+
+void TierArraySortExplicit(TierArray *array,
+                           int (*comp)(const void *, const void *)) {
+    return Int64ArraySortExplicit(array, comp);
+}
