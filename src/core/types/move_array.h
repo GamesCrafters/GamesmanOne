@@ -69,7 +69,8 @@ bool MoveArrayPopBack(MoveArray *array);
  * first argument is greater than the second and zero if the arguments are
  * equivalent.
  */
-void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *));
+void MoveArraySortExplicit(MoveArray *array,
+                           int (*comp)(const void *, const void *));
 
 /** @brief Returns true if ARRAY contains MOVE, or false otherwise. */
 bool MoveArrayContains(const MoveArray *array, Move move);

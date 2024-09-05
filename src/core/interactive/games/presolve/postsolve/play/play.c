@@ -202,7 +202,7 @@ static bool PrintSortedMoveValues(const Game *game) {
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
     SetExtremeChildRemotenesses(current, &moves);
-    MoveArraySort(&moves, MoveCompare);
+    MoveArraySortExplicit(&moves, MoveCompare);
 
     printf("\n\t==========================================================\n");
     printf("\n\t\tHere are the values of all possible moves:\n\n");
@@ -287,8 +287,8 @@ static bool PromptForAndProcessUserMove(const Game *game) {
         exit(EXIT_FAILURE);
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
-    
-    if (strncmp(move_string, "v", 1) == 0) { // Print values for all moves.
+
+    if (strncmp(move_string, "v", 1) == 0) {  // Print values for all moves.
         if (solved) {
             PrintSortedMoveValues(game);
         } else {

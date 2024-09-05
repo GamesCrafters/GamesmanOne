@@ -101,8 +101,8 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     return false;
 }
 
-void Int64ArraySort(Int64Array *array,
-                    int (*comp)(const void *, const void *)) {
+void Int64ArraySortExplicit(Int64Array *array,
+                            int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
 }
 

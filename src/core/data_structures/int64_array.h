@@ -63,7 +63,7 @@ void Int64ArrayInit(Int64Array *array);
 
 /**
  * @brief Initializes DEST array to be a copy of the SRC array.
- * 
+ *
  * @param dest Array to initialize.
  * @param src Source array to copy from.
  * @return true on success, or
@@ -114,8 +114,16 @@ bool Int64ArrayEmpty(const Int64Array *array);
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
-/** @brief Sorts the given ARRAY according to the given comparison function. */
-void Int64ArraySort(Int64Array *array, int (*comp)(const void *, const void *));
+/**
+ * @brief Sorts the given ARRAY according to the given comparison function.
+ * @param array The array to be sorted.
+ * @param comp 	Comparison function which returns ​a negative integer value if
+ * the first argument is less than the second, a positive integer value if the
+ * first argument is greater than the second, and zero if the arguments are
+ * equivalent.
+ */
+void Int64ArraySortExplicit(Int64Array *array,
+                            int (*comp)(const void *, const void *));
 
 /**
  * @brief Resizes ARRAY to have SIZE elements. If the current size of ARRAY is
@@ -132,7 +140,7 @@ bool Int64ArrayResize(Int64Array *array, int64_t size);
 
 /**
  * @brief Removes the item at index INDEX in ARRAY, if exists.
- * 
+ *
  * @param array Array of int64_t.
  * @param index Index of the item to remove.
  * @return true if INDEX exists in ARRAY, or
@@ -142,7 +150,7 @@ bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index);
 
 /**
  * @brief Removes the first occurrence of ITEM from ARRAY, if exists.
- * 
+ *
  * @param array Array of int64_t.
  * @param item Value to remove.
  * @return true if ITEM exists in ARRAY, or
