@@ -307,11 +307,6 @@ static Position TeekoGetCanonicalPosition(TierPosition tier_position) {
     return ret;
 }
 
-// static PositionArray TeekoGetCanonicalChildPositions(
-//     TierPosition tier_position) {
-//     // TODO
-// }
-
 static TierArray TeekoGetChildTiers(Tier tier) {
     TierArray ret;
     TierArrayInit(&ret);
