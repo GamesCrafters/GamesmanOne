@@ -146,7 +146,6 @@ static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
 static Tier current_tier;
-static RecordArray records;
 static TierHashMapSC loaded_tier_to_index;
 static RecordArray loaded_records[kArrayDbNumLoadedTiersMax];
 
@@ -171,7 +170,6 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     current_variant = variant;
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
-    memset(&records, 0, sizeof(records));
     TierHashMapSCInit(&loaded_tier_to_index, 0.5);
     memset(&loaded_records, 0, sizeof(loaded_records));
 
@@ -181,7 +179,6 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
 static void ArrayDbFinalize(void) {
     free(sandbox_path);
     sandbox_path = NULL;
-    RecordArrayDestroy(&records);
     TierHashMapSCDestroy(&loaded_tier_to_index);
     for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
         RecordArrayDestroy(&loaded_records[i]);
@@ -192,7 +189,17 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
     assert(current_tier == kIllegalTier);
     current_tier = tier;
 
-    return RecordArrayInit(&records, size);
+    // Initialize the 0-th loaded record as the solving tier's record array.
+    int error = RecordArrayInit(&loaded_records[0], size);
+    if (error != kNoError) return error;
+
+    // Add the solving tier's index to the map.
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, 0)) {
+        RecordArrayDestroy(&loaded_records[0]);
+        return kMallocFailureError;
+    }
+
+    return kNoError;
 }
 
 /**
@@ -254,8 +261,8 @@ static int ArrayDbFlushSolvingTier(void *aux) {
 
     int64_t compressed_size = XzraCompressStream(
         full_path, false, block_size, lzma_level, enable_extreme_compression,
-        GetNumThreads(), RecordArrayGetData(&records),
-        RecordArrayGetRawSize(&records));
+        GetNumThreads(), RecordArrayGetData(&loaded_records[0]),
+        RecordArrayGetRawSize(&loaded_records[0]));
     free(full_path);
     switch (compressed_size) {
         case -2:
@@ -270,7 +277,8 @@ static int ArrayDbFlushSolvingTier(void *aux) {
 }
 
 static int ArrayDbFreeSolvingTier(void) {
-    RecordArrayDestroy(&records);
+    RecordArrayDestroy(&loaded_records[0]);
+    TierHashMapSCRemove(&loaded_tier_to_index, current_tier);
     current_tier = kIllegalTier;
 
     return kNoError;
@@ -291,23 +299,23 @@ static int ArrayDbSetGameSolved(void) {
 }
 
 static int ArrayDbSetValue(Position position, Value value) {
-    RecordArraySetValue(&records, position, value);
+    RecordArraySetValue(&loaded_records[0], position, value);
 
     return kNoError;
 }
 
 static int ArrayDbSetRemoteness(Position position, int remoteness) {
-    RecordArraySetRemoteness(&records, position, remoteness);
+    RecordArraySetRemoteness(&loaded_records[0], position, remoteness);
 
     return kNoError;
 }
 
 static Value ArrayDbGetValue(Position position) {
-    return RecordArrayGetValue(&records, position);
+    return RecordArrayGetValue(&loaded_records[0], position);
 }
 
 static int ArrayDbGetRemoteness(Position position) {
-    return RecordArrayGetRemoteness(&records, position);
+    return RecordArrayGetRemoteness(&loaded_records[0], position);
 }
 
 static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
@@ -317,8 +325,8 @@ static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {
     // Find the first unused slot in the loaded records array.
-    int i;
-    for (i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
+    int i;  // The 0-th space is reserved for the solving tier.
+    for (i = 1; i < kArrayDbNumLoadedTiersMax; ++i) {
         if (loaded_records[i].records == NULL) break;
     }
     if (i == kArrayDbNumLoadedTiersMax) {
@@ -364,10 +372,12 @@ static int GetLoadedTierIndex(Tier tier) {
 
 static int ArrayDbUnloadTier(Tier tier) {
     int index = GetLoadedTierIndex(tier);
-    if (index >= 0) {
-        RecordArrayDestroy(&loaded_records[index]);
-        TierHashMapSCRemove(&loaded_tier_to_index, tier);
-    }
+
+    // Either not found or attempting to unload the solving tier.
+    if (index <= 0) return kRuntimeError;
+
+    RecordArrayDestroy(&loaded_records[index]);
+    TierHashMapSCRemove(&loaded_tier_to_index, tier);
 
     return kNoError;
 }
