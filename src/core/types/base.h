@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief GAMESMAN base types.
- * @version 1.0.1
- * @date 2024-02-15
+ * @version 1.0.2
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -57,8 +57,11 @@ typedef struct TierPosition {
 /**
  * @brief Possible values of a game position.
  *
- * @note Always make sure that kUndecided is 0 as other components rely on this
- * assumption.
+ * @details The following conventions must be observed as other components of
+ * GAMESMAN relies on them:
+ *   1. kUndecided is 0
+ *   2. kLose < kDraw < kTie < kWin
+ *   3. kNumValues is greater than all other possible values.
  */
 typedef enum Value {
     kErrorValue = -1, /**< This illegal value indicates an error. */
@@ -67,6 +70,7 @@ typedef enum Value {
     kDraw,            /**< Players are in a draw assuming perfect play. */
     kTie,             /**< The game will end in a tie assuming perfect play. */
     kWin,             /**< Current player is winning in a perfect play. */
+    kNumValues,       /**< Number of possible legal values. */
 } Value;
 
 /**
