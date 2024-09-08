@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.2.0
- * @date 2024-07-11
+ * @version 1.3.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,6 +30,7 @@
 #include <errno.h>      // errno
 #include <fcntl.h>      // open
 #include <inttypes.h>   // PRId64, PRIu64
+#include <lzma.h>       // lzma_physmem
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
@@ -59,6 +60,10 @@ void NotReached(ReadOnlyString message) {
             "error message was %s\n",
             message);
     exit(kNotReachedError);
+}
+
+intptr_t GetPhysicalMemory(void) {
+    return (intptr_t)lzma_physmem();    
 }
 
 void *SafeMalloc(size_t size) {
@@ -205,7 +210,7 @@ int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok) {
     if (items_read == n) return 0;
     if (feof(stream)) {
         if (eof_ok) return 0;
-        
+
         fprintf(
             stderr,
             "GuardedFread: end-of-file reached before reading %zd items, only "
