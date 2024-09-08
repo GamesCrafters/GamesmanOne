@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic tier array.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.1.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -62,6 +61,18 @@ bool TierArrayAppend(TierArray *array, Tier tier);
  * @return false otherwise.
  */
 bool TierArrayRemove(TierArray *array, Tier tier);
+
+/**
+ * @brief Pops the item at the back of the ARRAY. Calling this function on an
+ * empty ARRAY results in undefined behavior.
+ */
+void TierArrayPopBack(TierArray *array);
+
+/**
+ * @brief Returns the Tier at the back of the array. Calling this function on an
+ * empty ARRAY results in undefined behavior.
+ */
+Tier TierArrayBack(const TierArray *array);
 
 /** @brief Returns true if ARRAY is empty, or false otherwise. */
 bool TierArrayEmpty(const TierArray *array);
