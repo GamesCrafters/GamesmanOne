@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.0
- * @date 2024-07-11
+ * @version 1.0.1
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,7 +36,7 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>        // OpenMP pragmas
+#include <omp.h>  // OpenMP pragmas
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
@@ -68,11 +68,32 @@ static int largest_tie_remoteness;
 
 // ------------------------------ Step0Initialize ------------------------------
 
+static bool Step0_0SetupChildTiers(void) {
+    TierArray raw = api_internal->GetChildTiers(this_tier);
+    if (raw.size == kIllegalSize) return false;
+
+    TierHashSet dedup;
+    TierHashSetInit(&dedup, 0.5);
+    TierArrayInit(&child_tiers);
+    for (int64_t i = 0; i < raw.size; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(raw.array[i]);
+
+        // Another child tier is symmetric to this one and was already added.
+        if (TierHashSetContains(&dedup, canonical)) continue;
+
+        TierHashSetAdd(&dedup, canonical);
+        TierArrayAppend(&child_tiers, canonical);
+    }
+    TierHashSetDestroy(&dedup);
+    TierArrayDestroy(&raw);
+
+    return true;
+}
+
 static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
     api_internal = api;
     this_tier = tier;
-    child_tiers = api_internal->GetChildTiers(this_tier);
-    if (child_tiers.size == kIllegalSize) return false;
+    if (!Step0_0SetupChildTiers()) return false;
 
     this_tier_size = api_internal->GetTierSize(tier);
     largest_win_lose_remoteness = 0;
