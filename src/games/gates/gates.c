@@ -826,8 +826,9 @@ static const TierSolverApi kGatesSolverApi = {
     .GetCanonicalChildPositions = NULL,  // Too complicated.
 
     .GetPositionInSymmetricTier = GatesGetPositionInSymmetricTier,
-    .GetCanonicalTier = GatesGetCanonicalTier,
     .GetChildTiers = GatesGetChildTiers,
+    .GetTierType = GatesGetTierType,
+    .GetCanonicalTier = GatesGetCanonicalTier,
     .GetTierName = GatesGetTierName,
 };
 
@@ -1146,6 +1147,9 @@ static void InitOneWhiteGateSymmIndex(void) {
     for (GatesTierField G1 = 0; G1 < kBoardSize; ++G1) {
         for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
             GatesTierField sG1 = GatesTierGetSymmetryMatrixEntry(symm, G1);
+            // Note that this additional check is necessary only because we need
+            // to make sure that applying tier symmetry in the same tier returns
+            // the same position.
             if (kOneWhiteGateSymmIndex[G1][sG1] < 0) {
                 kOneWhiteGateSymmIndex[G1][sG1] = symm;
             }

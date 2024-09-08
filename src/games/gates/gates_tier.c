@@ -6,6 +6,7 @@
 #include <stdio.h>    // sprintf
 
 #include "core/misc.h"
+#include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
 // ====================== GatesTierGetSymmetryMatrixEntry ======================
@@ -447,7 +448,20 @@ static TierArray GetChildTiersGateMoving(const GatesTier *t) {
     return GetChildTiersGateMovingEitherTurn(t);
 }
 
-// TODO: address API change for immediate tier transition optimization.
+TierType GatesGetTierType(Tier tier) {
+    GatesTier t;
+    GatesTierUnhash(tier, &t);
+    switch (t.phase) {
+        case kPlacement:
+        case kGate1Moving:
+        case kGate2Moving:
+            return kTierTypeImmediateTransition;
+    }
+
+    return kTierTypeLoopy;
+}
+
+// TODO: remove these once finished debugging.
 int flag = 0;
 static TierHashSet placement_set, movement_set, gate_moving_set;
 TierArray GatesGetChildTiers(Tier tier) {
