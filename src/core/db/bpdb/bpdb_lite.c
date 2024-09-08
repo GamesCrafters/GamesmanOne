@@ -106,8 +106,6 @@ const Database kBpdbLite = {
     .GameStatus = &BpdbLiteGameStatus,
 };
 
-static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
-
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
