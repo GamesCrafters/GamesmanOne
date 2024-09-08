@@ -9,8 +9,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
- * @version 1.3.0
- * @date 2024-07-11
+ * @version 1.4.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,13 +41,39 @@
  * @brief Initializes the Tier Worker Module using the given API functions.
  *
  * @param api Game-specific implementation of the Tier Solver API functions.
+ * @param db_chunk_size Number of positions in each database compression block.
+ * @param memlimit Approximate maximum amount of heap memory that can be used by
+ * the tier worker.
  */
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
+                    intptr_t memlimit);
 
 /** @brief Solving methods for \c TierWorkerSolve. */
 enum TierWorkerSolveMethod {
     /**
-     * @brief Method of backward induction.
+     * @brief Method of simple k-pass tier scanning assuming an immediate tier
+     * transition happens at all positions in the solving tier (for all
+     * positions P in the solving tier T, no child positions of P are in T.)
+     * This also implies that the solving tier is loop-free.
+     *
+     * @details For each pass, loads as many child tiers of the solving tier as
+     * possible into memory and scan the solving tier to update the values using
+     * minimax. In the best case, assuming enough memory to load all child tiers
+     * at once, the solver finishes in one pass.
+     *
+     * Worst case runtime: O(N * (V + E)), where N is the number of child tiers
+     * of the tier being solved, V is the number of vertices in the position
+     * graph of the tier being solved, and E is the number of edges in the said
+     * graph. Note that this only happens when there is not enough memory to
+     * load more than one child tier at a time. Assuming unlimited memory, the
+     * runtime becomes O(V + E).
+     *
+     * Worst case memory: O(V).
+     */
+    kTierWorkerSolveMethodImmediateTransition,
+
+    /**
+     * @brief Method of backward induction for loopy tiers.
      *
      * @details Starts with all primitive positions and solved positions in
      * child tiers as the frontier. Solve by pushing the frontier up using
@@ -63,7 +89,7 @@ enum TierWorkerSolveMethod {
     kTierWorkerSolveMethodBackwardInduction,
 
     /**
-     * @brief Method of value iteration.
+     * @brief Method of value iteration for loopy tiers.
      *
      * @details Starts with all legal positions marked as drawing. The first
      * iteration assigns values and remotenesses to all primitive positions.
@@ -105,7 +131,7 @@ int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
 #ifdef USE_MPI
 /**
  * @brief Serve as a MPI worker until terminated.
- * 
+ *
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */

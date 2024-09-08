@@ -6,9 +6,9 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the loopy tier solver.
- * @version 1.5.1
- * @date 2024-08-25
+ * @brief Implementation of the generic tier solver.
+ * @version 1.6.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,6 +31,7 @@
 
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
+#include <stdint.h>  // int64_t, intptr_t
 #include <stdio.h>   // fprintf, stderr
 #include <string.h>  // memset, memcpy, strncmp
 #ifdef USE_MPI
@@ -158,6 +159,7 @@ static TierPosition GetCanonicalTierPosition(TierPosition tier_position);
 
 // Default API functions
 
+static TierType DefaultGetTierType(Tier tier);
 static Tier DefaultGetCanonicalTier(Tier tier);
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
                                                   Tier symmetric);
@@ -213,7 +215,9 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    // 90% of physical memory.
+    intptr_t memlimit = GetPhysicalMemory() / 10 * 9;
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, memlimit);
     return TierManagerTest(&current_api, seed);
 }
 
@@ -277,18 +281,19 @@ static int TierSolverSolve(void *aux) {
         return kNoError;
     }
 
-    static const TierSolverSolveOptions kDefaultSolveOptions = {
+    TierSolverSolveOptions default_options = {
         .force = false,
         .verbose = 1,
+        .memlimit = GetPhysicalMemory() / 10 * 9,  // 90% of physical memory.
     };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
-    if (options == NULL) options = &kDefaultSolveOptions;
+    if (options == NULL) options = &default_options;
     if (!options->force && solver_status == kTierSolverSolveStatusSolved) {
         printf("%s\n", kTierSolverSolveSkipSolvedMsg);
         return kNoError;
     }
 #ifndef USE_MPI  // If not using MPI
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
     return TierManagerSolve(&current_api, options->force, options->verbose);
 #else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
@@ -298,14 +303,16 @@ static int TierSolverSolve(void *aux) {
     if (cluster_size < 1) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
-        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
+                       options->memlimit);
         return TierManagerSolve(&current_api, options->force, options->verbose);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
-            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
+                           options->memlimit);
             return TierWorkerMpiServe();
         }
     }
@@ -495,6 +502,10 @@ static bool SetCurrentApi(const TierSolverApi *api) {
             &DefaultGetNumberOfCanonicalChildPositions;
     }
 
+    if (current_api.GetTierType == NULL) {
+        current_api.GetTierType = &DefaultGetTierType;
+    }
+
     if (current_api.GetCanonicalChildPositions == NULL) {
         current_api.GetCanonicalChildPositions =
             &DefaultGetCanonicalChildPositions;
@@ -538,8 +549,12 @@ static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
 
     // Convert to the tier position inside the canonical tier.
     canonical.tier = current_api.GetCanonicalTier(tier_position.tier);
-    canonical.position =
-        current_api.GetPositionInSymmetricTier(tier_position, canonical.tier);
+    if (canonical.tier == tier_position.tier) {  // Original tier is canonical.
+        canonical.position = tier_position.position;
+    } else {  // Original tier is not canonical.
+        canonical.position = current_api.GetPositionInSymmetricTier(
+            tier_position, canonical.tier);
+    }
 
     // Find the canonical position inside the canonical tier.
     canonical.position = current_api.GetCanonicalPosition(canonical);
@@ -549,11 +564,18 @@ static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
 
 // Default API functions
 
+static TierType DefaultGetTierType(Tier tier) {
+    (void)tier;  // Unused.
+    return kTierTypeLoopy;
+}
+
 static Tier DefaultGetCanonicalTier(Tier tier) { return tier; }
 
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
                                                   Tier symmetric) {
     (void)symmetric;  // Unused.
+    assert(tier_position.tier == symmetric);
+
     return tier_position.position;
 }
 
@@ -570,7 +592,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     MoveArray moves = current_api.GenerateMoves(tier_position);
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
-        child.position = current_api.GetCanonicalPosition(child);
+        child = GetCanonicalTierPosition(child);
         if (!TierPositionHashSetContains(&children, child)) {
             TierPositionHashSetAdd(&children, child);
         }
@@ -578,6 +600,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     int num_children = (int)children.size;
     TierPositionHashSetDestroy(&children);
+
     return num_children;
 }
 
@@ -593,15 +616,15 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArray moves = current_api.GenerateMoves(tier_position);
     for (int64_t i = 0; i < moves.size; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
-        child.position = current_api.GetCanonicalPosition(child);
+        child = GetCanonicalTierPosition(child);
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
             TierPositionHashSetAdd(&deduplication_set, child);
             TierPositionArrayAppend(&children, child);
         }
     }
-
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
+
     return children;
 }
 

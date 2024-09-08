@@ -6,9 +6,9 @@
  * tier solver with various optimizations.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The loopy tier solver.
- * @version 1.5.1
- * @date 2024-08-25
+ * @brief The generic tier solver capable of handling loopy and loop-free tiers.
+ * @version 1.6.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,6 +37,27 @@
 
 /** @brief The Tier Solver. */
 extern const Solver kTierSolver;
+
+typedef enum {
+    /**
+     * @brief A tier T is of this type if, for all positions P in T, the child
+     * positions of P is not in T. This also implies that T is loop-free.
+     */
+    kTierTypeImmediateTransition,
+
+    /**
+     * @brief A tier T is of this type if it is loop-free. That is, there are no
+     * cycles in the position graph of T.
+     */
+    kTierTypeLoopFree,
+
+    /**
+     * @brief A tier T is of this type if it is loopy.
+     * @note The loopy algorithm also works on loop-free tiers. Therefore, it is
+     * safe to classify a loop-free tier as loopy.
+     */
+    kTierTypeLoopy,
+} TierType;
 
 /**
  * @brief Tier Solver API.
@@ -254,6 +275,17 @@ typedef struct TierSolverApi {
     TierArray (*GetChildTiers)(Tier tier);
 
     /**
+     * @brief Returns the type of \p tier.
+     *
+     * @note Refer to the documentation of \c TierType for the definition of
+     * each tier type in tier_solver.h.
+     *
+     * @note This function is OPTIONAL. If not implemented, all tiers will be
+     * treated as loopy.
+     */
+    TierType (*GetTierType)(Tier tier);
+
+    /**
      * @brief Returns the canonical tier symmetric to the given TIER. Returns
      * TIER if itself is canonical.
      *
@@ -292,9 +324,9 @@ typedef struct TierSolverApi {
 
 /** @brief All detectable error types by the tier solver test function. */
 enum TierSolverTestErrors {
-    kTierSolverTestNoError,           /**< No error. */
-    kTierSolverTestDependencyError,   /**< Test failed due to a prior error. */
-    kTierSolverTestGetTierNameError,  /**< Failed to get tier name. */
+    kTierSolverTestNoError,          /**< No error. */
+    kTierSolverTestDependencyError,  /**< Test failed due to a prior error. */
+    kTierSolverTestGetTierNameError, /**< Failed to get tier name. */
     /** Illegal child tier detected. */
     kTierSolverTestIllegalChildTierError,
     /** Illegal child position detected. */
@@ -315,8 +347,9 @@ enum TierSolverTestErrors {
 
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
-    int verbose; /**< Level of details to output. */
-    bool force;  /**< Whether to force (re)analyze the game. */
+    int verbose;       /**< Level of details to output. */
+    bool force;        /**< Whether to force (re)analyze the game. */
+    intptr_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverSolveOptions;
 
 /** @brief Analyzer options of the Tier Solver. */

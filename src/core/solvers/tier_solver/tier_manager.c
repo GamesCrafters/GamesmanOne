@@ -95,8 +95,10 @@ static int64_t max_tier_size;
 // Largest tier in the tier graph.
 static Tier largest_tier;
 
-// Size of the largest "group" of tiers, which refers to a parent tier and all
-// of its tier children.
+// Size of the largest "group" of tiers. A group of tiers consists of a parent
+// tier and either all of its tier children or its largest child tier, depending
+// on the type of the parent tier. This is used to determine the least amount of
+// memory needed to solve the game.
 static int64_t max_tier_group_size;
 
 // Parent of the largest tier group.
@@ -458,9 +460,22 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
 
     // Check if this is the largest group of tiers.
     TierArray canonical_children = GetCanonicalChildTiers(parent);
-    for (int64_t i = 0; i < canonical_children.size; ++i) {
-        total_size += current_api.GetTierSize(canonical_children.array[i]);
+    if (current_api.GetTierType(parent) == kTierTypeImmediateTransition) {
+        int64_t largest_child_size = 0;
+        for (int64_t i = 0; i < canonical_children.size; ++i) {
+            int64_t this_child_size =
+                current_api.GetTierSize(canonical_children.array[i]);
+            if (this_child_size > largest_child_size) {
+                largest_child_size = this_child_size;
+            }
+        }
+        total_size += largest_child_size;
+    } else {
+        for (int64_t i = 0; i < canonical_children.size; ++i) {
+            total_size += current_api.GetTierSize(canonical_children.array[i]);
+        }
     }
+
     if (total_size > max_tier_group_size) {
         max_tier_group_size = total_size;
         largest_tier_group_parent = parent;
@@ -504,6 +519,22 @@ static void CreateTierGraphPrintError(int error) {
     }
 }
 
+static int GetMethodForTierType(TierType type) {
+    switch (type) {
+        case kTierTypeImmediateTransition:
+            return kTierWorkerSolveMethodImmediateTransition;
+
+        case kTierTypeLoopFree:  // TODO: implement more efficient method.
+            return kTierWorkerSolveMethodBackwardInduction;
+
+        case kTierTypeLoopy:
+            return kTierWorkerSolveMethodValueIteration;
+    }
+
+    NotReached("GetMethodForTierType: unknown tier type");
+    return -1;  // Never reached.
+}
+
 #ifndef USE_MPI
 static int SolveTierGraph(bool force, int verbose) {
     double time_elapsed = 0.0;
@@ -518,8 +549,9 @@ static int SolveTierGraph(bool force, int verbose) {
         if (IsCanonicalTier(tier)) {  // Only solve canonical tiers.
             time_t begin = time(NULL);
             bool solved;
-            int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
-                                        tier, force, false, &solved);
+            TierType type = current_api.GetTierType(tier);
+            int error = TierWorkerSolve(GetMethodForTierType(type), tier, force,
+                                        false, &solved);
             if (error == 0) {
                 // Solve succeeded.
                 SolveUpdateTierGraph(tier);
