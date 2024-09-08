@@ -31,7 +31,7 @@
 #define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdint.h>   // int64_t, intptr_t
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
@@ -167,6 +167,7 @@ typedef struct Database {
 
     // Loading API
 
+    intptr_t (*TierMemUsage)(Tier tier, int64_t size);
     int (*LoadTier)(Tier tier, int64_t size);
     int (*UnloadTier)(Tier tier);
     bool (*IsTierLoaded)(Tier tier);

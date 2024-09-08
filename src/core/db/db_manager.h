@@ -142,6 +142,7 @@ int DbManagerGetRemoteness(Position position);
 
 // --------------------- (EXPERIMENTAL) Loading Interface ---------------------
 
+intptr_t DbManagerTierMemUsage(Tier tier, int64_t size);
 int DbManagerLoadTier(Tier tier, int64_t size);
 int DbManagerUnloadTier(Tier tier);
 bool DbManagerIsTierLoaded(Tier tier);

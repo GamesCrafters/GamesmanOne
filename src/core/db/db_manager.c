@@ -28,6 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
+#include <stdint.h>   // intptr_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -128,6 +129,10 @@ Value DbManagerGetValue(Position position) {
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+    return current_db->TierMemUsage(tier, size);
 }
 
 int DbManagerLoadTier(Tier tier, int64_t size) {
