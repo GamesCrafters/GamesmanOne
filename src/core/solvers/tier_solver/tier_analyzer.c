@@ -45,7 +45,6 @@
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
 #define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
 
 // Otherwise, the following macros do nothing.
@@ -53,7 +52,6 @@
 #define PRAGMA
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
@@ -582,5 +580,4 @@ static void InitFringe(PositionArray *target) {
 #undef PRAGMA
 #undef PRAGMA_OMP_PARALLEL
 #undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
-#undef PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC
 #undef PRAGMA_OMP_CRITICAL
