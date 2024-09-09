@@ -1134,6 +1134,12 @@ static int InitGenericHash(void) {
     return kNoError;
 }
 
+static void SwapTierFields(GatesTierField *a, GatesTierField *b) {
+    GatesTierField tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
 static void InitOneWhiteGateSymmIndex(void) {
     // Initialize all values to -1 (invalid).
     for (int G1 = 0; G1 < kBoardSize; ++G1) {
@@ -1144,9 +1150,9 @@ static void InitOneWhiteGateSymmIndex(void) {
 
     // For each space, map it using each possible symmetry and fill in the
     // lookup table.
-    for (GatesTierField G1 = 0; G1 < kBoardSize; ++G1) {
-        for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
-            GatesTierField sG1 = GatesTierGetSymmetryMatrixEntry(symm, G1);
+    for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
+        for (GatesTierField sG1 = 0; sG1 < kBoardSize; ++sG1) {
+            GatesTierField G1 = GatesTierGetSymmetryMatrixEntry(symm, sG1);
             // Note that this additional check is necessary only because we need
             // to make sure that applying tier symmetry in the same tier returns
             // the same position.
@@ -1171,11 +1177,12 @@ static void InitTwoWhiteGatesSymmIndex(void) {
 
     // For each pair of spaces, map it using each possible symmetry and fill in
     // the lookup table.
-    for (GatesTierField G1 = 0; G1 < kBoardSize; ++G1) {
-        for (GatesTierField G2 = G1 + 1; G2 < kBoardSize; ++G2) {
-            for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
-                GatesTierField sG1 = GatesTierGetSymmetryMatrixEntry(symm, G1);
-                GatesTierField sG2 = GatesTierGetSymmetryMatrixEntry(symm, G2);
+    for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
+        for (GatesTierField sG1 = 0; sG1 < kBoardSize; ++sG1) {
+            for (GatesTierField sG2 = sG1 + 1; sG2 < kBoardSize; ++sG2) {
+                GatesTierField G1 = GatesTierGetSymmetryMatrixEntry(symm, sG1);
+                GatesTierField G2 = GatesTierGetSymmetryMatrixEntry(symm, sG2);
+                if (G1 > G2) SwapTierFields(&G1, &G2);
                 if (kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] < 0) {
                     kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] = symm;
                 }
