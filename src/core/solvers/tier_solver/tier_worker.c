@@ -34,7 +34,6 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stdint.h>   // int64_t, intptr_t
-#include <stdio.h>    // printf
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
