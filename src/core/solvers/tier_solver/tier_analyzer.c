@@ -469,7 +469,6 @@ static bool Step5Analyze(Analysis *dest) {
         AnalysisInit(&parts[i]);
     }
 
-    // PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
