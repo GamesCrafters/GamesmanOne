@@ -977,7 +977,7 @@ static int TestTierGraph(long seed) {
     double time_elapsed = 0.0;
     printf("Begin random sanity testing of all %" PRId64 " tiers (%" PRId64
            " canonical) of total size %" PRId64 " (positions). %" PRId64
-           " tiers ready in test queue\n",
+           " tiers are primitive.\n",
            total_tiers, total_canonical_tiers, total_size,
            TierQueueSize(&pending_tiers));
 
@@ -1023,7 +1023,7 @@ static int TestTierGraph(long seed) {
 static void PrintTestResult(double time_elapsed) {
     assert(failed_tiers == 0);
     printf(
-        "Finished solving all tiers in %d second(s).\n"
+        "Finished testing all tiers in %d second(s).\n"
         "Number of canonical tiers tested: %" PRId64
         "\nNumber of non-canonical tiers skipped: %" PRId64
         "\nTotal tiers tested: %" PRId64 "\n",
