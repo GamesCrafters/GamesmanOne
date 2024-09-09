@@ -215,9 +215,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    // 90% of physical memory.
-    intptr_t memlimit = GetPhysicalMemory() / 10 * 9;
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, memlimit);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
     return TierManagerTest(&current_api, seed);
 }
 
@@ -284,7 +282,7 @@ static int TierSolverSolve(void *aux) {
     TierSolverSolveOptions default_options = {
         .force = false,
         .verbose = 1,
-        .memlimit = GetPhysicalMemory() / 10 * 9,  // 90% of physical memory.
+        .memlimit = 0,  // Use default memory limit.
     };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     if (options == NULL) options = &default_options;

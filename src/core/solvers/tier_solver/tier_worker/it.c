@@ -101,7 +101,7 @@ static bool Step0_0SetupChildTiers(void) {
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
                             intptr_t memlimit) {
     api_internal = api;
-    mem = memlimit;
+    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 
@@ -272,6 +272,7 @@ static bool Step1_1IterateOnePass(void) {
         int min_child_remoteness;
         FindMinOutcome(&child_positions, &min_child_value,
                        &min_child_remoteness);
+        TierPositionArrayDestroy(&child_positions);
 
         // Maximize the value of the parent position using the min child.
         MaximizeParent(pos, min_child_value, min_child_remoteness);

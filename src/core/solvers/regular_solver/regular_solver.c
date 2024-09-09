@@ -216,7 +216,7 @@ static int RegularSolverSolve(void *aux) {
     RegularSolverSolveOptions default_options = {
         .force = false,
         .verbose = 1,
-        .memlimit = GetPhysicalMemory() / 10 * 9,  // 90% of physical memory.
+        .memlimit = 0,  // Use default memory limit.
     };
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;

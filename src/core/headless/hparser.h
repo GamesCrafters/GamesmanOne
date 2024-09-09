@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Command line parsing module for headless mode.
- * @version 1.1.0
- * @date 2024-02-02
+ * @version 1.2.0
+ * @date 2024-09-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,6 +38,7 @@
  *
  * Options:
  * --data-path=<path>
+ * --memory=<limit>  // in GiB
  * -o, --output=<path>
  * -f, --force    // only effective when solving/analyzing
  * -q, --quiet    // only effective when solving/analyzing
@@ -65,6 +66,7 @@ typedef struct HeadlessArguments {
     char *variant_id; /**< Variant index. */
     char *position;   /**< Position to query. */
     char *data_path;  /**< Path to the "data" directory, NULL for default. */
+    char *memlimit;   /**< Heap memory limit, NULL for default (90%). */
     char *output;     /**< Path to output file, defaults to stdout if NULL. */
     int action;       /**< Action to take. */
     int force;        /**< Whether to force solve/analyze. */
