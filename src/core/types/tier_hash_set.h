@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash set.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-09-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -54,7 +53,7 @@ void TierHashSetInit(TierHashSet *set, double max_load_factor);
 void TierHashSetDestroy(TierHashSet *set);
 
 /** @brief Returns true if the given SET contains TIER, or false otherwise. */
-bool TierHashSetContains(TierHashSet *set, Tier tier);
+bool TierHashSetContains(const TierHashSet *set, Tier tier);
 
 /**
  * @brief Adds TIER to the Tier hash set SET.
