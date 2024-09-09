@@ -486,7 +486,7 @@ static bool HashStep0Initialize(GenericHashContext *context,
         if (piece_index < 0) {
             fprintf(
                 stderr,
-                "HashStep0Initialize: invalid piece '%c'(%x) at board[%d]\n",
+                "HashStep0Initialize: invalid piece '%c'(0x%x) at board[%d]\n",
                 board[i], board[i], i);
             return false;
         }
