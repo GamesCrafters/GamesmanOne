@@ -93,7 +93,7 @@ static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 // integer to save memory. If this assumption no longer holds for any new
 // games in the future, the programmer should change this type to a wider
 // integer type such as int16_t.
-typedef unsigned char ChildPosCounterType;
+typedef int16_t ChildPosCounterType;
 #ifdef _OPENMP
 typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
 static AtomicChildPosCounterType *num_undecided_children = NULL;
@@ -609,6 +609,9 @@ static void DestroyFrontiers(void) {
         FrontierDestroy(&lose_frontiers[i]);
         FrontierDestroy(&tie_frontiers[i]);
     }
+    free(win_frontiers);
+    free(lose_frontiers);
+    free(tie_frontiers);
 }
 
 /**
