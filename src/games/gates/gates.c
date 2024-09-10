@@ -954,7 +954,7 @@ static Move GatesStringToMove(ReadOnlyString move_string) {
             m.unpacked.gate_src = atoi(tokens[i + 1]) - 1;
             m.unpacked.gate_dest = atoi(tokens[i + 2]) - 1;
             i += 3;
-        } else if (strcmp(tokens[i], "m")) {
+        } else if (strcmp(tokens[i], "m") == 0) {
             m.unpacked.move_src = atoi(tokens[i + 1]) - 1;
             m.unpacked.move_dest = atoi(tokens[i + 2]) - 1;
             i += 3;
