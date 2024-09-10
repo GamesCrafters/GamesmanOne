@@ -605,13 +605,16 @@ static bool ProcessTiePosition(int remoteness, TierPosition tier_position) {
 
 static void DestroyFrontiers(void) {
     for (int i = 0; i < num_threads; ++i) {
-        FrontierDestroy(&win_frontiers[i]);
-        FrontierDestroy(&lose_frontiers[i]);
-        FrontierDestroy(&tie_frontiers[i]);
+        if (win_frontiers) FrontierDestroy(&win_frontiers[i]);
+        if (lose_frontiers) FrontierDestroy(&lose_frontiers[i]);
+        if (tie_frontiers) FrontierDestroy(&tie_frontiers[i]);
     }
     free(win_frontiers);
     free(lose_frontiers);
     free(tie_frontiers);
+    win_frontiers = NULL;
+    lose_frontiers = NULL;
+    tie_frontiers = NULL;
 }
 
 /**

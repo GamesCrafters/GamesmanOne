@@ -475,6 +475,7 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
             total_size += current_api.GetTierSize(canonical_children.array[i]);
         }
     }
+    TierArrayDestroy(&canonical_children);
 
     if (total_size > max_tier_group_size) {
         max_tier_group_size = total_size;
@@ -528,7 +529,7 @@ static int GetMethodForTierType(TierType type) {
             return kTierWorkerSolveMethodBackwardInduction;
 
         case kTierTypeLoopy:
-            return kTierWorkerSolveMethodValueIteration;
+            return kTierWorkerSolveMethodBackwardInduction;
     }
 
     NotReached("GetMethodForTierType: unknown tier type");
