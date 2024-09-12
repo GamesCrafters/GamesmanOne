@@ -44,6 +44,10 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "| |  _ / _` | '_ ` _ \\ / _ \\/ __| '_ ` _ \\ / _` | '_ \\  : game generator.  More\n"
     "| |_| | (_| | | | | | |  __/\\__ \\ | | | | | (_| | | | | : information?  Contact\n"
     " \\____|\\__,_|_| |_| |_|\\___||___/_| |_| |_|\\__,_|_| |_| : ddgarcia@berkeley.edu\n"
+#ifndef NDEBUG
+    "...............................................................................\n"
+    "................................ DEBUG MODE ...................................\n"
+#endif
     "..........................%s.............................\n"
     "\n"
     "Welcome to GAMESMAN, version %s. Originally       (G)ame-independent\n"
