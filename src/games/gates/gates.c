@@ -297,6 +297,18 @@ static int8_t kOneWhiteGateSymmIndex[kBoardSize][kBoardSize];
 static int8_t kTwoWhiteGatesSymmIndex[kBoardSize][kBoardSize][kBoardSize]
                                      [kBoardSize];
 
+// ========================== Common Helper Functions ==========================
+
+static char TriangleOfPlayer(int turn) {
+    // turn == 1 -> 'A'; turn == 2 -> 'a'
+    return 'A' + ('a' - 'A') * (turn - 1);
+}
+
+static char TrapezoidOfPlayer(int turn) {
+    // turn == 1 -> 'Z'; turn == 2 -> 'z'
+    return 'Z' + ('z' - 'Z') * (turn - 1);
+}
+
 // ============================== kGatesSolverApi ==============================
 
 static Position GatesGetInitialPosition(void) {
@@ -349,7 +361,7 @@ static void GenerateMovesTriangle(const char board[static kBoardSize],
 
     // For all first level adjacencies, the destination can be reached if it is
     // blank or has a friendly gate on it.
-    for (int i = 0; i < kBoardAdjacency1Size[src]; ++i) {
+    for (int8_t i = 0; i < kBoardAdjacency1Size[src]; ++i) {
         int8_t dest = kBoardAdjacency1[src][i];
         if (board[dest] == '-' || board[dest] == gate) {
             move.unpacked.move_dest = dest;
@@ -360,7 +372,7 @@ static void GenerateMovesTriangle(const char board[static kBoardSize],
     // For all second level adjacencies, the destination can be reached if
     // itself is blank or has a friendly gate on it, and at least one of its
     // blocking points is blank.
-    for (int i = 0; i < kBoardAdjacency2Size[src]; ++i) {
+    for (int8_t i = 0; i < kBoardAdjacency2Size[src]; ++i) {
         int8_t dest = kBoardAdjacency2[src][i];
         bool unoccupied = board[dest] == '-' || board[dest] == gate;
         bool reachable =
@@ -419,8 +431,8 @@ static void GenerateMovesTrapezoid(const char board[static kBoardSize],
  */
 static void GenerateMovesOfPlayer(const char board[static kBoardSize], int turn,
                                   GatesMove move, MoveArray *ret) {
-    char triangle = 'A' + ('a' - 'A') * (turn - 1);
-    char trapezoid = 'Z' + ('z' - 'Z') * (turn - 1);
+    char triangle = TriangleOfPlayer(turn);
+    char trapezoid = TrapezoidOfPlayer(turn);
     for (int8_t i = 0; i < kBoardSize; ++i) {
         if (board[i] == triangle) {
             GenerateMovesTriangle(board, i, move, ret);
@@ -780,8 +792,242 @@ static bool GatesIsLegalPosition(TierPosition tier_position) {
     return true;
 }
 
+static void GetCanonicalParentsMovementTriangle(Tier tier, const GatesTier *t,
+                                                char board[static kBoardSize],
+                                                int8_t dest, int opponent_turn,
+                                                PositionArray *ret) {
+    assert(board[dest] == 'A' || board[dest] == 'a');
+
+    // For all first level adjacencies, the space could be a source only if it
+    // is blank.
+    for (int8_t i = 0; i < kBoardAdjacency1Size[dest]; ++i) {
+        int8_t src = kBoardAdjacency1[dest][i];
+        if (board[src] == '-') {
+            SwapPieces(&board[src], &board[dest]);
+            Position parent = HashWrapper(tier, t, board, opponent_turn);
+            SwapPieces(&board[src], &board[dest]);
+            PositionArrayAppend(ret, parent);
+        }
+    }
+
+    // For all second level adjacencies, the space could be a source if
+    // itself is blank and at least one of its blocking points is blank.
+    for (int8_t i = 0; i < kBoardAdjacency2Size[dest]; ++i) {
+        int8_t src = kBoardAdjacency2[dest][i];
+        bool unoccupied = board[src] == '-';
+        bool reachable =
+            board[kBoardAdjacency2BlockingPoints[dest][i][0]] == '-' ||
+            board[kBoardAdjacency2BlockingPoints[dest][i][1]] == '-';
+        if (unoccupied && reachable) {
+            SwapPieces(&board[src], &board[dest]);
+            Position parent = HashWrapper(tier, t, board, opponent_turn);
+            SwapPieces(&board[src], &board[dest]);
+            PositionArrayAppend(ret, parent);
+        }
+    }
+}
+
+static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
+                                                 char board[static kBoardSize],
+                                                 int8_t dest, int opponent_turn,
+                                                 PositionArray *ret) {
+    assert(board[dest] == 'Z' || board[dest] == 'z');
+    const char offset =
+        (board[dest] - 'Z');  // 0 if white's turn, 32 if black's turn.
+    const char friendly_triangle = 'A' + offset;
+    const char friendly_trapezoid = 'Z' + offset;
+
+    // Collect the locations of all friendly spikes.
+    int8_t friendly_spikes[kBoardSize];
+    int8_t num_friendly_spikes = 0;
+    for (int8_t i = 0; i < kBoardSize; ++i) {
+        if (board[i] == friendly_trapezoid || board[i] == friendly_trapezoid) {
+            friendly_spikes[num_friendly_spikes++] = i;
+        }
+    }
+
+    // For all first level adjacencies, the space could be a source if it is
+    // (A) blank or (B) a friendly spike which got teleported there in the
+    // previous turn.
+    for (int8_t i = 0; i < kBoardAdjacency1Size[dest]; ++i) {
+        int8_t src = kBoardAdjacency1[dest][i];
+        if (board[src] == '-') {
+            // Case A.1: move only.
+            SwapPieces(&board[src], &board[dest]);  // Move trapezoid to src.
+            Position parent = HashWrapper(tier, t, board, opponent_turn);
+            PositionArrayAppend(ret, parent);
+
+            // Case A.2: move and teleport.
+            for (int8_t j = 0; j < num_friendly_spikes; ++i) {
+                // "Un-teleport" friendly spike.
+                SwapPieces(&board[dest], &board[friendly_spikes[i]]);
+                parent = HashWrapper(tier, t, board, opponent_turn);
+                // Revert un-teleportation.
+                SwapPieces(&board[dest], &board[friendly_spikes[i]]);
+                PositionArrayAppend(ret, parent);
+            }
+            SwapPieces(&board[src], &board[dest]);  // Move trapezoid back.
+        } else if (board[src] == friendly_triangle ||
+                   board[src] == friendly_trapezoid) {
+            // Case B: move and teleport to the source space.
+            SwapPieces(&board[src], &board[dest]);
+            Position parent = HashWrapper(tier, t, board, opponent_turn);
+            SwapPieces(&board[src], &board[dest]);
+            PositionArrayAppend(ret, parent);
+        }
+    }
+}
+
+static PositionArray GetCanonicalParentsOfMovement(
+    Tier tier, const GatesTier *ct, char board[static kBoardSize], int turn) {
+    //
+    assert(ct->phase == kMovement);
+    int opponent_turn = 3 - turn;
+    char triangle = TriangleOfPlayer(opponent_turn);
+    char trapezoid = TrapezoidOfPlayer(opponent_turn);
+    PositionArray ret;
+    PositionArrayInit(&ret);
+
+    // In the previous turn, the opponent may have moved one of the triangles
+    // or trapezoids that are on the board.
+    for (int8_t i = 0; i < kBoardSize; ++i) {
+        if (board[i] == triangle) {
+            GetCanonicalParentsMovementTriangle(tier, ct, board, i,
+                                                opponent_turn, &ret);
+        } else if (board[i] == trapezoid) {
+            GetCanonicalParentsMovementTrapezoid(tier, ct, board, i,
+                                                 opponent_turn, &ret);
+        }
+    }
+
+    return ret;
+}
+
+static void GetCanonicalParentsGateMovingHelper(Tier parent_tier,
+                                                const GatesTier *pt,
+                                                int8_t dest, char piece,
+                                                char board[static kBoardSize],
+                                                PositionArray *ret) {
+    //
+    assert(board[dest] == 'G' || board[dest] == 'g');
+    assert((islower(piece) && islower(board[dest])) ||
+           (!islower(piece) && !islower(board[dest])));
+    int opponent_turn = ((bool)islower(piece)) + 1;
+
+    // For both triangle and trapezoid moves, we need to consider all first
+    // level adjacencies and the space could be a source only if it is blank.
+    for (int8_t i = 0; i < kBoardAdjacency1Size[dest]; ++i) {
+        int8_t src = kBoardAdjacency1[dest][i];
+        if (board[src] == '-') {
+            board[src] = piece;
+            Position parent =
+                HashWrapper(parent_tier, pt, board, opponent_turn);
+            board[src] = '-';
+            PositionArrayAppend(ret, parent);
+        }
+    }
+
+    // For triangle moves only, we also need to consider second level
+    // adjacencies. A space could be a source only if it is blank.
+    if (piece == 'A' || piece == 'a') {
+        for (int8_t i = 0; i < kBoardAdjacency2Size[dest]; ++i) {
+            int8_t src = kBoardAdjacency2[dest][i];
+            bool unoccupied = board[src] == '-';
+            bool reachable =
+                board[kBoardAdjacency2BlockingPoints[dest][i][0]] == '-' ||
+                board[kBoardAdjacency2BlockingPoints[dest][i][1]] == '-';
+            if (unoccupied && reachable) {
+                board[src] = piece;
+                Position parent =
+                    HashWrapper(parent_tier, pt, board, opponent_turn);
+                board[src] = '-';
+                PositionArrayAppend(ret, parent);
+            }
+        }
+    }
+}
+
+static PositionArray GetCanonicalParentsOfGateMoving(
+    Tier parent_tier, const GatesTier *ct, char board[static kBoardSize],
+    int turn) {
+    //
+    GatesTier pt;
+    GatesTierUnhash(parent_tier, &pt);
+    assert(ct->phase == kGate1Moving || ct->phase == kGate2Moving);
+    assert(pt.phase == kMovement);
+
+    const int offset = (turn - 1) * ('g' - 'G');
+    const char opponent_gate = 'g' - offset;
+    const char opponent_triangle = 'a' - offset;
+    const char opponent_trapezoid = 'z' - offset;
+    const int opponent_triangle_piece_index = A + (turn == 1);
+    int8_t gate_index =
+        FindGate(board, opponent_gate, ct->phase == kGate2Moving);
+
+    PositionArray ret;
+    PositionArrayInit(&ret);
+    if (ct->n[opponent_triangle_piece_index] + 1 ==
+        pt.n[opponent_triangle_piece_index]) {
+        // opponent scored a triangle in the previous turn
+        GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
+                                            opponent_triangle, board, &ret);
+    } else {
+        // opponent scored a trapezoid in the previous turn
+#ifndef NDEBUG
+        const int opponent_trapezoid_piece_index = Z + (turn == 1);
+        assert(ct->n[opponent_trapezoid_piece_index] + 1 ==
+               pt.n[opponent_trapezoid_piece_index]);
+#endif  // NDEBUG
+        GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
+                                            opponent_trapezoid, board, &ret);
+    }
+
+    return ret;
+}
+
+// This function only works if the parent tier is in the Movement phase,
+// which is the only type of tiers that uses the loopy solving algorithm.
+static PositionArray GatesGetCanonicalParentPositions(TierPosition child,
+                                                      Tier parent_tier) {
+    GatesTier ct;
+    char board[kBoardSize];
+    UnhashTierAndPosition(child, &ct, board);
+    int turn = GenericHashGetTurnLabel(child.tier, child.position);
+
+    switch (ct.phase) {
+        case kMovement:
+            assert(parent_tier == child.tier);
+            return GetCanonicalParentsOfMovement(child.tier, &ct, board, turn);
+
+        case kGate1Moving:
+        case kGate2Moving:
+            return GetCanonicalParentsOfGateMoving(parent_tier, &ct, board,
+                                                   turn);
+
+        default:
+            NotReached(
+                "GatesGetCanonicalParentPositions: unsupported child tier "
+                "phase");
+    }
+
+    // Never reached.
+    PositionArray error;
+    PositionArrayInit(&error);
+    return error;
+}
+
+// TODO: this function is wrong!!!
+// Fix 1: kTwoWhiteGatesSymmIndex is wrong when gate1moving and gate2moving are
+// swapped
+// Fix 2: need to implement symmetry within each tier; otherwise, two
+// positions that are symmetric to each other may have parents that are actually
+// symmetric but treated both as canonical positions.
+// Fix 3: There is a bug in GatesGetCanonicalTier when gate1moving is swapped
+// with gate2moving if it is white's turn moving a black gate.
 static Position GatesGetPositionInSymmetricTier(TierPosition tier_position,
                                                 Tier symmetric) {
+    if (tier_position.tier == symmetric) return tier_position.position;
+
     GatesTier t, st;
     char board[kBoardSize], symm_board[kBoardSize];
     UnhashTierAndPosition(tier_position, &t, board);
@@ -824,6 +1070,7 @@ static const TierSolverApi kGatesSolverApi = {
     .IsLegalPosition = GatesIsLegalPosition,
     .GetCanonicalPosition = NULL,        // No symmetries within each tier.
     .GetCanonicalChildPositions = NULL,  // Too complicated.
+    .GetCanonicalParentPositions = GatesGetCanonicalParentPositions,
 
     .GetPositionInSymmetricTier = GatesGetPositionInSymmetricTier,
     .GetChildTiers = GatesGetChildTiers,
@@ -1191,6 +1438,45 @@ static void InitTwoWhiteGatesSymmIndex(void) {
     }
 }
 
+static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
+    TierPosition canonical;
+
+    // Convert to the tier position inside the canonical tier.
+    canonical.tier = GatesGetCanonicalTier(tier_position.tier);
+    if (canonical.tier == tier_position.tier) {  // Original tier is canonical.
+        canonical.position = tier_position.position;
+    } else {  // Original tier is not canonical.
+        canonical.position =
+            GatesGetPositionInSymmetricTier(tier_position, canonical.tier);
+    }
+
+    return canonical;
+}
+
+static TierPositionArray DefaultGetCanonicalChildPositions(
+    TierPosition tier_position) {
+    //
+    TierPositionHashSet deduplication_set;
+    TierPositionHashSetInit(&deduplication_set, 0.5);
+
+    TierPositionArray children;
+    TierPositionArrayInit(&children);
+
+    MoveArray moves = GatesGenerateMoves(tier_position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        TierPosition child = GatesDoMove(tier_position, moves.array[i]);
+        child = GetCanonicalTierPosition(child);
+        if (!TierPositionHashSetContains(&deduplication_set, child)) {
+            TierPositionHashSetAdd(&deduplication_set, child);
+            TierPositionArrayAppend(&children, child);
+        }
+    }
+    MoveArrayDestroy(&moves);
+    TierPositionHashSetDestroy(&deduplication_set);
+
+    return children;
+}
+
 static int GatesInit(void *aux) {
     (void)aux;  // Unused.
 
@@ -1206,7 +1492,35 @@ static int GatesInit(void *aux) {
     InitOneWhiteGateSymmIndex();
     InitTwoWhiteGatesSymmIndex();
 
-    return InitGenericHash();
+    InitGenericHash();
+    TierPosition child = {.tier = 3711050, .position = 103};
+    TierPosition not_found_parent = {.tier = 3706970, .position = 3484};
+    PositionArray parents = GatesGetCanonicalParentPositions(child, 3706970);
+    TierPositionArray children_of_not_found_parent =
+        DefaultGetCanonicalChildPositions(not_found_parent);
+
+    char buffer[1000];
+    GatesTierPositionToString(child, buffer);
+    printf("child:\n%s\n\n", buffer);
+
+    GatesTierPositionToString(not_found_parent, buffer);
+    printf("not found parent:\n%s\n\n", buffer);
+
+    for (int64_t i = 0; i < children_of_not_found_parent.size; ++i) {
+        GatesTierPositionToString(children_of_not_found_parent.array[i],
+                                  buffer);
+        printf("children_of_not_found_parent %" PRId64 ":\n%s\n\n", i, buffer);
+    }
+
+    for (int64_t i = 0; i < parents.size; ++i) {
+        TierPosition parent = {.tier = 3706970, .position = parents.array[i]};
+        GatesTierPositionToString(parent, buffer);
+        printf("parent %" PRId64 ":\n%s\n\n", i, buffer);
+    }
+
+    return kNoError;
+
+    // return InitGenericHash();
 }
 
 // =============================== GatesFinalize ===============================
