@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the generic tier solver.
- * @version 1.6.0
- * @date 2024-09-07
+ * @version 1.6.1
+ * @date 2024-09-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -234,6 +234,16 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
         case kTierSolverTestIllegalChildPosError:
             return "an illegal position was found to be a child position of "
                    "some legal position";
+        case kTierSolverTestGetCanonicalChildPositionsMismatch:
+            return "the canonical child positions returned by the "
+                   "game-specific GetCanonicalChildPositions did not match "
+                   "those returned by the default function which calls "
+                   "GenerateMoves and DoMove";
+        case kTierSolverTestGetNumberOfCanonicalChildPositionsMismatch:
+            return "the number of canonical positions returned by the "
+                   "game-specific GetNumberOfCanonicalChildPositions did not "
+                   "match the value returned by the default function which "
+                   "calls GenerateMoves and DoMove.";
         case kTierSolverTestTierSymmetrySelfMappingError:
             return "applying tier symmetry within the same tier returned a "
                    "different position";

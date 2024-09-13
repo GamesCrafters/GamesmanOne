@@ -7,8 +7,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic tier solver capable of handling loopy and loop-free tiers.
- * @version 1.6.0
- * @date 2024-09-07
+ * @version 1.6.1
+ * @date 2024-09-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -331,6 +331,14 @@ enum TierSolverTestErrors {
     kTierSolverTestIllegalChildTierError,
     /** Illegal child position detected. */
     kTierSolverTestIllegalChildPosError,
+    /** The positions returned by the game-specific GetCanonicalChildPositions
+       did not match those returned by the default function which calls
+       GenerateMoves and DoMove. */
+    kTierSolverTestGetCanonicalChildPositionsMismatch,
+    /** The number of canonical positions returned by the game-specific
+       GetNumberOfCanonicalChildPositions did not match the value returned by
+       the default function which calls GenerateMoves and DoMove. */
+    kTierSolverTestGetNumberOfCanonicalChildPositionsMismatch,
     /** Applying tier symmetry within the same tier returned a different
        position. */
     kTierSolverTestTierSymmetrySelfMappingError,

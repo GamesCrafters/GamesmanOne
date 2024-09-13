@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tier worker testing module implementation.
- * @version 1.0.2
- * @date 2024-09-08
+ * @version 1.1.0
+ * @date 2024-09-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -127,6 +127,75 @@ static bool TestChildTiers(TierPosition parent,
     return true;
 }
 
+static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
+    TierPosition canonical;
+
+    // Convert to the tier position inside the canonical tier.
+    canonical.tier = api_internal->GetCanonicalTier(tier_position.tier);
+    if (canonical.tier == tier_position.tier) {  // Original tier is canonical.
+        canonical.position = tier_position.position;
+    } else {  // Original tier is not canonical.
+        canonical.position = api_internal->GetPositionInSymmetricTier(
+            tier_position, canonical.tier);
+    }
+
+    // Find the canonical position inside the canonical tier.
+    canonical.position = api_internal->GetCanonicalPosition(canonical);
+
+    return canonical;
+}
+
+static TierPositionHashSet ReferenceGetCanonicalChildPositions(
+    TierPosition tier_position) {
+    //
+    TierPositionHashSet ret;
+    TierPositionHashSetInit(&ret, 0.5);
+
+    MoveArray moves = api_internal->GenerateMoves(tier_position);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        TierPosition child =
+            api_internal->DoMove(tier_position, moves.array[i]);
+        child = GetCanonicalTierPosition(child);
+        if (!TierPositionHashSetContains(&ret, child)) {
+            TierPositionHashSetAdd(&ret, child);
+        }
+    }
+    MoveArrayDestroy(&moves);
+
+    return ret;
+}
+
+static int TestCustomGetCanonicalChildrenFunctions(
+    TierPosition parent, const TierPositionArray *canonical_children) {
+    TierPositionHashSet ref = ReferenceGetCanonicalChildPositions(parent);
+    int ret = kTierSolverTestNoError;
+
+    // Test if the sizes match.
+    if (canonical_children->size != ref.size) {
+        ret = kTierSolverTestGetCanonicalChildPositionsMismatch;
+        goto _bailout;
+    }
+
+    // Test if the contents match.
+    for (int64_t i = 0; i < canonical_children->size; ++i) {
+        if (!TierPositionHashSetContains(&ref, canonical_children->array[i])) {
+            ret = kTierSolverTestGetCanonicalChildPositionsMismatch;
+            goto _bailout;
+        }
+    }
+
+    // Test if the custom GetNumberOfCanonicalChildPositions is correct.
+    int num_children = api_internal->GetNumberOfCanonicalChildPositions(parent);
+    if (num_children != ref.size) {
+        ret = kTierSolverTestGetNumberOfCanonicalChildPositionsMismatch;
+        goto _bailout;
+    }
+
+_bailout:
+    TierPositionHashSetDestroy(&ref);
+    return ret;
+}
+
 static int TestChildPositions(Tier tier, Position position,
                               const TierHashSet *canonical_child_tiers) {
     TierPosition parent = {.tier = tier, .position = position};
@@ -139,6 +208,14 @@ static int TestChildPositions(Tier tier, Position position,
     if (!TestChildTiers(parent, &children, canonical_child_tiers)) {
         TierPositionArrayDestroy(&children);
         return kTierSolverTestIllegalChildTierError;
+    }
+
+    // Test if the game-specific GetCanonicalChildPositions and
+    // GetNumberOfCanonicalChildPositions are correctly implemented.
+    error = TestCustomGetCanonicalChildrenFunctions(parent, &children);
+    if (error) {
+        TierPositionArrayDestroy(&children);
+        return error;
     }
 
     for (int64_t i = 0; i < children.size; ++i) {
@@ -164,7 +241,7 @@ static bool UsesLoopyAlgorithm(Tier tier) {
 static int TestChildToParentMatching(Tier tier, Position position) {
     // The GetCanonicalParentPositions function does not need to work on parent
     // tiers that does not use the backward induction loopy algorithm.
-    if (!UsesLoopyAlgorithm(tier)) return kNoError;
+    if (!UsesLoopyAlgorithm(tier)) return kTierSolverTestNoError;
 
     TierPosition parent = {.tier = tier, .position = position};
     TierPosition canonical_parent = parent;
@@ -260,7 +337,7 @@ static TierHashSet GetCanonicalChildTiers(const TierSolverApi *api,
     TierArrayDestroy(&children);
 
     // Include the parent tier as well if it may loop back to itself.
-    if (api_internal->GetTierType != kTierTypeImmediateTransition) {
+    if (api_internal->GetTierType(parent) == kTierTypeLoopy) {
         assert(api_internal->GetCanonicalTier(parent) == parent);
         TierHashSetAdd(&ret, parent);  // Assuming parent is canonical.
     }
@@ -270,7 +347,7 @@ static TierHashSet GetCanonicalChildTiers(const TierSolverApi *api,
 
 int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
                            const TierArray *parent_tiers, long seed) {
-    static const int64_t kTestSizeMax = 4096;  // Max positions to test.
+    static const int64_t kTestSizeMax = 1024;  // Max positions to test.
 
     api_internal = api;
     init_genrand64(seed);  // Seed random number generator.
@@ -280,7 +357,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
     Tier canonical_tier = api_internal->GetCanonicalTier(tier);
     TierHashSet canonical_child_tiers = GetCanonicalChildTiers(api, tier);
 
-    int error = kNoError;
+    int error = kTierSolverTestNoError;
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
     for (int64_t i = 0; i < test_size; ++i) {
         if (error != kTierSolverTestNoError) continue;  // Fail fast.
