@@ -255,48 +255,6 @@ static const int8_t kBoardAdjacency2Size[kBoardSize] = {
     4, 4, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 4, 4,
 };
 
-/**
- * @brief Maps the pair of locations of the single white gates in two symmetric
- * tiers to the index of the symmetry applied.
- * @details For G1 and sG1 both in range(kBoardSize),
- * kOneWhiteGateSymmIndex[G1][sG1] equals:
- *
- *     a. -1 if the space of index G1 is not symmetric to the space of index sG1
- * on board in any way, or
- *     b. S if the space of index G1 is mapped to the space of index sG1 when
- * the symmetry of index S is applied.
- *
- * Note that there may be more than one possible symmetries that maps G1 to sG1
- * when applied. In this case, kOneWhiteGateSymmIndex[G1][sG1] is set to the
- * index of an arbitrary one. Also note that this is valid because we did not
- * remove symmetries within each tier.
- * @note The values are set at game initialization time. The array should be
- * treated as constant at all other times.
- */
-static int8_t kOneWhiteGateSymmIndex[kBoardSize][kBoardSize];
-
-/**
- * @brief Maps the quadruplet of locations of the two white gates in two
- * symmetric tiers to the index of the symmetry applied.
- * @details For G1, G2, sG1, sG2 all in range(kBoardSize),
- * kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] equals:
- *
- *     a. -1 if the pair of spaces (G1, G2) is not symmetric to the pair os
- * spaces (sG1, sG2) on board in any way, or
- *     b. S if the pair of spaces (G1, G2) is mapped to the pair of spaces (sG1,
- * sG2) when the symmetry of index S is applied.
- *
- * Note that there may be more than one possible symmetries that maps (G1, G2)
- * to (sG1, sG2) when applied. In this case,
- * kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] is set to the index of an arbitrary
- * one. Also note that this is valid because we did not remove symmetries within
- * each tier.
- * @note The values are set at game initialization time. The array should be
- * treated as constant at all other times.
- */
-static int8_t kTwoWhiteGatesSymmIndex[kBoardSize][kBoardSize][kBoardSize]
-                                     [kBoardSize];
-
 // ========================== Common Helper Functions ==========================
 
 static char TriangleOfPlayer(int turn) {
@@ -832,8 +790,8 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
                                                  int8_t dest, int opponent_turn,
                                                  PositionArray *ret) {
     assert(board[dest] == 'Z' || board[dest] == 'z');
-    const char offset =
-        (board[dest] - 'Z');  // 0 if white's turn, 32 if black's turn.
+    // offset == 0 if black is opponent from previous turn, 32 if white.
+    const char offset = ('z' - board[dest]);
     const char friendly_triangle = 'A' + offset;
     const char friendly_trapezoid = 'Z' + offset;
 
@@ -841,7 +799,7 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
     int8_t friendly_spikes[kBoardSize];
     int8_t num_friendly_spikes = 0;
     for (int8_t i = 0; i < kBoardSize; ++i) {
-        if (board[i] == friendly_trapezoid || board[i] == friendly_trapezoid) {
+        if (board[i] == friendly_triangle || board[i] == friendly_trapezoid) {
             friendly_spikes[num_friendly_spikes++] = i;
         }
     }
@@ -858,12 +816,12 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
             PositionArrayAppend(ret, parent);
 
             // Case A.2: move and teleport.
-            for (int8_t j = 0; j < num_friendly_spikes; ++i) {
+            for (int8_t j = 0; j < num_friendly_spikes; ++j) {
                 // "Un-teleport" friendly spike.
-                SwapPieces(&board[dest], &board[friendly_spikes[i]]);
+                SwapPieces(&board[dest], &board[friendly_spikes[j]]);
                 parent = HashWrapper(tier, t, board, opponent_turn);
                 // Revert un-teleportation.
-                SwapPieces(&board[dest], &board[friendly_spikes[i]]);
+                SwapPieces(&board[dest], &board[friendly_spikes[j]]);
                 PositionArrayAppend(ret, parent);
             }
             SwapPieces(&board[src], &board[dest]);  // Move trapezoid back.
@@ -961,6 +919,7 @@ static PositionArray GetCanonicalParentsOfGateMoving(
     const char opponent_triangle = 'a' - offset;
     const char opponent_trapezoid = 'z' - offset;
     const int opponent_triangle_piece_index = A + (turn == 1);
+    const int opponent_trapezoid_piece_index = Z + (turn == 1);
     int8_t gate_index =
         FindGate(board, opponent_gate, ct->phase == kGate2Moving);
 
@@ -971,13 +930,10 @@ static PositionArray GetCanonicalParentsOfGateMoving(
         // opponent scored a triangle in the previous turn
         GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
                                             opponent_triangle, board, &ret);
-    } else {
+    }
+    if (ct->n[opponent_trapezoid_piece_index] + 1 ==
+        pt.n[opponent_trapezoid_piece_index]) {
         // opponent scored a trapezoid in the previous turn
-#ifndef NDEBUG
-        const int opponent_trapezoid_piece_index = Z + (turn == 1);
-        assert(ct->n[opponent_trapezoid_piece_index] + 1 ==
-               pt.n[opponent_trapezoid_piece_index]);
-#endif  // NDEBUG
         GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
                                             opponent_trapezoid, board, &ret);
     }
@@ -1016,49 +972,6 @@ static PositionArray GatesGetCanonicalParentPositions(TierPosition child,
     return error;
 }
 
-// TODO: this function is wrong!!!
-// Fix 1: kTwoWhiteGatesSymmIndex is wrong when gate1moving and gate2moving are
-// swapped
-// Fix 2: need to implement symmetry within each tier; otherwise, two
-// positions that are symmetric to each other may have parents that are actually
-// symmetric but treated both as canonical positions.
-// Fix 3: There is a bug in GatesGetCanonicalTier when gate1moving is swapped
-// with gate2moving if it is white's turn moving a black gate.
-static Position GatesGetPositionInSymmetricTier(TierPosition tier_position,
-                                                Tier symmetric) {
-    if (tier_position.tier == symmetric) return tier_position.position;
-
-    GatesTier t, st;
-    char board[kBoardSize], symm_board[kBoardSize];
-    UnhashTierAndPosition(tier_position, &t, board);
-    GatesTierUnhash(symmetric, &st);
-    int8_t symm_index;
-    switch (t.n[G]) {
-        case 0:  // No tier symmetries available when there are no white gates.
-            return tier_position.position;
-
-        case 1:
-            symm_index = kOneWhiteGateSymmIndex[t.G1][st.G1];
-            break;
-
-        case 2:
-            symm_index = kTwoWhiteGatesSymmIndex[t.G1][t.G2][st.G1][st.G2];
-            break;
-
-        default:
-            NotReached("invalid number of white gates on board");
-    }
-
-    // Apply the symmetry to the board.
-    for (GatesTierField i = 0; i < kBoardSize; ++i) {
-        symm_board[i] = board[GatesTierGetSymmetryMatrixEntry(symm_index, i)];
-    }
-
-    int turn =
-        GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    return HashWrapper(symmetric, &st, symm_board, turn);
-}
-
 static const TierSolverApi kGatesSolverApi = {
     .GetInitialTier = GatesGetInitialTier,
     .GetInitialPosition = GatesGetInitialPosition,
@@ -1072,10 +985,10 @@ static const TierSolverApi kGatesSolverApi = {
     .GetCanonicalChildPositions = NULL,  // Too complicated.
     .GetCanonicalParentPositions = GatesGetCanonicalParentPositions,
 
-    .GetPositionInSymmetricTier = GatesGetPositionInSymmetricTier,
+    .GetPositionInSymmetricTier = NULL,  // Symmetry removal disabled for now.
     .GetChildTiers = GatesGetChildTiers,
     .GetTierType = GatesGetTierType,
-    .GetCanonicalTier = GatesGetCanonicalTier,
+    .GetCanonicalTier = NULL,  // Symmetry removal disabled for now.
     .GetTierName = GatesGetTierName,
 };
 
@@ -1381,102 +1294,6 @@ static int InitGenericHash(void) {
     return kNoError;
 }
 
-static void SwapTierFields(GatesTierField *a, GatesTierField *b) {
-    GatesTierField tmp = *a;
-    *a = *b;
-    *b = tmp;
-}
-
-static void InitOneWhiteGateSymmIndex(void) {
-    // Initialize all values to -1 (invalid).
-    for (int G1 = 0; G1 < kBoardSize; ++G1) {
-        for (int sG1 = 0; sG1 < kBoardSize; ++sG1) {
-            kOneWhiteGateSymmIndex[G1][sG1] = -1;
-        }
-    }
-
-    // For each space, map it using each possible symmetry and fill in the
-    // lookup table.
-    for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
-        for (GatesTierField sG1 = 0; sG1 < kBoardSize; ++sG1) {
-            GatesTierField G1 = GatesTierGetSymmetryMatrixEntry(symm, sG1);
-            // Note that this additional check is necessary only because we need
-            // to make sure that applying tier symmetry in the same tier returns
-            // the same position.
-            if (kOneWhiteGateSymmIndex[G1][sG1] < 0) {
-                kOneWhiteGateSymmIndex[G1][sG1] = symm;
-            }
-        }
-    }
-}
-
-static void InitTwoWhiteGatesSymmIndex(void) {
-    // Initialize all values to -1 (invalid).
-    for (int G1 = 0; G1 < kBoardSize; ++G1) {
-        for (int G2 = 0; G2 < kBoardSize; ++G2) {
-            for (int sG1 = 0; sG1 < kBoardSize; ++sG1) {
-                for (int sG2 = 0; sG2 < kBoardSize; ++sG2) {
-                    kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] = -1;
-                }
-            }
-        }
-    }
-
-    // For each pair of spaces, map it using each possible symmetry and fill in
-    // the lookup table.
-    for (int8_t symm = 0; symm < kNumSymmetries; ++symm) {
-        for (GatesTierField sG1 = 0; sG1 < kBoardSize; ++sG1) {
-            for (GatesTierField sG2 = sG1 + 1; sG2 < kBoardSize; ++sG2) {
-                GatesTierField G1 = GatesTierGetSymmetryMatrixEntry(symm, sG1);
-                GatesTierField G2 = GatesTierGetSymmetryMatrixEntry(symm, sG2);
-                if (G1 > G2) SwapTierFields(&G1, &G2);
-                if (kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] < 0) {
-                    kTwoWhiteGatesSymmIndex[G1][G2][sG1][sG2] = symm;
-                }
-            }
-        }
-    }
-}
-
-static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
-    TierPosition canonical;
-
-    // Convert to the tier position inside the canonical tier.
-    canonical.tier = GatesGetCanonicalTier(tier_position.tier);
-    if (canonical.tier == tier_position.tier) {  // Original tier is canonical.
-        canonical.position = tier_position.position;
-    } else {  // Original tier is not canonical.
-        canonical.position =
-            GatesGetPositionInSymmetricTier(tier_position, canonical.tier);
-    }
-
-    return canonical;
-}
-
-static TierPositionArray DefaultGetCanonicalChildPositions(
-    TierPosition tier_position) {
-    //
-    TierPositionHashSet deduplication_set;
-    TierPositionHashSetInit(&deduplication_set, 0.5);
-
-    TierPositionArray children;
-    TierPositionArrayInit(&children);
-
-    MoveArray moves = GatesGenerateMoves(tier_position);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = GatesDoMove(tier_position, moves.array[i]);
-        child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&deduplication_set, child)) {
-            TierPositionHashSetAdd(&deduplication_set, child);
-            TierPositionArrayAppend(&children, child);
-        }
-    }
-    MoveArrayDestroy(&moves);
-    TierPositionHashSetDestroy(&deduplication_set);
-
-    return children;
-}
-
 static int GatesInit(void *aux) {
     (void)aux;  // Unused.
 
@@ -1488,39 +1305,36 @@ static int GatesInit(void *aux) {
     kPieceToTypeIndex[(int8_t)'Z'] = Z;
     kPieceToTypeIndex[(int8_t)'z'] = z;
 
-    // Initialize tier symmetry reverse lookup tables.
-    InitOneWhiteGateSymmIndex();
-    InitTwoWhiteGatesSymmIndex();
+    // InitGenericHash();
+    // TierPosition child = {.tier = 8646730, .position = 111};
+    // TierPosition not_found_parent = {.tier = 8638794, .position = 1830};
+    // PositionArray parents = GatesGetCanonicalParentPositions(child, 8638794);
+    // TierPositionArray children_of_not_found_parent =
+    //     DefaultGetCanonicalChildPositions(not_found_parent);
 
-    InitGenericHash();
-    TierPosition child = {.tier = 3711050, .position = 103};
-    TierPosition not_found_parent = {.tier = 3706970, .position = 3484};
-    PositionArray parents = GatesGetCanonicalParentPositions(child, 3706970);
-    TierPositionArray children_of_not_found_parent =
-        DefaultGetCanonicalChildPositions(not_found_parent);
+    // char buffer[1000];
+    // GatesTierPositionToString(child, buffer);
+    // printf("child:\n%s\n\n", buffer);
 
-    char buffer[1000];
-    GatesTierPositionToString(child, buffer);
-    printf("child:\n%s\n\n", buffer);
+    // GatesTierPositionToString(not_found_parent, buffer);
+    // printf("not found parent:\n%s\n\n", buffer);
 
-    GatesTierPositionToString(not_found_parent, buffer);
-    printf("not found parent:\n%s\n\n", buffer);
+    // for (int64_t i = 0; i < children_of_not_found_parent.size; ++i) {
+    //     GatesTierPositionToString(children_of_not_found_parent.array[i],
+    //                               buffer);
+    //     printf("children_of_not_found_parent %" PRId64 ":\n%s\n\n", i,
+    //     buffer);
+    // }
 
-    for (int64_t i = 0; i < children_of_not_found_parent.size; ++i) {
-        GatesTierPositionToString(children_of_not_found_parent.array[i],
-                                  buffer);
-        printf("children_of_not_found_parent %" PRId64 ":\n%s\n\n", i, buffer);
-    }
+    // for (int64_t i = 0; i < parents.size; ++i) {
+    //     TierPosition parent = {.tier = 8638794, .position =
+    //     parents.array[i]}; GatesTierPositionToString(parent, buffer);
+    //     printf("parent %" PRId64 ":\n%s\n\n", i, buffer);
+    // }
 
-    for (int64_t i = 0; i < parents.size; ++i) {
-        TierPosition parent = {.tier = 3706970, .position = parents.array[i]};
-        GatesTierPositionToString(parent, buffer);
-        printf("parent %" PRId64 ":\n%s\n\n", i, buffer);
-    }
+    // return kNoError;
 
-    return kNoError;
-
-    // return InitGenericHash();
+    return InitGenericHash();
 }
 
 // =============================== GatesFinalize ===============================
