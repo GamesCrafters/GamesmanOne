@@ -721,33 +721,77 @@ static TierPosition DoMoveGateMoving(GatesTier *t,
     return HashTierAndPosition(t, board, 3 - turn);
 }
 
+static TierPosition DoMoveInternal(GatesTier *t, char board[static kBoardSize],
+                                   int turn, Move move) {
+    switch (t->phase) {
+        case kPlacement:
+            return DoMovePlacement(t, board, turn, move);
+
+        case kMovement:
+            return DoMoveMovement(t, board, turn, move);
+
+        case kGate1Moving:
+        case kGate2Moving:
+            return DoMoveGateMoving(t, board, turn, move);
+
+        default:
+            NotReached("DoMoveInternal: unknown phase");
+    }
+
+    return kIllegalTierPosition;
+}
+
 static TierPosition GatesDoMove(TierPosition tier_position, Move move) {
     GatesTier t;
     char board[kBoardSize];
     UnhashTierAndPosition(tier_position, &t, board);
     int turn =
         GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    switch (t.phase) {
-        case kPlacement:
-            return DoMovePlacement(&t, board, turn, move);
 
-        case kMovement:
-            return DoMoveMovement(&t, board, turn, move);
-
-        case kGate1Moving:
-        case kGate2Moving:
-            return DoMoveGateMoving(&t, board, turn, move);
-
-        default:
-            NotReached("GatesDoMove: unknown phase");
-    }
-
-    return kIllegalTierPosition;
+    return DoMoveInternal(&t, board, turn, move);
 }
 
 static bool GatesIsLegalPosition(TierPosition tier_position) {
     (void)tier_position;  // There's no easy way to tell if a position is legal.
     return true;
+}
+
+/**
+ * @brief Inserts all child positions of \p tp in \p array if \p array is
+ * non-NULL, and returns the number of child positions found.
+ */
+static int GetChildPositionsInternal(TierPosition tp,
+                                     TierPositionArray *array) {
+    MoveArray moves = GatesGenerateMoves(tp);
+    int ret = (int)moves.size;
+    if (array != NULL) {
+        GatesTier t, t_copy;
+        char board[kBoardSize], board_copy[kBoardSize];
+        UnhashTierAndPosition(tp, &t, board);
+        int turn = GenericHashGetTurnLabel(tp.tier, tp.position);
+        for (int64_t i = 0; i < moves.size; ++i) {
+            memcpy(board_copy, board, kBoardSize);
+            t_copy = t;
+            TierPosition child =
+                DoMoveInternal(&t_copy, board_copy, turn, moves.array[i]);
+            TierPositionArrayAppend(array, child);
+        }
+    }
+    MoveArrayDestroy(&moves);
+
+    return ret;
+}
+
+static int GatesGetNumberOfCanonicalChildPositions(TierPosition tp) {
+    return GetChildPositionsInternal(tp, NULL);
+}
+
+static TierPositionArray GatesGetCanonicalChildPositions(TierPosition tp) {
+    TierPositionArray ret;
+    TierPositionArrayInit(&ret);
+    GetChildPositionsInternal(tp, &ret);
+
+    return ret;
 }
 
 static void GetCanonicalParentsMovementTriangle(Tier tier, const GatesTier *t,
@@ -981,8 +1025,10 @@ static const TierSolverApi kGatesSolverApi = {
     .Primitive = GatesPrimitive,
     .DoMove = GatesDoMove,
     .IsLegalPosition = GatesIsLegalPosition,
-    .GetCanonicalPosition = NULL,        // No symmetries within each tier.
-    .GetCanonicalChildPositions = NULL,  // Too complicated.
+    .GetCanonicalPosition = NULL,  // No symmetries within each tier.
+    .GetNumberOfCanonicalChildPositions =
+        GatesGetNumberOfCanonicalChildPositions,
+    .GetCanonicalChildPositions = GatesGetCanonicalChildPositions,
     .GetCanonicalParentPositions = GatesGetCanonicalParentPositions,
 
     .GetPositionInSymmetricTier = NULL,  // Symmetry removal disabled for now.
