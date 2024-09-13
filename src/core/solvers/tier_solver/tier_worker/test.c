@@ -58,7 +58,7 @@ static bool IsLegalPosition(Tier tier, Position pos) {
 
 static bool IsPrimitive(Tier tier, Position pos) {
     TierPosition tier_position = {.tier = tier, .position = pos};
-    
+
     return api_internal->Primitive(tier_position) != kUndecided;
 }
 
@@ -157,7 +157,15 @@ static int TestChildPositions(Tier tier, Position position,
     return error;
 }
 
+static bool UsesLoopyAlgorithm(Tier tier) {
+    return api_internal->GetTierType(tier) != kTierTypeImmediateTransition;
+}
+
 static int TestChildToParentMatching(Tier tier, Position position) {
+    // The GetCanonicalParentPositions function does not need to work on parent
+    // tiers that does not use the backward induction loopy algorithm.
+    if (!UsesLoopyAlgorithm(tier)) return kNoError;
+
     TierPosition parent = {.tier = tier, .position = position};
     TierPosition canonical_parent = parent;
     canonical_parent.position =
@@ -192,6 +200,12 @@ static int TestParentToChildMatching(Tier tier, Position position,
     int error = kTierSolverTestNoError;
     for (int64_t i = 0; i < parent_tiers->size; ++i) {
         Tier parent_tier = parent_tiers->array[i];
+
+        // The GetCanonicalParentPositions function does not need to work on
+        // parent tiers that does not use the backward induction loopy
+        // algorithm.
+        if (!UsesLoopyAlgorithm(parent_tier)) continue;
+
         PositionArray parents = api_internal->GetCanonicalParentPositions(
             canonical_child, parent_tier);
         for (int64_t j = 0; j < parents.size; ++j) {
@@ -269,7 +283,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
     int error = kNoError;
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
     for (int64_t i = 0; i < test_size; ++i) {
-        if (error != kNoError) continue;  // Fail fast.
+        if (error != kTierSolverTestNoError) continue;  // Fail fast.
         long long next_rand64;
         PRAGMA_OMP_CRITICAL(mt19937) { next_rand64 = genrand64_int63(); }
         Position position = random_test ? next_rand64 % tier_size : i;
