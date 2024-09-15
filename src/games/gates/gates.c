@@ -255,6 +255,13 @@ static const int8_t kBoardAdjacency2Size[kBoardSize] = {
     4, 4, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 4, 4,
 };
 
+/**
+ * @brief The set of tiers that contain positions from which different moves can
+ * lead to the same child and therefore requires deduplication after generating
+ * child positions using GatesGenerateMoves and GatesDoMove.
+ */
+static TierHashSet kChildDedupTiers;
+
 // ========================== Common Helper Functions ==========================
 
 static char TriangleOfPlayer(int turn) {
@@ -756,12 +763,33 @@ static bool GatesIsLegalPosition(TierPosition tier_position) {
     return true;
 }
 
-/**
- * @brief Inserts all child positions of \p tp in \p array if \p array is
- * non-NULL, and returns the number of child positions found.
- */
-static int GetChildPositionsInternal(TierPosition tp,
-                                     TierPositionArray *array) {
+static int GetChildPositionsInternalDedup(TierPosition tp,
+                                          TierPositionArray *array) {
+    MoveArray moves = GatesGenerateMoves(tp);
+    GatesTier t, t_copy;
+    char board[kBoardSize], board_copy[kBoardSize];
+    UnhashTierAndPosition(tp, &t, board);
+    int turn = GenericHashGetTurnLabel(tp.tier, tp.position);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        memcpy(board_copy, board, kBoardSize);
+        t_copy = t;
+        TierPosition child =
+            DoMoveInternal(&t_copy, board_copy, turn, moves.array[i]);
+        if (TierPositionHashSetContains(&dedup, child)) continue;
+        TierPositionHashSetAdd(&dedup, child);
+        if (array) TierPositionArrayAppend(array, child);
+    }
+    MoveArrayDestroy(&moves);
+    int ret = (int)dedup.size;
+    TierPositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
+static int GetChildPositionsInternalNoDedup(TierPosition tp,
+                                            TierPositionArray *array) {
     MoveArray moves = GatesGenerateMoves(tp);
     int ret = (int)moves.size;
     if (array != NULL) {
@@ -780,6 +808,21 @@ static int GetChildPositionsInternal(TierPosition tp,
     MoveArrayDestroy(&moves);
 
     return ret;
+}
+
+/**
+ * @brief Inserts all child positions of \p tp in \p array if \p array is
+ * non-NULL, and returns the number of child positions found.
+ */
+static int GetChildPositionsInternal(TierPosition tp,
+                                     TierPositionArray *array) {
+    if (TierHashSetContains(&kChildDedupTiers, tp.tier)) {
+        // Need child deduplication
+        return GetChildPositionsInternalDedup(tp, array);
+    }
+
+    // No deduplication required.
+    return GetChildPositionsInternalNoDedup(tp, array);
 }
 
 static int GatesGetNumberOfCanonicalChildPositions(TierPosition tp) {
@@ -1217,6 +1260,36 @@ static void FillPieceInitArray(const GatesTier *t, int piece_init[static 19]) {
     piece_init[16] = piece_init[17] = kBoardSize - GatesTierGetNumPieces(t);
 }
 
+static bool InitChildDedupTiers(void) {
+    TierHashSetInit(&kChildDedupTiers, 0.5);
+    GatesTier t;
+    t.phase = kPlacement;
+    t.n[G] = t.n[g] = t.n[A] = t.n[a] = t.n[Z] = t.n[z] = 2;
+    static_assert(A + 1 == a && a + 1 == Z && Z + 1 == z);
+    for (int p = A; p <= z; ++p) {
+        t.n[p] = 1;
+        for (t.G1 = 0; t.G1 < kBoardSize; ++t.G1) {
+            for (t.G2 = t.G1 + 1; t.G2 < kBoardSize; ++t.G2) {
+                Tier adding = GatesTierHash(&t);
+                bool success = TierHashSetAdd(&kChildDedupTiers, adding);
+                if (!success) {
+                    TierHashSetDestroy(&kChildDedupTiers);
+                    return false;
+                }
+#ifndef NDEBUG
+                char name[kDbFileNameLengthMax + 1];
+                GatesGetTierName(adding, name);
+                printf("Adding [%s] (#%" PRITier ") to kChildDedupTiers\n",
+                       name, adding);
+#endif  // NDEBUG
+            }
+        }
+        t.n[p] = 2;
+    }
+
+    return true;
+}
+
 static int InitGenericHashPlacement(void) {
     GatesTier t = {0};
     int piece_init[] = {
@@ -1351,6 +1424,10 @@ static int GatesInit(void *aux) {
     kPieceToTypeIndex[(int8_t)'Z'] = Z;
     kPieceToTypeIndex[(int8_t)'z'] = z;
 
+    // Initialize kChildDedupTiers, which contains tiers that contain positions
+    // from which different moves can lead to the same child.
+    if (!InitChildDedupTiers()) return kMallocFailureError;
+
     // InitGenericHash();
     // TierPosition child = {.tier = 8646730, .position = 111};
     // TierPosition not_found_parent = {.tier = 8638794, .position = 1830};
@@ -1385,7 +1462,10 @@ static int GatesInit(void *aux) {
 
 // =============================== GatesFinalize ===============================
 
-static int GatesFinalize(void) { return kNoError; }
+static int GatesFinalize(void) {
+    TierHashSetDestroy(&kChildDedupTiers);
+    return kNoError;
+}
 
 // ================================== kGates ==================================
 
