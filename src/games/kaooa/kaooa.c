@@ -190,7 +190,8 @@ const Game kKaooa = {
 
 // -----------------------------------------------------------------------------
 
-enum KaooaPieces { kBlank = '-', kX = 'X', kO = 'O' };
+//crows, vultures
+enum KaooaPieces { kBlank = '-', kC = 'C', kV = 'V' };
 
 enum KaooaConstants {
     kBoardRowsMax = 6,
@@ -198,7 +199,7 @@ enum KaooaConstants {
     kBoardSizeMax = kBoardRowsMax * kBoardColsMax,
 };
 
-static const char kPlayerPiece[3] = {kBlank, kX, kO};  // Cached turn-to-piece
+static const char kPlayerPiece[3] = {kBlank, kC, kV};  // Cached turn-to-piece
                                                        // mapping.
 static Tier initial_tier;
 static Position initial_position;
@@ -268,7 +269,7 @@ static int InitGenericHash(void) {
     int board_size = GetBoardSize();
     // These values are just place holders. The actual values are generated
     // in the for loop below.
-    int pieces_init_array[10] = {kBlank, 0, 0, kX, 0, 0, kO, 0, 0, -1};
+    int pieces_init_array[10] = {kBlank, 0, 0, kC, 0, 0, kV, 0, 0, -1};
 
     bool success;
     for (int num_blanks = 0; num_blanks <= board_size; ++num_blanks) {
@@ -438,8 +439,8 @@ static Tier GetChildTier(Tier parent, int turn, bool flip) {
     int num_blanks, num_x, num_o;
     UnhashTier(parent, &num_blanks, &num_x, &num_o);
     --num_blanks;
-    num_x += (kPlayerPiece[turn] == kX);
-    num_o += (kPlayerPiece[turn] == kO);
+    num_x += (kPlayerPiece[turn] == kC);
+    num_o += (kPlayerPiece[turn] == kV);
 
     return HashTier(num_blanks, num_x, num_o);
 }
@@ -867,12 +868,12 @@ static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     int turn = formal_position[0] - '0';
     int num_blanks = 0, num_x = 0, num_o = 0;
     for (int i = 0; i < GetBoardSize(); ++i) {
-        if (board[i] != kBlank && board[i] != kX && board[i] != kO) {
+        if (board[i] != kBlank && board[i] != kC && board[i] != kV) {
             return false;
         }
         num_blanks += (board[i] == kBlank);
-        num_x += (board[i] == kX);
-        num_o += (board[i] == kO);
+        num_x += (board[i] == kC);
+        num_o += (board[i] == kV);
     }
     if (!IsValidPieceConfig(num_blanks, num_x, num_o)) return false;
 
@@ -893,8 +894,8 @@ static TierPosition KaooaFormalPositionToTierPosition(
     int num_blanks = 0, num_x = 0, num_o = 0;
     for (int i = 0; i < GetBoardSize(); ++i) {
         num_blanks += (board[i] == kBlank);
-        num_x += (board[i] == kX);
-        num_o += (board[i] == kO);
+        num_x += (board[i] == kC);
+        num_o += (board[i] == kV);
     }
 
     TierPosition ret = {.tier = HashTier(num_blanks, num_x, num_o)};
