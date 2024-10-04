@@ -1,9 +1,9 @@
 /**
  * @file kaooa.c
- * @author Robert Shi (robertyishi@berkeley.edu),
- *         Maria Rufova,
- *         Benji Xu,
- *         Angela He,
+ * @author Maria Rufova, 
+ * Benji Xu,
+ * Sriya Kantipudi, 
+ * Xiang Zheng
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Kaooa implementation.
  * @version 1.0.1
