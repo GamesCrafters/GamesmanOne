@@ -25,19 +25,19 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git autoconf automake cmake liblz4-dev pkg-config zlib1g zlib1g-dev
+    sudo apt update && sudo apt install -y git autoconf automake cmake zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git autoconf automake cmake lz4-devel pkg-config zlib zlib-devel
+    sudo dnf update && sudo dnf install -y git autoconf automake cmake zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git autoconf automake cmake lz4 pkg-config zlib || error_exit "brew install failed"
+    brew install git autoconf automake cmake zlib || error_exit "brew install failed"
 }
 
 # Check if running as root, abort if yes.
@@ -116,7 +116,15 @@ cd xz || error_exit "Failed to change directory to lib-build/xz"
 cmake ../../lib/xz/ $CMAKE_FLAGS || error_exit "CMake failed to configure xz"
 make -j
 make install -j
-cd ..
+cd ../ || error_exit "Failed to change directory back to lib-build"
+
+# Build lz4
+mkdir_if_not_exist "lz4"
+cd lz4 || error_exit "Failed to change directory to lib-build/lz4"
+cmake ../../lib/lz4/build/cmake/ $CMAKE_FLAGS || error_exit "CMake failed to configure lz4"
+make -j
+make install -j
+cd ../ || error_exit "Failed to change directory back to lib-build"
 
 # Finalize library setup
 cd ..

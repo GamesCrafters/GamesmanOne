@@ -6,14 +6,13 @@ target_compile_options(gamesman PRIVATE
 )
 
 # Check dependent packages.
-find_package(PkgConfig REQUIRED)                            # pkg-config
-pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)      # (pkg-config check) liblz4
 find_package(ZLIB REQUIRED)                                 # ZLIB
 
 # Check additional required libraries.
 list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res")  # Add directory for additional libraries
 find_package(json-c REQUIRED CONFIG)                        # json-c
 find_package(liblzma 5.4.0 REQUIRED CONFIG)                 # liblzma
+find_package(lz4 1.10.0 REQUIRED CONFIG)                    # liblz4
 
 # Check optional libraries.
 if(NOT DISABLE_OPENMP)                                      # OpenMP
@@ -30,10 +29,10 @@ add_subdirectory(games)
 add_subdirectory(libs)
 
 # Link libraries.
-target_link_libraries(gamesman PRIVATE PkgConfig::lz4)         # PkgConfig::lz4
 target_link_libraries(gamesman PRIVATE ZLIB::ZLIB)             # ZLIB
 target_link_libraries(gamesman PRIVATE json-c::json-c)         # json-c
-target_link_libraries(gamesman PRIVATE liblzma::liblzma) # liblzma
+target_link_libraries(gamesman PRIVATE lz4::lz4)               # liblz4
+target_link_libraries(gamesman PRIVATE liblzma::liblzma)       # liblzma
 if(OpenMP_FOUND)                                               # OpenMP (optional)
   target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
 endif()
