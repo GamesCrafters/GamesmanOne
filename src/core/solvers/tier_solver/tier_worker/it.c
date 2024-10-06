@@ -31,6 +31,7 @@
 #include <stdint.h>   // intptr_t, int64_t
 #include <stdio.h>    // printf, fprintf, stderr
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
@@ -40,13 +41,7 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>  // OpenMP pragmas
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-
-#else  // _OPENMP not defined, the following macros do nothing.
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
+#include <omp.h>
 #endif  // _OPENMP
 
 // Note on multithreading:
@@ -228,8 +223,7 @@ static void MaximizeParent(Position parent, Value child_value,
     int parent_remoteness = DbManagerGetRemoteness(parent);
 
     Value parent_new_value = GetParentValue(child_value);
-    int parent_new_remoteness =
-        child_value == kDraw ? 0 : child_remoteness + 1;
+    int parent_new_remoteness = child_value == kDraw ? 0 : child_remoteness + 1;
 
     if (parent_value == kUndecided ||
         OutcomeCompare(parent_value, parent_remoteness, parent_new_value,
@@ -241,8 +235,8 @@ static void MaximizeParent(Position parent, Value child_value,
 }
 
 static bool Step1_1IterateOnePass(void) {
-    bool success = true;
-
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         if (!success) continue;  // Fail fast.
@@ -265,7 +259,7 @@ static bool Step1_1IterateOnePass(void) {
         // tier_position is not primitive, generate child positions and minimax.
         TierPositionArray child_positions =
             api_internal->GetCanonicalChildPositions(tier_position);
-        if (child_positions.size <= 0) success = false;
+        if (child_positions.size <= 0) ConcurrentBoolStore(&success, false);
 
         // Find the min child (with respect to the player at parent position.)
         Value min_child_value;
@@ -278,7 +272,7 @@ static bool Step1_1IterateOnePass(void) {
         MaximizeParent(pos, min_child_value, min_child_remoteness);
     }
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 static void Step1_2UnloadChildTiers(void) {

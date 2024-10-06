@@ -38,6 +38,7 @@
 #include <stdlib.h>   // calloc, malloc, free
 #include <string.h>   // memcpy
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/solvers/tier_solver/frontier.h"
@@ -47,25 +48,13 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>  // OpenMP pragmas
-#include <stdatomic.h>  // AtomicChildPosCounterType, atomic functions, memory_order_relaxed
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-
-#else  // _OPENMP not defined, the following macros do nothing.
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_PARALLEL_FOR
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
+#include <omp.h>
 #endif  // _OPENMP
 
 // Note on multithreading:
-//   Be careful that "if (!condition) success = false;" is not equivalent to
-//   "success &= condition" or "success = condition". The former creates a race
+//   Be careful that "if (!condition) ConcurrentBoolStore(&success, false);" is
+//   not equivalent to "ConcurrentBoolStore(&success, success & condition);" or
+//   "ConcurrentBoolStore(&success, condition);". The former creates a race
 //   condition whereas the latter may overwrite an already failing result.
 
 // Copy of the API functions from tier_manager. Cannot use a reference here
@@ -239,7 +228,8 @@ static bool Step1_0LoadTierHelper(int child_index) {
 
     // Scan child tier and load non-drawing positions into frontier.
     int64_t child_tier_size = current_api.GetTierSize(child_tier);
-    bool success = true;
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
 
     PRAGMA_OMP_PARALLEL {
         DbProbe probe;
@@ -254,13 +244,13 @@ static bool Step1_0LoadTierHelper(int child_index) {
                 DbManagerProbeRemoteness(&probe, child_tier_position);
             if (!CheckAndLoadFrontier(child_index, position, value, remoteness,
                                       tid)) {
-                success = false;
+                ConcurrentBoolStore(&success, false);
             }
         }
         DbManagerProbeDestroy(&probe);
     }
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 /**
@@ -346,7 +336,8 @@ static void SetNumUndecidedChildren(Position pos, ChildPosCounterType value) {
  * loads primitive positions into frontier.
  */
 static bool Step3ScanTier(void) {
-    bool success = true;
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
 
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
@@ -370,14 +361,15 @@ static bool Step3ScanTier(void) {
                 int this_tier_index = child_tiers.size - 1;
                 if (!CheckAndLoadFrontier(this_tier_index, position, value, 0,
                                           tid)) {
-                    success = false;
+                    ConcurrentBoolStore(&success, false);
                 }
                 SetNumUndecidedChildren(position, 0);
                 continue;
             }  // Execute the following lines if tier_position is not primitive.
             ChildPosCounterType num_children = Step3_0CountChildren(position);
             if (num_children <= 0)
-                success = false;  // Either OOM or no children.
+                // Either OOM or no children.
+                ConcurrentBoolStore(&success, false);
             SetNumUndecidedChildren(position, num_children);
         }
     }
@@ -388,7 +380,7 @@ static bool Step3ScanTier(void) {
         FrontierAccumulateDividers(&tie_frontiers[i]);
     }
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 // ---------------------------- Step4PushFrontierUp ----------------------------
@@ -452,7 +444,8 @@ static bool PushFrontierHelper(
     int64_t *frontier_offsets = MakeFrontierOffsets(frontiers, remoteness);
     if (!frontier_offsets) return false;
 
-    bool success = true;
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_index = 0;
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(16)
@@ -466,7 +459,9 @@ static bool PushFrontierHelper(
                 .position = FrontierGetPosition(&frontiers[frontier_id],
                                                 remoteness, index_in_frontier),
             };
-            if (!ProcessPosition(remoteness, tier_position)) success = false;
+            if (!ProcessPosition(remoteness, tier_position)) {
+                ConcurrentBoolStore(&success, false);
+            }
         }
     }
 
@@ -477,7 +472,7 @@ static bool PushFrontierHelper(
     free(frontier_offsets);
     frontier_offsets = NULL;
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 // This function is called within a OpenMP parallel region.

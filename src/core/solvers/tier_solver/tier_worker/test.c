@@ -30,6 +30,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stdio.h>    // printf, fprintf, stderr
 
+#include "core/concurrency.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 #include "libs/mt19937/mt19937-64.h"
@@ -37,15 +38,6 @@
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
-
-// Otherwise, the following macros do nothing.
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
 static const TierSolverApi *api_internal;
@@ -351,16 +343,20 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
 
     api_internal = api;
     init_genrand64(seed);  // Seed random number generator.
-    int64_t tier_size = api_internal->GetTierSize(tier);
-    bool random_test = tier_size > kTestSizeMax;
-    int64_t test_size = random_test ? kTestSizeMax : tier_size;
-    Tier canonical_tier = api_internal->GetCanonicalTier(tier);
+    const int64_t tier_size = api_internal->GetTierSize(tier);
+    const bool random_test = tier_size > kTestSizeMax;
+    const int64_t test_size = random_test ? kTestSizeMax : tier_size;
+    const Tier canonical_tier = api_internal->GetCanonicalTier(tier);
     TierHashSet canonical_child_tiers = GetCanonicalChildTiers(api, tier);
 
-    int error = kTierSolverTestNoError;
+    ConcurrentInt error;
+    ConcurrentIntInit(&error, kTierSolverTestNoError);
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
     for (int64_t i = 0; i < test_size; ++i) {
-        if (error != kTierSolverTestNoError) continue;  // Fail fast.
+        if (ConcurrentIntLoad(&error) != kTierSolverTestNoError) {
+            continue;  // Fail fast.
+        }
+
         long long next_rand64;
         PRAGMA_OMP_CRITICAL(mt19937) { next_rand64 = genrand64_int63(); }
         Position position = random_test ? next_rand64 % tier_size : i;
@@ -373,7 +369,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
             TestTierSymmetryRemoval(tier, position, canonical_tier);
         if (local_error != kTierSolverTestNoError) {
             TestPrintError(tier, position);
-            error = local_error;
+            ConcurrentIntStore(&error, local_error);
             continue;
         }
 
@@ -385,7 +381,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
             TestChildPositions(tier, position, &canonical_child_tiers);
         if (local_error != kTierSolverTestNoError) {
             TestPrintError(tier, position);
-            error = local_error;
+            ConcurrentIntStore(&error, local_error);
             continue;
         }
 
@@ -397,7 +393,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
             local_error = TestChildToParentMatching(tier, position);
             if (local_error != kTierSolverTestNoError) {
                 TestPrintError(tier, position);
-                error = local_error;
+                ConcurrentIntStore(&error, local_error);
                 continue;
             }
 
@@ -407,12 +403,12 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
                 TestParentToChildMatching(tier, position, parent_tiers);
             if (local_error != kTierSolverTestNoError) {
                 TestPrintError(tier, position);
-                error = local_error;
+                ConcurrentIntStore(&error, local_error);
                 continue;
             }
         }
     }
     TierHashSetDestroy(&canonical_child_tiers);
 
-    return error;
+    return ConcurrentIntLoad(&error);
 }

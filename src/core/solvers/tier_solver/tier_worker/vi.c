@@ -29,6 +29,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stdio.h>    // fprintf, stderr
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -36,17 +37,7 @@
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>  // OpenMP pragmas
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-
-#else  // _OPENMP not defined, the following macros do nothing.
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
+#include <omp.h>
 #endif  // _OPENMP
 
 // Note on multithreading:
@@ -104,15 +95,11 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
 // ----------------------------- Step1LoadChildren -----------------------------
 
 static bool Step1LoadChildren(void) {
-    bool success = true;
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         Tier child_tier = child_tiers.array[i];
         int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
-        if (error != kNoError) {
-            success = false;
-            break;
-        }
+        if (error != kNoError) return false;
 
         // Scan for largest remotenesses
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
@@ -142,7 +129,7 @@ static bool Step1LoadChildren(void) {
         }
     }
 
-    return success;
+    return true;
 }
 
 // --------------------------- Step2SetupSolvingTier ---------------------------
@@ -164,25 +151,23 @@ static bool IsCanonicalPosition(Position position) {
 static void Step3ScanTier(void) {
     printf("Value iteration: scanning tier... ");
     fflush(stdout);
-    PRAGMA_OMP_PARALLEL {
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(256)
-        for (Position pos = 0; pos < this_tier_size; ++pos) {
-            TierPosition tier_position = {.tier = this_tier, .position = pos};
-            if (!api_internal->IsLegalPosition(tier_position) ||
-                !IsCanonicalPosition(pos)) {
-                // Temporarily mark illegal and non-canonical positions as
-                // drawing. These values will be changed to undecided later.
-                DbManagerSetValue(pos, kDraw);
-                continue;
-            }
-
-            Value value = api_internal->Primitive(tier_position);
-            if (value != kUndecided) {  // If tier_position is primitive...
-                // Set its value immediately.
-                DbManagerSetValue(pos, value);
-                DbManagerSetRemoteness(pos, 0);
-            }  // Otherwise, do nothing.
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    for (Position pos = 0; pos < this_tier_size; ++pos) {
+        TierPosition tier_position = {.tier = this_tier, .position = pos};
+        if (!api_internal->IsLegalPosition(tier_position) ||
+            !IsCanonicalPosition(pos)) {
+            // Temporarily mark illegal and non-canonical positions as
+            // drawing. These values will be changed to undecided later.
+            DbManagerSetValue(pos, kDraw);
+            continue;
         }
+
+        Value value = api_internal->Primitive(tier_position);
+        if (value != kUndecided) {  // If tier_position is primitive...
+            // Set its value immediately.
+            DbManagerSetValue(pos, value);
+            DbManagerSetRemoteness(pos, 0);
+        }  // Otherwise, do nothing.
     }
 
     printf("done\n");
@@ -254,28 +239,31 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
 }
 
 static bool Step4_0IterateWinLose(void) {
-    bool updated = true;
-    bool failed = false;
+    ConcurrentBool updated, failed;
+    ConcurrentBoolInit(&updated, true);
+    ConcurrentBoolInit(&failed, false);
 
     printf("Value iteration: begin iterations for W/L positions");
     fflush(stdout);
-    for (int i = 1; updated || i <= largest_win_lose_remoteness + 1; ++i) {
-        updated = false;
+    for (int i = 1;
+         ConcurrentBoolLoad(&updated) || i <= largest_win_lose_remoteness + 1;
+         ++i) {
+        ConcurrentBoolStore(&updated, false);
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(128)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
             bool success = IterateWinLoseProcessPosition(i, pos, &pos_updated);
-            if (!success) failed = true;
-            if (pos_updated) updated = true;
+            if (!success) ConcurrentBoolStore(&failed, true);
+            if (pos_updated) ConcurrentBoolStore(&updated, true);
         }
 
-        if (failed) return false;
+        if (ConcurrentBoolLoad(&failed)) return false;
         printf(".");
         fflush(stdout);
     }
-
     printf("done\n");
+
     return true;
 }
 
@@ -314,28 +302,30 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
 }
 
 static bool Step4_1IterateTie(void) {
-    bool updated = false;
-    bool failed = false;
+    ConcurrentBool updated, failed;
+    ConcurrentBoolInit(&updated, true);
+    ConcurrentBoolInit(&failed, false);
 
     printf("Value iteration: begin iterations for T positions");
     fflush(stdout);
-    for (int i = 1; updated || i <= largest_tie_remoteness + 1; ++i) {
-        updated = false;
+    for (int i = 1;
+         ConcurrentBoolLoad(&updated) || i <= largest_tie_remoteness + 1; ++i) {
+        ConcurrentBoolStore(&updated, false);
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
             bool success = IterateTieProcessPosition(i, pos, &pos_updated);
-            if (!success) failed = true;
-            if (pos_updated) updated = true;
+            if (!success) ConcurrentBoolStore(&failed, true);
+            if (pos_updated) ConcurrentBoolStore(&updated, true);
         }
 
-        if (failed) return false;
+        if (ConcurrentBoolLoad(&failed)) return false;
         printf(".");
         fflush(stdout);
     }
-
     printf("done\n");
+
     return true;
 }
 
