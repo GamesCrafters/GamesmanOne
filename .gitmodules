@@ -1,3 +1,6 @@
 [submodule "lib/json-c"]
 	path = lib/json-c
 	url = https://github.com/json-c/json-c.git
+[submodule "lib/xz"]
+	path = lib/xz
+	url = https://github.com/tukaani-project/xz.git
