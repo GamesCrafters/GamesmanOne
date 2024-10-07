@@ -29,7 +29,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/solvers/tier_solver/frontier.h"
+#include "core/solvers/tier_solver/tier_worker/frontier.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
