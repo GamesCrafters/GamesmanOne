@@ -9,7 +9,6 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseGraph type.
- *
  * @version 1.1.0
  * @date 2023-10-20
  *
