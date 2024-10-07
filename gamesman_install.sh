@@ -104,7 +104,7 @@ cd lib-build || error_exit "Failed to change directory to lib-build"
 # Build json-c
 mkdir_if_not_exist "json-c"
 cd json-c || error_exit "Failed to change directory to lib-build/json-c"
-CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../res -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_BUILD_TYPE=Release"
+CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../res -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 -DCMAKE_BUILD_TYPE=Release"
 cmake ../../lib/json-c/ $CMAKE_FLAGS || error_exit "CMake failed to configure json-c"
 make -j || error_exit "json-c make failed"
 make install -j || error_exit "json-c make install failed"
