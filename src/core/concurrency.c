@@ -34,7 +34,7 @@ void ConcurrentBoolStore(ConcurrentBool *cb, bool val) {
 
 void ConcurrentIntInit(ConcurrentInt *ci, int val) {
 #ifdef _OPENMP
-    atomic_init(cb, val);
+    atomic_init(ci, val);
 #else
     *ci = val;
 #endif

@@ -21,6 +21,7 @@ set(LIBS
     core_types)
 
 set(HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/game_manager.h
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.h
@@ -28,6 +29,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/misc.h)
 
 set(SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.c
     ${CMAKE_CURRENT_SOURCE_DIR}/game_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.c
