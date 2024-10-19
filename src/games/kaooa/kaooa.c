@@ -1,13 +1,9 @@
 /**
- * @file mttt.c
- * @author
-        Xiang
-        Benji
-        Maria 
-        Sriya
-    supervised by Dan Garcia: designed and developed of the original version (mttt.c in
- * GamesmanClassic.)
- *         GamesCrafters Research Group, UC Berkeley
+ * @file kaooa.c
+ * @author Maria Rufova, 
+ * Benji Xu,
+ * Sriya Kantipudi, 
+ * Xiang Zheng
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Kaooa.
  *
