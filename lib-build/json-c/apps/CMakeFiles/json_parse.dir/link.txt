@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -O3 -DNDEBUG -O2 -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/json_parse.dir/json_parse.c.o -o json_parse  ../libjson-c.a -lm

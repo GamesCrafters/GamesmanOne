@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -O2 -DNDEBUG -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/lzmadec.dir/src/common/tuklib_exit.c.o CMakeFiles/lzmadec.dir/src/common/tuklib_progname.c.o CMakeFiles/lzmadec.dir/src/xzdec/xzdec.c.o -o lzmadec  liblzma.a

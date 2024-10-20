@@ -1,0 +1,12 @@
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/lz4_static.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/lz4cli.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/create_lz4cat_symlink.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/create_unlz4_symlink.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/package.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/package_source.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/edit_cache.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/rebuild_cache.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/list_install_components.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/install.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/install/local.dir
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/lz4/CMakeFiles/install/strip.dir

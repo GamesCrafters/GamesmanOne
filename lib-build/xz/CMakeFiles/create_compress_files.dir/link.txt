@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -O2 -DNDEBUG -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/create_compress_files.dir/tests/create_compress_files.c.o -o test_compress/create_compress_files

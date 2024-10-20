@@ -1,0 +1,16 @@
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/bin/lz4
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/liblz4.a
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/include/lz4.h
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/include/lz4hc.h
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/include/lz4frame.h
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/include/lz4file.h
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/share/man/man1/lz4.1
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/pkgconfig/liblz4.pc
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/cmake/lz4/lz4Targets.cmake
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/cmake/lz4/lz4Targets-release.cmake
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/cmake/lz4/lz4Config.cmake
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/lib/cmake/lz4/lz4ConfigVersion.cmake
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/bin/lz4cat
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/bin/unlz4
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/share/man/man1/lz4cat.1
+/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/res/share/man/man1/unlz4.1

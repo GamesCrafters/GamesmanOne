@@ -1,0 +1,2339 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      The system is: Darwin - 24.0.0 - arm64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      ld: library 'System' not found
+      clang: error: linker command failed with exit code 1 (use -v to see invocation)
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /Library/Developer/CommandLineTools/usr/bin/cc 
+      Build flags: 
+      Id flags: -c 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is AppleClang, found in:
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/3.30.4/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:10 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_82eac/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_82eac.dir/build.make CMakeFiles/cmTC_82eac.dir/build
+        Building C object CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc   -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk   -v -Wl,-v -MD -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin24.0.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+        clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple x86_64-apple-macosx14.4.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=all -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=2 -target-sdk-version=14.4 -fvisibility-inlines-hidden-static-local-var -target-cpu penryn -tune-cpu generic -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-2f4e10/CMakeCCompilerABI-x86_64.o -x c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin24.0.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include
+         /Library/Developer/CommandLineTools/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks (framework directory)
+        End of search list.
+         "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.4.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=14.4 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-424028/CMakeCCompilerABI-arm64.o -x c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin24.0.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include
+         /Library/Developer/CommandLineTools/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks (framework directory)
+        End of search list.
+         "/Library/Developer/CommandLineTools/usr/bin/lipo" -create -output CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-2f4e10/CMakeCCompilerABI-x86_64.o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-424028/CMakeCCompilerABI-arm64.o
+        Linking C executable cmTC_82eac
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_82eac.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -o cmTC_82eac
+        Apple clang version 15.0.0 (clang-1500.3.9.4)
+        Target: arm64-apple-darwin24.0.0
+        Thread model: posix
+        InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+         "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch x86_64 -platform_version macos 14.4.0 14.4 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-0550a7/CMakeCCompilerABI-x86_64.out -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_82eac -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1053.12
+        BUILD 15:45:29 Feb  3 2024
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+        will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+        TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+        Library search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks
+         "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -no_deduplicate -dynamic -arch arm64 -platform_version macos 14.4.0 14.4 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-c3ff2a/CMakeCCompilerABI-arm64.out -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_82eac -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1053.12
+        BUILD 15:45:29 Feb  3 2024
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+        will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+        TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+        Library search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks
+         "/Library/Developer/CommandLineTools/usr/bin/lipo" -create -output cmTC_82eac /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-0550a7/CMakeCCompilerABI-x86_64.out /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-c3ff2a/CMakeCCompilerABI-arm64.out
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:113 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : "arm64;x86_64"
+      Effective list of architectures found in the ABI info binary: "arm64;x86_64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include]
+          add: [/Library/Developer/CommandLineTools/usr/include]
+        end of search list found
+        collapse include dir [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include] ==> [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include]
+        collapse include dir [/Library/Developer/CommandLineTools/usr/include] ==> [/Library/Developer/CommandLineTools/usr/include]
+        implicit include dirs: [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include;/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include;/Library/Developer/CommandLineTools/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_82eac/fast]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_82eac.dir/build.make CMakeFiles/cmTC_82eac.dir/build]
+        ignore line: [Building C object CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/cc   -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk   -v -Wl -v -MD -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin24.0.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple x86_64-apple-macosx14.4.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=all -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=2 -target-sdk-version=14.4 -fvisibility-inlines-hidden-static-local-var -target-cpu penryn -tune-cpu generic -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-2f4e10/CMakeCCompilerABI-x86_64.o -x c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin24.0.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple arm64-apple-macosx14.4.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -mrelax-all --mrelax-relocations -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=14.4 -fvisibility-inlines-hidden-static-local-var -target-cpu apple-m1 -target-feature +v8.5a -target-feature +crc -target-feature +lse -target-feature +rdm -target-feature +crypto -target-feature +dotprod -target-feature +fp-armv8 -target-feature +neon -target-feature +fp16fml -target-feature +ras -target-feature +rcpc -target-feature +zcm -target-feature +zcz -target-feature +fullfp16 -target-feature +sm4 -target-feature +sha3 -target-feature +sha2 -target-feature +aes -target-abi darwinpcs -debugger-tuning=lldb -target-linker-version 1053.12 -v -fcoverage-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0 -dependency-file CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include -internal-isystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include -internal-externc-isystem /Library/Developer/CommandLineTools/usr/include -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -Wno-reserved-identifier -Wno-gnu-folding-constant -fdebug-compilation-dir=/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-L30uAl -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -mllvm -disable-aligned-alloc-awareness=1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-424028/CMakeCCompilerABI-arm64.o -x c /opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 15.0.0 (clang-1500.3.9.4) default target arm64-apple-darwin24.0.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [ "/Library/Developer/CommandLineTools/usr/bin/lipo" -create -output CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-2f4e10/CMakeCCompilerABI-x86_64.o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-424028/CMakeCCompilerABI-arm64.o]
+        ignore line: [Linking C executable cmTC_82eac]
+        ignore line: [/opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_82eac.dir/link.txt --verbose=1]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl -search_paths_first -Wl -headerpad_max_install_names  -v -Wl -v CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -o cmTC_82eac]
+        ignore line: [Apple clang version 15.0.0 (clang-1500.3.9.4)]
+        ignore line: [Target: arm64-apple-darwin24.0.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /Library/Developer/CommandLineTools/usr/bin]
+        link line: [ "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -dynamic -arch x86_64 -platform_version macos 14.4.0 14.4 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o /var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-0550a7/CMakeCCompilerABI-x86_64.out -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_82eac -lSystem /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+          arg [/Library/Developer/CommandLineTools/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/Library/Developer/CommandLineTools/usr/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [x86_64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [14.4.0] ==> ignore
+          arg [14.4] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk] ==> ignore
+          arg [-o] ==> ignore
+          arg [/var/folders/dh/638wkll90xxdtxjbkj4kjdyh0000gn/T/CMakeCCompilerABI-0550a7/CMakeCCompilerABI-x86_64.out] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_82eac.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-arch_multiple] ==> ignore
+          arg [-final_output] ==> ignore
+          arg [cmTC_82eac] ==> ignore
+          arg [-lSystem] ==> lib [System]
+          arg [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a] ==> lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'C': /Library/Developer/CommandLineTools/usr/bin/ld
+        Library search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks]
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      Running the C compiler's linker: "/Library/Developer/CommandLineTools/usr/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld-1053.12
+      BUILD 15:45:29 Feb  3 2024
+      configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+      will use ld-classic for: armv6 armv7 armv7s arm64_32 i386 armv6m armv7k armv7m armv7em
+      LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
+      TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:98 (check_include_file)"
+    checks:
+      - "Looking for fcntl.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-NXbyY0"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-NXbyY0"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_FCNTL_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-NXbyY0'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_f8db8/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_f8db8.dir/build.make CMakeFiles/cmTC_f8db8.dir/build
+        Building C object CMakeFiles/cmTC_f8db8.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_f8db8.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_f8db8.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_f8db8.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-NXbyY0/CheckIncludeFile.c
+        Linking C executable cmTC_f8db8
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f8db8.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_f8db8.dir/CheckIncludeFile.c.o -o cmTC_f8db8  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:99 (check_include_file)"
+    checks:
+      - "Looking for inttypes.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ERaSrI"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ERaSrI"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_INTTYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ERaSrI'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_eb312/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_eb312.dir/build.make CMakeFiles/cmTC_eb312.dir/build
+        Building C object CMakeFiles/cmTC_eb312.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_eb312.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_eb312.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_eb312.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ERaSrI/CheckIncludeFile.c
+        Linking C executable cmTC_eb312
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_eb312.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_eb312.dir/CheckIncludeFile.c.o -o cmTC_eb312  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:100 (check_include_file)"
+    checks:
+      - "Looking for stdarg.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-56rkbg"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-56rkbg"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STDARG_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-56rkbg'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c4944/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c4944.dir/build.make CMakeFiles/cmTC_c4944.dir/build
+        Building C object CMakeFiles/cmTC_c4944.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c4944.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c4944.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c4944.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-56rkbg/CheckIncludeFile.c
+        Linking C executable cmTC_c4944
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c4944.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c4944.dir/CheckIncludeFile.c.o -o cmTC_c4944  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:101 (check_include_file)"
+    checks:
+      - "Looking for strings.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0OciNV"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0OciNV"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRINGS_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0OciNV'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_9c554/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_9c554.dir/build.make CMakeFiles/cmTC_9c554.dir/build
+        Building C object CMakeFiles/cmTC_9c554.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_9c554.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_9c554.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_9c554.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0OciNV/CheckIncludeFile.c
+        Linking C executable cmTC_9c554
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9c554.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_9c554.dir/CheckIncludeFile.c.o -o cmTC_9c554  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:102 (check_include_file)"
+    checks:
+      - "Looking for string.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-EIeCT8"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-EIeCT8"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRING_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-EIeCT8'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_2c45c/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_2c45c.dir/build.make CMakeFiles/cmTC_2c45c.dir/build
+        Building C object CMakeFiles/cmTC_2c45c.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_2c45c.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_2c45c.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_2c45c.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-EIeCT8/CheckIncludeFile.c
+        Linking C executable cmTC_2c45c
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2c45c.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_2c45c.dir/CheckIncludeFile.c.o -o cmTC_2c45c  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:103 (check_include_file)"
+    checks:
+      - "Looking for syslog.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-V7xC8t"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-V7xC8t"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYSLOG_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-V7xC8t'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c1eb8/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c1eb8.dir/build.make CMakeFiles/cmTC_c1eb8.dir/build
+        Building C object CMakeFiles/cmTC_c1eb8.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c1eb8.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c1eb8.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c1eb8.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-V7xC8t/CheckIncludeFile.c
+        Linking C executable cmTC_c1eb8
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c1eb8.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c1eb8.dir/CheckIncludeFile.c.o -o cmTC_c1eb8  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFiles.cmake:132 (try_compile)"
+      - "CMakeLists.txt:106 (check_include_files)"
+    checks:
+      - "Looking for 4 include files stdlib.h, ..., float.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-O0SDfg"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-O0SDfg"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "STDC_HEADERS"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-O0SDfg'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_a480e/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_a480e.dir/build.make CMakeFiles/cmTC_a480e.dir/build
+        Building C object CMakeFiles/cmTC_a480e.dir/STDC_HEADERS.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_a480e.dir/STDC_HEADERS.c.o -MF CMakeFiles/cmTC_a480e.dir/STDC_HEADERS.c.o.d -o CMakeFiles/cmTC_a480e.dir/STDC_HEADERS.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-O0SDfg/STDC_HEADERS.c
+        Linking C executable cmTC_a480e
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a480e.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_a480e.dir/STDC_HEADERS.c.o -o cmTC_a480e  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:108 (check_include_file)"
+    checks:
+      - "Looking for unistd.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-SecnLQ"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-SecnLQ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_UNISTD_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-SecnLQ'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c276e/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c276e.dir/build.make CMakeFiles/cmTC_c276e.dir/build
+        Building C object CMakeFiles/cmTC_c276e.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c276e.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c276e.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c276e.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-SecnLQ/CheckIncludeFile.c
+        Linking C executable cmTC_c276e
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c276e.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c276e.dir/CheckIncludeFile.c.o -o cmTC_c276e  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:109 (check_include_file)"
+    checks:
+      - "Looking for sys/types.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7v78sh"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7v78sh"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7v78sh'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_bce19/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_bce19.dir/build.make CMakeFiles/cmTC_bce19.dir/build
+        Building C object CMakeFiles/cmTC_bce19.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_bce19.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_bce19.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_bce19.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7v78sh/CheckIncludeFile.c
+        Linking C executable cmTC_bce19
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bce19.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_bce19.dir/CheckIncludeFile.c.o -o cmTC_bce19  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:110 (check_include_file)"
+    checks:
+      - "Looking for sys/resource.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-wsmEPt"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-wsmEPt"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_RESOURCE_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-wsmEPt'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c0a23/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c0a23.dir/build.make CMakeFiles/cmTC_c0a23.dir/build
+        Building C object CMakeFiles/cmTC_c0a23.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c0a23.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c0a23.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c0a23.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-wsmEPt/CheckIncludeFile.c
+        Linking C executable cmTC_c0a23
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c0a23.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c0a23.dir/CheckIncludeFile.c.o -o cmTC_c0a23  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:112 (check_include_file)"
+    checks:
+      - "Looking for dlfcn.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-lc8ssH"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-lc8ssH"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DLFCN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-lc8ssH'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_26609/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_26609.dir/build.make CMakeFiles/cmTC_26609.dir/build
+        Building C object CMakeFiles/cmTC_26609.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_26609.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_26609.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_26609.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-lc8ssH/CheckIncludeFile.c
+        Linking C executable cmTC_26609
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_26609.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_26609.dir/CheckIncludeFile.c.o -o cmTC_26609  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:113 (check_include_file)"
+    checks:
+      - "Looking for endian.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qn7mc6"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qn7mc6"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_ENDIAN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qn7mc6'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c592c/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c592c.dir/build.make CMakeFiles/cmTC_c592c.dir/build
+        Building C object CMakeFiles/cmTC_c592c.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c592c.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c592c.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c592c.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qn7mc6/CheckIncludeFile.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qn7mc6/CheckIncludeFile.c:1:10: fatal error: 'endian.h' file not found
+        #include <endian.h>
+                 ^~~~~~~~~~
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_c592c.dir/CheckIncludeFile.c.o] Error 1
+        make: *** [cmTC_c592c/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:114 (check_include_file)"
+    checks:
+      - "Looking for limits.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-mO0qHc"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-mO0qHc"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_LIMITS_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-mO0qHc'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_fc990/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_fc990.dir/build.make CMakeFiles/cmTC_fc990.dir/build
+        Building C object CMakeFiles/cmTC_fc990.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_fc990.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_fc990.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_fc990.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-mO0qHc/CheckIncludeFile.c
+        Linking C executable cmTC_fc990
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fc990.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_fc990.dir/CheckIncludeFile.c.o -o cmTC_fc990  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:115 (check_include_file)"
+    checks:
+      - "Looking for locale.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-LmKh9Z"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-LmKh9Z"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_LOCALE_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-LmKh9Z'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_bad37/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_bad37.dir/build.make CMakeFiles/cmTC_bad37.dir/build
+        Building C object CMakeFiles/cmTC_bad37.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_bad37.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_bad37.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_bad37.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-LmKh9Z/CheckIncludeFile.c
+        Linking C executable cmTC_bad37
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bad37.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_bad37.dir/CheckIncludeFile.c.o -o cmTC_bad37  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:116 (check_include_file)"
+    checks:
+      - "Looking for memory.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-4O2z4t"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-4O2z4t"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_MEMORY_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-4O2z4t'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ac965/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_ac965.dir/build.make CMakeFiles/cmTC_ac965.dir/build
+        Building C object CMakeFiles/cmTC_ac965.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_ac965.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_ac965.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_ac965.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-4O2z4t/CheckIncludeFile.c
+        Linking C executable cmTC_ac965
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ac965.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_ac965.dir/CheckIncludeFile.c.o -o cmTC_ac965  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:118 (check_include_file)"
+    checks:
+      - "Looking for stdint.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-iGyz1X"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-iGyz1X"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STDINT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-iGyz1X'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_61ed4/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_61ed4.dir/build.make CMakeFiles/cmTC_61ed4.dir/build
+        Building C object CMakeFiles/cmTC_61ed4.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_61ed4.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_61ed4.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_61ed4.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-iGyz1X/CheckIncludeFile.c
+        Linking C executable cmTC_61ed4
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_61ed4.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_61ed4.dir/CheckIncludeFile.c.o -o cmTC_61ed4  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:119 (check_include_file)"
+    checks:
+      - "Looking for stdlib.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-AVBiGi"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-AVBiGi"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STDLIB_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-AVBiGi'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_428a9/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_428a9.dir/build.make CMakeFiles/cmTC_428a9.dir/build
+        Building C object CMakeFiles/cmTC_428a9.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_428a9.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_428a9.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_428a9.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-AVBiGi/CheckIncludeFile.c
+        Linking C executable cmTC_428a9
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_428a9.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_428a9.dir/CheckIncludeFile.c.o -o cmTC_428a9  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:120 (check_include_file)"
+    checks:
+      - "Looking for sys/cdefs.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qjTPsl"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qjTPsl"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_CDEFS_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qjTPsl'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_174b9/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_174b9.dir/build.make CMakeFiles/cmTC_174b9.dir/build
+        Building C object CMakeFiles/cmTC_174b9.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_174b9.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_174b9.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_174b9.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-qjTPsl/CheckIncludeFile.c
+        Linking C executable cmTC_174b9
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_174b9.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_174b9.dir/CheckIncludeFile.c.o -o cmTC_174b9  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:121 (check_include_file)"
+    checks:
+      - "Looking for sys/param.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-OCwHv6"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-OCwHv6"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_PARAM_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-OCwHv6'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_16b89/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_16b89.dir/build.make CMakeFiles/cmTC_16b89.dir/build
+        Building C object CMakeFiles/cmTC_16b89.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_16b89.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_16b89.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_16b89.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-OCwHv6/CheckIncludeFile.c
+        Linking C executable cmTC_16b89
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_16b89.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_16b89.dir/CheckIncludeFile.c.o -o cmTC_16b89  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:122 (check_include_file)"
+    checks:
+      - "Looking for sys/random.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x0rx0E"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x0rx0E"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_RANDOM_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x0rx0E'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_530ba/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_530ba.dir/build.make CMakeFiles/cmTC_530ba.dir/build
+        Building C object CMakeFiles/cmTC_530ba.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_530ba.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_530ba.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_530ba.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x0rx0E/CheckIncludeFile.c
+        Linking C executable cmTC_530ba
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_530ba.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_530ba.dir/CheckIncludeFile.c.o -o cmTC_530ba  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:123 (check_include_file)"
+    checks:
+      - "Looking for sys/stat.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-asnRD5"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-asnRD5"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SYS_STAT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-asnRD5'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_47f2a/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_47f2a.dir/build.make CMakeFiles/cmTC_47f2a.dir/build
+        Building C object CMakeFiles/cmTC_47f2a.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_47f2a.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_47f2a.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_47f2a.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-asnRD5/CheckIncludeFile.c
+        Linking C executable cmTC_47f2a
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_47f2a.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_47f2a.dir/CheckIncludeFile.c.o -o cmTC_47f2a  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "CMakeLists.txt:124 (check_include_file)"
+    checks:
+      - "Looking for xlocale.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-pHaC5i"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-pHaC5i"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_XLOCALE_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-pHaC5i'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_eb0cd/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_eb0cd.dir/build.make CMakeFiles/cmTC_eb0cd.dir/build
+        Building C object CMakeFiles/cmTC_eb0cd.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_eb0cd.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_eb0cd.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_eb0cd.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-pHaC5i/CheckIncludeFile.c
+        Linking C executable cmTC_eb0cd
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_eb0cd.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_eb0cd.dir/CheckIncludeFile.c.o -o cmTC_eb0cd  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:136 (check_symbol_exists)"
+    checks:
+      - "Looking for _isnan"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-rnQwEq"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-rnQwEq"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL__ISNAN"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-rnQwEq'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_b5348/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_b5348.dir/build.make CMakeFiles/cmTC_b5348.dir/build
+        Building C object CMakeFiles/cmTC_b5348.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_b5348.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_b5348.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_b5348.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-rnQwEq/CheckSymbolExists.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-rnQwEq/CheckSymbolExists.c:8:19: error: use of undeclared identifier '_isnan'
+          return ((int*)(&_isnan))[argc];
+                          ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_b5348.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_b5348/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:137 (check_symbol_exists)"
+    checks:
+      - "Looking for _finite"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5X3OQz"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5X3OQz"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL__FINITE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5X3OQz'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_5fbb6/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_5fbb6.dir/build.make CMakeFiles/cmTC_5fbb6.dir/build
+        Building C object CMakeFiles/cmTC_5fbb6.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_5fbb6.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_5fbb6.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_5fbb6.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5X3OQz/CheckSymbolExists.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5X3OQz/CheckSymbolExists.c:8:19: error: use of undeclared identifier '_finite'
+          return ((int*)(&_finite))[argc];
+                          ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_5fbb6.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_5fbb6/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:140 (check_symbol_exists)"
+    checks:
+      - "Looking for INFINITY"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-YSkk68"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-YSkk68"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL_INFINITY"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-YSkk68'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ea97f/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_ea97f.dir/build.make CMakeFiles/cmTC_ea97f.dir/build
+        Building C object CMakeFiles/cmTC_ea97f.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_ea97f.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_ea97f.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_ea97f.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-YSkk68/CheckSymbolExists.c
+        Linking C executable cmTC_ea97f
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ea97f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_ea97f.dir/CheckSymbolExists.c.o -o cmTC_ea97f  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:141 (check_symbol_exists)"
+    checks:
+      - "Looking for isinf"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0q4As9"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0q4As9"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL_ISINF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0q4As9'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_fc3e4/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_fc3e4.dir/build.make CMakeFiles/cmTC_fc3e4.dir/build
+        Building C object CMakeFiles/cmTC_fc3e4.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_fc3e4.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_fc3e4.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_fc3e4.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-0q4As9/CheckSymbolExists.c
+        Linking C executable cmTC_fc3e4
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fc3e4.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_fc3e4.dir/CheckSymbolExists.c.o -o cmTC_fc3e4  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:142 (check_symbol_exists)"
+    checks:
+      - "Looking for isnan"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-25F0IH"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-25F0IH"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL_ISNAN"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-25F0IH'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_af26a/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_af26a.dir/build.make CMakeFiles/cmTC_af26a.dir/build
+        Building C object CMakeFiles/cmTC_af26a.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_af26a.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_af26a.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_af26a.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-25F0IH/CheckSymbolExists.c
+        Linking C executable cmTC_af26a
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_af26a.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_af26a.dir/CheckSymbolExists.c.o -o cmTC_af26a  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:143 (check_symbol_exists)"
+    checks:
+      - "Looking for nan"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-FupzVR"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-FupzVR"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DECL_NAN"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-FupzVR'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_f4533/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_f4533.dir/build.make CMakeFiles/cmTC_f4533.dir/build
+        Building C object CMakeFiles/cmTC_f4533.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_f4533.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_f4533.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_f4533.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-FupzVR/CheckSymbolExists.c
+        Linking C executable cmTC_f4533
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f4533.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_f4533.dir/CheckSymbolExists.c.o -o cmTC_f4533  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:146 (check_symbol_exists)"
+    checks:
+      - "Looking for _doprnt"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-s19Gzx"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-s19Gzx"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_DOPRNT"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-s19Gzx'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_668d2/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_668d2.dir/build.make CMakeFiles/cmTC_668d2.dir/build
+        Building C object CMakeFiles/cmTC_668d2.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_668d2.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_668d2.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_668d2.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-s19Gzx/CheckSymbolExists.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-s19Gzx/CheckSymbolExists.c:8:19: error: use of undeclared identifier '_doprnt'; did you mean 'fdopen'?
+          return ((int*)(&_doprnt))[argc];
+                          ^~~~~~~
+                          fdopen
+        /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/stdio.h:220:7: note: 'fdopen' declared here
+        FILE    *fdopen(int, const char *) __DARWIN_ALIAS_STARTING(__MAC_10_6, __IPHONE_2_0, __DARWIN_ALIAS(fdopen));
+                 ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_668d2.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_668d2/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:148 (check_symbol_exists)"
+    checks:
+      - "Looking for snprintf"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-isyNxY"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-isyNxY"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SNPRINTF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-isyNxY'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_7dd5f/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_7dd5f.dir/build.make CMakeFiles/cmTC_7dd5f.dir/build
+        Building C object CMakeFiles/cmTC_7dd5f.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_7dd5f.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_7dd5f.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_7dd5f.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-isyNxY/CheckSymbolExists.c
+        Linking C executable cmTC_7dd5f
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7dd5f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_7dd5f.dir/CheckSymbolExists.c.o -o cmTC_7dd5f  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:150 (check_symbol_exists)"
+    checks:
+      - "Looking for vasprintf"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-VrXB5W"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-VrXB5W"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_VASPRINTF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-VrXB5W'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_32a9c/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_32a9c.dir/build.make CMakeFiles/cmTC_32a9c.dir/build
+        Building C object CMakeFiles/cmTC_32a9c.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_32a9c.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_32a9c.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_32a9c.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-VrXB5W/CheckSymbolExists.c
+        Linking C executable cmTC_32a9c
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_32a9c.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_32a9c.dir/CheckSymbolExists.c.o -o cmTC_32a9c  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:151 (check_symbol_exists)"
+    checks:
+      - "Looking for vsnprintf"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Y4L4D3"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Y4L4D3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_VSNPRINTF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Y4L4D3'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_a850a/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_a850a.dir/build.make CMakeFiles/cmTC_a850a.dir/build
+        Building C object CMakeFiles/cmTC_a850a.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_a850a.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_a850a.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_a850a.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Y4L4D3/CheckSymbolExists.c
+        Linking C executable cmTC_a850a
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a850a.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_a850a.dir/CheckSymbolExists.c.o -o cmTC_a850a  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:152 (check_symbol_exists)"
+    checks:
+      - "Looking for vprintf"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-TzFrJw"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-TzFrJw"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_VPRINTF"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-TzFrJw'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_abe5b/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_abe5b.dir/build.make CMakeFiles/cmTC_abe5b.dir/build
+        Building C object CMakeFiles/cmTC_abe5b.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_abe5b.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_abe5b.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_abe5b.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-TzFrJw/CheckSymbolExists.c
+        Linking C executable cmTC_abe5b
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_abe5b.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_abe5b.dir/CheckSymbolExists.c.o -o cmTC_abe5b  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:154 (check_symbol_exists)"
+    checks:
+      - "Looking for arc4random"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-3yH5CC"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-3yH5CC"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_ARC4RANDOM"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-3yH5CC'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_f43ac/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_f43ac.dir/build.make CMakeFiles/cmTC_f43ac.dir/build
+        Building C object CMakeFiles/cmTC_f43ac.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_f43ac.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_f43ac.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_f43ac.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-3yH5CC/CheckSymbolExists.c
+        Linking C executable cmTC_f43ac
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f43ac.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_f43ac.dir/CheckSymbolExists.c.o -o cmTC_f43ac  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:168 (check_symbol_exists)"
+    checks:
+      - "Looking for open"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-8nQ7BE"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-8nQ7BE"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_OPEN"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-8nQ7BE'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_129d8/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_129d8.dir/build.make CMakeFiles/cmTC_129d8.dir/build
+        Building C object CMakeFiles/cmTC_129d8.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_129d8.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_129d8.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_129d8.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-8nQ7BE/CheckSymbolExists.c
+        Linking C executable cmTC_129d8
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_129d8.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_129d8.dir/CheckSymbolExists.c.o -o cmTC_129d8  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:171 (check_symbol_exists)"
+    checks:
+      - "Looking for realloc"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-uma3p9"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-uma3p9"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_REALLOC"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-uma3p9'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_6d80b/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_6d80b.dir/build.make CMakeFiles/cmTC_6d80b.dir/build
+        Building C object CMakeFiles/cmTC_6d80b.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_6d80b.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_6d80b.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_6d80b.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-uma3p9/CheckSymbolExists.c
+        Linking C executable cmTC_6d80b
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6d80b.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_6d80b.dir/CheckSymbolExists.c.o -o cmTC_6d80b  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:174 (check_symbol_exists)"
+    checks:
+      - "Looking for setlocale"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ww4MuN"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ww4MuN"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SETLOCALE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ww4MuN'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_88582/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_88582.dir/build.make CMakeFiles/cmTC_88582.dir/build
+        Building C object CMakeFiles/cmTC_88582.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_88582.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_88582.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_88582.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ww4MuN/CheckSymbolExists.c
+        Linking C executable cmTC_88582
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_88582.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_88582.dir/CheckSymbolExists.c.o -o cmTC_88582  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:175 (check_symbol_exists)"
+    checks:
+      - "Looking for uselocale"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-QOXG6P"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-QOXG6P"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_USELOCALE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-QOXG6P'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_3da3a/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_3da3a.dir/build.make CMakeFiles/cmTC_3da3a.dir/build
+        Building C object CMakeFiles/cmTC_3da3a.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_3da3a.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_3da3a.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_3da3a.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-QOXG6P/CheckSymbolExists.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-QOXG6P/CheckSymbolExists.c:8:19: error: use of undeclared identifier 'uselocale'; did you mean 'setlocale'?
+          return ((int*)(&uselocale))[argc];
+                          ^~~~~~~~~
+                          setlocale
+        /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/locale.h:53:8: note: 'setlocale' declared here
+        char            *setlocale(int, const char *);
+                         ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_3da3a.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_3da3a/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:191 (check_symbol_exists)"
+    checks:
+      - "Looking for strcasecmp"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Iv7KUP"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Iv7KUP"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRCASECMP"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Iv7KUP'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_5a4b0/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_5a4b0.dir/build.make CMakeFiles/cmTC_5a4b0.dir/build
+        Building C object CMakeFiles/cmTC_5a4b0.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_5a4b0.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_5a4b0.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_5a4b0.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Iv7KUP/CheckSymbolExists.c
+        Linking C executable cmTC_5a4b0
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5a4b0.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_5a4b0.dir/CheckSymbolExists.c.o -o cmTC_5a4b0  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:192 (check_symbol_exists)"
+    checks:
+      - "Looking for strncasecmp"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Cl08hP"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Cl08hP"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRNCASECMP"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Cl08hP'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_4ba55/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_4ba55.dir/build.make CMakeFiles/cmTC_4ba55.dir/build
+        Building C object CMakeFiles/cmTC_4ba55.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_4ba55.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_4ba55.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_4ba55.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-Cl08hP/CheckSymbolExists.c
+        Linking C executable cmTC_4ba55
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4ba55.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_4ba55.dir/CheckSymbolExists.c.o -o cmTC_4ba55  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:195 (check_symbol_exists)"
+    checks:
+      - "Looking for strdup"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sV0dHL"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sV0dHL"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRDUP"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sV0dHL'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_825b6/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_825b6.dir/build.make CMakeFiles/cmTC_825b6.dir/build
+        Building C object CMakeFiles/cmTC_825b6.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_825b6.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_825b6.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_825b6.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sV0dHL/CheckSymbolExists.c
+        Linking C executable cmTC_825b6
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_825b6.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_825b6.dir/CheckSymbolExists.c.o -o cmTC_825b6  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:196 (check_symbol_exists)"
+    checks:
+      - "Looking for strerror"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-em8NCE"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-em8NCE"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRERROR"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-em8NCE'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c8863/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_c8863.dir/build.make CMakeFiles/cmTC_c8863.dir/build
+        Building C object CMakeFiles/cmTC_c8863.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_c8863.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_c8863.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_c8863.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-em8NCE/CheckSymbolExists.c
+        Linking C executable cmTC_c8863
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8863.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c8863.dir/CheckSymbolExists.c.o -o cmTC_c8863  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:199 (check_symbol_exists)"
+    checks:
+      - "Looking for vsyslog"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-JCxdJF"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-JCxdJF"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_VSYSLOG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-JCxdJF'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_403bb/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_403bb.dir/build.make CMakeFiles/cmTC_403bb.dir/build
+        Building C object CMakeFiles/cmTC_403bb.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_403bb.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_403bb.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_403bb.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-JCxdJF/CheckSymbolExists.c
+        Linking C executable cmTC_403bb
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_403bb.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_403bb.dir/CheckSymbolExists.c.o -o cmTC_403bb  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:202 (check_symbol_exists)"
+    checks:
+      - "Looking for getrandom"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-vO2NCE"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-vO2NCE"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_GETRANDOM"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-vO2NCE'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e8618/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_e8618.dir/build.make CMakeFiles/cmTC_e8618.dir/build
+        Building C object CMakeFiles/cmTC_e8618.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_e8618.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_e8618.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_e8618.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-vO2NCE/CheckSymbolExists.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-vO2NCE/CheckSymbolExists.c:8:19: error: use of undeclared identifier 'getrandom'
+          return ((int*)(&getrandom))[argc];
+                          ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_e8618.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_e8618/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:205 (check_symbol_exists)"
+    checks:
+      - "Looking for getrusage"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-B7Qrcd"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-B7Qrcd"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_GETRUSAGE"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-B7Qrcd'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_d02bd/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_d02bd.dir/build.make CMakeFiles/cmTC_d02bd.dir/build
+        Building C object CMakeFiles/cmTC_d02bd.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_d02bd.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_d02bd.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_d02bd.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-B7Qrcd/CheckSymbolExists.c
+        Linking C executable cmTC_d02bd
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d02bd.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_d02bd.dir/CheckSymbolExists.c.o -o cmTC_d02bd  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:208 (check_symbol_exists)"
+    checks:
+      - "Looking for strtoll"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sUXyOO"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sUXyOO"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRTOLL"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sUXyOO'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_74b2f/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_74b2f.dir/build.make CMakeFiles/cmTC_74b2f.dir/build
+        Building C object CMakeFiles/cmTC_74b2f.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_74b2f.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_74b2f.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_74b2f.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sUXyOO/CheckSymbolExists.c
+        Linking C executable cmTC_74b2f
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_74b2f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_74b2f.dir/CheckSymbolExists.c.o -o cmTC_74b2f  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:154 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckSymbolExists.cmake:66 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:209 (check_symbol_exists)"
+    checks:
+      - "Looking for strtoull"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x2h2su"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x2h2su"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STRTOULL"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x2h2su'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_67413/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_67413.dir/build.make CMakeFiles/cmTC_67413.dir/build
+        Building C object CMakeFiles/cmTC_67413.dir/CheckSymbolExists.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_67413.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_67413.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_67413.dir/CheckSymbolExists.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-x2h2su/CheckSymbolExists.c
+        Linking C executable cmTC_67413
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_67413.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_67413.dir/CheckSymbolExists.c.o -o cmTC_67413  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckIncludeFile.cmake:90 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:253 (check_include_file)"
+      - "CMakeLists.txt:232 (check_type_size)"
+    checks:
+      - "Looking for stddef.h"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-c9A5oC"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-c9A5oC"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_STDDEF_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-c9A5oC'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_7bf92/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_7bf92.dir/build.make CMakeFiles/cmTC_7bf92.dir/build
+        Building C object CMakeFiles/cmTC_7bf92.dir/CheckIncludeFile.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_7bf92.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_7bf92.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_7bf92.dir/CheckIncludeFile.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-c9A5oC/CheckIncludeFile.c
+        Linking C executable cmTC_7bf92
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7bf92.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_7bf92.dir/CheckIncludeFile.c.o -o cmTC_7bf92  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:232 (check_type_size)"
+    checks:
+      - "Check size of int"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-1Loukk"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-1Loukk"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_INT"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-1Loukk'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_3a859/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_3a859.dir/build.make CMakeFiles/cmTC_3a859.dir/build
+        Building C object CMakeFiles/cmTC_3a859.dir/SIZEOF_INT.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_3a859.dir/SIZEOF_INT.c.o -MF CMakeFiles/cmTC_3a859.dir/SIZEOF_INT.c.o.d -o CMakeFiles/cmTC_3a859.dir/SIZEOF_INT.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-1Loukk/SIZEOF_INT.c
+        Linking C executable cmTC_3a859
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3a859.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_3a859.dir/SIZEOF_INT.c.o -o cmTC_3a859  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:233 (check_type_size)"
+    checks:
+      - "Check size of int64_t"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7YJyPp"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7YJyPp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_INT64_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7YJyPp'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_f226d/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_f226d.dir/build.make CMakeFiles/cmTC_f226d.dir/build
+        Building C object CMakeFiles/cmTC_f226d.dir/SIZEOF_INT64_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_f226d.dir/SIZEOF_INT64_T.c.o -MF CMakeFiles/cmTC_f226d.dir/SIZEOF_INT64_T.c.o.d -o CMakeFiles/cmTC_f226d.dir/SIZEOF_INT64_T.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-7YJyPp/SIZEOF_INT64_T.c
+        Linking C executable cmTC_f226d
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f226d.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_f226d.dir/SIZEOF_INT64_T.c.o -o cmTC_f226d  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:234 (check_type_size)"
+    checks:
+      - "Check size of long"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sSXQec"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sSXQec"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sSXQec'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e2322/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_e2322.dir/build.make CMakeFiles/cmTC_e2322.dir/build
+        Building C object CMakeFiles/cmTC_e2322.dir/SIZEOF_LONG.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_e2322.dir/SIZEOF_LONG.c.o -MF CMakeFiles/cmTC_e2322.dir/SIZEOF_LONG.c.o.d -o CMakeFiles/cmTC_e2322.dir/SIZEOF_LONG.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-sSXQec/SIZEOF_LONG.c
+        Linking C executable cmTC_e2322
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e2322.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_e2322.dir/SIZEOF_LONG.c.o -o cmTC_e2322  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:235 (check_type_size)"
+    checks:
+      - "Check size of long long"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-saJF1s"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-saJF1s"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_LONG_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-saJF1s'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1c8fb/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_1c8fb.dir/build.make CMakeFiles/cmTC_1c8fb.dir/build
+        Building C object CMakeFiles/cmTC_1c8fb.dir/SIZEOF_LONG_LONG.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_1c8fb.dir/SIZEOF_LONG_LONG.c.o -MF CMakeFiles/cmTC_1c8fb.dir/SIZEOF_LONG_LONG.c.o.d -o CMakeFiles/cmTC_1c8fb.dir/SIZEOF_LONG_LONG.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-saJF1s/SIZEOF_LONG_LONG.c
+        Linking C executable cmTC_1c8fb
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1c8fb.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_1c8fb.dir/SIZEOF_LONG_LONG.c.o -o cmTC_1c8fb  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:236 (check_type_size)"
+    checks:
+      - "Check size of size_t"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5ybbuc"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5ybbuc"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_SIZE_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5ybbuc'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_91044/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_91044.dir/build.make CMakeFiles/cmTC_91044.dir/build
+        Building C object CMakeFiles/cmTC_91044.dir/SIZEOF_SIZE_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_91044.dir/SIZEOF_SIZE_T.c.o -MF CMakeFiles/cmTC_91044.dir/SIZEOF_SIZE_T.c.o.d -o CMakeFiles/cmTC_91044.dir/SIZEOF_SIZE_T.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5ybbuc/SIZEOF_SIZE_T.c
+        Linking C executable cmTC_91044
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_91044.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_91044.dir/SIZEOF_SIZE_T.c.o -o cmTC_91044  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:147 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckTypeSize.cmake:272 (__check_type_size_impl)"
+      - "CMakeLists.txt:241 (check_type_size)"
+    checks:
+      - "Check size of ssize_t"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-45IBkO"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-45IBkO"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SIZEOF_SSIZE_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-45IBkO'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_79851/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_79851.dir/build.make CMakeFiles/cmTC_79851.dir/build
+        Building C object CMakeFiles/cmTC_79851.dir/SIZEOF_SSIZE_T.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_79851.dir/SIZEOF_SSIZE_T.c.o -MF CMakeFiles/cmTC_79851.dir/SIZEOF_SSIZE_T.c.o.d -o CMakeFiles/cmTC_79851.dir/SIZEOF_SSIZE_T.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-45IBkO/SIZEOF_SSIZE_T.c
+        Linking C executable cmTC_79851
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_79851.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_79851.dir/SIZEOF_SSIZE_T.c.o -o cmTC_79851  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:244 (check_c_source_compiles)"
+    checks:
+      - "Performing Test HAS_GNU_WARNING_LONG"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAS_GNU_WARNING_LONG"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_25041/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_25041.dir/build.make CMakeFiles/cmTC_25041.dir/build
+        Building C object CMakeFiles/cmTC_25041.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DHAS_GNU_WARNING_LONG -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_25041.dir/src.c.o -MF CMakeFiles/cmTC_25041.dir/src.c.o.d -o CMakeFiles/cmTC_25041.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N/src.c
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N/src.c:3:9: warning: missing terminating '"' character [-Winvalid-pp-token]
+        __asm__(".section .gnu.json_object_get
+                ^
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N/src.c:3:9: error: expected string literal in 'asm'
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N/src.c:5:7: warning: missing terminating '"' character [-Winvalid-pp-token]
+                .text");
+                     ^
+        /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZxTy2N/src.c:6:38: error: expected ';' after top-level asm block
+        int main(int c, char *v) { return 0;}
+                                             ^
+                                             ;
+        2 warnings and 2 errors generated.
+        make[1]: *** [CMakeFiles/cmTC_25041.dir/src.c.o] Error 1
+        make: *** [cmTC_25041/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:252 (check_c_source_compiles)"
+    checks:
+      - "Performing Test HAVE_ATOMIC_BUILTINS"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-GoegZ7"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-GoegZ7"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_ATOMIC_BUILTINS"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-GoegZ7'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_2663c/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_2663c.dir/build.make CMakeFiles/cmTC_2663c.dir/build
+        Building C object CMakeFiles/cmTC_2663c.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DHAVE_ATOMIC_BUILTINS -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_2663c.dir/src.c.o -MF CMakeFiles/cmTC_2663c.dir/src.c.o.d -o CMakeFiles/cmTC_2663c.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-GoegZ7/src.c
+        Linking C executable cmTC_2663c
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2663c.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_2663c.dir/src.c.o -o cmTC_2663c  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:257 (check_c_source_compiles)"
+    checks:
+      - "Performing Test HAVE___THREAD"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-a0fNRb"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-a0fNRb"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE___THREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-a0fNRb'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_50cb5/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_50cb5.dir/build.make CMakeFiles/cmTC_50cb5.dir/build
+        Building C object CMakeFiles/cmTC_50cb5.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DHAVE___THREAD -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_50cb5.dir/src.c.o -MF CMakeFiles/cmTC_50cb5.dir/src.c.o.d -o CMakeFiles/cmTC_50cb5.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-a0fNRb/src.c
+        Linking C executable cmTC_50cb5
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_50cb5.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_50cb5.dir/src.c.o -o cmTC_50cb5  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:312 (check_c_source_compiles)"
+    checks:
+      - "Performing Test REENTRANT_WORKS"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-q8RAyF"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-q8RAyF"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "REENTRANT_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-q8RAyF'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_2b9e4/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_2b9e4.dir/build.make CMakeFiles/cmTC_2b9e4.dir/build
+        Building C object CMakeFiles/cmTC_2b9e4.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DREENTRANT_WORKS -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_2b9e4.dir/src.c.o -MF CMakeFiles/cmTC_2b9e4.dir/src.c.o.d -o CMakeFiles/cmTC_2b9e4.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-q8RAyF/src.c
+        Linking C executable cmTC_2b9e4
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2b9e4.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_2b9e4.dir/src.c.o -o cmTC_2b9e4  -lm
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:331 (check_c_source_compiles)"
+    checks:
+      - "Performing Test BSYMBOLIC_WORKS"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZAly7g"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZAly7g"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "BSYMBOLIC_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZAly7g'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_abd5f/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_abd5f.dir/build.make CMakeFiles/cmTC_abd5f.dir/build
+        Building C object CMakeFiles/cmTC_abd5f.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DBSYMBOLIC_WORKS -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_abd5f.dir/src.c.o -MF CMakeFiles/cmTC_abd5f.dir/src.c.o.d -o CMakeFiles/cmTC_abd5f.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-ZAly7g/src.c
+        Linking C executable cmTC_abd5f
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_abd5f.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_abd5f.dir/src.c.o -o cmTC_abd5f  -lm -Wl,-Bsymbolic-functions
+        ld: unknown options: -Bsymbolic-functions 
+        clang: error: linker command failed with exit code 1 (use -v to see invocation)
+        make[1]: *** [cmTC_abd5f] Error 1
+        make: *** [cmTC_abd5f/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/opt/homebrew/Cellar/cmake/3.30.4/share/cmake/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "CMakeLists.txt:349 (check_c_source_compiles)"
+    checks:
+      - "Performing Test VERSION_SCRIPT_WORKS"
+    directories:
+      source: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5sx7Yj"
+      binary: "/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5sx7Yj"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "VERSION_SCRIPT_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5sx7Yj'
+        
+        Run Build Command(s): /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_27d02/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_27d02.dir/build.make CMakeFiles/cmTC_27d02.dir/build
+        Building C object CMakeFiles/cmTC_27d02.dir/src.c.o
+        /Library/Developer/CommandLineTools/usr/bin/cc -DVERSION_SCRIPT_WORKS -D_GNU_SOURCE  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIE -MD -MT CMakeFiles/cmTC_27d02.dir/src.c.o -MF CMakeFiles/cmTC_27d02.dir/src.c.o.d -o CMakeFiles/cmTC_27d02.dir/src.c.o -c /Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/CMakeFiles/CMakeScratch/TryCompile-5sx7Yj/src.c
+        Linking C executable cmTC_27d02
+        /opt/homebrew/Cellar/cmake/3.30.4/bin/cmake -E cmake_link_script CMakeFiles/cmTC_27d02.dir/link.txt --verbose=1
+        /Library/Developer/CommandLineTools/usr/bin/cc  -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_27d02.dir/src.c.o -o cmTC_27d02  -lm -Wl,--version-script,/Users/valeriiapletneva/Desktop/testGMOne/GamesmanOne/lib-build/json-c/check-version-script.sym
+        ld: unknown options: --version-script 
+        clang: error: linker command failed with exit code 1 (use -v to see invocation)
+        make[1]: *** [cmTC_27d02] Error 1
+        make: *** [cmTC_27d02/fast] Error 2
+        
+      exitCode: 2
+...

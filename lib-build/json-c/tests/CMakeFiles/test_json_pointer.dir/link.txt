@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -O3 -DNDEBUG -O2 -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_json_pointer.dir/test_json_pointer.c.o -o test_json_pointer  ../libjson-c.a -lm

@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc -O2 -DNDEBUG -arch x86_64 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_memlimit.dir/tests/test_memlimit.c.o -o tests_bin/test_memlimit  liblzma.a
