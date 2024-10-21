@@ -1,14 +1,15 @@
 /**
- * @file kaooa.c
- * @author Maria Rufova, 
- * Benji Xu,
- * Sriya Kantipudi, 
- * Xiang Zheng
- *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of Kaooa.
- *
- * @version 1.1.1
- * @date 2024-01-04
+ * @file mkaooa.c
+ * @author 
+ *  Xiang Zheng
+ *  Sriya Kantipudi
+ *  Maria Rufova
+ *  Benji Xu
+ *  Robert Shi
+ * Supervised by Dan Garcia
+ * @brief Kaooa implementation
+ * @version 1.0.2
+ * @date 2024-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,587 +28,546 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/mttt/mttt.h"
+#include "games/mkaooa/mkaooa.h"
 
 #include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
 #include <stdbool.h>   // bool, true, false
+#include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // fprintf, stderr
 #include <stdlib.h>    // atoi
 
-#include "core/constants.h"
-#include "core/data_structures/cstring.h"
+#include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
-// Game, Solver, Gameplay, and UWAPI Functions
+// Game, Solver, and Gameplay API Functions
 
-static int MtttInit(void *aux);
-static int MtttFinalize(void);
+#define boardSize 10
 
-static const GameVariant *MtttGetCurrentVariant(void);
-static int MtttSetVariantOption(int option, int selection);
+// MB TODO: Can we just use All Quenes Chess's unhash move and hash move? 
+#define MOVE_ENCODE(from, to) ((from << 5) | to) 
 
-static int64_t MtttGetNumPositions(void);
-static Position MtttGetInitialPosition(void);
+// NOTE: Player 1 is always (C)row, Plaer 2 is always (V)ulture
+// Player 1 Crow goes first!
+#define C 'C'
+#define V 'V'
+#define BLANK '-'
 
-static MoveArray MtttGenerateMoves(Position position);
-static Value MtttPrimitive(Position position);
-static Position MtttDoMove(Position position, Move move);
-static bool MtttIsLegalPosition(Position position);
-static Position MtttGetCanonicalPosition(Position position); // ignore 
-static PositionArray MtttGetCanonicalParentPositions(Position position); // ignore 
+static int MkaooaInit(void *aux);
+static int MkaooaFinalize(void);
 
-static int MtttPositionToString(Position position, char *buffer);
-static int MtttMoveToString(Move move, char *buffer);
-static bool MtttIsValidMoveString(ReadOnlyString move_string);
-static Move MtttStringToMove(ReadOnlyString move_string);
+static const GameVariant *MkaooaGetCurrentVariant(void);
+static int MkaooaSetVariantOption(int option, int selection);
 
-static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position);
-static Position MtttFormalPositionToPosition(ReadOnlyString formal_position);
-static CString MtttPositionToFormalPosition(Position position);
-static CString MtttPositionToAutoGuiPosition(Position position); 
-static CString MtttMoveToFormalMove(Position position, Move move);
-static CString MtttMoveToAutoGuiMove(Position position, Move move);
+static int64_t MkaooaGetNumPositions(void);
+static Position MkaooaGetInitialPosition(void);
+
+static MoveArray MkaooaGenerateMoves(Position position);
+static Value MkaooaPrimitive(Position position);
+static Position MkaooaDoMove(Position position, Move move);
+static bool MkaooaIsLegalPosition(Position position);
+static Position MkaooaGetCanonicalPosition(Position position);
+static PositionArray MkaooaGetCanonicalParentPositions(
+    Position position);
+
+static int MkaooaPositionToString(Position position, char *buffer);
+static int MkaooaMoveToString(Move move, char *buffer);
+static bool MkaooaIsValidMoveString(ReadOnlyString move_string);
+static Move MkaooaStringToMove(ReadOnlyString move_string);
 
 // Solver API Setup
-static const RegularSolverApi kMtttSolverApi = {
-    .GetNumPositions = &MtttGetNumPositions,
-    .GetInitialPosition = &MtttGetInitialPosition,
-
-    .GenerateMoves = &MtttGenerateMoves,
-    .Primitive = &MtttPrimitive,
-    .DoMove = &MtttDoMove,
-    .IsLegalPosition = &MtttIsLegalPosition,
-    .GetCanonicalPosition = &MtttGetCanonicalPosition,
+static const RegularSolverApi kSolverApi = {
+    .GetNumPositions = &MkaooaGetNumPositions,
+    .GetInitialPosition = &MkaooaGetInitialPosition,
+    .GenerateMoves = &MkaooaGenerateMoves,
+    .Primitive = &MkaooaPrimitive,
+    .DoMove = &MkaooaDoMove,
+    .IsLegalPosition = &MkaooaIsLegalPosition,
+    .GetCanonicalPosition = &MkaooaGetCanonicalPosition, // MB TODO: Can change this to null? 
+    .GetNumberOfCanonicalChildPositions = NULL,
     .GetCanonicalChildPositions = NULL,
-    .GetCanonicalParentPositions = &MtttGetCanonicalParentPositions,
+    .GetCanonicalParentPositions = &MkaooaGetCanonicalParentPositions, // MB TODO: Can change this to null? 
 };
 
 // Gameplay API Setup
 
-static const GameplayApiCommon kMtttGameplayApiCommon = {
-    .GetInitialPosition = &MtttGetInitialPosition,
+static const GameplayApiCommon kGamePlayApiCommon = {
+    .GetInitialPosition = &MkaooaGetInitialPosition,
     .position_string_length_max = 120,
 
-    .move_string_length_max = 1,
-    .MoveToString = &MtttMoveToString,
-
-    .IsValidMoveString = &MtttIsValidMoveString,
-    .StringToMove = &MtttStringToMove,
+    .move_string_length_max = 3,
+    .MoveToString = &MkaooaMoveToString,
+    .IsValidMoveString = &MkaooaIsValidMoveString,
+    .StringToMove = &MkaooaStringToMove,
 };
 
-static const GameplayApiRegular kMtttGameplayApiRegular = {
-    .PositionToString = &MtttPositionToString,
-
-    .GenerateMoves = &MtttGenerateMoves,
-    .DoMove = &MtttDoMove,
-    .Primitive = &MtttPrimitive,
+static const GameplayApiRegular kGameplayApiRegular = {
+    .PositionToString = &MkaooaPositionToString,
+    .GenerateMoves = &MkaooaGenerateMoves,
+    .DoMove = &MkaooaDoMove,
+    .Primitive = &MkaooaPrimitive,
 };
 
-static const GameplayApi kMtttGameplayApi = {
-    .common = &kMtttGameplayApiCommon,
-    .regular = &kMtttGameplayApiRegular,
+static const GameplayApi kGameplayApi = {
+    .common = &kGamePlayApiCommon,
+    .regular = &kGameplayApiRegular,
 };
 
-// UWAPI Setup
-
-static const UwapiRegular kMtttUwapiRegular = {
-    .GenerateMoves = &MtttGenerateMoves,
-    .DoMove = &MtttDoMove,
-    .IsLegalFormalPosition = &MtttIsLegalFormalPosition,
-    .FormalPositionToPosition = &MtttFormalPositionToPosition,
-    .PositionToFormalPosition = &MtttPositionToFormalPosition,
-    .PositionToAutoGuiPosition = &MtttPositionToAutoGuiPosition,
-    .MoveToFormalMove = &MtttMoveToFormalMove,
-    .MoveToAutoGuiMove = &MtttMoveToAutoGuiMove,
-    .GetInitialPosition = &MtttGetInitialPosition,
-    .GetRandomLegalPosition = NULL,
-};
-
-static const Uwapi kMtttUwapi = {.regular = &kMtttUwapiRegular};
-
-// -----------------------------------------------------------------------------
-
-const Game kMttt = {
-    .name = "mttt",
-    .formal_name = "Tic-Tac-Toe",
+const Game kMkaooa = {
+    .name = "mkaooa",
+    .formal_name = "Kaooa",
     .solver = &kRegularSolver,
-    .solver_api = (const void *)&kMtttSolverApi,
-    .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
-    .uwapi = (const Uwapi *)&kMtttUwapi,
+    .solver_api = (const void *)&kSolverApi,
+    .gameplay_api = (const GameplayApi *)&kGameplayApi,
 
-    .Init = &MtttInit,
-    .Finalize = &MtttFinalize,
+    .Init = &MkaooaInit,
+    .Finalize = &MkaooaFinalize,
 
-    .GetCurrentVariant = &MtttGetCurrentVariant,
-    .SetVariantOption = &MtttSetVariantOption,
+    .GetCurrentVariant = &MkaooaGetCurrentVariant,
+    .SetVariantOption = &MkaooaSetVariantOption,
 };
-
-// -----------------------------------------------------------------------------
-
-// Helper Types and Global Variables
-
-typedef enum PossibleBoardPieces { kBlank, kV, kC } BlankVC;
-
-// Powers of 3 - this is the way I encode the position, as an integer.
-static int three_to_the[] = {1, 3, 9, 27, 81, 243, 729, 2187, 6561, 19683};
-
-//static const int kNumRowsToCheck = 8;
-
-// static const int kRowsToCheck[8][3] = {
-//     {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6},
-//     {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6},
-// };
-
-// 8 symmetries, each one is a reordering of the 9 slots on the board.
-// This will be initialized in the MtttInit function.
-// static const int kNumSymmetries = 8;
-// static int symmetry_matrix[8][9];
-
-// Proofs of correctness for the below arrays:
-//
-//   FLIP                 ROTATE
-//
-// 0 1 2    2 1 0       0 1 2    6 3 0    8 7 6    2 5 8
-// 3 4 5 -> 5 4 3       3 4 5 -> 7 4 1 -> 5 4 3 -> 1 4 7
-// 6 7 8    8 7 6       6 7 8    8 5 2    2 1 0    0 3 6
-
-// This is the array used for flipping along the N-S axis.
-// static const int flip_new_position[] = {2, 1, 0, 5, 4, 3, 8, 7, 6};
-
-// This is the array used for rotating 90 degrees clockwise.
-// static const int rotate_90_clockwise_new_position[] = {
-//     6, 3, 0, 7, 4, 1, 8, 5, 2,
-// };
 
 // Helper Functions
 
-static void InitSymmetryMatrix(void); // 
-static Position DoSymmetry(Position position, int symmetry);
+static void UnhashMove(Move move, int *from, int *to);
 
-static Position Hash(BlankOX *board);
-static void Unhash(Position position, BlankOX *board);
-static int ThreeInARow(BlankOX *board, const int *indices);
-static bool AllFilledIn(BlankOX *board);
-static void CountPieces(BlankOX *board, int *xcount, int *ocount);
-static BlankOX WhoseTurn(BlankOX *board);
-
-// API Implementation
-
-static int MtttInit(void *aux) {
+static int MkaooaInit(void *aux) {
     (void)aux;  // Unused.
-    InitSymmetryMatrix();
+
+    GenericHashReinitialize();
+    int pieces_init_array[10] = {BLANK, 10, 10, C, 6, 6, V, 1, 1, -1}; // MB TODO: Figure out what this array should be
+    bool success =
+        GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
+    if (!success) {
+        fprintf(stderr,
+                "Mkaooa: failed to initialize generic hash context. "
+                "Aborting...\n");
+        GenericHashReinitialize();
+        return kRuntimeError;
+    }
     return kNoError;
 }
 
-static int MtttFinalize(void) {
-    // Nothing to deallocate.
-    return kNoError;
+static int MkaooaFinalize(void) { return kNoError; }
+
+static const GameVariant *MkaooaGetCurrentVariant(void) {
+    return NULL;  // Later MB TODO
 }
 
-static const GameVariant *MtttGetCurrentVariant(void) {
-    return NULL;  // Not implemented.
-}
-
-static int MtttSetVariantOption(int option, int selection) {
+static int MkaooaSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
-    return kNotImplementedError;  // Not implemented.
+    return 0;  // Later MB TODO
 }
 
-static int64_t MtttGetNumPositions(void) {
-    return 19683;  // 3 ** 9.
+// TODO: Hash initial board configuration
+static Position MkaooaGetInitialPosition(void) {
+    return GenericHashHash("WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
 }
 
-static Position MtttGetInitialPosition(void) { return 0; }
+static int64_t MkaooaGetNumPositions(void) {
+    return GenericHashNumPositions();
+}
 
-// TODO: Implement MkaooaGenerateMoves
+// TODO
+// Given a board position, generate all the moves available depending on whose turn it is.
+// Position is a 64 bit integer. For us, we will use the last 11 digut of this number. 
+// The 11th digit would represent the # Crows dropped (0 - 6), and rest 10 digit would each correspond to a spot on the board (0 or 1 or 2)
 static MoveArray MkaooaGenerateMoves(Position position) {
     MoveArray moves;
     MoveArrayInit(&moves);
-    if (MtttPrimitive(position) != kUndecided) return moves;
 
-    BlankVC board[9] = {0};
-    Unhash(position, board);
-    for (Move i = 0; i < 9; ++i) {
-        if (board[i] == kBlank) {
-            MoveArrayAppend(&moves, i);
-        }
-    }
-    return moves;
-}
+    char board[boardSize];
+    GenericHashUnhash(position, board);
 
-static Value MtttPrimitive(Position position) {
-    BlankOX board[9] = {0};
-    Unhash(position, board);
+    char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
-    for (int i = 0; i < kNumRowsToCheck; ++i) {
-        if (ThreeInARow(board, kRowsToCheck[i]) > 0) return kLose;
-    }
-    if (AllFilledIn(board)) return kTie;
-    return kUndecided;
-}
+    // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess. 
+    // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
+    // You do not need to change the code above
+    for (int i = 0; i < boardSize; i++) {
+        if ((turn == C && board[i] == C) || (turn == V && board[i] == V)) {
+            int originRow = i / sideLength;
+            int originCol = i % sideLength;
+            int origin = i;
 
-static Position MtttDoMove(Position position, Move move) {
-    BlankOX board[9] = {0};
-    Unhash(position, board);
-    return position + three_to_the[move] * (int)WhoseTurn(board);
-}
+            // Left
+            for (int col = originCol - 1; col >= 0; col--) {
+                if (board[originRow * sideLength + col] == BLANK) {
+                    int targetRow = originRow;
+                    int targetCol = col;
 
-static bool MtttIsLegalPosition(Position position) {
-    // A position is legal if and only if:
-    // 1. xcount == ocount or xcount = ocount + 1 if no one is winning and
-    // 2. xcount == ocount if O is winning and
-    // 3. xcount == ocount + 1 if X is winning and
-    // 4. only one player can be winning
-    BlankOX board[9] = {0};
-    Unhash(position, board);
+                    int target = targetRow * sideLength + targetCol;
 
-    int xcount, ocount;
-    CountPieces(board, &xcount, &ocount);
-    if (xcount != ocount && xcount != ocount + 1) return false;
+                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                } else {
+                    break;
+                }
+            }
 
-    bool xwin = false, owin = false;
-    for (int i = 0; i < kNumRowsToCheck; ++i) {
-        int row_value = ThreeInARow(board, kRowsToCheck[i]);
-        xwin |= (row_value == kX);
-        owin |= (row_value == kO);
-    }
-    if (xwin && owin) return false;
-    if (xwin && xcount != ocount + 1) return false;
-    if (owin && xcount != ocount) return false;
-    return true;
-}
+            // Right
+            for (int col = originCol + 1; col < sideLength; col++) {
+                if (board[originRow * sideLength + col] == BLANK) {
+                    int targetRow = originRow;
+                    int targetCol = col;
 
-static Position MtttGetCanonicalPosition(Position position) {
-    Position canonical_position = position;
-    Position new_position;
+                    int target = targetRow * sideLength + targetCol;
 
-    for (int i = 0; i < kNumSymmetries; ++i) {
-        new_position = DoSymmetry(position, i);
-        if (new_position < canonical_position) {
-            // By GAMESMAN convention, the canonical position is the one with
-            // the smallest hash value.
-            canonical_position = new_position;
-        }
-    }
+                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                } else {
+                    break;
+                }
+            }
 
-    return canonical_position;
-}
+            // Up
+            for (int row = originRow - 1; row >= 0; row--) {
+                if (board[row * sideLength + originCol] == BLANK) {
+                    int targetRow = row;
+                    int targetCol = originCol;
 
-static PositionArray MtttGetCanonicalParentPositions(Position position) {
-    PositionHashSet deduplication_set;
-    PositionHashSetInit(&deduplication_set, 0.5);
+                    int target = targetRow * sideLength + targetCol;
 
-    PositionArray parents;
-    PositionArrayInit(&parents);
+                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                } else {
+                    break;
+                }
+            }
 
-    BlankOX board[9] = {0};
-    Unhash(position, board);
+            // Down
+            for (int row = originRow + 1; row < sideLength; row++) {
+                if (board[row * sideLength + originCol] == BLANK) {
+                    int targetRow = row;
+                    int targetCol = originCol;
 
-    BlankOX prev_turn = WhoseTurn(board) == kX ? kO : kX;
-    for (int i = 0; i < 9; ++i) {
-        if (board[i] == prev_turn) {
-            Position parent = position - (int)prev_turn * three_to_the[i];
-            parent = MtttGetCanonicalPosition(parent);
-            if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
-            if (PositionHashSetContains(&deduplication_set, parent))
-                continue;  // Already included.
-            PositionHashSetAdd(&deduplication_set, parent);
-            PositionArrayAppend(&parents, parent);
-        }
-    }
-    PositionHashSetDestroy(&deduplication_set);
+                    int target = targetRow * sideLength + targetCol;
 
-    return parents;
-}
+                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                } else {
+                    break;
+                }
+            }
 
-static int MtttPositionToString(Position position, char *buffer) {
-    static const char kPieceMap[3] = {' ', 'C', 'V'};
+            // Left-Up
+            if (originRow > 0 && originCol > 0) {
+                int row = originRow - 1;
+                int col = originCol - 1;
 
-    BlankVC board[10] = {0};
-    Unhash(position, board);
+                while (row >= 0 && col >= 0) {
+                    if (board[row * sideLength + col] == BLANK) {
+                        int target = row * sideLength + col;
+                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
 
-    static ConstantReadOnlyString kFormat =
-        "         ( 0 )            : %c\n"
-        "      ( 1 2 3 4 )         : %c %c %c %c\n"
-        "        ( 5 6 )           : %c %c\n"
-        "         ( 7 )            : %c \n"
-        "        ( 8 9 )           : %c %c\n";
-    int actual_length = snprintf(
-        buffer, kMtttGameplayApiCommon.position_string_length_max + 1, kFormat,
-        kPieceMap[board[0]], kPieceMap[board[1]], kPieceMap[board[2]],
-        kPieceMap[board[3]], kPieceMap[board[4]], kPieceMap[board[5]],
-        kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
-    if (actual_length >=
-        kMtttGameplayApiCommon.position_string_length_max + 1) {
-        fprintf(
-            stderr,
-            "MtttTierPositionToString: (BUG) not enough space was allocated "
-            "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
-    }
-
-    return kNoError;
-}
-
-static int MtttMoveToString(Move move, char *buffer) {
-    int actual_length =
-        snprintf(buffer, kMtttGameplayApiCommon.move_string_length_max + 1,
-                 "%" PRId64, move + 1);
-    if (actual_length >= kMtttGameplayApiCommon.move_string_length_max + 1) {
-        fprintf(stderr,
-                "MtttMoveToString: (BUG) not enough space was allocated "
-                "to buffer. Please increase move_string_length_max.\n");
-        return kMemoryOverflowError;
-    }
-
-    return kNoError;
-}
-
-// Function to return the size of the Kaooa board (number of nodes)
-int GetBoardSize() {
-    return 10;  // The board size is equal to the number of nodes
-}
-
-
-
-static bool KaooaIsValidMoveString(ReadOnlyString move_string) {
-    // Strings of format "source destination". Ex: "6 10"
-    // Only "1" - "<board_size>" are valid move strings for both source and
-    // dest.
-
-    if (move_string == NULL) return false;
-    if (strlen(move_string) != 3) return false;
-
-    // Make a copy of move_string bc strtok mutates the original move_string
-    char copy_string[6];
-    strcpy(copy_string, move_string);
-
-    char *token = strtok(copy_string, " ");
-    if (token == NULL) return false;
-    int src = atoi(token);
-
-    token = strtok(NULL, " ");
-    if (token == NULL) return false;
-    int dest = atoi(token);
-
-    int NUM_NODES = 10;
-
-    //for the crow:
-    int graph[NUM_NODES][3] = {
-    {2, 3, INVALID, INVALID},    // Node 0 is connected to 1, 4, and 9
-    {2, 5, INVALID, INVALID},    // Node 1 is connected to 0, 2, and 5
-    {0, 1, 3, 5},    // Node 2 is connected to 1, 3, and 7
-    {4, 6, 2, 0},    // Node 3 is connected to 2, 4, and 6
-    {3, 6, INVALID, INVALID},    // Node 4 is connected to 0, 3, and 9
-    {2, 7, 1, 8},    // Node 5 is connected to 1, 6, and 8
-    {3, 9, 4, 7},    // Node 6 is connected to 3, 5, and 7
-    {5, 8, 6, 9},    // Node 7 is connected to 2, 6, and 8
-    {5, 7, INVALID, INVALID},    // Node 8 is connected to 5, 7, and 9
-    {6, 7, INVALID, INVALID}     // Node 9 is connected to 0, 4, and 8
-
-    // Function to check if target_node is a valid neighbor of current_node
-    bool is_valid_move(int source_node, int dest_node, int graph[NUM_NODES][3]) {
-    for (int i = 0; i <= 3; i++) {
-        if (graph[source_node][i] == INVALID) {
-            // Reached the end of the neighbor list
-            return false;
-        }
-        if (graph[source_node][i] == dest_node) {
-            // target_node found in the neighbors of current_node
-            return true;
-        }
-    }
-        return false;  // target_node not found
-    }
-
-    
-
-
-    int board_size = GetBoardSize();
-    if (src < 0) return false;
-    if (src > board_size) return false;
-    if (dest < 0) return false;
-    if (dest > board_size) return false;
-
-    return true;
-}
-/*
-static bool MtttIsValidMoveString(ReadOnlyString move_string) {
-    // Only "1" - "9" are valid move strings.
-    
-    if (move_string[0] < '1') return false;
-    if (move_string[0] > '9') return false;
-    if (move_string[1] != '\0') return false;
-
-    return true;
-}
-*/
-
-static Move MtttStringToMove(ReadOnlyString move_string) {
-    assert(MtttIsValidMoveString(move_string));
-    return (Move)atoi(move_string) - 1;
-}
-
-static bool MtttIsLegalFormalPosition(ReadOnlyString formal_position) {
-    if (formal_position == NULL) return false;
-    for (int i = 0; i < 9; ++i) {
-        char curr = formal_position[i];
-        if (curr != '-' && curr != 'o' && curr != 'x') return false;
-    }
-    if (formal_position[9] != '\0') return false;
-
-    return true;
-}
-
-static Position MtttFormalPositionToPosition(ReadOnlyString formal_position) {
-    // Formal position string format: 9 characters '-', 'o', or 'x'.
-    BlankOX board[9] = {0};
-    for (int i = 0; i < 9; ++i) {
-        switch (formal_position[i]) {
-            case '-':
-                board[i] = kBlank;
-                break;
-            case 'o':
-                board[i] = kO;
-                break;
-            case 'x':
-                board[i] = kX;
-                break;
-            default:
-                fprintf(stderr,
-                        "MtttFormalPositionToPosition: illegal character "
-                        "encountered\n");
-                return kIllegalPosition;
-        }
-    }
-    return Hash(board);
-}
-
-static CString MtttPositionToFormalPosition(Position position) {
-    static const char kUwapiPieceMap[3] = {'-', 'o', 'x'};
-    BlankOX board[9] = {0};
-    Unhash(position, board);
-    CString ret;
-    if (!CStringInitCopy(&ret, "---------")) return ret;
-
-    for (int i = 0; i < 9; ++i) {
-        ret.str[i] = kUwapiPieceMap[board[i]];
-    }
-    return ret;
-}
-
-static CString MtttPositionToAutoGuiPosition(Position position) {
-    static const char kUwapiPieceMap[3] = {'-', 'o', 'x'};
-    BlankOX board[9] = {0};
-    Unhash(position, board);
-    CString ret;
-    if (!CStringInitCopy(&ret, "1_---------")) return ret;
-
-    BlankOX turn = WhoseTurn(board);
-    ret.str[0] = turn == kX ? '1' : '2';
-
-    for (int i = 0; i < 9; ++i) {
-        ret.str[i + 2] = kUwapiPieceMap[board[i]];
-    }
-    return ret;
-}
-
-static CString MtttMoveToFormalMove(Position position, Move move) {
-    (void)position;  // Unused.
-    CString ret;
-    if (!CStringInitCopy(&ret, "0")) return ret;
-    ret.str[0] = '0' + move;
-    return ret;
-}
-
-static CString MtttMoveToAutoGuiMove(Position position, Move move) {
-    BlankOX board[9] = {0};
-    Unhash(position, board);
-    CString ret;
-    if (!CStringInitCopy(&ret, "A_x_0")) return ret;
-
-    BlankOX turn = WhoseTurn(board);
-    ret.str[2] = turn == kX ? 'x' : 'o';
-    ret.str[4] = '0' + move;
-    return ret;
-}
-
-// Helper functions implementation
-
-static void InitSymmetryMatrix(void) {
-    for (int i = 0; i < 9; ++i) {
-        int temp = i;
-        for (int j = 0; j < kNumSymmetries; ++j) {
-            if (j == kNumSymmetries / 2) temp = flip_new_position[i];
-            if (j < kNumSymmetries / 2) {
-                temp = symmetry_matrix[j][i] =
-                    rotate_90_clockwise_new_position[temp];
-            } else {
-                temp = symmetry_matrix[j][i] =
-                    rotate_90_clockwise_new_position[temp];
+                        row--;
+                        col--;
+                    } else {
+                        break;
+                    }
+                }
             }
         }
     }
+
+    return moves;
 }
 
-static Position DoSymmetry(Position position, int symmetry) {
-    BlankOX board[9] = {0}, symmetry_board[9] = {0};
+// TODO: Checks if a given board position is Primitive.
+// A Primitive position is one that signals the end of the game.
+// Hint: At what point do we know that the game is lost?
+// The game ends when either the vulture captures 3 crows OR when the vulture is trapped
+// For our game, we would only return kLose or kUndecided (reasons explained during meeting)
+static Value MkaooaPrimitive(Position position) {
+    char board[boardSize];
+    GenericHashUnhash(position, board);
 
-    Unhash(position, board);
+    // Code below are examples from All Queuens Chess. You can keep the 2 lines above unchanged. 
 
-    // Copy from the symmetry matrix.
-    for (int i = 0; i < 9; ++i) {
-        symmetry_board[i] = board[symmetry_matrix[symmetry][i]];
+    char piece;
+
+    // Vertical
+    int i = 0;
+    for (i = 10; i < 15; i++) {
+        piece = board[i];
+        if (piece != BLANK) {
+            if (board[i - 5] == piece && board[i + 5] == piece) {
+                if (board[i - 10] == piece || board[i + 10] == piece) {
+                    return kLose;
+                }
+            }
+        }
     }
 
-    return Hash(symmetry_board);
-}
-
-static Position Hash(BlankOX *board) {
-    Position ret = 0;
-    for (int i = 8; i >= 0; --i) {
-        ret = ret * 3 + (int)board[i];
+    // Horizontal
+    for (i = 2; i < 25; i += 5) {
+        piece = board[i];
+        if (piece != BLANK) {
+            if (board[i - 1] == piece && board[i + 1] == piece) {
+                if (board[i - 2] == piece || board[i + 2] == piece) {
+                    return kLose;
+                }
+            }
+        }
     }
-    return ret;
-}
 
-static void Unhash(Position position, BlankOX *board) {
-    // The following algorithm assumes kBlank == 0, kO == 1, and kX == 2.
-    for (int i = 0; i < 9; ++i) {
-        board[i] = (BlankOX)(position % 3);
-        position /= 3;
+    piece = board[12];
+    if (piece != BLANK) {
+        // Antidiagonal
+        if (board[6] == piece && board[18] == piece) {
+            if (board[0] == piece || board[24] == piece) {
+                return kLose;
+            }
+        }
+        // Maindiagonal
+        if (board[8] == piece && board[16] == piece) {
+            if (board[4] == piece || board[20] == piece) {
+                return kLose;
+            }
+        }
     }
+
+    piece = board[1];
+    if (piece != BLANK && board[7] == piece && board[13] == piece &&
+        board[19] == piece) {
+        return kLose;
+    }
+
+    return kUndecided;
 }
 
-static int ThreeInARow(BlankOX *board, const int *indices) {
-    if (board[indices[0]] != board[indices[1]]) return 0;
-    if (board[indices[1]] != board[indices[2]]) return 0;
-    if (board[indices[0]] == kBlank) return 0;
-    return (int)board[indices[0]];
+// TODO: Takes in a Position and a Move, return a new Position (hashed) which is generated from performing the MOVE to POSITION
+// Refer to psuedocode in slack!
+static Position MkaooaDoMove(Position position, Move move) {
+    char board[boardSize];
+    GenericHashUnhash(position, board);
+
+    int from, to;
+    UnhashMove(move, &from, &to);
+
+    // The code above can be left unchanged
+
+    board[to] = board[from];
+    board[from] = BLANK;
+
+    int oppTurn = GenericHashGetTurn(position) == 1 ? 2 : 1;
+    return GenericHashHash(board, oppTurn);
 }
 
-static bool AllFilledIn(BlankOX *board) {
-    for (int i = 0; i < 9; ++i) {
-        if (board[i] == kBlank) return false;
+static bool MkaooaIsLegalPosition(Position position) { // MB TODO: Do we need to implement this? 
+    // Don't need to implement.
+    (void)position;
+    return true;
+}
+
+// MB TODO: Not considering symmetries rn, but think about if we actually need this
+
+// static Position MkaooaGetCanonicalPosition(Position position) {
+//     char board[boardSize];
+//     GenericHashUnhash(position, board);
+
+//     char pieceInSymmetry, pieceInCurrentCanonical;
+//     int i, symmetryNum;
+//     int turn = GenericHashGetTurn(position);
+
+//     /* Figure out which symmetry transformation on the input board
+//     leads to the smallest-ternary-number board in the input board's orbit
+//     (where the transformations are just rotation/reflection. */
+//     int bestSymmetryNum = 0;
+//     for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+//         for (i = boardSize - 1; i >= 0; i--) {
+//             pieceInSymmetry = board[symmetries[symmetryNum][i]];
+//             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
+//             if (pieceInSymmetry != pieceInCurrentCanonical) {
+//                 if (pieceInSymmetry < pieceInCurrentCanonical) {
+//                     bestSymmetryNum = symmetryNum;
+//                 }
+//                 break;
+//             }
+//         }
+//     }
+//     char canonBoard[boardSize];
+//     for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+//         canonBoard[i] = board[symmetries[bestSymmetryNum][i]];
+//     }
+
+//     // Invert the piece colors of the board
+//     for (i = 0; i < boardSize; i++) {
+//         if (board[i] == W) {
+//             board[i] = B;
+//         } else if (board[i] == B) {
+//             board[i] = W;
+//         }
+//     }
+
+//     /* Figure out which symmetry transformation on the swapped input board
+//     leads to the smallest-ternary-number board in the input board's orbit
+//     (where the transformations are just rotation/reflection. */
+//     bestSymmetryNum = 0;
+//     for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+//         for (i = boardSize - 1; i >= 0; i--) {
+//             pieceInSymmetry = board[symmetries[symmetryNum][i]];
+//             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
+//             if (pieceInSymmetry != pieceInCurrentCanonical) {
+//                 if (pieceInSymmetry < pieceInCurrentCanonical) {
+//                     bestSymmetryNum = symmetryNum;
+//                 }
+//                 break;
+//             }
+//         }
+//     }
+//     char canonSwappedBoard[boardSize];
+//     for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+//         canonSwappedBoard[i] = board[symmetries[bestSymmetryNum][i]];
+//     }
+
+//     // Compare canonBoard and canonSwappedBoard
+//     char pieceInRegular, pieceInSwapped;
+//     for (i = boardSize - 1; i >= 0; i--) {
+//         pieceInRegular = canonBoard[i];
+//         pieceInSwapped = canonSwappedBoard[i];
+//         if (pieceInRegular < pieceInSwapped) {
+//             return GenericHashHash(canonBoard, turn);
+//         } else if (pieceInSwapped < pieceInRegular) {
+//             return GenericHashHash(canonSwappedBoard, turn == 1 ? 2 : 1);
+//         }
+//     }
+//     return GenericHashHash(canonBoard, 1);
+// }
+
+// static PositionArray MkaooaGetCanonicalParentPositions(
+//     Position position) {
+//     /* The parent positions can be found by swapping the turn of
+//     the position to get position P', getting the children of
+//     P', canonicalizing them, then swapping the turn of each
+//     of those canonical children. */
+
+//     char board[boardSize];
+//     GenericHashUnhash(position, board);
+//     int t = GenericHashGetTurn(position);
+//     int oppT = t == 1 ? 2 : 1;
+//     Position turnSwappedPos = GenericHashHash(board, oppT);
+
+//     PositionHashSet deduplication_set;
+//     PositionHashSetInit(&deduplication_set, 0.5);
+
+//     PositionArray canonicalParents;
+//     PositionArrayInit(&canonicalParents);
+
+//     Position child;
+//     MoveArray moves = MkaooaGenerateMoves(turnSwappedPos);
+//     for (int64_t i = 0; i < moves.size; i++) {
+//         child = MkaooaDoMove(turnSwappedPos, moves.array[i]);
+//         /* Note that at this point, it is current player's turn at `child`.
+//         We check if it's primitive before we swap the turn because
+//         primitive doesn't care about turn. */
+//         if (MkaooaPrimitive(child) == kUndecided) {
+//             GenericHashUnhash(child, board);
+//             child = GenericHashHash(board, oppT);  // Now it's opponent's turn
+//             child = MkaooaGetCanonicalPosition(child);
+//             if (!PositionHashSetContains(&deduplication_set, child)) {
+//                 PositionHashSetAdd(&deduplication_set, child);
+//                 PositionArrayAppend(&canonicalParents, child);
+//             }
+//         }
+//     }
+//     PositionHashSetDestroy(&deduplication_set);
+//     MoveArrayDestroy(&moves);
+//     return canonicalParents;
+// }
+
+
+// TODO: Takes in a POSITION, fills its string representation in the BUFFER. 
+// This is to display the board/position to the user when using GamesmanOne
+static int MkaooaPositionToString(Position position, char *buffer) {
+    char board[boardSize];
+    GenericHashUnhash(position, board);
+    char turn = GenericHashGetTurn(position) == 1 ? W : B;
+
+    static ConstantReadOnlyString kFormat =
+        "\n"
+        "1 %c%c%c%c%c\n"
+        "2 %c%c%c%c%c\n"
+        "3 %c%c%c%c%c\n"
+        "4 %c%c%c%c%c\n"
+        "5 %c%c%c%c%c\n"
+        "  abcde          TURN: %c\n";
+
+    int actual_length = snprintf(
+        buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
+        board[0], board[1], board[2], board[3], board[4], board[5], board[6],
+        board[7], board[8], board[9], board[10], board[11], board[12],
+        board[13], board[14], board[15], board[16], board[17], board[18],
+        board[19], board[20], board[21], board[22], board[23], board[24], turn);
+
+    if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1) {
+        fprintf(stderr,
+                "MkaooaTierPositionToString: (BUG) not enough space "
+                "was allocated "
+                "to buffer. Please increase position_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+// TODO: Takes in a MOVE, fills its string representation in the BUFFER. 
+// This is to display the move to the user when using GamesmanOne
+// The string representation of a move can be a 2-character string seperated by a white space. Eg: 
+// 'X Y', where X is the source (0 - 9) and Y is the destination (0 - 9)
+// When X = Y, the move signifies dropping a piece
+static int MkaooaMoveToString(Move move, char *buffer) {
+    int from, to;
+    UnhashMove(move, &from, &to);
+    int fromRow = from / sideLength;
+    int fromCol = from % sideLength;
+    int toRow = to / sideLength;
+    int toCol = to % sideLength;
+
+    int actual_length = snprintf(
+        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d%c%d%c",
+        fromRow + 1, fromCol + 'a', toRow + 1, toCol + 'a');
+    if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1) {
+        fprintf(
+            stderr,
+            "MkaooaMoveToString: (BUG) not enough space was allocated "
+            "to buffer. Please increase move_string_length_max.\n");
+        return 1;
+    }
+    return 0;
+}
+
+// TODO
+// Checks if string representing a move is valid
+// This is NOT the same as checking if a move is a valid move. Here you are only supposed to check if a string is in the correct form
+static bool MkaooaIsValidMoveString(ReadOnlyString move_string) {
+    if (move_string[0] < '1' || move_string[0] > '5') {
+        return false;
+    } else if (move_string[1] < 'a' || move_string[1] > 'e') {
+        return false;
+    } else if (move_string[2] < '1' || move_string[2] > '5') {
+        return false;
+    } else if (move_string[3] < 'a' || move_string[3] > 'e') {
+        return false;
     }
     return true;
 }
 
-static void CountPieces(BlankOX *board, int *xcount, int *ocount) {
-    *xcount = *ocount = 0;
-    for (int i = 0; i < 9; ++i) {
-        *xcount += (board[i] == kX);
-        *ocount += (board[i] == kO);
-    }
+// TODO: Converts the string move a user entered into a Move gamesmanone can understand internally. 
+static Move MkaooaStringToMove(ReadOnlyString move_string) {
+    assert(MkaooaIsValidMoveString(move_string));
+
+    int fromRow = move_string[0] - '1';
+    int fromCol = move_string[1] - 'a';
+    int from = fromRow * sideLength + fromCol;
+
+    int toRow = move_string[2] - '1';
+    int toCol = move_string[3] - 'a';
+    int to = toRow * sideLength + toCol;
+
+    return MOVE_ENCODE(from, to);
 }
 
-static BlankOX WhoseTurn(BlankOX *board) {
-    int xcount, ocount;
-    CountPieces(board, &xcount, &ocount);
-    if (xcount == ocount) return kX;  // In our TicTacToe, x always goes first.
-    return kO;
+// MB TODO: Can we just use All Queens Chess's unhash move and hash move? 
+//If not, consult Robert/Quixo
+static void UnhashMove(Move move, int *from, int *to) {
+    *from = move >> 5;
+    *to = move & 0x1F;
 }
