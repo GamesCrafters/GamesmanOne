@@ -130,7 +130,9 @@ const Game kMkaooa = {
 
 // Helper Functions
 
+//this is good 
 static void UnhashMove(Move move, int *from, int *to);
+
 
 static int MkaooaInit(void *aux) {
     (void)aux;  // Unused.
@@ -155,6 +157,7 @@ static const GameVariant *MkaooaGetCurrentVariant(void) {
     return NULL;  // Later MB TODO
 }
 
+//start off with 6 crows 
 static int MkaooaSetVariantOption(int option, int selection) {
     (void)option;
     (void)selection;
@@ -163,8 +166,11 @@ static int MkaooaSetVariantOption(int option, int selection) {
 
 // TODO: Hash initial board configuration
 static Position MkaooaGetInitialPosition(void) {
-    return GenericHashHash("WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
+    return GenericHashHash("--------------------", 1); // HINT: second parameter should be left as 1
+                            //WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
+    //change this to our gameboard, so just put all dashes here 
 }
+
 
 static int64_t MkaooaGetNumPositions(void) {
     return GenericHashNumPositions();
