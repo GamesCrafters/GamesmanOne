@@ -1,0 +1,12 @@
+prefix=/Users/valeriiapletneva/Desktop/gamescrafters/gamesmanone/res
+exec_prefix=/Users/valeriiapletneva/Desktop/gamescrafters/gamesmanone/res
+libdir=/Users/valeriiapletneva/Desktop/gamescrafters/gamesmanone/res/lib
+includedir=/Users/valeriiapletneva/Desktop/gamescrafters/gamesmanone/res/include
+
+Name: json-c
+Description: A JSON implementation in C
+Version: 0.17.99
+Requires:
+Libs.private: -lm
+Libs: -L${libdir} -ljson-c
+Cflags: -I${includedir} -I${includedir}/json-c
