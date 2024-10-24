@@ -200,6 +200,8 @@ int check_lower_bound(int n_1, int bound){
     return (n_1 < bound) ? 1 : 0;  
 }
 
+// TODO
+// xiang
 static MoveArray MkaooaGenerateMoves(Position position) {
     MoveArray moves;
     MoveArrayInit(&moves);
@@ -247,90 +249,55 @@ static MoveArray MkaooaGenerateMoves(Position position) {
         // V's turn
         else if (turn == V && board[i]==V){
             // TODO xiang
-        }
-    }
-    
-    for (int i = 0; i < boardSize; i++) {
-        if ((turn == C && board[i] == C) || (turn == V && board[i] == V)) {
-            int originRow = i / sideLength;
-            int originCol = i % sideLength;
-            int origin = i;
-
-            // Left
-            for (int col = originCol - 1; col >= 0; col--) {
-                if (board[originRow * sideLength + col] == BLANK) {
-                    int targetRow = originRow;
-                    int targetCol = col;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-                } else {
-                    break;
-                }
-            }
-
-            // Right
-            for (int col = originCol + 1; col < sideLength; col++) {
-                if (board[originRow * sideLength + col] == BLANK) {
-                    int targetRow = originRow;
-                    int targetCol = col;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-                } else {
-                    break;
-                }
-            }
-
-            // Up
-            for (int row = originRow - 1; row >= 0; row--) {
-                if (board[row * sideLength + originCol] == BLANK) {
-                    int targetRow = row;
-                    int targetCol = originCol;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-                } else {
-                    break;
-                }
-            }
-
-            // Down
-            for (int row = originRow + 1; row < sideLength; row++) {
-                if (board[row * sideLength + originCol] == BLANK) {
-                    int targetRow = row;
-                    int targetCol = originCol;
-
-                    int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-                } else {
-                    break;
-                }
-            }
-
-            // Left-Up
-            if (originRow > 0 && originCol > 0) {
-                int row = originRow - 1;
-                int col = originCol - 1;
-
-                while (row >= 0 && col >= 0) {
-                    if (board[row * sideLength + col] == BLANK) {
-                        int target = row * sideLength + col;
-                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-
-                        row--;
-                        col--;
-                    } else {
-                        break;
+            if (i < 5) {
+                // out-circle: 
+                *move_count = 2;  
+                possible_moves = (int*)malloc(*move_count * sizeof(int)); 
+                possible_moves[0] = i + 5 + check_upper_bound(i + 5, 5) * 5;
+                possible_moves[1] = i + 4 + check_upper_bound(i + 4, 4) * 5;
+                ajacent_positions = (int*)malloc(2 * sizeof(int));
+                ajacent_positions[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
+                ajacent_positions[1] = i + 5;
+                
+                if (board[ajacent_positions[0]] == C){
+                    int jump_position = (ajacent_positions[0]-1)+check_lower_bound(ajacent_positions[0]-1,5)*5;
+                    if (board[jump_position] == BLANK){
+                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
                     }
                 }
-            }
+                if (board[ajacent_positions[1]] == C){
+                    int jump_position = (ajacent_positions[1]+1)+check_upper_bound(ajacent_positions[1]+1,10)*(-5);
+                    if (board[jump_position] == BLANK){
+                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                    }
+                }
+            } else {
+                // in-circle:
+                *move_count = 4;  
+                possible_moves = (int*)malloc(*move_count * sizeof(int));  
+                possible_moves[0] = i - 5;
+                possible_moves[1] = i - 1;
+                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 10) * 10;
+                possible_moves[3] = i - 4 + check_lower_bound(i - 4, 5) * 5;
+                ajacent_positions = (int*)malloc(2 * sizeof(int));
+                ajacent_positions[0] = i + 1 + check_upper_bound(i+1, 9)*(-5);
+                ajacent_positions[1] = i + 1 + check_lower_bound(i-1, 5)*(5);
+                if (board[ajacent_positions[0]] == C){
+                    int jump_position = (ajacent_positions[0]-6)+check_lower_bound(ajacent_positions[0]-6,0)*5;
+                    if (board[jump_position] == BLANK){
+                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                    }
+                }
+                if (board[ajacent_positions[1]] == C){
+                    int jump_position = (ajacent_positions[1]-3)+check_upper_bound(ajacent_positions[1]+1,4)*(-5);
+                    if (board[jump_position] == BLANK){
+                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                    }
+                }
+            }     
         }
     }
+    free(possible_moves);
 
     return moves;
 }
@@ -340,9 +307,53 @@ static MoveArray MkaooaGenerateMoves(Position position) {
 // Hint: At what point do we know that the game is lost?
 // The game ends when either the vulture captures 3 crows OR when the vulture is trapped
 // For our game, we would only return kLose or kUndecided (reasons explained during meeting)
+// xiang
 static Value MkaooaPrimitive(Position position) {
     char board[boardSize];
     GenericHashUnhash(position, board);
+
+    if (board[-1] >= 3) {
+        return kLose;
+    }
+
+    for (i=0; i<10; i++){
+        if(board[i]==V){
+            if (i<5){
+                possible_trap = (int*)malloc(4 * sizeof(int));
+                possible_trap[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
+                possible_trap[1] = i + 5;
+                possible_trap[2] = i + 6 + check_upper_bound(i + 6, 9) * (-5);
+                possible_trap[3] = i + 3 + check_lower_bound(i + 3, 5) * 5;
+                for (int j = 0; j < 4; j++) {
+                    if (board[possible_trap[j]] == BLANK) {
+                        return kUndecided;
+                    }
+                }
+                return kLose;
+            
+            }
+            if (i>=5){
+                impossible_trap = (int*)malloc(4 * sizeof(int));
+                impossible_trap[0] = (i-2) % 5;
+                impossible_trap[1] = (i-2) % 5 + 5;
+                impossible_trap[2] = (i-2) % 5 + 4;
+                impossible_trap[3] = i;
+                int *possible_trap = (int*)malloc(6 * sizeof(int));
+                int count = 0;
+                for (int j = 0; j < 10; j++) {
+                    if (!is_in_impossible_trap(impossible_trap, 3, j)) {
+                        possible_trap[count++] = j; 
+                    }
+                }
+                for (int j = 0; j < 6; j++) {
+                    if (board[possible_trap[j]] == BLANK) {
+                        return kUndecided;
+                    }
+                }
+                return kLose;
+            }
+        }
+    }
 
     // Code below are examples from All Queuens Chess. You can keep the 2 lines above unchanged. 
 
@@ -408,11 +419,15 @@ static Position MkaooaDoMove(Position position, Move move) {
     UnhashMove(move, &from, &to);
 
     // The code above can be left unchanged
-
+    if from == to {
+        board[to] = C;
+        board[-1] += 1;
+    } else {
     board[to] = board[from];
     board[from] = BLANK;
+    }
 
-    int oppTurn = GenericHashGetTurn(position) == 1 ? 2 : 1;
+    int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     return GenericHashHash(board, oppTurn);
 }
 
@@ -585,9 +600,8 @@ static int MkaooaMoveToString(Move move, char *buffer) {
     if (from == to) {
         int actual_length = snprintf(
             buffer, kGamePlayApiCommon.move_string_length_max + 1, "drop %d",
-            from + 1);  // 假设位置从1开始显示
+            from + 1); 
 
-        // 检查是否超过缓冲区大小
         if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1) {
             fprintf(
                 stderr,
@@ -615,30 +629,24 @@ static int MkaooaMoveToString(Move move, char *buffer) {
 // TODO
 // Checks if string representing a move is valid
 // This is NOT the same as checking if a move is a valid move. Here you are only supposed to check if a string is in the correct form
+// xiang
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string) {
-    if (move_string[0] < '1' || move_string[0] > '5') {
+    if (move_string[0] < '0' || move_string[0] > '9') {
         return false;
-    } else if (move_string[1] < 'a' || move_string[1] > 'e') {
+    } else if (move_string[1] < '0' || move_string[1] > '9') {
         return false;
-    } else if (move_string[2] < '1' || move_string[2] > '5') {
-        return false;
-    } else if (move_string[3] < 'a' || move_string[3] > 'e') {
-        return false;
+    } else{
+        return true;
     }
-    return true;
 }
 
-// TODO: Converts the string move a user entered into a Move gamesmanone can understand internally. 
+// TODO: Converts the string move a user entered into a Move gamesmanone can understand internally.
+// xiang 
 static Move MkaooaStringToMove(ReadOnlyString move_string) {
     assert(MkaooaIsValidMoveString(move_string));
 
-    int fromRow = move_string[0] - '1';
-    int fromCol = move_string[1] - 'a';
-    int from = fromRow * sideLength + fromCol;
-
-    int toRow = move_string[2] - '1';
-    int toCol = move_string[3] - 'a';
-    int to = toRow * sideLength + toCol;
+    int from = move_string[0];
+    int to = move_string[1];
 
     return MOVE_ENCODE(from, to);
 }
