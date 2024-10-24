@@ -165,8 +165,10 @@ static int MkaooaSetVariantOption(int option, int selection) {
 }
 
 // TODO: Hash initial board configuration
+// xiang
 static Position MkaooaGetInitialPosition(void) {
-    return GenericHashHash("--------------------", 1); // HINT: second parameter should be left as 1
+    initial_str = '-' * 11
+    return GenericHashHash(initial_str, 1); // HINT: second parameter should be left as 1
                             //WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
     //change this to our gameboard, so just put all dashes here 
 }
@@ -192,6 +194,15 @@ static MoveArray MkaooaGenerateMoves(Position position) {
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess. 
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
+
+    // for (int i=0; i < boardSize; i++){
+    //     if (turn == C && board[i]==C) {
+
+    //     }
+    // }
+
+
+    
     for (int i = 0; i < boardSize; i++) {
         if ((turn == C && board[i] == C) || (turn == V && board[i] == V)) {
             int originRow = i / sideLength;
@@ -483,26 +494,26 @@ static bool MkaooaIsLegalPosition(Position position) { // MB TODO: Do we need to
 
 // TODO: Takes in a POSITION, fills its string representation in the BUFFER. 
 // This is to display the board/position to the user when using GamesmanOne
+// xiang
 static int MkaooaPositionToString(Position position, char *buffer) {
     char board[boardSize];
     GenericHashUnhash(position, board);
-    char turn = GenericHashGetTurn(position) == 1 ? W : B;
+    char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
     static ConstantReadOnlyString kFormat =
         "\n"
-        "1 %c%c%c%c%c\n"
-        "2 %c%c%c%c%c\n"
-        "3 %c%c%c%c%c\n"
-        "4 %c%c%c%c%c\n"
-        "5 %c%c%c%c%c\n"
-        "  abcde          TURN: %c\n";
+        "1    %c   \n"
+        "2 %c%c%c%c\n"
+        "3  %c %c  \n"
+        "4    %c   \n"
+        "5  %c %c  \n"
+        "                TURN: %c\n";
+
 
     int actual_length = snprintf(
         buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
         board[0], board[1], board[2], board[3], board[4], board[5], board[6],
-        board[7], board[8], board[9], board[10], board[11], board[12],
-        board[13], board[14], board[15], board[16], board[17], board[18],
-        board[19], board[20], board[21], board[22], board[23], board[24], turn);
+        board[7], board[8], board[9], board[10], turn);
 
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1) {
         fprintf(stderr,
@@ -519,17 +530,30 @@ static int MkaooaPositionToString(Position position, char *buffer) {
 // The string representation of a move can be a 2-character string seperated by a white space. Eg: 
 // 'X Y', where X is the source (0 - 9) and Y is the destination (0 - 9)
 // When X = Y, the move signifies dropping a piece
+// xiang
 static int MkaooaMoveToString(Move move, char *buffer) {
     int from, to;
     UnhashMove(move, &from, &to);
-    int fromRow = from / sideLength;
-    int fromCol = from % sideLength;
-    int toRow = to / sideLength;
-    int toCol = to % sideLength;
+
+    if (from == to) {
+        int actual_length = snprintf(
+            buffer, kGamePlayApiCommon.move_string_length_max + 1, "drop %d",
+            from + 1);  // 假设位置从1开始显示
+
+        // 检查是否超过缓冲区大小
+        if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1) {
+            fprintf(
+                stderr,
+                "MkaooaMoveToString: (BUG) not enough space was allocated "
+                "to buffer. Please increase move_string_length_max.\n");
+            return 1;
+        }
+
+        return 0;
+    }
 
     int actual_length = snprintf(
-        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d%c%d%c",
-        fromRow + 1, fromCol + 'a', toRow + 1, toCol + 'a');
+        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d-%d", from+1, to+1);
     if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1) {
         fprintf(
             stderr,
@@ -537,6 +561,7 @@ static int MkaooaMoveToString(Move move, char *buffer) {
             "to buffer. Please increase move_string_length_max.\n");
         return 1;
     }
+
     return 0;
 }
 

@@ -1,5 +1,5 @@
-set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/quixo.h)
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/kaooa.h)
 
-set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/quixo.c)
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/kaooa.c)
 
 target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
