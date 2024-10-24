@@ -182,6 +182,24 @@ static int64_t MkaooaGetNumPositions(void) {
 // Given a board position, generate all the moves available depending on whose turn it is.
 // Position is a 64 bit integer. For us, we will use the last 11 digut of this number. 
 // The 11th digit would represent the # Crows dropped (0 - 6), and rest 10 digit would each correspond to a spot on the board (0 or 1 or 2)
+int count_char_in_board(char board[], int boardSize, char c) {
+    int count = 0;
+    for (int i = 0; i < boardSize; i++) {
+        if (board[i] == c) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int check_upper_bound(int n_1, int bound){
+    return (n_1 > bound) ? 1 : 0;  
+}
+
+int check_lower_bound(int n_1, int bound){
+    return (n_1 < bound) ? 1 : 0;  
+}
+
 static MoveArray MkaooaGenerateMoves(Position position) {
     MoveArray moves;
     MoveArrayInit(&moves);
@@ -194,14 +212,43 @@ static MoveArray MkaooaGenerateMoves(Position position) {
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess. 
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
-
-    // for (int i=0; i < boardSize; i++){
-    //     if (turn == C && board[i]==C) {
-
-    //     }
-    // }
-
-
+    int c_count = count_char_in_board(board, boardSize, C);
+    if c_count + board[-1] < 6{
+        bool is_drop = true;
+    } 
+    for (int i=0; i < boardSize; i++){
+        // C's turn
+        if (turn == C && board[i]==C) {
+            if (i < 5) {
+                // out-circle: 
+                *move_count = 2;  
+                possible_moves = (int*)malloc(*move_count * sizeof(int)); 
+                possible_moves[0] = i + 5 + check_upper_bound(i + 5, 5) * 5;
+                possible_moves[1] = i + 4 + check_upper_bound(i + 4, 4) * 5;
+            } else {
+                // in-circle:
+                *move_count = 4;  
+                possible_moves = (int*)malloc(*move_count * sizeof(int));  
+                possible_moves[0] = i - 5;
+                possible_moves[1] = i - 1;
+                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 10) * 10;
+                possible_moves[3] = i - 4 + check_lower_bound(i - 4, 5) * 5;
+            }
+            for (int j = 0; j < *move_count; i++) {
+                if (board[possible_moves[j]] == BLANK) {
+                    MoveArrayAppend(&moves, MOVE_ENCODE(j, possible_moves[j]));
+                }
+            }
+        }
+        else if (turn == C && board[i]==BLANK) {
+            // Drop a crow
+            MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
+        }
+        // V's turn
+        else if (turn == V && board[i]==V){
+            // TODO xiang
+        }
+    }
     
     for (int i = 0; i < boardSize; i++) {
         if ((turn == C && board[i] == C) || (turn == V && board[i] == V)) {
