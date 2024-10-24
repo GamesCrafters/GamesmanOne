@@ -5,8 +5,17 @@
 # Function to print an error and exit
 error_exit() {
     echo "Error: $1" 1>&2
-    echo "Please ensure all dependencies are installed and try again."
     exit 1
+}
+
+mkdir_if_not_exist() {
+    local dir_name="$1"
+    if [ -d "$dir_name" ]; then
+        echo "Directory '$dir_name' already exists."
+    else
+        mkdir "$dir_name" || error_exit "Failed to create directory '$dir_name'."
+        echo "Directory '$dir_name' created successfully."
+    fi
 }
 
 # Function to check if a command exists
@@ -16,19 +25,19 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git autoconf automake cmake liblz4-dev liblzma-dev pkg-config zlib1g zlib1g-dev
+    sudo apt update && sudo apt install -y git autoconf automake cmake zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git autoconf automake cmake lz4-devel pkg-config xz-devel zlib zlib-devel
+    sudo dnf update && sudo dnf install -y git autoconf automake cmake zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git autoconf automake cmake lz4 pkg-config xz zlib || error_exit "brew install failed"
+    brew install git autoconf automake cmake zlib || error_exit "brew install failed"
 }
 
 # Check if running as root, abort if yes.
@@ -81,25 +90,51 @@ for cmd in git autoconf automake autoreconf cmake; do
     command_exists "$cmd" || error_exit "command $cmd not found."
 done
 
-# Begin project setup
-git submodule update --init || error_exit "Failed to update git submodules."
+#################
+# Library Setup #
+#################
 
-cd lib/json-c/ || error_exit "Failed to change directory to lib/json-c."
-if [ ! -d "build" ]; then
-  mkdir build
-fi
-cd build || error_exit "Failed to create or change to the build directory under lib/json-c/."
+# Initialize submodules
+git submodule update --init || error_exit "Failed to update git submodules"
 
-CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../../res -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64 -DCMAKE_BUILD_TYPE=Release"
-cmake $CMAKE_FLAGS ../ || error_exit "Failed to configure json-c using cmake."
-make -j || error_exit "json-c make failed."
-make install -j || error_exit "json-c make install failed."
-cd ../../../ || error_exit "Failed to change directory back to project root."
+# Prepare library build directory
+mkdir_if_not_exist "lib-build"
+cd lib-build || error_exit "Failed to change directory to lib-build"
 
-if [ ! -d "build" ]; then
-  mkdir build
-fi
-cd build || error_exit "Failed to create or change to the build directory."
-cmake -DCMAKE_BUILD_TYPE=Release .. || error_exit "cmake failed to configure GamesmanOne."
-cd .. || error_exit "Failed to change directory back to project root."
-cmake --build build -- -j || error_exit "cmake failed to build GamesmanOne."
+# Build json-c
+mkdir_if_not_exist "json-c"
+cd json-c || error_exit "Failed to change directory to lib-build/json-c"
+CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../res -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 -DCMAKE_BUILD_TYPE=Release"
+cmake ../../lib/json-c/ $CMAKE_FLAGS || error_exit "CMake failed to configure json-c"
+make -j || error_exit "json-c make failed"
+make install -j || error_exit "json-c make install failed"
+cd ../ || error_exit "Failed to change directory back to lib-build"
+
+# Build xz
+mkdir_if_not_exist "xz"
+cd xz || error_exit "Failed to change directory to lib-build/xz"
+cmake ../../lib/xz/ $CMAKE_FLAGS || error_exit "CMake failed to configure xz"
+make -j
+make install -j
+cd ../ || error_exit "Failed to change directory back to lib-build"
+
+# Build lz4
+mkdir_if_not_exist "lz4"
+cd lz4 || error_exit "Failed to change directory to lib-build/lz4"
+cmake ../../lib/lz4/build/cmake/ $CMAKE_FLAGS || error_exit "CMake failed to configure lz4"
+make -j
+make install -j
+cd ../ || error_exit "Failed to change directory back to lib-build"
+
+# Finalize library setup
+cd ..
+
+############################
+# Build GamesmanOne Binary #
+############################
+
+mkdir_if_not_exist "build"
+cd build || error_exit "Failed to change directory to build"
+cmake -DCMAKE_BUILD_TYPE=Release .. || error_exit "CMake failed to configure GamesmanOne."
+cd .. || error_exit "Failed to change directory back to the project root."
+cmake --build build -- -j || error_exit "CMake failed to build GamesmanOne."
