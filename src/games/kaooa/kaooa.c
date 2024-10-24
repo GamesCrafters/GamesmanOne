@@ -165,7 +165,6 @@ static int MkaooaSetVariantOption(int option, int selection) {
 }
 
 // TODO: Hash initial board configuration
-// xiang
 static Position MkaooaGetInitialPosition(void) {
     initial_str = '-' * 11
     return GenericHashHash(initial_str, 1); // HINT: second parameter should be left as 1
@@ -201,7 +200,6 @@ int check_lower_bound(int n_1, int bound){
 }
 
 // TODO
-// xiang
 static MoveArray MkaooaGenerateMoves(Position position) {
     MoveArray moves;
     MoveArrayInit(&moves);
@@ -248,7 +246,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
         }
         // V's turn
         else if (turn == V && board[i]==V){
-            // TODO xiang
+            // TODO 
             if (i < 5) {
                 // out-circle: 
                 *move_count = 2;  
@@ -307,7 +305,6 @@ static MoveArray MkaooaGenerateMoves(Position position) {
 // Hint: At what point do we know that the game is lost?
 // The game ends when either the vulture captures 3 crows OR when the vulture is trapped
 // For our game, we would only return kLose or kUndecided (reasons explained during meeting)
-// xiang
 static Value MkaooaPrimitive(Position position) {
     char board[boardSize];
     GenericHashUnhash(position, board);
@@ -556,7 +553,6 @@ static bool MkaooaIsLegalPosition(Position position) { // MB TODO: Do we need to
 
 // TODO: Takes in a POSITION, fills its string representation in the BUFFER. 
 // This is to display the board/position to the user when using GamesmanOne
-// xiang
 static int MkaooaPositionToString(Position position, char *buffer) {
     char board[boardSize];
     GenericHashUnhash(position, board);
@@ -592,7 +588,6 @@ static int MkaooaPositionToString(Position position, char *buffer) {
 // The string representation of a move can be a 2-character string seperated by a white space. Eg: 
 // 'X Y', where X is the source (0 - 9) and Y is the destination (0 - 9)
 // When X = Y, the move signifies dropping a piece
-// xiang
 static int MkaooaMoveToString(Move move, char *buffer) {
     int from, to;
     UnhashMove(move, &from, &to);
@@ -629,7 +624,6 @@ static int MkaooaMoveToString(Move move, char *buffer) {
 // TODO
 // Checks if string representing a move is valid
 // This is NOT the same as checking if a move is a valid move. Here you are only supposed to check if a string is in the correct form
-// xiang
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string) {
     if (move_string[0] < '0' || move_string[0] > '9') {
         return false;
@@ -641,7 +635,6 @@ static bool MkaooaIsValidMoveString(ReadOnlyString move_string) {
 }
 
 // TODO: Converts the string move a user entered into a Move gamesmanone can understand internally.
-// xiang 
 static Move MkaooaStringToMove(ReadOnlyString move_string) {
     assert(MkaooaIsValidMoveString(move_string));
 
