@@ -1,15 +1,18 @@
 /**
- * @file mttt.h
- * @author Dan Garcia: designed and developed of the original version (mttt.c in
- * GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and 
+ * @file kaooa.h
+ * @author 
+ *         Xiang Zheng
+ *         Sriya Kantipudi
+ *         Maria Rufova
+ *         Benji Xu
+ *         Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and 
  * adapted to the new system.
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Tic-Tac-Toe
+ * @brief Kaooa
  *
  * @version 1.1.0
- * @date 2023-10-22
+ * @date 2024-10-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,12 +31,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_GAMES_MTTT_MTTT_H_
-#define GAMESMANONE_GAMES_MTTT_MTTT_H_
+#ifndef GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
+#define GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
 
 #include "core/types/gamesman_types.h"
 
-/** @brief Tic-Tac-Toe */
-extern const Game kMttt;
+/** @brief Kaooa */
+extern const Game kMkaooa;
 
-#endif  // GAMESMANONE_GAMES_MTTT_MTTT_H_
+#endif  // GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
