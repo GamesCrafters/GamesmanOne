@@ -1,2 +1,0 @@
-/usr/bin/ar qc liblz4_utils.a CMakeFiles/lz4_utils.dir/lz4_utils.c.o
-/usr/bin/ranlib liblz4_utils.a
