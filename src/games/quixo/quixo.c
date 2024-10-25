@@ -906,7 +906,7 @@ static TierPosition QuixoFormalPositionToTierPosition(
 
 static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
     CString ret;
-    CStringInit(&ret);
+    CStringInitEmpty(&ret);
     CStringResize(&ret, 2 + GetBoardSize(), '\0');
 
     // Set turn.

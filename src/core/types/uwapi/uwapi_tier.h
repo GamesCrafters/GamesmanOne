@@ -12,9 +12,8 @@
  * database querying service for the GamesmanUni online game generator.
  * @link https://github.com/GamesCrafters/GamesCraftersUWAPI
  * @link https://github.com/GamesCrafters/GamesmanUni
- *
- * @version 1.0.1
- * @date 2024-04-07
+ * @version 1.1.0
+ * @date 2024-10-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,6 +39,7 @@
 
 #include "core/data_structures/cstring.h"
 #include "core/types/base.h"
+#include "core/types/uwapi/partmove_array.h"
 
 /**
  * @brief A collection of helper methods that are used by tier games to
@@ -141,9 +141,12 @@ typedef struct UwapiTier {
         ReadOnlyString formal_position);
 
     /**
-     * @brief Returns the formal position as a dynamically allocated CString
-     * corresponding to the given hashed TIER_POSITION. The caller of this
-     * function is responsible for destroying the CString returned.
+     * @brief Returns the formal position as a CString corresponding to the
+     * given hashed TIER_POSITION. Returns \c kErrorCString if an error
+     * occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details A formal position is a human-editable (and hopefully
      * human-readable) string that uniquely defines a position. For example, a
@@ -152,9 +155,12 @@ typedef struct UwapiTier {
     CString (*TierPositionToFormalPosition)(TierPosition tier_position);
 
     /**
-     * @brief Returns the AutoGUI position as a dynamically allocated CString
-     * corresponding to the given hashed TIER_POSITION. The caller of this
-     * function is responsible for destroying the CString returned.
+     * @brief Returns the AutoGUI position as a CString corresponding to the
+     * given hashed TIER_POSITION. Returns \c kErrorCString if an error
+     * occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details An AutoGUI position is a position string recognized by the
      * GamesmanUni online game generator. It not only uniquely defines a
@@ -166,9 +172,12 @@ typedef struct UwapiTier {
     CString (*TierPositionToAutoGuiPosition)(TierPosition tier_position);
 
     /**
-     * @brief Returns the formal move as a dynamically allocated CString
-     * corresponding to the given MOVE at the given TIER_POSITION. The caller of
-     * this function is responsible for destroying the CString returned.
+     * @brief Returns the formal move as a CString corresponding to the given
+     * MOVE at the given TIER_POSITION. Returns \c kErrorCString if an error
+     * occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details A formal move is a human-redable string that uniquely defines
      * a move that is available at the given TIER_POSITION. It should be
@@ -180,15 +189,20 @@ typedef struct UwapiTier {
      * @param tier_position The tier position at which the move can be made.
      * @param move The move.
      *
-     * @return The formal move as a dynamically allocated CString corresponding
-     * to the given MOVE at the given TIER_POSITION.
+     * @return The formal move as a CString corresponding to the given MOVE at
+     * the given TIER_POSITION.
      */
     CString (*MoveToFormalMove)(TierPosition tier_position, Move move);
 
     /**
-     * @brief Returns the AutoGUI move as a dynamically allocated CString
-     * corresponding to the given MOVE at the given TIER_POSITION. The caller of
-     * this function is responsible for destroying the CString returned.
+     * @brief Returns the AutoGUI move as a CString corresponding to the given
+     * MOVE at the given TIER_POSITION if MOVE is a full-move. Returns
+     * \c kNullCString if MOVE is a part-move. Returns \c kErrorCString if an
+     * error occurred. Note that all moves are full moves if the game does not
+     * implement multipart moves.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details An AutoGUI move is a move string recognized by the GamesmanUni
      * online game generator. It not only unabiguously describes a move at a
@@ -200,10 +214,12 @@ typedef struct UwapiTier {
      * @param tier_position The tier position at which the move can be made.
      * @param move The move.
      *
-     * @return The AutoGUI move as a dynamically allocated CString corresponding
-     * to the given MOVE at the given TIER_POSITION.
+     * @return The AutoGUI move as a CString corresponding to the given MOVE at
+     * the given TIER_POSITION.
      */
     CString (*MoveToAutoGuiMove)(TierPosition tier_position, Move move);
+
+    PartmoveArray (*GeneratePartmoves)(TierPosition tier_position);
 } UwapiTier;
 
 #endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H
