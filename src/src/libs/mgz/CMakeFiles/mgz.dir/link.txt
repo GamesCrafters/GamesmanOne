@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmgz.a CMakeFiles/mgz.dir/gz64.c.o CMakeFiles/mgz.dir/mgz.c.o
+/usr/bin/ranlib libmgz.a

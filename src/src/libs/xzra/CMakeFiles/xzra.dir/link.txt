@@ -1,0 +1,2 @@
+/usr/bin/ar qc libxzra.a CMakeFiles/xzra.dir/xzra.c.o
+/usr/bin/ranlib libxzra.a

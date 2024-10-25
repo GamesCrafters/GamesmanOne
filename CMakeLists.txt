@@ -18,3 +18,21 @@ include_directories("${PROJECT_SOURCE_DIR}/res/include")
 
 # Add source.
 add_subdirectory(src)
+
+# Find the liblzma library
+find_library(LIBLZMA_LIBRARY
+    NAMES lzma
+    HINTS /opt/homebrew/lib /usr/local/lib
+    REQUIRED)
+
+# Find the lzma.h header file
+find_path(LIBLZMA_INCLUDE_DIR
+    NAMES lzma.h
+    HINTS /opt/homebrew/include /usr/local/include
+    REQUIRED)
+
+# Include the directory containing lzma.h
+target_include_directories(gamesman PRIVATE ${LIBLZMA_INCLUDE_DIR})
+
+# Link the liblzma library to your target
+target_link_libraries(gamesman PRIVATE ${LIBLZMA_LIBRARY})

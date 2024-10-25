@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmt19937.a "CMakeFiles/mt19937.dir/mt19937-64.c.o"
+/usr/bin/ranlib libmt19937.a
