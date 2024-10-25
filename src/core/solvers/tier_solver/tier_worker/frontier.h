@@ -10,8 +10,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic 2D Position array which stores solved positions that have not
  * been used to deduce the values of their parents.
- * @version 2.0.0
- * @date 2024-02-24
+ * @version 2.0.1
+ * @date 2024-10-06
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

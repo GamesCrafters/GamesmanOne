@@ -2,6 +2,8 @@
 /bin
 /build
 /data*
+/lib-build
+/res
 
 # Prerequisites
 *.d

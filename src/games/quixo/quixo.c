@@ -233,7 +233,7 @@ static Tier QuixoSetInitialTier(void);
 static Position QuixoSetInitialPosition(void);
 static Tier HashTier(int num_blanks, int num_x, int num_o);
 static void UnhashTier(Tier tier, int *num_blanks, int *num_x, int *num_o);
-static void QuixoInitSymmMatrix();
+static void QuixoInitSymmMatrix(void);
 
 // Helper functions for QuixoGenerateMoves
 static int OpponentsTurn(int turn);
@@ -1082,7 +1082,7 @@ static void Mirror(int *dest, int *src) {
     }
 }
 
-static void QuixoInitSymmMatrix() {
+static void QuixoInitSymmMatrix(void) {
     int board_size = GetBoardSize();
     assert(board_size <= kBoardSizeMax);
 
