@@ -9,8 +9,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Frontier type.
- * @version 2.0.0
- * @date 2024-02-24
+ * @version 2.0.1
+ * @date 2024-10-06
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,7 +29,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/solvers/tier_solver/frontier.h"
+#include "core/solvers/tier_solver/tier_worker/frontier.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
@@ -56,26 +56,28 @@ static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
         fprintf(stderr, "FrontierInit: failed to calloc buckets.\n");
         return false;
     }
+
     return true;
 }
 
 static bool FrontierAllocateDividers(Frontier *frontier, int frontier_size,
                                      int dividers_size) {
-    bool success = true;
     frontier->dividers = (int64_t **)calloc(frontier_size, sizeof(int64_t *));
-    success = (frontier->dividers != NULL);
-    if (!success) goto _bailout;
-
-    for (int64_t i = 0; i < frontier_size; ++i) {
-        frontier->dividers[i] =
-            (int64_t *)calloc(dividers_size, sizeof(int64_t));
-        success = (frontier->dividers[i] != NULL);
-        if (!success) goto _bailout;
+    if (frontier->dividers == NULL) {
+        fprintf(stderr, "FrontierInit: failed to calloc dividers.\n");
+        return false;
     }
 
-_bailout:
-    if (!success) fprintf(stderr, "FrontierInit: failed to calloc dividers.\n");
-    return success;
+    for (int i = 0; i < frontier_size; ++i) {
+        frontier->dividers[i] =
+            (int64_t *)calloc(dividers_size, sizeof(int64_t));
+        if (frontier->dividers[i] == NULL) {
+            fprintf(stderr, "FrontierInit: failed to calloc dividers.\n");
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static void FrontierInitAllFields(Frontier *frontier) {
@@ -101,7 +103,7 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
         // to spaces that can be freed with function free.
         free(frontier->buckets);
         if (frontier->dividers) {
-            for (int i = 0; i < dividers_size; ++i) {
+            for (int i = 0; i < frontier_size; ++i) {
                 free(frontier->dividers[i]);
             }
             free(frontier->dividers);

@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.0
- * @date 2024-07-10
+ * @version 1.2.1
+ * @date 2024-10-06
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -270,6 +270,7 @@ static int NaiveDbFlushSolvingTier(void *aux) {
     int64_t n = fwrite(records, sizeof(records[0]), current_tier_size, file);
     if (n != current_tier_size) {
         perror("fwrite");
+        fclose(file);
         return kFileSystemError;
     }
 
