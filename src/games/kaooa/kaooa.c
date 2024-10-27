@@ -55,7 +55,6 @@
 #define BLANK '-'
 #define CROWS_DROPPED_COUNT '0'
 
-
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
 
@@ -141,7 +140,7 @@ static int MkaooaInit(void *aux)
 
     GenericHashReinitialize();
     // MB TODO: Figure out what this array should be
-    int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1}; 
+    int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1};
     bool success =
         GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
     if (!success)
@@ -173,9 +172,9 @@ static int MkaooaSetVariantOption(int option, int selection)
 // TODO: Hash initial board configuration
 static Position MkaooaGetInitialPosition(void)
 {
-    char* initial_str = "-----------";
+    char *initial_str = "-----------";
     return GenericHashHash(initial_str, 1); // HINT: second parameter should be left as 1
-                                                                   // WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
+                                            // WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
     // change this to our gameboard, so just put all dashes here
 }
 
@@ -203,7 +202,7 @@ int count_char_in_board(char board[], char c)
 
 int check_upper_bound(int n_1, int bound)
 {
-    return (n_1 > bound) ? 1 : 0;
+    return (n_1 > bound) ? -1 : 0;
 }
 
 int check_lower_bound(int n_1, int bound)
@@ -225,22 +224,22 @@ static MoveArray MkaooaGenerateMoves(Position position)
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess.
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
-    bool can_drop = (board[10] - '0') < 6; 
+    bool can_drop = (board[10] - '0') < 6;
     int move_count;
-    int* possible_moves; 
+    int *possible_moves;
     for (int i = 0; i < boardSize; i++)
     {
         // C's turn
         if (turn == C && board[i] == C && !can_drop)
         {
-            
+
             if (i < 5)
             {
                 // out-circle:
                 move_count = 2;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
-                possible_moves[0] = i + 5 + check_upper_bound(i + 5, 5) * 5;
-                possible_moves[1] = i + 4 + check_upper_bound(i + 4, 4) * 5;
+                possible_moves[0] = i + 5 + check_lower_bound(i + 5, 5) * 5;
+                possible_moves[1] = i + 4 + check_lower_bound(i + 4, 5) * 5;
             }
             else
             {
@@ -248,9 +247,9 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 move_count = 4;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i - 5;
-                possible_moves[1] = i - 1;
-                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 10) * 10;
-                possible_moves[3] = i - 4 + check_lower_bound(i - 4, 5) * 5;
+                possible_moves[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
+                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 9) * 5;
+                possible_moves[3] = i - 4 + check_upper_bound(i - 4, 4) * 5;
             }
             for (int j = 0; j < move_count; i++)
             {
@@ -274,20 +273,21 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 // out-circle:
                 move_count = 2;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
-                possible_moves[0] = i + 5 + check_upper_bound(i + 5, 5) * 5;
-                possible_moves[1] = i + 4 + check_upper_bound(i + 4, 4) * 5;
-                
-                for (int k = 0; k < move_count; k++) {
-                    if (board[possible_moves[k]] == BLANK){
+                possible_moves[0] = i + 5 + check_lower_bound(i + 5, 5) * 5;
+                possible_moves[1] = i + 4 + check_lower_bound(i + 4, 5) * 5;
+
+                for (int k = 0; k < move_count; k++)
+                {
+                    if (board[possible_moves[k]] == BLANK)
+                    {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
-                    }      
+                    }
                 }
-                
-                int* adjacent_positions = (int *)malloc(2 * sizeof(int));
+
+                int *adjacent_positions = (int *)malloc(2 * sizeof(int));
                 adjacent_positions[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 adjacent_positions[1] = i + 5;
 
-                
                 if (board[adjacent_positions[0]] == C)
                 {
                     int jump_position = (adjacent_positions[0] - 1) + check_lower_bound(adjacent_positions[0] - 1, 5) * 5;
@@ -298,7 +298,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 }
                 if (board[adjacent_positions[1]] == C)
                 {
-                    int jump_position = (adjacent_positions[1] + 1) + check_upper_bound(adjacent_positions[1] + 1, 10) * (-5);
+                    int jump_position = (adjacent_positions[1] + 1) + check_upper_bound(adjacent_positions[1] + 1, 9) * (-5);
                     if (board[jump_position] == BLANK)
                     {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
@@ -312,19 +312,21 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 move_count = 4;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i - 5;
-                possible_moves[1] = i - 1;
-                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 10) * 10;
-                possible_moves[3] = i - 4 + check_lower_bound(i - 4, 5) * 5;
+                possible_moves[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
+                possible_moves[2] = i + 1 + check_upper_bound(i + 1, 9) * 5;
+                possible_moves[3] = i - 4 + check_upper_bound(i - 4, 4) * 5;
 
-                for (int k = 0; k < move_count; k++) {
-                    if (board[possible_moves[k]] == BLANK){
+                for (int k = 0; k < move_count; k++)
+                {
+                    if (board[possible_moves[k]] == BLANK)
+                    {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
-                    }      
+                    }
                 }
 
-                int* adjacent_positions = (int *)malloc(2 * sizeof(int));
-                adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * (-5);
-                adjacent_positions[1] = i + 1 + check_lower_bound(i - 1, 5) * (5);
+                int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+                adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * 5;
+                adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * (5);
                 if (board[adjacent_positions[0]] == C)
                 {
                     int jump_position = (adjacent_positions[0] - 6) + check_lower_bound(adjacent_positions[0] - 6, 0) * 5;
@@ -359,7 +361,7 @@ static Value MkaooaPrimitive(Position position)
     char board[boardSize];
     GenericHashUnhash(position, board);
 
-    if ((board[10] -'0') - count_char_in_board(board, C) >= 3)
+    if ((board[10] - '0') - count_char_in_board(board, C) >= 3)
     {
         return kLose;
     }
@@ -370,7 +372,7 @@ static Value MkaooaPrimitive(Position position)
         {
             if (i < 5)
             {
-                int* possible_trap = (int *)malloc(4 * sizeof(int));
+                int *possible_trap = (int *)malloc(4 * sizeof(int));
                 possible_trap[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 possible_trap[1] = i + 5;
                 possible_trap[2] = i + 6 + check_upper_bound(i + 6, 9) * (-5);
@@ -386,7 +388,7 @@ static Value MkaooaPrimitive(Position position)
             }
             if (i >= 5)
             {
-                int* impossible_trap = (int *)malloc(4 * sizeof(int));
+                int *impossible_trap = (int *)malloc(4 * sizeof(int));
                 impossible_trap[0] = (i - 2) % 5;
                 impossible_trap[1] = (i - 2) % 5 + 5;
                 impossible_trap[2] = (i - 2) % 5 + 4;
@@ -427,10 +429,10 @@ static Position MkaooaDoMove(Position position, Move move)
 
     // The code above can be left unchanged
     if (from == to)
-        {
-            board[to] = C;
-            board[10] = (board[10] - '0' + 1) + '0';
-        }
+    {
+        board[to] = C;
+        board[10] = (board[10] - '0' + 1) + '0';
+    }
     else
     {
         board[to] = board[from];
