@@ -43,7 +43,7 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 10
+#define boardSize 11
 
 // MB TODO: Can we just use All Quenes Chess's unhash move and hash move?
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
@@ -253,7 +253,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 possible_moves[2] = i + 1 + check_upper_bound(i + 1, 9) * 5;
                 possible_moves[3] = i - 4 + check_upper_bound(i - 4, 4) * 5;
             }
-            for (int j = 0; j < move_count; i++)
+            for (int j = 0; j < move_count; j++)
             {
                 if (board[possible_moves[j]] == BLANK)
                 {
