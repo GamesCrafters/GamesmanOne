@@ -76,6 +76,7 @@ static int MkaooaPositionToString(Position position, char *buffer);
 static int MkaooaMoveToString(Move move, char *buffer);
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string);
 static Move MkaooaStringToMove(ReadOnlyString move_string);
+bool is_in_impossible_trap(int impossible_trap[], int size, int value);
 
 // Solver API Setup
 static const RegularSolverApi kSolverApi = {
@@ -363,6 +364,19 @@ static MoveArray MkaooaGenerateMoves(Position position)
 // The game ends when either the vulture captures 3 crows OR when the vulture is trapped
 // For our game, we would only return kLose or kUndecided (reasons explained during meeting)
 // check 1027
+
+bool is_in_impossible_trap(int impossible_trap[], int size, int value)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (impossible_trap[i] == value)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 static Value MkaooaPrimitive(Position position)
 {
     char board[boardSize];
