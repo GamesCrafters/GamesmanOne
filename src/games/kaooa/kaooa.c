@@ -475,33 +475,36 @@ static Position MkaooaDoMove(Position position, Move move)
             adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
             if (!is_in_adjacent_positions(*adjacent_positions, 2, to))
             // jump move
+            // the move here already obeyed the rule
             {
                 int min = from < to ? from : to;
                 int max = from < to ? to : from;
                 int min_norm = max + check_upper_bound(max, 3) * 5;
                 int diff = abs(to - from);
-                if (diff == 6)
+                // left jump
+                if (diff % 5 == 1)
                 {
                     int medium = min + 5 + check_lower_bound(min + 5, 5) * 5;
                     if (board[medium] == C)
                     {
                         board[medium] = BLANK;
                     }
+                    else
+                    {
+                        printf("Error: Thought there was a crow here, but there wasn't\n");
+                    }
                 }
-                else if (diff == 8 || diff == 3)
+                // right jump
+                else if (diff % 5 == 3)
                 {
                     int medium = min + 4 + check_lower_bound(min + 4, 5) * 5;
                     if (board[medium] == C)
                     {
                         board[medium] = BLANK;
                     }
-                }
-                if (max == 5 && min == 4)
-                {
-                    int medium = 9;
-                    if (board[medium] == C)
+                    else
                     {
-                        board[medium] = BLANK;
+                        printf("Error: Thought there was a crow here, but there wasn't\n");
                     }
                 }
             }
