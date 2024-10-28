@@ -211,6 +211,7 @@ int check_lower_bound(int n_1, int bound)
 }
 
 // TODO
+// Check 1027
 static MoveArray MkaooaGenerateMoves(Position position)
 {
     MoveArray moves;
@@ -231,6 +232,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
     {
         // C's turn
         if (turn == C && board[i] == C && !can_drop)
+        // C's turn and can't drop
         {
 
             if (i < 5)
@@ -260,6 +262,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
             }
         }
         else if (turn == C && board[i] == BLANK && can_drop)
+        // C's turn and can drop
         {
             // Drop a crow
             MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
@@ -271,6 +274,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
             if (i < 5)
             {
                 // out-circle:
+                // direct move
                 move_count = 2;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i + 5 + check_lower_bound(i + 5, 5) * 5;
@@ -284,9 +288,10 @@ static MoveArray MkaooaGenerateMoves(Position position)
                     }
                 }
 
+                // jump move
                 int *adjacent_positions = (int *)malloc(2 * sizeof(int));
                 adjacent_positions[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
-                adjacent_positions[1] = i + 5;
+                adjacent_positions[1] = i + 5 + check_lower_bound(i + 5, 5) * 5;
 
                 if (board[adjacent_positions[0]] == C)
                 {
@@ -298,7 +303,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 }
                 if (board[adjacent_positions[1]] == C)
                 {
-                    int jump_position = (adjacent_positions[1] + 1) + check_upper_bound(adjacent_positions[1] + 1, 9) * (-5);
+                    int jump_position = (adjacent_positions[1] + 1) + check_upper_bound(adjacent_positions[1] + 1, 9) * 5;
                     if (board[jump_position] == BLANK)
                     {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
@@ -308,7 +313,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
             else
             {
                 // in-circle:
-                // possible move
+                // direct move
                 move_count = 4;
                 possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i - 5;
@@ -324,9 +329,10 @@ static MoveArray MkaooaGenerateMoves(Position position)
                     }
                 }
 
+                // jump move
                 int *adjacent_positions = (int *)malloc(2 * sizeof(int));
                 adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * 5;
-                adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * (5);
+                adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
                 if (board[adjacent_positions[0]] == C)
                 {
                     int jump_position = (adjacent_positions[0] - 6) + check_lower_bound(adjacent_positions[0] - 6, 0) * 5;
@@ -337,7 +343,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 }
                 if (board[adjacent_positions[1]] == C)
                 {
-                    int jump_position = (adjacent_positions[1] - 3) + check_upper_bound(adjacent_positions[1] + 1, 4) * (-5);
+                    int jump_position = (adjacent_positions[1] - 3) + check_upper_bound(adjacent_positions[1] + 1, 4) * 5;
                     if (board[jump_position] == BLANK)
                     {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
@@ -356,6 +362,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
 // Hint: At what point do we know that the game is lost?
 // The game ends when either the vulture captures 3 crows OR when the vulture is trapped
 // For our game, we would only return kLose or kUndecided (reasons explained during meeting)
+// check 1027
 static Value MkaooaPrimitive(Position position)
 {
     char board[boardSize];
@@ -375,7 +382,7 @@ static Value MkaooaPrimitive(Position position)
                 int *possible_trap = (int *)malloc(4 * sizeof(int));
                 possible_trap[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 possible_trap[1] = i + 5;
-                possible_trap[2] = i + 6 + check_upper_bound(i + 6, 9) * (-5);
+                possible_trap[2] = i + 6 + check_upper_bound(i + 6, 9) * 5;
                 possible_trap[3] = i + 3 + check_lower_bound(i + 3, 5) * 5;
                 for (int j = 0; j < 4; j++)
                 {
@@ -391,13 +398,13 @@ static Value MkaooaPrimitive(Position position)
                 int *impossible_trap = (int *)malloc(4 * sizeof(int));
                 impossible_trap[0] = (i - 2) % 5;
                 impossible_trap[1] = (i - 2) % 5 + 5;
-                impossible_trap[2] = (i - 2) % 5 + 4;
+                impossible_trap[2] = (i - 2) % 5 + 4 + check_lower_bound((i - 2) % 5 + 4, 5) * 5;
                 impossible_trap[3] = i;
                 int *possible_trap = (int *)malloc(6 * sizeof(int));
                 int count = 0;
                 for (int j = 0; j < 10; j++)
                 {
-                    if (!is_in_impossible_trap(impossible_trap, 3, j))
+                    if (!is_in_impossible_trap(impossible_trap, 4, j))
                     {
                         possible_trap[count++] = j;
                     }
@@ -419,6 +426,20 @@ static Value MkaooaPrimitive(Position position)
 
 // TODO: Takes in a Position and a Move, return a new Position (hashed) which is generated from performing the MOVE to POSITION
 // Refer to psuedocode in slack!
+
+int is_in_adjacent_positions(int *adjacent_positions, int size, int value)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (adjacent_positions[i] == value)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Check 1027
 static Position MkaooaDoMove(Position position, Move move)
 {
     char board[boardSize];
@@ -426,18 +447,86 @@ static Position MkaooaDoMove(Position position, Move move)
 
     int from, to;
     UnhashMove(move, &from, &to);
-
+    int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     // The code above can be left unchanged
-    if (from == to)
+    if (oppTurn == C)
     {
-        board[to] = C;
-        board[10] = (board[10] - '0' + 1) + '0';
+        if (from == to)
+        {
+            board[to] = C;
+            board[10] = (board[10] - '0' + 1) + '0';
+        }
+        else
+        {
+            board[to] = C;
+            board[from] = BLANK;
+        }
     }
     else
     {
-        board[to] = board[from];
+        // same to direct move & jump move
+        board[to] = V;
         board[from] = BLANK;
+        // check if is direct move
+        if (from < 5)
+        {
+            int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+            adjacent_positions[0] = from + 4 + check_lower_bound(from + 4, 5) * 5;
+            adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
+            if (!is_in_adjacent_positions(*adjacent_positions, 2, to))
+            // jump move
+            {
+                int min = from < to ? from : to;
+                int max = from < to ? to : from;
+                int min_norm = max + check_upper_bound(max, 3) * 5;
+                int diff = abs(to - from);
+                if (diff == 6)
+                {
+                    int medium = min + 5 + check_lower_bound(min + 5, 5) * 5;
+                    if (board[medium] == C)
+                    {
+                        board[medium] = BLANK;
+                    }
+                }
+                else if (diff == 8 || diff == 3)
+                {
+                    int medium = min + 4 + check_lower_bound(min + 4, 5) * 5;
+                    if (board[medium] == C)
+                    {
+                        board[medium] = BLANK;
+                    }
+                }
+                if (max == 5 && min == 4)
+                {
+                    int medium = 9;
+                    if (board[medium] == C)
+                    {
+                        board[medium] = BLANK;
+                    }
+                }
+            }
+        }
     }
+
+    // int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+    //             adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * 5;
+    //             adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
+    //             if (board[adjacent_positions[0]] == C)
+    //             {
+    //                 int jump_position = (adjacent_positions[0] - 6) + check_lower_bound(adjacent_positions[0] - 6, 0) * 5;
+    //                 if (board[jump_position] == BLANK)
+    //                 {
+    //                     MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+    //                 }
+    //             }
+    //             if (board[adjacent_positions[1]] == C)
+    //             {
+    //                 int jump_position = (adjacent_positions[1] - 3) + check_upper_bound(adjacent_positions[1] + 1, 4) * 5;
+    //                 if (board[jump_position] == BLANK)
+    //                 {
+    //                     MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+    //                 }
+    //             }
 
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     return GenericHashHash(board, oppTurn);
