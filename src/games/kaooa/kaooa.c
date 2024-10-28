@@ -68,9 +68,9 @@ static MoveArray MkaooaGenerateMoves(Position position);
 static Value MkaooaPrimitive(Position position);
 static Position MkaooaDoMove(Position position, Move move);
 static bool MkaooaIsLegalPosition(Position position);
-static Position MkaooaGetCanonicalPosition(Position position);
-static PositionArray MkaooaGetCanonicalParentPositions(
-    Position position);
+// static Position MkaooaGetCanonicalPosition(Position position);
+// static PositionArray MkaooaGetCanonicalParentPositions(
+//     Position position);
 
 static int MkaooaPositionToString(Position position, char *buffer);
 static int MkaooaMoveToString(Move move, char *buffer);
@@ -86,10 +86,10 @@ static const RegularSolverApi kSolverApi = {
     .Primitive = &MkaooaPrimitive,
     .DoMove = &MkaooaDoMove,
     .IsLegalPosition = &MkaooaIsLegalPosition,
-    .GetCanonicalPosition = &MkaooaGetCanonicalPosition, // MB TODO: Can change this to null?
+    // .GetCanonicalPosition = &MkaooaGetCanonicalPosition, // MB TODO: Can change this to null?
     .GetNumberOfCanonicalChildPositions = NULL,
     .GetCanonicalChildPositions = NULL,
-    .GetCanonicalParentPositions = &MkaooaGetCanonicalParentPositions, // MB TODO: Can change this to null?
+    // .GetCanonicalParentPositions = &MkaooaGetCanonicalParentPositions, // MB TODO: Can change this to null?
 };
 
 // Gameplay API Setup
