@@ -508,26 +508,6 @@ static Position MkaooaDoMove(Position position, Move move)
         }
     }
 
-    // int *adjacent_positions = (int *)malloc(2 * sizeof(int));
-    //             adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * 5;
-    //             adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
-    //             if (board[adjacent_positions[0]] == C)
-    //             {
-    //                 int jump_position = (adjacent_positions[0] - 6) + check_lower_bound(adjacent_positions[0] - 6, 0) * 5;
-    //                 if (board[jump_position] == BLANK)
-    //                 {
-    //                     MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
-    //                 }
-    //             }
-    //             if (board[adjacent_positions[1]] == C)
-    //             {
-    //                 int jump_position = (adjacent_positions[1] - 3) + check_upper_bound(adjacent_positions[1] + 1, 4) * 5;
-    //                 if (board[jump_position] == BLANK)
-    //                 {
-    //                     MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
-    //                 }
-    //             }
-
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     return GenericHashHash(board, oppTurn);
 }
