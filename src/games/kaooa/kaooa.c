@@ -493,7 +493,6 @@ static Position MkaooaDoMove(Position position, Move move)
             {
                 int min = from < to ? from : to;
                 int max = from < to ? to : from;
-                int min_norm = max + check_upper_bound(max, 3) * 5;
                 int diff = abs(to - from);
                 // left jump
                 if (diff % 5 == 1)
@@ -525,7 +524,6 @@ static Position MkaooaDoMove(Position position, Move move)
         }
     }
 
-    int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     return GenericHashHash(board, oppTurn);
 }
 
