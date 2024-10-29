@@ -9,7 +9,6 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseGraph type.
- *
  * @version 1.1.0
  * @date 2023-10-20
  *
@@ -30,7 +29,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/solvers/tier_solver/reverse_graph.h"
+#include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false

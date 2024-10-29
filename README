@@ -18,7 +18,7 @@ GamesmanOne is built with [CMake](https://cmake.org/cmake-tutorial/), which can 
 Variable                     | Type   | Description
 -----------------------------|--------|--------------
 CMAKE_BUILD_TYPE             | String | Project build type.
-DISABLE_OPENMP               | Bool   | Defaults to `ON`. Set this to `OFF` to disable OpenMP.
+DISABLE_OPENMP               | Bool   | Defaults to `OFF`. Set this to `ON` to disable OpenMP.
 USE_MPI                      | Bool   | Defaults to `OFF`. Set this to `ON` to enable MPI.
 
 Each one of the variables can be set at configure time by passing a definition of the variable to the `cmake` command.
