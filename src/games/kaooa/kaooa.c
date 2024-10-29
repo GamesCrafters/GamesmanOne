@@ -96,9 +96,9 @@ static const RegularSolverApi kSolverApi = {
 
 static const GameplayApiCommon kGamePlayApiCommon = {
     .GetInitialPosition = &MkaooaGetInitialPosition,
-    .position_string_length_max = 120,
+    .position_string_length_max = 1028,
 
-    .move_string_length_max = 3,
+    .move_string_length_max = 128,
     .MoveToString = &MkaooaMoveToString,
     .IsValidMoveString = &MkaooaIsValidMoveString,
     .StringToMove = &MkaooaStringToMove,
@@ -261,6 +261,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                     MoveArrayAppend(&moves, MOVE_ENCODE(j, possible_moves[j]));
                 }
             }
+            free(possible_moves);
         }
         else if (turn == C && board[i] == BLANK && can_drop)
         // C's turn and can drop
@@ -288,6 +289,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
                     }
                 }
+                free(possible_moves);
 
                 // jump move
                 int *adjacent_positions = (int *)malloc(2 * sizeof(int));
@@ -310,6 +312,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
                     }
                 }
+                free(adjacent_positions);
             }
             else
             {
@@ -329,6 +332,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
                     }
                 }
+                free(possible_moves);
 
                 // jump move
                 int *adjacent_positions = (int *)malloc(2 * sizeof(int));
@@ -350,10 +354,10 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
                     }
                 }
+                free(adjacent_positions);
             }
         }
     }
-    free(possible_moves);
 
     return moves;
 }
