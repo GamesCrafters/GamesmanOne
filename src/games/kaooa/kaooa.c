@@ -271,17 +271,12 @@ static MoveArray MkaooaGenerateMoves(Position position)
         }
         // V's turn
         // 1029
-        else if (turn == V && count_char_in_board(board, V) == 0)
+        else if (turn == V && board[i] == BLANK && count_char_in_board(board, V) == 0)
         {
             // 1029
-            printf("DEBUG: V's turn and no vultures on the board");
-            for (int j = 0; j < 10; j++)
-            {
-                if (board[possible_moves[j]] == BLANK)
-                {
-                    MoveArrayAppend(&moves, MOVE_ENCODE(j, possible_moves[j]));
-                }
-            }
+            printf("\nDEBUG: V's turn and no vultures on the board\n");
+            // Drop a vulture
+            MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
         }
         else if (turn == V && board[i] == V)
         {
@@ -480,7 +475,7 @@ static Position MkaooaDoMove(Position position, Move move)
     UnhashMove(move, &from, &to);
     if (to == 10 || from == 10)
     {
-        printf("DEBUG: TO OR FROM IS 10");
+        printf("\nDEBUG: TO OR FROM IS 10\n");
     }
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     // The code above can be left unchanged
@@ -533,7 +528,7 @@ static Position MkaooaDoMove(Position position, Move move)
                     {
                         if (medium == 10)
                         {
-                            printf("DEBUG: MEDIUM IS 10");
+                            printf("\nDEBUG: MEDIUM IS 10\n");
                         }
                         board[medium] = BLANK;
                     }
@@ -550,7 +545,7 @@ static Position MkaooaDoMove(Position position, Move move)
                     {
                         if (medium == 10)
                         {
-                            printf("DEBUG: MEDIUM IS 10");
+                            printf("\nDEBUG: MEDIUM IS 10\n");
                         }
                         board[medium] = BLANK;
                     }
@@ -739,8 +734,6 @@ static int MkaooaMoveToString(Move move, char *buffer)
 {
     int from, to;
     UnhashMove(move, &from, &to);
-
-    printf("DEBUG: THIS LINE SHOULD BE PRINTED");
 
     if (from == to)
     {
