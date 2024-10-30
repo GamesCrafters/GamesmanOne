@@ -173,7 +173,7 @@ static int MkaooaSetVariantOption(int option, int selection)
 // TODO: Hash initial board configuration
 static Position MkaooaGetInitialPosition(void)
 {
-    char *initial_str = "-----------";
+    char *initial_str = "----------0";
     return GenericHashHash(initial_str, 1); // HINT: second parameter should be left as 1
                                             // WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
     // change this to our gameboard, so just put all dashes here
@@ -270,6 +270,19 @@ static MoveArray MkaooaGenerateMoves(Position position)
             MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
         }
         // V's turn
+        // 1029
+        else if (turn == V && count_char_in_board(board, V) == 0)
+        {
+            // 1029
+            printf("DEBUG: V's turn and no vultures on the board");
+            for (int j = 0; j < 10; j++)
+            {
+                if (board[possible_moves[j]] == BLANK)
+                {
+                    MoveArrayAppend(&moves, MOVE_ENCODE(j, possible_moves[j]));
+                }
+            }
+        }
         else if (turn == V && board[i] == V)
         {
             // TODO
@@ -465,23 +478,38 @@ static Position MkaooaDoMove(Position position, Move move)
 
     int from, to;
     UnhashMove(move, &from, &to);
+    if (to == 10 || from == 10)
+    {
+        printf("DEBUG: TO OR FROM IS 10");
+    }
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     // The code above can be left unchanged
     if (oppTurn == C)
     {
         if (from == to)
         {
-            board[to] = C;
-            board[10] = (board[10] - '0' + 1) + '0';
+            if (board[to] == BLANK)
+            {
+                board[to] = C;
+                board[10] = (board[10] - '0' + 1) + '0';
+                return GenericHashHash(board, oppTurn);
+            }
         }
         else
         {
             board[to] = C;
             board[from] = BLANK;
+            return GenericHashHash(board, oppTurn);
         }
     }
     else
     {
+        // V's turn
+        if (from == to)
+        {
+            board[to] = V;
+            return GenericHashHash(board, oppTurn);
+        }
         // same to direct move & jump move
         board[to] = V;
         board[from] = BLANK;
@@ -491,12 +519,11 @@ static Position MkaooaDoMove(Position position, Move move)
             int *adjacent_positions = (int *)malloc(2 * sizeof(int));
             adjacent_positions[0] = from + 4 + check_lower_bound(from + 4, 5) * 5;
             adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
-            if (!is_in_adjacent_positions(*adjacent_positions, 2, to))
+            if (!is_in_adjacent_positions(adjacent_positions, 2, to))
             // jump move
             // the move here already obeyed the rule
             {
                 int min = from < to ? from : to;
-                int max = from < to ? to : from;
                 int diff = abs(to - from);
                 // left jump
                 if (diff % 5 == 1)
@@ -504,6 +531,10 @@ static Position MkaooaDoMove(Position position, Move move)
                     int medium = min + 5 + check_lower_bound(min + 5, 5) * 5;
                     if (board[medium] == C)
                     {
+                        if (medium == 10)
+                        {
+                            printf("DEBUG: MEDIUM IS 10");
+                        }
                         board[medium] = BLANK;
                     }
                     else
@@ -517,6 +548,10 @@ static Position MkaooaDoMove(Position position, Move move)
                     int medium = min + 4 + check_lower_bound(min + 4, 5) * 5;
                     if (board[medium] == C)
                     {
+                        if (medium == 10)
+                        {
+                            printf("DEBUG: MEDIUM IS 10");
+                        }
                         board[medium] = BLANK;
                     }
                     else
@@ -664,17 +699,17 @@ static int MkaooaPositionToString(Position position, char *buffer)
 
     static ConstantReadOnlyString kFormat =
         "\n"
-        "1            [0]                           %c                 \\n"
-        "            /  \\                         /  \\               \n"
+        "1            [0]                           %c  \n"
+        "            /  \\                         /  \\  \n"
         "2  [4]____[9]___[5]___[1]       %c______%c___%c_____%c       \n"
-        "   \\    /       \\    /           \\    /       \\   /        \n"
+        "   \\    /       \\    /           \\  /       \\   /        \n"
         "     \\ /         \\ /             \\ /         \\ /         \n"
         "3     [8]__________[6]               %c___________%c          \n"
         "      / \\        / \\               / \\        / \\         \n"
         "     /   \\      /   \\             /   \\      /   \\        \n"
-        "4   /       [7]       \\           /    /   %c       \\       \n"
-        "   /    /         \\   \\         /    /         \\   \\      \n"
-        "  /   /             \\  \\       /   /             \\  \\     \n"
+        "4   /       [7]       \\           /    /   %c  \\   \\       \n"
+        "   /    /         \\   \\         /    /          \\  \\      \n"
+        "  /   /             \\  \\       /   /              \\\\     \n"
         "5 [3]                 [2]        %c                  %c      \n"
         "           LEGEND                        TURN: %c"
         "                                                               ";
@@ -682,7 +717,7 @@ static int MkaooaPositionToString(Position position, char *buffer)
     int actual_length = snprintf(
         buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
         board[0], board[1], board[2], board[3], board[4], board[5], board[6],
-        board[7], board[8], board[9], board[10], turn);
+        board[7], board[8], board[9], turn);
 
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1)
     {
@@ -705,11 +740,13 @@ static int MkaooaMoveToString(Move move, char *buffer)
     int from, to;
     UnhashMove(move, &from, &to);
 
+    printf("DEBUG: THIS LINE SHOULD BE PRINTED");
+
     if (from == to)
     {
         int actual_length = snprintf(
             buffer, kGamePlayApiCommon.move_string_length_max + 1, "drop %d",
-            from + 1);
+            from);
 
         if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1)
         {
@@ -724,7 +761,7 @@ static int MkaooaMoveToString(Move move, char *buffer)
     }
 
     int actual_length = snprintf(
-        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d-%d", from + 1, to + 1);
+        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d-%d", from, to);
     if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1)
     {
         fprintf(
@@ -761,8 +798,8 @@ static Move MkaooaStringToMove(ReadOnlyString move_string)
 {
     assert(MkaooaIsValidMoveString(move_string));
 
-    int from = move_string[0];
-    int to = move_string[1];
+    int from = move_string[0] - '0';
+    int to = move_string[1] - '0';
 
     return MOVE_ENCODE(from, to);
 }
