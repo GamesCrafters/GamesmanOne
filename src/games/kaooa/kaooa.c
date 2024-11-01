@@ -43,7 +43,7 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 11
+#define boardSize 10
 
 // MB TODO: Can we just use All Quenes Chess's unhash move and hash move?
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
@@ -53,7 +53,6 @@
 #define C 'C'
 #define V 'V'
 #define BLANK '-'
-#define CROWS_DROPPED_COUNT '0'
 
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
@@ -116,6 +115,7 @@ static const GameplayApi kGameplayApi = {
     .regular = &kGameplayApiRegular,
 };
 
+
 const Game kMkaooa = {
     .name = "mkaooa",
     .formal_name = "Kaooa",
@@ -141,9 +141,9 @@ static int MkaooaInit(void *aux)
 
     GenericHashReinitialize();
     // MB TODO: Figure out what this array should be
-    int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1};
-    bool success =
-        GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
+    // int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1};
+    static const int pieces_init_array[13] = {BLANK, 3, 10, C, 0, 6, V, 0, 1, -2, 0, 6, -1};
+    bool success = GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
     if (!success)
     {
         fprintf(stderr,
@@ -173,10 +173,9 @@ static int MkaooaSetVariantOption(int option, int selection)
 // TODO: Hash initial board configuration
 static Position MkaooaGetInitialPosition(void)
 {
-    char *initial_str = "----------0";
-    return GenericHashHash(initial_str, 1); // HINT: second parameter should be left as 1
-                                            // WBWBW-----B---W-----BWBWB", 1); // HINT: second parameter should be left as 1
-    // change this to our gameboard, so just put all dashes here
+    char board[11] = "----------";
+    board[10] = 0;  // using an unordered piece, should be int not char (look in generic_hash.h for more info)
+    return GenericHashHash(board, 1); 
 }
 
 static int64_t MkaooaGetNumPositions(void)
@@ -191,22 +190,18 @@ static int64_t MkaooaGetNumPositions(void)
 int count_char_in_board(char board[], char c)
 {
     int count = 0;
-    for (int i = 0; i < boardSize; i++)
-    {
-        if (board[i] == c)
-        {
-            count++;
-        }
+    for (int i = 0; i < boardSize; i++) {
+        if (board[i] == c) count++;
     }
     return count;
 }
 
-int check_upper_bound(int n_1, int bound)
+int check_upper_bound(int n_1, int bound) // -1 if n1 > bound else 0
 {
     return (n_1 > bound) ? -1 : 0;
 }
 
-int check_lower_bound(int n_1, int bound)
+int check_lower_bound(int n_1, int bound) // 1 if n1 < bound else 0
 {
     return (n_1 < bound) ? 1 : 0;
 }
@@ -218,7 +213,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
     MoveArray moves;
     MoveArrayInit(&moves);
 
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
@@ -226,7 +221,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess.
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
-    bool can_drop = (board[10] - '0') < 6;
+    bool can_drop = board[10] < 6;
     int move_count;
     int *possible_moves;
     for (int i = 0; i < boardSize; i++)
@@ -258,7 +253,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
             {
                 if (board[possible_moves[j]] == BLANK)
                 {
-                    MoveArrayAppend(&moves, MOVE_ENCODE(j, possible_moves[j]));
+                    MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[j]));
                 }
             }
             free(possible_moves);
@@ -300,7 +295,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 free(possible_moves);
 
                 // jump move
-                int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+                int *adjacent_positions = (int *)malloc(move_count * sizeof(int));
                 adjacent_positions[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 adjacent_positions[1] = i + 5 + check_lower_bound(i + 5, 5) * 5;
 
@@ -367,6 +362,8 @@ static MoveArray MkaooaGenerateMoves(Position position)
         }
     }
 
+    printf("DEBUG: End of generate moves"); 
+
     return moves;
 }
 
@@ -391,10 +388,10 @@ bool is_in_impossible_trap(int impossible_trap[], int size, int value)
 
 static Value MkaooaPrimitive(Position position)
 {
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
-    if ((board[10] - '0') - count_char_in_board(board, C) >= 3)
+    if (board[10] - count_char_in_board(board, C) >= 3)
     {
         return kLose;
     }
@@ -468,7 +465,7 @@ int is_in_adjacent_positions(int *adjacent_positions, int size, int value)
 // Check 1027
 static Position MkaooaDoMove(Position position, Move move)
 {
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
     int from, to;
@@ -486,7 +483,7 @@ static Position MkaooaDoMove(Position position, Move move)
             if (board[to] == BLANK)
             {
                 board[to] = C;
-                board[10] = (board[10] - '0' + 1) + '0';
+                board[10] = board[10] + 1;
                 return GenericHashHash(board, oppTurn);
             }
         }
@@ -688,7 +685,7 @@ static bool MkaooaIsLegalPosition(Position position)
 // This is to display the board/position to the user when using GamesmanOne
 static int MkaooaPositionToString(Position position, char *buffer)
 {
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
@@ -738,7 +735,7 @@ static int MkaooaMoveToString(Move move, char *buffer)
     if (from == to)
     {
         int actual_length = snprintf(
-            buffer, kGamePlayApiCommon.move_string_length_max + 1, "drop %d",
+            buffer, kGamePlayApiCommon.move_string_length_max + 1, "Drop %d",
             from);
 
         if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1)
