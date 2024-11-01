@@ -213,19 +213,37 @@ static MoveArray MkaooaGenerateMoves(Position position)
     MoveArray moves;
     MoveArrayInit(&moves);
 
-    char board[boardSize];
+    printf("\nIn generate move");
+
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
-    char another_board[boardSize + 1];
-    GenericHashUnhash(position, another_board);
+    printf("\nThis is board in generate moves\n:"); 
+    for (int i = 0; i < boardSize; i++) {
+        printf("%c", board[i]); 
+    }
+    printf("\n"); 
+
+    // char another_board[boardSize + 1];
+    // GenericHashUnhash(position, another_board);
+    // printf("\nThis is another board in gnerate moves:\n"); 
+    // for (int i = 0; i < boardSize + 1; i++) {
+    //     if (i == 10) {
+    //         printf("%d", another_board[i]); 
+    //     } else {
+    //         printf("%c", another_board[i]); 
+    //     }
+    // }
+    // printf("\n"); 
 
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess.
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
-    bool can_drop = another_board[10] < 6;
+    bool can_drop = board[10] < 6;
     int move_count;
     int *possible_moves;
+
     for (int i = 0; i < boardSize; i++)
     {
 
@@ -396,13 +414,13 @@ bool is_in_impossible_trap(int impossible_trap[], int size, int value)
 
 static Value MkaooaPrimitive(Position position)
 {
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
-    char another_board[boardSize + 1]; 
-    GenericHashUnhash(position, another_board);
+    // char another_board[boardSize + 1]; 
+    // GenericHashUnhash(position, another_board);
 
-    if (another_board[10] - count_char_in_board(board, C) >= 3)
+    if (board[10] - count_char_in_board(board, C) >= 3)
     {
         return kLose;
     }
@@ -476,11 +494,11 @@ int is_in_adjacent_positions(int *adjacent_positions, int size, int value)
 // Check 1027
 static Position MkaooaDoMove(Position position, Move move)
 {
-    char board[boardSize];
+    char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
-    char another_board[boardSize + 1];
-    GenericHashUnhash(position, another_board);
+    // char another_board[boardSize + 1];
+    // GenericHashUnhash(position, another_board);
 
     int from, to;
     UnhashMove(move, &from, &to);
@@ -496,7 +514,7 @@ static Position MkaooaDoMove(Position position, Move move)
         {
             //condition to check if TO is blank not needed --> checked in GenMoves
             board[to] = C;
-            another_board[10] = another_board[10] + 1;
+            board[10] = board[10] + 1;
             // return GenericHashHash(board, oppTurn);
         }
         else // moving crow
@@ -569,24 +587,49 @@ static Position MkaooaDoMove(Position position, Move move)
         //     }
         // }
     }
-
-    for (int i = 0; i < boardSize; i++) {
-        printf("\n"); 
+    printf("\n"); 
+    for (int i = 0; i < boardSize + 1; i++) {
         printf("%c", board[i]); 
-        printf("\n"); 
     }
+    printf("\n"); 
 
-    //only first 10, leave off unordered piece
-    for (int i = 0; i < boardSize; i++) {
-        another_board[i] = board[i]; 
-    }
+    // //only first 10, leave off unordered piece
+    // for (int i = 0; i < boardSize; i++) {
+    //     another_board[i] = board[i]; 
+    // }
+    
+    // printf("\nAnother board final in do moves:\n"); 
+    // for (int i = 0; i < boardSize + 1; i++) {
+    //     if (i == 10) {
+    //         printf("%d", another_board[i]); 
+    //     } else {
+    //         printf("%c", another_board[i]); 
+    //     }
+    // }
+    // printf("\n"); 
 
-    return GenericHashHash(another_board, oppTurn);
+    // char new_board[11]; 
+    // for (int i = 0; i < boardSize; i++) {
+    //     new_board[i] = board[i]; 
+    // }
+    // new_board[10] = another_board[10]; 
+    // printf("\nNew board final in do moves:\n"); 
+    // for (int i = 0; i < boardSize + 1; i++) {
+    //     if (i == 10) {
+    //         printf("%d", new_board[i]); 
+    //     } else {
+    //         printf("%c", new_board[i]); 
+    //     }
+    // }
+    // printf("\n"); 
+
+    return GenericHashHash(board, oppTurn);
 }
 
 static bool MkaooaIsLegalPosition(Position position)
 { // MB TODO: Do we need to implement this?
     // Don't need to implement.
+    printf("\nIn IsLegalPosition");
     (void)position;
     return true;
 }
@@ -711,6 +754,7 @@ static bool MkaooaIsLegalPosition(Position position)
 // This is to display the board/position to the user when using GamesmanOne
 static int MkaooaPositionToString(Position position, char *buffer)
 {
+    printf("\nIn PositionToString");
     char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
@@ -755,6 +799,7 @@ static int MkaooaPositionToString(Position position, char *buffer)
 // When X = Y, the move signifies dropping a piece
 static int MkaooaMoveToString(Move move, char *buffer)
 {
+    printf("\nIn MoveToString");
     int from, to;
     UnhashMove(move, &from, &to);
 
@@ -795,6 +840,7 @@ static int MkaooaMoveToString(Move move, char *buffer)
 // This is NOT the same as checking if a move is a valid move. Here you are only supposed to check if a string is in the correct form
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string)
 {
+    printf("\nIn IsValidMoveString");
     if (move_string[0] - '0' < 0 || move_string[0] - '0' > 9)
     {
         return false;
@@ -812,6 +858,7 @@ static bool MkaooaIsValidMoveString(ReadOnlyString move_string)
 // TODO: Converts the string move a user entered into a Move gamesmanone can understand internally.
 static Move MkaooaStringToMove(ReadOnlyString move_string)
 {
+    printf("\nIn StringToMove");
     assert(MkaooaIsValidMoveString(move_string));
 
     int from = move_string[0] - '0';
