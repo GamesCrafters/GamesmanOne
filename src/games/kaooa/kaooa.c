@@ -213,17 +213,18 @@ static MoveArray MkaooaGenerateMoves(Position position)
     MoveArray moves;
     MoveArrayInit(&moves);
 
-    printf("\nIn generate move");
+    // printf("\nIn generate move");
 
     char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
-    printf("\nThis is board in generate moves\n:"); 
-    for (int i = 0; i < boardSize; i++) {
-        printf("%c", board[i]); 
-    }
-    printf("\n"); 
+    // printf("\nThis is board in generate moves:\n"); 
+    // for (int i = 0; i < boardSize; i++) {
+    //     printf("%c", board[i]); 
+    //     printf("$"); 
+    // }
+    // printf("\n"); 
 
     // char another_board[boardSize + 1];
     // GenericHashUnhash(position, another_board);
@@ -247,9 +248,9 @@ static MoveArray MkaooaGenerateMoves(Position position)
     for (int i = 0; i < boardSize; i++)
     {
 
-        printf("turn == v %d\n", turn == V); 
-        printf("board[i] == BLANK %d\n", board[i] == BLANK); 
-        printf("thircond %d\n", count_char_in_board(board, V) == 0); 
+        // printf("turn == v %d\n", turn == V); 
+        // printf("board[i] == BLANK %d\n", board[i] == BLANK); 
+        // printf("thircond %d\n", count_char_in_board(board, V) == 0); 
 
         // C's turn
         if (turn == C && board[i] == C && !can_drop)
@@ -295,7 +296,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
         else if (turn == V && board[i] == BLANK && count_char_in_board(board, V) == 0)
         {
             // 1029
-            printf("\nDEBUG: V's turn and no vultures on the board\n");
+            // printf("\nDEBUG: V's turn and no vultures on the board\n");
             // Drop a vulture
             MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
         }
@@ -388,7 +389,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
         }
     }
 
-    printf("DEBUG: End of generate moves"); 
+    // printf("DEBUG: End of generate moves"); 
 
     return moves;
 }
@@ -504,12 +505,11 @@ static Position MkaooaDoMove(Position position, Move move)
     UnhashMove(move, &from, &to);
     if (to == 10 || from == 10)
     {
-        printf("\nDEBUG: TO OR FROM IS 10\n");
+        // printf("\nDEBUG: TO OR FROM IS 10\n");
     }
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     // The code above can be left unchanged
-    if (oppTurn == C)
-    {
+    if (oppTurn == C) {
         if (from == to) // dropping crow
         {
             //condition to check if TO is blank not needed --> checked in GenMoves
@@ -517,15 +517,13 @@ static Position MkaooaDoMove(Position position, Move move)
             board[10] = board[10] + 1;
             // return GenericHashHash(board, oppTurn);
         }
-        else // moving crow
-        {
+        else { // moving crow
             board[to] = C;
             board[from] = BLANK;
             // return GenericHashHash(board, oppTurn);
         }
     }
-    else
-    {
+    else {
         // V's turn
         if (from == to) {
             board[to] = V;
@@ -587,11 +585,11 @@ static Position MkaooaDoMove(Position position, Move move)
         //     }
         // }
     }
-    printf("\n"); 
-    for (int i = 0; i < boardSize + 1; i++) {
-        printf("%c", board[i]); 
-    }
-    printf("\n"); 
+    // printf("\n"); 
+    // for (int i = 0; i < boardSize + 1; i++) {
+    //     printf("%c", board[i]); 
+    // }
+    // printf("\n"); 
 
     // //only first 10, leave off unordered piece
     // for (int i = 0; i < boardSize; i++) {
@@ -623,13 +621,13 @@ static Position MkaooaDoMove(Position position, Move move)
     // }
     // printf("\n"); 
 
-    return GenericHashHash(board, oppTurn);
+    return GenericHashHash(board, oppTurn == C ? 2 : 1);
 }
 
 static bool MkaooaIsLegalPosition(Position position)
 { // MB TODO: Do we need to implement this?
     // Don't need to implement.
-    printf("\nIn IsLegalPosition");
+    // printf("\nIn IsLegalPosition");
     (void)position;
     return true;
 }
@@ -754,19 +752,19 @@ static bool MkaooaIsLegalPosition(Position position)
 // This is to display the board/position to the user when using GamesmanOne
 static int MkaooaPositionToString(Position position, char *buffer)
 {
-    printf("\nIn PositionToString");
+    // printf("\nIn PositionToString");
     char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
     static ConstantReadOnlyString kFormat =
         "\n"
-        "1            [0]                           %c  \n"
-        "            /  \\                         /  \\  \n"
+        "1           [0]                          %c  \n"
+        "           /  \\                        /  \\  \n"
         "2  [4]____[9]___[5]___[1]       %c______%c___%c_____%c       \n"
         "   \\    /       \\    /           \\  /       \\   /        \n"
         "     \\ /         \\ /             \\ /         \\ /         \n"
-        "3     [8]__________[6]               %c___________%c          \n"
+        "3     [8]________[6]               %c___________%c          \n"
         "      / \\        / \\               / \\        / \\         \n"
         "     /   \\      /   \\             /   \\      /   \\        \n"
         "4   /       [7]       \\           /    /   %c  \\   \\       \n"
@@ -778,8 +776,8 @@ static int MkaooaPositionToString(Position position, char *buffer)
 
     int actual_length = snprintf(
         buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
-        board[0], board[1], board[2], board[3], board[4], board[5], board[6],
-        board[7], board[8], board[9], turn);
+        board[0], board[4], board[9], board[5], board[1], board[8], board[6],
+        board[7], board[3], board[2], turn);
 
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1)
     {
@@ -799,7 +797,7 @@ static int MkaooaPositionToString(Position position, char *buffer)
 // When X = Y, the move signifies dropping a piece
 static int MkaooaMoveToString(Move move, char *buffer)
 {
-    printf("\nIn MoveToString");
+    // printf("\nIn MoveToString");
     int from, to;
     UnhashMove(move, &from, &to);
 
@@ -840,7 +838,7 @@ static int MkaooaMoveToString(Move move, char *buffer)
 // This is NOT the same as checking if a move is a valid move. Here you are only supposed to check if a string is in the correct form
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string)
 {
-    printf("\nIn IsValidMoveString");
+    // printf("\nIn IsValidMoveString");
     if (move_string[0] - '0' < 0 || move_string[0] - '0' > 9)
     {
         return false;
@@ -858,7 +856,7 @@ static bool MkaooaIsValidMoveString(ReadOnlyString move_string)
 // TODO: Converts the string move a user entered into a Move gamesmanone can understand internally.
 static Move MkaooaStringToMove(ReadOnlyString move_string)
 {
-    printf("\nIn StringToMove");
+    // printf("\nIn StringToMove");
     assert(MkaooaIsValidMoveString(move_string));
 
     int from = move_string[0] - '0';
