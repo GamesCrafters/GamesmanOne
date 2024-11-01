@@ -132,6 +132,28 @@ const Game kMkaooa = {
 
 // Helper Functions
 
+//Variants
+static ConstantReadOnlyString kMkaooaRuleChoices[] = {
+    "6 crows", "7 crows",
+};
+
+static const GameVariantOption kMkaooaRules = {
+    .name = "rules",
+    .num_choices = sizeof(kMkaooaRuleChoices) / sizeof(kMkaooaRuleChoices[0]),
+    .choices = kMkaooaRuleChoices,
+};
+
+//M: Zero terminator ??
+#define NUM_OPTIONS 2  // 1 option and 1 zero-terminator 
+static GameVariantOption kaooa_variant_options[NUM_OPTIONS];
+static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0};  // 6 crows, 7 crows
+#undef NUM_OPTIONS
+static GameVariant current_variant = {
+    .options = kaooa_variant_options,
+    .selections = kaooa_variant_option_selections,
+};
+
+
 // this is good
 static void UnhashMove(Move move, int *from, int *to);
 
@@ -761,15 +783,15 @@ static int MkaooaPositionToString(Position position, char *buffer)
         "\n"
         "1           [0]                          %c  \n"
         "           /  \\                        /  \\  \n"
-        "2  [4]____[9]___[5]___[1]       %c______%c___%c_____%c       \n"
-        "   \\    /       \\    /           \\  /       \\   /        \n"
-        "     \\ /         \\ /             \\ /         \\ /         \n"
+        "2  [4]___[9]___[5]___[1]        %c_____%c___%c_____%c       \n"
+        "   \\    /       \\    /          \\  /       \\   /        \n"
+        "     \\ /         \\  /            \\ /         \\ /         \n"
         "3     [8]________[6]               %c___________%c          \n"
         "      / \\        / \\               / \\        / \\         \n"
         "     /   \\      /   \\             /   \\      /   \\        \n"
-        "4   /       [7]       \\           /    /   %c  \\   \\       \n"
+        "4   /      [7]       \\           /    /   %c  \\    \\       \n"
         "   /    /         \\   \\         /    /          \\  \\      \n"
-        "  /   /             \\  \\       /   /              \\\\     \n"
+        "  /   /             \\  \\       /   /             \\ \\     \n"
         "5 [3]                 [2]        %c                  %c      \n"
         "           LEGEND                        TURN: %c"
         "                                                               ";
