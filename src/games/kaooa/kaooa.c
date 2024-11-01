@@ -826,8 +826,8 @@ static int MkaooaMoveToString(Move move, char *buffer)
     if (from == to)
     {
         int actual_length = snprintf(
-            buffer, kGamePlayApiCommon.move_string_length_max + 1, "Drop %d",
-            from);
+            buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d %d",
+            from, from);
 
         if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1)
         {
@@ -842,7 +842,7 @@ static int MkaooaMoveToString(Move move, char *buffer)
     }
 
     int actual_length = snprintf(
-        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d-%d", from, to);
+        buffer, kGamePlayApiCommon.move_string_length_max + 1, "%d %d", from, to);
     if (actual_length >= kGamePlayApiCommon.move_string_length_max + 1)
     {
         fprintf(
@@ -865,7 +865,7 @@ static bool MkaooaIsValidMoveString(ReadOnlyString move_string)
     {
         return false;
     }
-    else if (move_string[1] - '0' < 0 || move_string[1] - '0' > 9)
+    else if (move_string[2] - '0' < 0 || move_string[2] - '0' > 9)
     {
         return false;
     }
@@ -882,7 +882,7 @@ static Move MkaooaStringToMove(ReadOnlyString move_string)
     assert(MkaooaIsValidMoveString(move_string));
 
     int from = move_string[0] - '0';
-    int to = move_string[1] - '0';
+    int to = move_string[2] - '0';
 
     return MOVE_ENCODE(from, to);
 }
