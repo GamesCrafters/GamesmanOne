@@ -115,7 +115,6 @@ static const GameplayApi kGameplayApi = {
     .regular = &kGameplayApiRegular,
 };
 
-
 const Game kMkaooa = {
     .name = "mkaooa",
     .formal_name = "Kaooa",
@@ -132,9 +131,10 @@ const Game kMkaooa = {
 
 // Helper Functions
 
-//Variants
+// Variants
 static ConstantReadOnlyString kMkaooaRuleChoices[] = {
-    "6 crows", "7 crows",
+    "6 crows",
+    "7 crows",
 };
 
 static const GameVariantOption kMkaooaRules = {
@@ -143,16 +143,15 @@ static const GameVariantOption kMkaooaRules = {
     .choices = kMkaooaRuleChoices,
 };
 
-//M: Zero terminator ??
-#define NUM_OPTIONS 2  // 1 option and 1 zero-terminator 
+// M: Zero terminator ??
+#define NUM_OPTIONS 2 // 1 option and 1 zero-terminator
 static GameVariantOption kaooa_variant_options[NUM_OPTIONS];
-static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0};  // 6 crows, 7 crows
+static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0}; // 6 crows, 7 crows
 #undef NUM_OPTIONS
 static GameVariant current_variant = {
     .options = kaooa_variant_options,
     .selections = kaooa_variant_option_selections,
 };
-
 
 // this is good
 static void UnhashMove(Move move, int *from, int *to);
@@ -196,8 +195,8 @@ static int MkaooaSetVariantOption(int option, int selection)
 static Position MkaooaGetInitialPosition(void)
 {
     char board[11] = "----------";
-    board[10] = 0;  // using an unordered piece, should be int not char (look in generic_hash.h for more info)
-    return GenericHashHash(board, 1); 
+    board[10] = 0; // using an unordered piece, should be int not char (look in generic_hash.h for more info)
+    return GenericHashHash(board, 1);
 }
 
 static int64_t MkaooaGetNumPositions(void)
@@ -212,8 +211,10 @@ static int64_t MkaooaGetNumPositions(void)
 int count_char_in_board(char board[], char c)
 {
     int count = 0;
-    for (int i = 0; i < boardSize; i++) {
-        if (board[i] == c) count++;
+    for (int i = 0; i < boardSize; i++)
+    {
+        if (board[i] == c)
+            count++;
     }
     return count;
 }
@@ -241,25 +242,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
 
-    // printf("\nThis is board in generate moves:\n"); 
-    // for (int i = 0; i < boardSize; i++) {
-    //     printf("%c", board[i]); 
-    //     printf("$"); 
-    // }
-    // printf("\n"); 
-
-    // char another_board[boardSize + 1];
-    // GenericHashUnhash(position, another_board);
-    // printf("\nThis is another board in gnerate moves:\n"); 
-    // for (int i = 0; i < boardSize + 1; i++) {
-    //     if (i == 10) {
-    //         printf("%d", another_board[i]); 
-    //     } else {
-    //         printf("%c", another_board[i]); 
-    //     }
-    // }
-    // printf("\n"); 
-
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess.
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
@@ -269,11 +251,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
 
     for (int i = 0; i < boardSize; i++)
     {
-
-        // printf("turn == v %d\n", turn == V); 
-        // printf("board[i] == BLANK %d\n", board[i] == BLANK); 
-        // printf("thircond %d\n", count_char_in_board(board, V) == 0); 
-
         // C's turn
         if (turn == C && board[i] == C && !can_drop)
         // C's turn and can't drop
@@ -388,11 +365,11 @@ static MoveArray MkaooaGenerateMoves(Position position)
 
                 // jump move
                 int *adjacent_positions = (int *)malloc(2 * sizeof(int));
-                adjacent_positions[0] = i + 1 + check_upper_bound(i + 1, 9) * 5;
-                adjacent_positions[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
+                adjacent_positions[0] = i - 1 + check_lower_bound(i - 1, 5) * 5;
+                adjacent_positions[1] = i + 1 + check_upper_bound(i + 1, 9) * 5;
                 if (board[adjacent_positions[0]] == C)
                 {
-                    int jump_position = (adjacent_positions[0] - 6) + check_lower_bound(adjacent_positions[0] - 6, 0) * 5;
+                    int jump_position = (adjacent_positions[0] - 5) + check_lower_bound(adjacent_positions[0] - 5, 0) * 5;
                     if (board[jump_position] == BLANK)
                     {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
@@ -400,7 +377,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 }
                 if (board[adjacent_positions[1]] == C)
                 {
-                    int jump_position = (adjacent_positions[1] - 3) + check_upper_bound(adjacent_positions[1] + 1, 4) * 5;
+                    int jump_position = (adjacent_positions[1] - 4) + check_upper_bound(adjacent_positions[1] - 4, 4) * 5;
                     if (board[jump_position] == BLANK)
                     {
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
@@ -411,7 +388,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
         }
     }
 
-    // printf("DEBUG: End of generate moves"); 
+    // printf("DEBUG: End of generate moves");
 
     return moves;
 }
@@ -440,7 +417,7 @@ static Value MkaooaPrimitive(Position position)
     char board[boardSize + 1];
     GenericHashUnhash(position, board);
 
-    // char another_board[boardSize + 1]; 
+    // char another_board[boardSize + 1];
     // GenericHashUnhash(position, another_board);
 
     if (board[10] - count_char_in_board(board, C) >= 3)
@@ -525,125 +502,88 @@ static Position MkaooaDoMove(Position position, Move move)
 
     int from, to;
     UnhashMove(move, &from, &to);
-    if (to == 10 || from == 10)
-    {
-        // printf("\nDEBUG: TO OR FROM IS 10\n");
-    }
     int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
     // The code above can be left unchanged
-    if (oppTurn == C) {
+    if (oppTurn == C)
+    {
         if (from == to) // dropping crow
         {
-            //condition to check if TO is blank not needed --> checked in GenMoves
+            // condition to check if TO is blank not needed --> checked in GenMoves
             board[to] = C;
             board[10] = board[10] + 1;
-            // return GenericHashHash(board, oppTurn);
+            return GenericHashHash(board, oppTurn == C ? 2 : 1);
         }
-        else { // moving crow
+        else
+        { // moving crow
             board[to] = C;
             board[from] = BLANK;
-            // return GenericHashHash(board, oppTurn);
+            return GenericHashHash(board, oppTurn == C ? 2 : 1);
         }
     }
-    else {
+    else
+    {
         // V's turn
-        if (from == to) {
+        if (from == to)
+        {
             board[to] = V;
-            // return GenericHashHash(board, oppTurn);
-        } else {
-            board[to] = V;
-            board[from] = BLANK;
-            // return GenericHashHash(board, oppTurn);
+
+            return GenericHashHash(board, oppTurn == C ? 2 : 1);
         }
         // same to direct move & jump move
-        // board[to] = V;
-        // board[from] = BLANK;
+        board[to] = V;
+        board[from] = BLANK;
         // check if is direct move
-        // if (from < 5)
-        // {
-        //     int *adjacent_positions = (int *)malloc(2 * sizeof(int));
-        //     adjacent_positions[0] = from + 4 + check_lower_bound(from + 4, 5) * 5;
-        //     adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
-        //     if (!is_in_adjacent_positions(adjacent_positions, 2, to))
-        //     // jump move
-        //     // the move here already obeyed the rule
-        //     {
-        //         int min = from < to ? from : to;
-        //         int diff = abs(to - from);
-        //         // left jump
-        //         if (diff % 5 == 1)
-        //         {
-        //             int medium = min + 5 + check_lower_bound(min + 5, 5) * 5;
-        //             if (board[medium] == C)
-        //             {
-        //                 if (medium == 10)
-        //                 {
-        //                     printf("\nDEBUG: MEDIUM IS 10\n");
-        //                 }
-        //                 board[medium] = BLANK;
-        //             }
-        //             else
-        //             {
-        //                 printf("Error: Thought there was a crow here, but there wasn't\n");
-        //             }
-        //         }
-        //         // right jump
-        //         else if (diff % 5 == 3)
-        //         {
-        //             int medium = min + 4 + check_lower_bound(min + 4, 5) * 5;
-        //             if (board[medium] == C)
-        //             {
-        //                 if (medium == 10)
-        //                 {
-        //                     printf("\nDEBUG: MEDIUM IS 10\n");
-        //                 }
-        //                 board[medium] = BLANK;
-        //             }
-        //             else
-        //             {
-        //                 printf("Error: Thought there was a crow here, but there wasn't\n");
-        //             }
-        //         }
-        //     }
-        // }
+        int min_pos = from < to ? from : to;
+        if (min_pos > 4)
+        {
+            return GenericHashHash(board, oppTurn == C ? 2 : 1);
+        }
+        else
+        {
+            int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+            adjacent_positions[0] = from + 4 + check_lower_bound(from + 4, 5) * 5;
+            adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
+            if (is_in_adjacent_positions(adjacent_positions, 2, to))
+            {
+                return GenericHashHash(board, oppTurn == C ? 2 : 1);
+            }
+            if (!is_in_adjacent_positions(adjacent_positions, 2, to))
+            // jump move
+            // the move here already obeyed the rule
+            {
+                int min = from < to ? from : to;
+                int diff = abs(to - from);
+                // left jump
+                if (diff % 5 == 1)
+                {
+                    int medium = min + 5 + check_lower_bound(min + 5, 5) * 5;
+                    if (board[medium] == C)
+                    {
+                        board[medium] = BLANK;
+                    }
+                    else
+                    {
+                        printf("Error: Thought there was a crow here, but there wasn't\n");
+                    }
+                }
+                // right jump
+                else if (diff % 5 == 3)
+                {
+                    int medium = min + 4 + check_lower_bound(min + 4, 5) * 5;
+                    if (board[medium] == C)
+                    {
+                        board[medium] = BLANK;
+                    }
+                    else
+                    {
+                        printf("Error: Thought there was a crow here, but there wasn't\n");
+                    }
+                }
+            }
+        }
+
+        return GenericHashHash(board, oppTurn == C ? 2 : 1);
     }
-    // printf("\n"); 
-    // for (int i = 0; i < boardSize + 1; i++) {
-    //     printf("%c", board[i]); 
-    // }
-    // printf("\n"); 
-
-    // //only first 10, leave off unordered piece
-    // for (int i = 0; i < boardSize; i++) {
-    //     another_board[i] = board[i]; 
-    // }
-    
-    // printf("\nAnother board final in do moves:\n"); 
-    // for (int i = 0; i < boardSize + 1; i++) {
-    //     if (i == 10) {
-    //         printf("%d", another_board[i]); 
-    //     } else {
-    //         printf("%c", another_board[i]); 
-    //     }
-    // }
-    // printf("\n"); 
-
-    // char new_board[11]; 
-    // for (int i = 0; i < boardSize; i++) {
-    //     new_board[i] = board[i]; 
-    // }
-    // new_board[10] = another_board[10]; 
-    // printf("\nNew board final in do moves:\n"); 
-    // for (int i = 0; i < boardSize + 1; i++) {
-    //     if (i == 10) {
-    //         printf("%d", new_board[i]); 
-    //     } else {
-    //         printf("%c", new_board[i]); 
-    //     }
-    // }
-    // printf("\n"); 
-
-    return GenericHashHash(board, oppTurn == C ? 2 : 1);
 }
 
 static bool MkaooaIsLegalPosition(Position position)
@@ -784,22 +724,23 @@ static int MkaooaPositionToString(Position position, char *buffer)
         "1           [0]                          %c  \n"
         "           /  \\                        /  \\  \n"
         "2  [4]___[9]___[5]___[1]        %c_____%c___%c_____%c       \n"
-        "   \\    /       \\    /          \\  /       \\   /        \n"
+        "   \\    /       \\    /          \\  /       \\    /        \n"
         "     \\ /         \\  /            \\ /         \\ /         \n"
         "3     [8]________[6]               %c___________%c          \n"
         "      / \\        / \\               / \\        / \\         \n"
         "     /   \\      /   \\             /   \\      /   \\        \n"
         "4   /      [7]       \\           /    /   %c  \\    \\       \n"
-        "   /    /         \\   \\         /    /          \\  \\      \n"
-        "  /   /             \\  \\       /   /             \\ \\     \n"
+        "   /    /         \\   \\         /    /         \\   \\      \n"
+        "  /   /             \\  \\       /   /             \\  \\     \n"
         "5 [3]                 [2]        %c                  %c      \n"
-        "           LEGEND                        TURN: %c"
-        "                                                               ";
-
+        "           LEGEND                        TURN: %c           \n"
+        "EATEN CROWS: %d\n";
+    "                                                               ";
+    int eaten_crows = board[10] - count_char_in_board(board, C);
     int actual_length = snprintf(
         buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
         board[0], board[4], board[9], board[5], board[1], board[8], board[6],
-        board[7], board[3], board[2], turn);
+        board[7], board[3], board[2], turn, eaten_crows);
 
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1)
     {
