@@ -40,8 +40,8 @@
 
 #include "core/constants.h"
 #include "core/db/db_manager.h"
-#include "core/solvers/tier_solver/frontier.h"
-#include "core/solvers/tier_solver/reverse_graph.h"
+#include "core/solvers/tier_solver/tier_worker/frontier.h"
+#include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 

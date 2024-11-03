@@ -1,8 +1,6 @@
 add_subdirectory(tier_worker)
 
 set(HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/frontier.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/reverse_graph.h
     ${CMAKE_CURRENT_SOURCE_DIR}/reverse_tier_graph.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_analyzer.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_manager.h
@@ -11,8 +9,6 @@ set(HEADERS
 )
 
 set(SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/frontier.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/reverse_graph.c
     ${CMAKE_CURRENT_SOURCE_DIR}/reverse_tier_graph.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_analyzer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_manager.c
