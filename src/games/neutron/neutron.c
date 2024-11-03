@@ -38,6 +38,26 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
+// ============================= Type Definitions =============================
+typedef union {
+    struct {
+        /** [-1, 25), 25 possible neutron move sources plus an additional value
+         * -1 for no neutron move at the initial position. */
+        int8_t n_src;
+
+        /** [0, 8), 8 possible neutron move directions. */
+        int8_t n_dir;
+
+        /** [-1, 25), 25 possible piece move sources plus an additional value
+         * -1 for no neutron move due to game over after moving the neutron. */
+        int8_t p_src;
+
+        /** [0, 8), 8 possible piece move directions. */
+        int8_t p_dir;
+    } unpacked;
+    Move hashed;
+} NeutronMove;
+
 // ============================= Global Constants =============================
 
 enum {
@@ -54,14 +74,14 @@ enum {
  * X X X X X
  */
 static ConstantReadOnlyString kInitialBoard = "OOOOO-------N-------XXXXX";
-static const int kSymmetry[] = {
+static const int8_t kSymmetry[] = {
     4,  3,  2,  1,  0,  9,  8,  7,  6,  5,  14, 13, 12,
     11, 10, 19, 18, 17, 16, 15, 24, 23, 22, 21, 20,
 };
 
-static const int kXHomeRow[] = {20, 21, 22, 23, 24};
-static const int kOHomeRow[] = {0, 1, 2, 3, 4};
-static const int kDirections[8][2] = {
+static const int8_t kXHomeRow[] = {20, 21, 22, 23, 24};
+static const int8_t kOHomeRow[] = {0, 1, 2, 3, 4};
+static const int8_t kDirections[8][2] = {
     {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1},
 };
 static ConstantReadOnlyString kDirectionStr[8] = {
@@ -73,8 +93,8 @@ static ConstantReadOnlyString kDirectionStr[8] = {
 // should be considered constant.
 static Position kInitialPosition;
 
-static const int *kXWinningRow = kXHomeRow;
-static const int *kOWinningRow = kOHomeRow;
+static const int8_t *kXWinningRow = kXHomeRow;
+static const int8_t *kOWinningRow = kOHomeRow;
 
 // ============================= kNeutronSolverApi =============================
 
@@ -86,31 +106,9 @@ static int64_t NeutronGetNumPositions(void) {
 
 static Position NeutronGetInitialPosition(void) { return kInitialPosition; }
 
-// Pass n_src == -1 for initial position.
-static Move ConstructMove(int n_src, int n_dir, int p_src, int p_dir) {
-    // 26 possible neutron sources (1 additional for initial position's neutron,
-    // which cannot be moved), 25 piece sources, and 8 possible directions for
-    // each part.
-    return (((n_src + 1) * 8 + n_dir) * kBoardSize + p_src) * 8 + p_dir;
-}
-
-static void ExpandMove(Move move, int *n_src, int *n_dir, int *p_src,
-                       int *p_dir) {
-    *p_dir = move % 8;
-    move /= 8;
-
-    *p_src = move % kBoardSize;
-    move /= kBoardSize;
-
-    *n_dir = move % 8;
-    move /= 8;
-
-    *n_src = move - 1;
-}
-
 // Returns the index of the neutron's location.
-static int FindNeutron(const char board[static kBoardSize]) {
-    for (int i = 0; i < kBoardSize; ++i) {
+static int8_t FindNeutron(const char board[static kBoardSize]) {
+    for (int8_t i = 0; i < kBoardSize; ++i) {
         if (board[i] == 'N') return i;
     }
 
@@ -118,7 +116,7 @@ static int FindNeutron(const char board[static kBoardSize]) {
     return -1;
 }
 
-static bool OnBoard(int row, int col) {
+static bool OnBoard(int8_t row, int8_t col) {
     if (row < 0) return false;
     if (col < 0) return false;
     if (row >= kBoardRows) return false;
@@ -127,24 +125,24 @@ static bool OnBoard(int row, int col) {
     return true;
 }
 
-static int ToIndex(int row, int col) { return row * kBoardCols + col; }
+static int8_t ToIndex(int8_t row, int8_t col) { return row * kBoardCols + col; }
 
 static const char kTurnToPiece[] = {'-', 'X', 'O', 'N'};
 
-static bool CanMoveInDirection(const char board[static kBoardSize], int src,
-                               int dir) {
-    int row = src / kBoardCols;
-    int col = src % kBoardCols;
-    int row_off = kDirections[dir][0];
-    int col_off = kDirections[dir][1];
+static bool CanMoveInDirection(const char board[static kBoardSize], int8_t src,
+                               int8_t dir) {
+    int8_t row = src / kBoardCols;
+    int8_t col = src % kBoardCols;
+    int8_t row_off = kDirections[dir][0];
+    int8_t col_off = kDirections[dir][1];
 
     // If the piece can be moved for at least one sqaure, then the move is
     // valid. Here, we call the square being checked that is one square away
     // from the source "the destination" for simplicity, even though the
     // piece should move all the way in that direction until it hits a wall
     // or another piece.
-    int dest_row = row + row_off;
-    int dest_col = col + col_off;
+    int8_t dest_row = row + row_off;
+    int8_t dest_col = col + col_off;
 
     // Cannot move outside the board.
     if (!OnBoard(dest_row, dest_col)) return false;
@@ -156,14 +154,14 @@ static bool CanMoveInDirection(const char board[static kBoardSize], int src,
 }
 
 // Returns destination index.
-static int MovePiece(char board[static kBoardSize], int src, int dir) {
-    int row = src / kBoardCols;
-    int col = src % kBoardCols;
-    int row_off = kDirections[dir][0];
-    int col_off = kDirections[dir][1];
-    int dest_row = row + row_off;
-    int dest_col = col + col_off;
-    int dest = ToIndex(dest_row, dest_col);
+static int8_t MovePiece(char board[static kBoardSize], int8_t src, int8_t dir) {
+    int8_t row = src / kBoardCols;
+    int8_t col = src % kBoardCols;
+    int8_t row_off = kDirections[dir][0];
+    int8_t col_off = kDirections[dir][1];
+    int8_t dest_row = row + row_off;
+    int8_t dest_col = col + col_off;
+    int8_t dest = ToIndex(dest_row, dest_col);
     while (OnBoard(dest_row, dest_col) && board[dest] == '-') {
         dest_row += row_off;
         dest_col += col_off;
@@ -181,14 +179,18 @@ static int MovePiece(char board[static kBoardSize], int src, int dir) {
 }
 
 static void GeneratePieceMoves(const char board[static kBoardSize], int turn,
-                               int n_src, int n_dir, MoveArray *moves) {
+                               int8_t n_src, int8_t n_dir, MoveArray *moves) {
     char piece_to_move = kTurnToPiece[turn];
-    for (int i = 0; i < kBoardSize; ++i) {
+    NeutronMove m;
+    m.unpacked.n_src = n_src;
+    m.unpacked.n_dir = n_dir;
+    for (int8_t i = 0; i < kBoardSize; ++i) {
         if (board[i] != piece_to_move) continue;
-        for (int dir = 0; dir < 8; ++dir) {
+        for (int8_t dir = 0; dir < 8; ++dir) {
             if (CanMoveInDirection(board, i, dir)) {
-                Move move = ConstructMove(n_src, n_dir, i, dir);
-                MoveArrayAppend(moves, move);
+                m.unpacked.p_src = i;
+                m.unpacked.p_dir = dir;
+                MoveArrayAppend(moves, m.hashed);
             }
         }
     }
@@ -209,6 +211,10 @@ static int GetTurn(Position hash) {
     return GenericHashGetTurn(hash);
 }
 
+static bool IsInHomeRows(int8_t i) {
+    return (0 <= i && i < 5) || (20 <= i && i < 25);
+}
+
 static MoveArray NeutronGenerateMoves(Position position) {
     MoveArray ret;
     MoveArrayInit(&ret);
@@ -227,16 +233,25 @@ static MoveArray NeutronGenerateMoves(Position position) {
         return ret;
     }
 
-    int n_src = FindNeutron(board);
+    int8_t n_src = FindNeutron(board);
 
     // For each possible neutron move
-    for (int n_dir = 0; n_dir < 8; ++n_dir) {
+    for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // If cannot move the neutron in this direction, skip it.
         if (!CanMoveInDirection(board, n_src, n_dir)) continue;
 
         // Make the current neutron move and generate piece moves.
-        int dest = MovePiece(board, n_src, n_dir);
-        GeneratePieceMoves(board, turn, n_src, n_dir, &ret);
+        int8_t dest = MovePiece(board, n_src, n_dir);
+        if (IsInHomeRows(dest)) {  // Game already over after neutron move.
+            NeutronMove m;
+            m.unpacked.n_src = n_src;
+            m.unpacked.n_dir = n_dir;
+            m.unpacked.p_src = -1;
+            m.unpacked.p_dir = 0;
+            MoveArrayAppend(&ret, m.hashed);
+        } else {
+            GeneratePieceMoves(board, turn, n_src, n_dir, &ret);
+        }
 
         // Revert the neutron move.
         board[n_src] = 'N';
@@ -283,15 +298,17 @@ static Position NeutronDoMove(Position position, Move move) {
     (void)success;
     int turn = GetTurn(position);
 
-    int n_src, n_dir, p_src, p_dir;
-    ExpandMove(move, &n_src, &n_dir, &p_src, &p_dir);
-    if (n_src >= 0) {  // Not initial position, perform neutron move.
+    NeutronMove m;
+    m.hashed = move;
+    if (m.unpacked.n_src >= 0) {  // Not initial position, perform neutron move.
         assert(position != kInitialPosition);
-        MovePiece(board, n_src, n_dir);
+        MovePiece(board, m.unpacked.n_src, m.unpacked.n_dir);
     }
 
-    // Always perform piece move.
-    MovePiece(board, p_src, p_dir);
+    // Perform piece move if necessary.
+    if (m.unpacked.p_src >= 0) {
+        MovePiece(board, m.unpacked.p_src, m.unpacked.p_dir);
+    }
 
     return GenericHashHash(board, 3 - turn);
 }
@@ -363,20 +380,25 @@ static int NeutronPositionToString(Position position, char *buffer) {
 }
 
 static int NeutronMoveToString(Move move, char *buffer) {
-    int n_src, n_dir, p_src, p_dir;
-    ExpandMove(move, &n_src, &n_dir, &p_src, &p_dir);
-    if (n_src < 0) {  // No neutron move
-        sprintf(buffer, "%d %s", p_src + 1, kDirectionStr[p_dir]);
+    NeutronMove m;
+    m.hashed = move;
+    if (m.unpacked.n_src < 0) {  // No neutron move
+        sprintf(buffer, "%d %s", m.unpacked.p_src + 1,
+                kDirectionStr[m.unpacked.p_dir]);
+    } else if (m.unpacked.p_src < 0) {  // No piece move
+        sprintf(buffer, "%d %s END", m.unpacked.n_src + 1,
+                kDirectionStr[m.unpacked.n_dir]);
     } else {
-        sprintf(buffer, "%d %s %d %s", n_src + 1, kDirectionStr[n_dir],
-                p_src + 1, kDirectionStr[p_dir]);
+        sprintf(buffer, "%d %s %d %s", m.unpacked.n_src + 1,
+                kDirectionStr[m.unpacked.n_dir], m.unpacked.p_src + 1,
+                kDirectionStr[m.unpacked.p_dir]);
     }
 
     return kNoError;
 }
 
-static int DirectionStrToDir(const char *dir_str) {
-    for (int i = 0; i < 8; ++i) {
+static int8_t DirectionStrToDir(const char *dir_str) {
+    for (int8_t i = 0; i < 8; ++i) {
         if (strcmp(dir_str, kDirectionStr[i]) == 0) return i;
     }
 
@@ -404,11 +426,13 @@ static ConstantReadOnlyString kMoveStrDelim = " ";
 
 static bool NeutronIsValidMoveString(ReadOnlyString move_string) {
     // Valid move formats:
-    // 1. Initial position: "[p_src] [p_dir]"
-    // 2. Any other position: "[n_src] [n_dir] [p_src] [p_dir]"
+    // 1. Initial position: "p_src p_dir"
+    // 2. Any other position:
+    //    a. "n_src n_dir END" if game is over after neutron movement, or
+    //    b. "n_src n_dir p_src p_dir" otherwise.
     if (move_string == NULL) return false;
     size_t len = strlen(move_string);
-    if (len < 4 || len > 11) return false;
+    if (len < 3 || len > 11) return false;
 
     char move_string_copy[12];
     strcpy(move_string_copy, move_string);
@@ -421,8 +445,10 @@ static bool NeutronIsValidMoveString(ReadOnlyString move_string) {
     // Validate the first two tokens
     if (!IsValidMoveTokenPair(tokens[0], tokens[1])) return false;
 
-    // If no more tokens, the format is valid for the initial position.
-    if (tokens[2] == NULL) return tokens[3] == NULL;
+    // If no more tokens or game ends after neutron move, the format is valid.
+    if (tokens[2] == NULL || strcmp(tokens[2], "END") == 0) {
+        return tokens[3] == NULL;
+    }
 
     // Otherwise, also check for the last two tokens.
     if (!IsValidMoveTokenPair(tokens[2], tokens[3])) return false;
@@ -439,22 +465,28 @@ static Move NeutronStringToMove(ReadOnlyString move_string) {
         tokens[i] = strtok(NULL, kMoveStrDelim);
     }
 
-    int n_src, n_dir, p_src, p_dir;
+    NeutronMove m;
     if (tokens[2] == NULL) {  // Move at the initial position.
         assert(tokens[3] == NULL);
-        n_src = -1;
-        n_dir = 0;
-        p_src = atoi(tokens[0]) - 1;
-        p_dir = DirectionStrToDir(tokens[1]);
-    } else {  // Move at any other position.
+        m.unpacked.n_src = -1;
+        m.unpacked.n_dir = 0;
+        m.unpacked.p_src = atoi(tokens[0]) - 1;
+        m.unpacked.p_dir = DirectionStrToDir(tokens[1]);
+    } else if (strcmp(tokens[2], "END") == 0) {  // Game over after neutron move
+        assert(tokens[3] == NULL);
+        m.unpacked.n_src = atoi(tokens[0]) - 1;
+        m.unpacked.n_dir = DirectionStrToDir(tokens[1]);
+        m.unpacked.p_src = -1;
+        m.unpacked.p_dir = 0;
+    } else {  // All other moves.
         assert(tokens[3] != NULL);
-        n_src = atoi(tokens[0]) - 1;
-        n_dir = DirectionStrToDir(tokens[1]);
-        p_src = atoi(tokens[2]) - 1;
-        p_dir = DirectionStrToDir(tokens[3]);
+        m.unpacked.n_src = atoi(tokens[0]) - 1;
+        m.unpacked.n_dir = DirectionStrToDir(tokens[1]);
+        m.unpacked.p_src = atoi(tokens[2]) - 1;
+        m.unpacked.p_dir = DirectionStrToDir(tokens[3]);
     }
 
-    return ConstructMove(n_src, n_dir, p_src, p_dir);
+    return m.hashed;
 }
 
 static const GameplayApiCommon kNeutronGameplayApiCommon = {
