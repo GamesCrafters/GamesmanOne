@@ -1186,7 +1186,7 @@ static Move GatesStringToMove(ReadOnlyString move_string) {
     static ConstantReadOnlyString delim = " ";
     char move_string_copy[20];
     strcpy(move_string_copy, move_string);
-    char *tokens[8] = {strtok(move_string_copy, delim)};
+    char *tokens[10] = {strtok(move_string_copy, delim)};
     for (int i = 1; i < 8; ++i) {
         tokens[i] = strtok(NULL, delim);
     }
