@@ -190,7 +190,7 @@ static int OutcomeCompare(Value v1, int r1, Value v2, int r2) {
     assert(v1 >= kLose && v1 <= kWin);
 
     // If the common value is kLose, return r1 - r2, otherwise return r2 - r1.
-    // Reason: when losing, a large remoteness is better than a small one;
+    // Reason: when losing, a larger remoteness is preferred;
     // when winning/tying, a smaller remoteness is preferred.
     return (1 - (v1 == kLose) * 2) * (r2 - r1);
 }
@@ -303,6 +303,7 @@ static bool Step1Iterate(void) {
     success = true;
 
 _bailout:
+    Step1_2UnloadChildTiers();
     BitStreamDestroy(&processed);
     return success;
 }
