@@ -6,7 +6,7 @@
  * @brief Naive database which stores Values and Remotenesses in uncompressed
  * raw bytes.
  * @version 1.2.1
- * @date 2024-08-25
+ * @date 2024-10-06
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

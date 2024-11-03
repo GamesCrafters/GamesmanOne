@@ -9,8 +9,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of compression and decompression dictionaries for
  * Bit-Perfect Array.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.0.1
+ * @date 2024-10-16
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -53,13 +53,13 @@ int BpDictInit(BpDict *dict) {
 
     int error = ExpandCompDict(dict, 0);
     if (error != 0) {
-        memset(dict, 0, sizeof(*dict));
+        BpDictDestroy(dict);
         return error;
     }
 
     error = ExpandDecompDict(dict);
     if (error != 0) {
-        memset(dict, 0, sizeof(*dict));
+        BpDictDestroy(dict);
         return error;
     }
 
