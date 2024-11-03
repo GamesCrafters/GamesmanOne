@@ -48,7 +48,7 @@
 static intptr_t ParseMemLimit(ReadOnlyString str) {
     if (str == NULL || *str == '\0') return 0;
     
-    return (intptr_t)atoi(str) << 20;
+    return (intptr_t)atoi(str) << 30;
 }
 
 int GamesmanHeadlessMain(int argc, char **argv) {
