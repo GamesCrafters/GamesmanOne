@@ -605,10 +605,10 @@ static void DestroyFrontiers(void) {
         if (tie_frontiers) FrontierDestroy(&tie_frontiers[i]);
     }
     free(win_frontiers);
-    free(lose_frontiers);
-    free(tie_frontiers);
     win_frontiers = NULL;
+    free(lose_frontiers);
     lose_frontiers = NULL;
+    free(tie_frontiers);
     tie_frontiers = NULL;
 }
 
