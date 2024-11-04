@@ -149,7 +149,7 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
 
-static int TestTierGraph(long seed);
+static int TestTierGraph(long seed, int64_t test_size);
 static void PrintTestResult(double time_elapsed);
 
 // -----------------------------------------------------------------------------
@@ -196,7 +196,7 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
     return ret;
 }
 
-int TierManagerTest(const TierSolverApi *api, long seed) {
+int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size) {
     memcpy(&current_api, api, sizeof(current_api));
     int error = InitGlobalVariables(kTierSolving);
     if (error != 0) {
@@ -206,7 +206,7 @@ int TierManagerTest(const TierSolverApi *api, long seed) {
         return kTierSolverTestDependencyError;
     }
 
-    int ret = TestTierGraph(seed);
+    int ret = TestTierGraph(seed, test_size);
     DestroyGlobalVariables();
 
     return ret;
@@ -765,7 +765,7 @@ static void PrintAnalyzerResult(void) {
     AnalysisPrintEverything(stdout, &game_analysis);
 }
 
-static int TestTierGraph(long seed) {
+static int TestTierGraph(long seed, int64_t test_size) {
     double time_elapsed = 0.0;
     printf("Begin random sanity testing of all %" PRId64 " tiers (%" PRId64
            " canonical) of total size %" PRId64 " (positions). %" PRId64
@@ -788,7 +788,7 @@ static int TestTierGraph(long seed) {
                    tier_name, tier, current_api.GetTierSize(tier));
             TierArray parent_tiers = GetParentTiers(tier);
             TierArrayAppend(&parent_tiers, tier);
-            error = TierWorkerTest(tier, &parent_tiers, seed);
+            error = TierWorkerTest(tier, &parent_tiers, seed, test_size);
             TierArrayDestroy(&parent_tiers);
             if (error == kTierSolverTestNoError) {
                 // Test passed.

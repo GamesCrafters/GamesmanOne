@@ -117,7 +117,7 @@ static int TestChildToParentMatching(Tier tier, Position position) {
     // Skip this test if the position is primitive, in which case
     // GetCanonicalChildPositions is undefined.
     if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
-    
+
     TierPosition parent = {.tier = tier, .position = position};
     TierPosition canonical_parent = parent;
     canonical_parent.position =
@@ -188,14 +188,14 @@ static int TestPrintError(Tier tier, Position position) {
 }
 
 int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
-                           const TierArray *parent_tiers, long seed) {
-    static const int64_t kTestSizeMax = 1000;  // Max positions to test.
-
+                           const TierArray *parent_tiers, long seed,
+                           int64_t test_size) {
     api_internal = api;
     init_genrand64(seed);  // Seed random number generator.
     int64_t tier_size = api_internal->GetTierSize(tier);
-    bool random_test = tier_size > kTestSizeMax;
-    int64_t test_size = random_test ? kTestSizeMax : tier_size;
+    bool random_test = tier_size > test_size;  // Cap test size at tier size.
+    if (!random_test) test_size = tier_size;
+
     Tier canonical_tier = api_internal->GetCanonicalTier(tier);
     int error = kTierSolverTestNoError;
     Position position = -1;

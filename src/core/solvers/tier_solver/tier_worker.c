@@ -109,6 +109,8 @@ int TierWorkerMpiServe(void) {
 }
 #endif  // USE_MPI
 
-int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed) {
-    return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed);
+int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
+                   int64_t test_size) {
+    return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed,
+                                  test_size);
 }

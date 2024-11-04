@@ -33,15 +33,17 @@
 /**
  * @brief Tests the implementation of the \p api functions for positions in the
  * given \p tier.
- * 
+ *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to test.
  * @param parent_tiers Parent tiers of \p tier.
  * @param seed Seed for internal pseudorandom number generator.
- * @return One of the values in the \c TierSolverTestErrors enum. See 
+ * @param test_size Maximum number of positions to test in the given \p tier.
+ * @return One of the values in the \c TierSolverTestErrors enum. See
  * \c tier_solver.h for details.
  */
 int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
-                           const TierArray *parent_tiers, long seed);
+                           const TierArray *parent_tiers, long seed,
+                           int64_t test_size);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_TEST_H_

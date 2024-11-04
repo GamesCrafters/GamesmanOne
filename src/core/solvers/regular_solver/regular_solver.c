@@ -224,7 +224,20 @@ static int RegularSolverTest(long seed) {
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     TierArray empty;
     TierArrayInit(&empty);
-    int ret = TierWorkerTest(kDefaultTier, &empty, seed);
+    printf("Enter the maximum number of positions to test [Default: 1000000]: ");
+    char input[kInt64Base10StringLengthMax + 1];
+    int64_t test_size = 1000000;
+    if (fgets(input, sizeof(input), stdin) != NULL) {
+        // Check if the user pressed Enter without entering a number
+        if (input[0] != '\n') {
+            test_size = strtoll(input, NULL, 10);
+            if (test_size < 0) {
+                printf("Invalid input. Using default test size [1000000]\n");
+                test_size = 1000000;
+            }
+        }
+    }
+    int ret = TierWorkerTest(kDefaultTier, &empty, seed, test_size);
     TierArrayDestroy(&empty);
 
     return ret;

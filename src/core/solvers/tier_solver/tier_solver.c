@@ -32,6 +32,7 @@
 #include <assert.h>  // assert
 #include <stddef.h>  // NULL
 #include <stdio.h>   // fprintf, stderr
+#include <stdlib.h>  // strtoll
 #include <string.h>  // memset, memcpy, strncmp
 #ifdef USE_MPI
 #include <mpi.h>
@@ -213,7 +214,22 @@ static int TierSolverFinalize(void) {
 
 static int TierSolverTest(long seed) {
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-    return TierManagerTest(&current_api, seed);
+    printf(
+        "Enter the number of positions to test in each tier [Default: 1000]: ");
+    char input[kInt64Base10StringLengthMax + 1];
+    int64_t test_size = 1000;
+    if (fgets(input, sizeof(input), stdin) != NULL) {
+        // Check if the user pressed Enter without entering a number
+        if (input[0] != '\n') {
+            test_size = strtoll(input, NULL, 10);
+            if (test_size < 0) {
+                printf("Invalid input. Using default test size [1000]\n");
+                test_size = 1000;
+            }
+        }
+    }
+
+    return TierManagerTest(&current_api, seed, test_size);
 }
 
 static ReadOnlyString TierSolverExplainTestError(int error) {

@@ -37,6 +37,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 
@@ -73,9 +74,10 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose);
  *
  * @param api Tier solver API to test.
  * @param seed Seed for random number generation.
+ * @param test_size Maximum number of positions to test in each tier.
  * @return 0 on success, or
  * @return one of the values from TierSolverTestErrors defined in tier_solver.h.
  */
-int TierManagerTest(const TierSolverApi *api, long seed);
+int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

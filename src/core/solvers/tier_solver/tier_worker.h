@@ -105,7 +105,7 @@ int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
 #ifdef USE_MPI
 /**
  * @brief Serve as a MPI worker until terminated.
- * 
+ *
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
@@ -118,9 +118,11 @@ int TierWorkerMpiServe(void);
  * @param tier Tier to test.
  * @param parent_tiers Array of parent tiers of TIER.
  * @param seed Seed for psuedorandom number generator.
+ * @param test_size Maximum number of positions to test in the given TIER.
  * @return 0 on success or one of the error codes enumerated in
  * TierSolverTestErrors otherwise.
  */
-int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed);
+int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
+                   int64_t test_size);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
