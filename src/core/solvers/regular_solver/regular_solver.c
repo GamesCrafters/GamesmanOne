@@ -54,6 +54,10 @@
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
+
+static int RegularSolverTest(long seed);
+static ReadOnlyString RegularSolverExplainTestError(int error);
+
 static int RegularSolverSolve(void *aux);
 static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
@@ -69,6 +73,9 @@ const Solver kRegularSolver = {
 
     .Init = &RegularSolverInit,
     .Finalize = &RegularSolverFinalize,
+
+    .Test = &RegularSolverTest,
+    .ExplainTestError = &RegularSolverExplainTestError,
 
     .Solve = &RegularSolverSolve,
     .Analyze = &RegularSolverAnalyze,
@@ -164,6 +171,8 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric);
 
 static int DefaultGetTierName(char *dest, Tier tier);
 
@@ -209,6 +218,56 @@ static int RegularSolverFinalize(void) {
     num_options = 0;
 
     return kNoError;
+}
+
+static int RegularSolverTest(long seed) {
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    TierArray empty;
+    TierArrayInit(&empty);
+    int ret = TierWorkerTest(kDefaultTier, &empty, seed);
+    TierArrayDestroy(&empty);
+
+    return ret;
+}
+
+enum RegularSolverTestErrors {
+    /** No error. */
+    kRegularSolverTestNoError = kTierSolverTestNoError,
+    /** Test failed due to a prior error. */
+    kRegularSolverTestDependencyError = kTierSolverTestDependencyError,
+    /** Illegal child position detected. */
+    kRegularSolverTestIllegalChildError = kTierSolverTestIllegalChildError,
+    /** One of the canonical child positions of a legal canonical position was
+       found not to have that legal position as its parent. */
+    kRegularSolverTestChildParentMismatchError =
+        kTierSolverTestChildParentMismatchError,
+    /** One of the canonical parent positions of a legal canonical position was
+       found not to have that legal position as its child. */
+    kRegularSolverTestParentChildMismatchError =
+        kTierSolverTestParentChildMismatchError,
+};
+
+static ReadOnlyString RegularSolverExplainTestError(int error) {
+    switch (error) {
+        case kRegularSolverTestNoError:
+            return "no error";
+        case kRegularSolverTestDependencyError:
+            return "another error occurred before the test begins";
+        case kRegularSolverTestIllegalChildError:
+            return "an illegal position was found to be a child position of "
+                   "some legal position";
+        case kRegularSolverTestChildParentMismatchError:
+            return "one of the canonical child positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "parent";
+        case kRegularSolverTestParentChildMismatchError:
+            return "one of the canonical parent positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "child";
+    }
+
+    return "unknown error, which usually indicates a bug in the regular "
+           "solver's test code";
 }
 
 static int RegularSolverSolve(void *aux) {
@@ -394,7 +453,7 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
         tier->GetCanonicalChildPositions = &DefaultGetCanonicalChildPositions;
     }
 
-    tier->GetPositionInSymmetricTier = NULL;
+    tier->GetPositionInSymmetricTier = &DefaultGetPositionInSymmetricTier;
     tier->GetChildTiers = &GetChildTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
 }
@@ -552,6 +611,12 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
     return children;
+}
+
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric) {
+    (void)symmetric;  // Unused.
+    return tier_position.position;
 }
 
 static int DefaultGetTierName(char *dest, Tier tier) {

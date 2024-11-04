@@ -38,6 +38,9 @@ static const TierSolverApi *api_internal;
 static bool TestShouldSkip(Tier tier, Position position) {
     TierPosition tier_position = {.tier = tier, .position = position};
     if (!api_internal->IsLegalPosition(tier_position)) return true;
+
+    // TODO: do not skip primitives; instead, perform all tests that do not
+    // require generating children of primitives.
     if (api_internal->Primitive(tier_position) != kUndecided) return true;
 
     return false;

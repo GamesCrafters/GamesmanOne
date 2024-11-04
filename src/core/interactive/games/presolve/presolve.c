@@ -111,7 +111,7 @@ static int TestCurrentGameVariant(ReadOnlyString key) {
         "Please enter a 64-bit integer as a seed, or leave blank to use a "
         "random seed based on current time: ");
     if (fgets(input, sizeof(input), stdin)) {
-        // Attempt to parse a long long from the input
+        // Attempt to parse a long from the input
         if (sscanf(input, "%ld", &seed) != 1) {
             // If parsing fails, use the current time as the seed
             seed = (long)time(NULL);
@@ -123,8 +123,13 @@ static int TestCurrentGameVariant(ReadOnlyString key) {
     printf("Testing with seed %ld\n", seed);
     int error = SolverManagerTest(seed);
     if (error != 0) {
-        printf("TestCurrentGameVariant: an error occurred. Explanation: %s\n",
+        printf("\nTestCurrentGameVariant: an error occurred. Explanation: %s\n",
                SolverManagerExplainTestError(error));
+    } else {
+        puts(
+            "\n************************\n"
+            "***** TESTS PASSED *****\n"
+            "************************\n");
     }
 
     return 0;
