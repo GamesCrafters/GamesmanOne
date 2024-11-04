@@ -5,6 +5,18 @@ target_compile_options(gamesman PRIVATE
   $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
 )
 
+# Check and enable link-time optimizations if possible.
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
+if(NOT ipo_supported)
+  message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  message(STATUS "IPO / LTO disabled for debugging")
+else()
+  message(STATUS "IPO / LTO enabled")
+  set_property(TARGET gamesman PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 # Enable static analyzer if possible when build type is "Debug"
 include(CheckCCompilerFlag)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
