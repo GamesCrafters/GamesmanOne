@@ -215,33 +215,30 @@ static bool IsInHomeRows(int8_t i) {
     return (0 <= i && i < 5) || (20 <= i && i < 25);
 }
 
-static MoveArray NeutronGenerateMoves(Position position) {
+static MoveArray NeutronGenerateMovesInternal(
+    Position pos, const char board[static kBoardSize], int turn) {
+    //
     MoveArray ret;
     MoveArrayInit(&ret);
-
-    // Unhash
-    char board[kBoardSize];
-    bool success = Unhash(position, board);
-    assert(success);
-    (void)success;
-    int turn = GetTurn(position);
+    char board_copy[kBoardSize];
+    memcpy(board_copy, board, kBoardSize);
 
     // If the given position is the initial position, generate piece moves
     // directly.
-    if (position == kInitialPosition) {
-        GeneratePieceMoves(board, turn, -1, 0, &ret);
+    if (pos == kInitialPosition) {
+        GeneratePieceMoves(board_copy, turn, -1, 0, &ret);
         return ret;
     }
 
-    int8_t n_src = FindNeutron(board);
+    int8_t n_src = FindNeutron(board_copy);
 
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // If cannot move the neutron in this direction, skip it.
-        if (!CanMoveInDirection(board, n_src, n_dir)) continue;
+        if (!CanMoveInDirection(board_copy, n_src, n_dir)) continue;
 
         // Make the current neutron move and generate piece moves.
-        int8_t dest = MovePiece(board, n_src, n_dir);
+        int8_t dest = MovePiece(board_copy, n_src, n_dir);
         if (IsInHomeRows(dest)) {  // Game already over after neutron move.
             NeutronMove m;
             m.unpacked.n_src = n_src;
@@ -250,15 +247,26 @@ static MoveArray NeutronGenerateMoves(Position position) {
             m.unpacked.p_dir = 0;
             MoveArrayAppend(&ret, m.hashed);
         } else {
-            GeneratePieceMoves(board, turn, n_src, n_dir, &ret);
+            GeneratePieceMoves(board_copy, turn, n_src, n_dir, &ret);
         }
 
         // Revert the neutron move.
-        board[n_src] = 'N';
-        board[dest] = '-';
+        board_copy[n_src] = 'N';
+        board_copy[dest] = '-';
     }
 
     return ret;
+}
+
+static MoveArray NeutronGenerateMoves(Position position) {
+    // Unhash
+    char board[kBoardSize];
+    bool success = Unhash(position, board);
+    assert(success);
+    (void)success;
+    int turn = GetTurn(position);
+
+    return NeutronGenerateMovesInternal(position, board, turn);
 }
 
 static Value NeutronPrimitive(Position position) {
@@ -290,6 +298,24 @@ static Value NeutronPrimitive(Position position) {
     return kUndecided;
 }
 
+static Position NeutronDoMoveInternal(const char board[static kBoardSize],
+                                      int turn, Move move) {
+    NeutronMove m;
+    m.hashed = move;
+    char board_copy[kBoardSize];
+    memcpy(board_copy, board, kBoardSize);
+    if (m.unpacked.n_src >= 0) {  // Not initial position, perform neutron move.
+        MovePiece(board_copy, m.unpacked.n_src, m.unpacked.n_dir);
+    }
+
+    // Perform piece move if necessary.
+    if (m.unpacked.p_src >= 0) {
+        MovePiece(board_copy, m.unpacked.p_src, m.unpacked.p_dir);
+    }
+
+    return GenericHashHash(board_copy, 3 - turn);
+}
+
 static Position NeutronDoMove(Position position, Move move) {
     // Unhash
     char board[kBoardSize];
@@ -298,19 +324,7 @@ static Position NeutronDoMove(Position position, Move move) {
     (void)success;
     int turn = GetTurn(position);
 
-    NeutronMove m;
-    m.hashed = move;
-    if (m.unpacked.n_src >= 0) {  // Not initial position, perform neutron move.
-        assert(position != kInitialPosition);
-        MovePiece(board, m.unpacked.n_src, m.unpacked.n_dir);
-    }
-
-    // Perform piece move if necessary.
-    if (m.unpacked.p_src >= 0) {
-        MovePiece(board, m.unpacked.p_src, m.unpacked.p_dir);
-    }
-
-    return GenericHashHash(board, 3 - turn);
+    return NeutronDoMoveInternal(board, turn, move);
 }
 
 static bool NeutronIsLegalPosition(Position position) {
@@ -341,7 +355,32 @@ static Position NeutronGetCanonicalPosition(Position position) {
     return position < sym ? position : sym;
 }
 
-// static PositionArray NeutronGetCanonicalChildPositions(Position position) {}
+static PositionArray NeutronGetCanonicalChildPositions(Position position) {
+    // Unhash
+    char board[kBoardSize];
+    bool success = Unhash(position, board);
+    assert(success);
+    (void)success;
+    int turn = GetTurn(position);
+
+    // Generate moves
+    MoveArray moves = NeutronGenerateMovesInternal(position, board, turn);
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
+    PositionArray ret;
+    PositionArrayInit(&ret);
+    for (int64_t i = 0; i < moves.size; ++i) {
+        Position child = NeutronDoMoveInternal(board, turn, moves.array[i]);
+        child = NeutronGetCanonicalPosition(child);
+        if (!PositionHashSetContains(&dedup, child)) {
+            PositionHashSetAdd(&dedup, child);
+            PositionArrayAppend(&ret, child);
+        }
+    }
+    MoveArrayDestroy(&moves);
+
+    return ret;
+}
 
 static const RegularSolverApi kNeutronSolverApi = {
     .GetNumPositions = NeutronGetNumPositions,
@@ -352,7 +391,7 @@ static const RegularSolverApi kNeutronSolverApi = {
     .DoMove = NeutronDoMove,
     .IsLegalPosition = NeutronIsLegalPosition,
     .GetCanonicalPosition = NeutronGetCanonicalPosition,
-    .GetCanonicalChildPositions = NULL,  // TODO
+    .GetCanonicalChildPositions = NeutronGetCanonicalChildPositions,
 };
 
 // ============================ kNeutronGameplayApi ============================
