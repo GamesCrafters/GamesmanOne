@@ -37,13 +37,14 @@ static const TierSolverApi *api_internal;
 
 static bool TestShouldSkip(Tier tier, Position position) {
     TierPosition tier_position = {.tier = tier, .position = position};
-    if (!api_internal->IsLegalPosition(tier_position)) return true;
 
-    // TODO: do not skip primitives; instead, perform all tests that do not
-    // require generating children of primitives.
-    if (api_internal->Primitive(tier_position) != kUndecided) return true;
+    return !api_internal->IsLegalPosition(tier_position);
+}
 
-    return false;
+static bool IsPrimitive(Tier tier, Position position) {
+    TierPosition tier_position = {.tier = tier, .position = position};
+
+    return api_internal->Primitive(tier_position) != kUndecided;
 }
 
 static int TestTierSymmetryRemoval(Tier tier, Position position,
@@ -87,6 +88,10 @@ static int TestTierSymmetryRemoval(Tier tier, Position position,
 }
 
 static int TestChildPositions(Tier tier, Position position) {
+    // Skip this test if the position is primitive, in which case
+    // GetCanonicalChildPositions is undefined.
+    if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
+
     TierPosition parent = {.tier = tier, .position = position};
     TierPositionArray children =
         api_internal->GetCanonicalChildPositions(parent);
@@ -109,6 +114,10 @@ static int TestChildPositions(Tier tier, Position position) {
 }
 
 static int TestChildToParentMatching(Tier tier, Position position) {
+    // Skip this test if the position is primitive, in which case
+    // GetCanonicalChildPositions is undefined.
+    if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
+    
     TierPosition parent = {.tier = tier, .position = position};
     TierPosition canonical_parent = parent;
     canonical_parent.position =
@@ -188,24 +197,19 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
     bool random_test = tier_size > kTestSizeMax;
     int64_t test_size = random_test ? kTestSizeMax : tier_size;
     Tier canonical_tier = api_internal->GetCanonicalTier(tier);
-
+    int error = kTierSolverTestNoError;
+    Position position = -1;
     for (int64_t i = 0; i < test_size; ++i) {
-        Position position = random_test ? genrand64_int63() % tier_size : i;
+        position = random_test ? genrand64_int63() % tier_size : i;
         if (TestShouldSkip(tier, position)) continue;
 
         // Check tier symmetry removal implementation.
-        int error = TestTierSymmetryRemoval(tier, position, canonical_tier);
-        if (error != kTierSolverTestNoError) {
-            TestPrintError(tier, position);
-            return error;
-        }
+        error = TestTierSymmetryRemoval(tier, position, canonical_tier);
+        if (error != kTierSolverTestNoError) goto _bailout;
 
         // Check if all child positions are legal.
         error = TestChildPositions(tier, position);
-        if (error != kTierSolverTestNoError) {
-            TestPrintError(tier, position);
-            return error;
-        }
+        if (error != kTierSolverTestNoError) goto _bailout;
 
         // Perform the following tests only if current game variant implements
         // its own GetCanonicalParentPositions.
@@ -213,20 +217,16 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
             // Check if all child positions of the current position has the
             // current position as one of their parents.
             error = TestChildToParentMatching(tier, position);
-            if (error != kTierSolverTestNoError) {
-                TestPrintError(tier, position);
-                return error;
-            }
+            if (error != kTierSolverTestNoError) goto _bailout;
 
             // Check if all parent positions of the current position has the
             // current position as one of their children.
             error = TestParentToChildMatching(tier, position, parent_tiers);
-            if (error != kTierSolverTestNoError) {
-                TestPrintError(tier, position);
-                return error;
-            }
+            if (error != kTierSolverTestNoError) goto _bailout;
         }
     }
 
-    return kTierSolverTestNoError;
+_bailout:
+    if (error) TestPrintError(tier, position);
+    return error;
 }
