@@ -52,9 +52,11 @@ typedef enum {
     kTierTypeLoopFree,
 
     /**
-     * @brief A tier T is of this type if it is loopy.
-     * @note The loopy algorithm also works on loop-free tiers. Therefore, it is
-     * safe to classify a loop-free tier as loopy.
+     * @brief A tier T is of this type if it is loopy, or if its loopiness is
+     * unclear.
+     * 
+     * @note The loopy algorithm also works on loop-free tiers. Hence, this is
+     * the default type of a tier if its type is not specified.
      */
     kTierTypeLoopy,
 } TierType;

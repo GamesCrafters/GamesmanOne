@@ -39,6 +39,7 @@
 #include "core/types/gamesman_types.h"
 
 // ============================= Type Definitions =============================
+
 typedef union {
     struct {
         /** [-1, 25), 25 possible neutron move sources plus an additional value
@@ -95,6 +96,16 @@ static Position kInitialPosition;
 
 static const int8_t *kXWinningRow = kXHomeRow;
 static const int8_t *kOWinningRow = kOHomeRow;
+
+static const NeutronMove kNeutronMoveInit = {
+    .unpacked =
+        {
+            .n_src = -1,
+            .n_dir = 0,
+            .p_src = -1,
+            .p_dir = 0,
+        },
+};
 
 // ============================= kNeutronSolverApi =============================
 
@@ -181,7 +192,7 @@ static int8_t MovePiece(char board[static kBoardSize], int8_t src, int8_t dir) {
 static void GeneratePieceMoves(const char board[static kBoardSize], int turn,
                                int8_t n_src, int8_t n_dir, MoveArray *moves) {
     char piece_to_move = kTurnToPiece[turn];
-    NeutronMove m;
+    NeutronMove m = kNeutronMoveInit;
     m.unpacked.n_src = n_src;
     m.unpacked.n_dir = n_dir;
     for (int8_t i = 0; i < kBoardSize; ++i) {
@@ -240,11 +251,9 @@ static MoveArray NeutronGenerateMovesInternal(
         // Make the current neutron move and generate piece moves.
         int8_t dest = MovePiece(board_copy, n_src, n_dir);
         if (IsInHomeRows(dest)) {  // Game already over after neutron move.
-            NeutronMove m;
+            NeutronMove m = kNeutronMoveInit;
             m.unpacked.n_src = n_src;
             m.unpacked.n_dir = n_dir;
-            m.unpacked.p_src = -1;
-            m.unpacked.p_dir = 0;
             MoveArrayAppend(&ret, m.hashed);
         } else {
             GeneratePieceMoves(board_copy, turn, n_src, n_dir, &ret);
@@ -300,8 +309,7 @@ static Value NeutronPrimitive(Position position) {
 
 static Position NeutronDoMoveInternal(const char board[static kBoardSize],
                                       int turn, Move move) {
-    NeutronMove m;
-    m.hashed = move;
+    NeutronMove m = {.hashed = move};
     char board_copy[kBoardSize];
     memcpy(board_copy, board, kBoardSize);
     if (m.unpacked.n_src >= 0) {  // Not initial position, perform neutron move.
@@ -377,6 +385,7 @@ static PositionArray NeutronGetCanonicalChildPositions(Position position) {
             PositionArrayAppend(&ret, child);
         }
     }
+    PositionHashSetDestroy(&dedup);
     MoveArrayDestroy(&moves);
 
     return ret;
@@ -419,8 +428,7 @@ static int NeutronPositionToString(Position position, char *buffer) {
 }
 
 static int NeutronMoveToString(Move move, char *buffer) {
-    NeutronMove m;
-    m.hashed = move;
+    NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
         sprintf(buffer, "%d %s", m.unpacked.p_src + 1,
                 kDirectionStr[m.unpacked.p_dir]);
@@ -504,19 +512,15 @@ static Move NeutronStringToMove(ReadOnlyString move_string) {
         tokens[i] = strtok(NULL, kMoveStrDelim);
     }
 
-    NeutronMove m;
+    NeutronMove m = kNeutronMoveInit;
     if (tokens[2] == NULL) {  // Move at the initial position.
         assert(tokens[3] == NULL);
-        m.unpacked.n_src = -1;
-        m.unpacked.n_dir = 0;
         m.unpacked.p_src = atoi(tokens[0]) - 1;
         m.unpacked.p_dir = DirectionStrToDir(tokens[1]);
     } else if (strcmp(tokens[2], "END") == 0) {  // Game over after neutron move
         assert(tokens[3] == NULL);
         m.unpacked.n_src = atoi(tokens[0]) - 1;
         m.unpacked.n_dir = DirectionStrToDir(tokens[1]);
-        m.unpacked.p_src = -1;
-        m.unpacked.p_dir = 0;
     } else {  // All other moves.
         assert(tokens[3] != NULL);
         m.unpacked.n_src = atoi(tokens[0]) - 1;

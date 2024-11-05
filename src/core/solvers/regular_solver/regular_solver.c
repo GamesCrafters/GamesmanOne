@@ -171,9 +171,10 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
+
+static TierType DefaultGetTierType(Tier tier);
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
                                                   Tier symmetric);
-
 static int DefaultGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]);
 
@@ -222,10 +223,11 @@ static int RegularSolverFinalize(void) {
 }
 
 static int RegularSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
     TierArray empty;
     TierArrayInit(&empty);
-    printf("Enter the maximum number of positions to test [Default: 1000000]: ");
+    printf(
+        "Enter the maximum number of positions to test [Default: 1000000]: ");
     char input[kInt64Base10StringLengthMax + 1];
     int64_t test_size = 1000000;
     if (fgets(input, sizeof(input), stdin) != NULL) {
@@ -250,7 +252,8 @@ enum RegularSolverTestErrors {
     /** Test failed due to a prior error. */
     kRegularSolverTestDependencyError = kTierSolverTestDependencyError,
     /** Illegal child position detected. */
-    kRegularSolverTestIllegalChildError = kTierSolverTestIllegalChildError,
+    kRegularSolverTestIllegalChildPosError =
+        kTierSolverTestIllegalChildPosError,
     /** One of the canonical child positions of a legal canonical position was
        found not to have that legal position as its parent. */
     kRegularSolverTestChildParentMismatchError =
@@ -267,7 +270,7 @@ static ReadOnlyString RegularSolverExplainTestError(int error) {
             return "no error";
         case kRegularSolverTestDependencyError:
             return "another error occurred before the test begins";
-        case kRegularSolverTestIllegalChildError:
+        case kRegularSolverTestIllegalChildPosError:
             return "an illegal position was found to be a child position of "
                    "some legal position";
         case kRegularSolverTestChildParentMismatchError:
@@ -468,6 +471,8 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
         tier->GetCanonicalChildPositions = &DefaultGetCanonicalChildPositions;
     }
 
+    // TODO: add support for loop-free games.
+    tier->GetTierType = &DefaultGetTierType;
     tier->GetPositionInSymmetricTier = &DefaultGetPositionInSymmetricTier;
     tier->GetChildTiers = &GetChildTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
@@ -626,6 +631,11 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
     return children;
+}
+
+static TierType DefaultGetTierType(Tier tier) {
+    (void)tier;  // Unused.
+    return kTierTypeLoopy;
 }
 
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,

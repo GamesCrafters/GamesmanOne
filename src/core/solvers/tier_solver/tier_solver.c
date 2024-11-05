@@ -216,7 +216,7 @@ static int TierSolverFinalize(void) {
 }
 
 static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
     printf(
         "Enter the number of positions to test in each tier [Default: 1000]: ");
     char input[kInt64Base10StringLengthMax + 1];
