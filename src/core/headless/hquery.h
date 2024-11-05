@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Position querying functionality of headless mode.
- * @version 1.0.0
- * @date 2024-01-20
+ * @version 1.1.0
+ * @date 2024-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

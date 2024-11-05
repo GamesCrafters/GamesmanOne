@@ -1,5 +1,7 @@
 # Define the executable.
 add_executable(gamesman main.c)
+
+# Add compiler warning flags.
 target_compile_options(gamesman PRIVATE
   $<$<C_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
@@ -62,9 +64,17 @@ find_package(liblzma 5.4.0 REQUIRED CONFIG) # liblzma
 find_package(lz4 1.10.0 REQUIRED CONFIG) # liblz4
 if(NOT DISABLE_OPENMP) # OpenMP
   find_package(OpenMP)
+  if(OpenMP_FOUND)
+    message(STATUS "OpenMP multithreading enabled")
+  else()
+    message(STATUS "OpenMP not found, configuring without multithreading")
+  endif()
+else()
+  message(STATUS "OpenMP multithreading disabled")
 endif()
 if(USE_MPI) # MPI
   find_package(MPI REQUIRED)
+  message(STATUS "MPI enabled")
   target_compile_definitions(gamesman PRIVATE USE_MPI)
 endif()
 

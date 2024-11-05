@@ -4,9 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic tier array.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.1.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -45,7 +44,7 @@ void TierArrayDestroy(TierArray *array);
 
 /**
  * @brief Appends TIER to the end of the given Tier ARRAY.
- * 
+ *
  * @param array Destination Tier array.
  * @param tier Tier to append.
  * @return true on success,
@@ -55,7 +54,7 @@ bool TierArrayAppend(TierArray *array, Tier tier);
 
 /**
  * @brief Removes the first occurrence of TIER from ARRAY if it exists.
- * 
+ *
  * @param array Tier array.
  * @param tier Tier to remove.
  * @return true if TIER exists in ARRAY, or
@@ -63,7 +62,30 @@ bool TierArrayAppend(TierArray *array, Tier tier);
  */
 bool TierArrayRemove(TierArray *array, Tier tier);
 
+/**
+ * @brief Pops the item at the back of the ARRAY. Calling this function on an
+ * empty ARRAY results in undefined behavior.
+ */
+void TierArrayPopBack(TierArray *array);
+
+/**
+ * @brief Returns the Tier at the back of the array. Calling this function on an
+ * empty ARRAY results in undefined behavior.
+ */
+Tier TierArrayBack(const TierArray *array);
+
 /** @brief Returns true if ARRAY is empty, or false otherwise. */
 bool TierArrayEmpty(const TierArray *array);
+
+/**
+ * @brief Sorts the given ARRAY according to the given comparison function.
+ * @param array The array to be sorted.
+ * @param comp 	Comparison function which returns ​a negative integer value if
+ * the first argument is less than the second, a positive integer value if the
+ * first argument is greater than the second, and zero if the arguments are
+ * equivalent. Both parameters are assumed to be pointers to \c Tier objects.
+ */
+void TierArraySortExplicit(TierArray *array,
+                           int (*comp)(const void *, const void *));
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_ARRAY_H

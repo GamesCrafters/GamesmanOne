@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Json parser helper method collection for headless mode.
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 1.1.0
+ * @date 2024-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,41 +31,47 @@
 #include "core/constants.h"
 #include "core/types/gamesman_types.h"
 
-int HeadlessJsonAddPosition(json_object *dest, ReadOnlyString formal_position) {
-    json_object *position_obj = json_object_new_string(formal_position);
+static int AddStringHelper(json_object *dest, ReadOnlyString key,
+                           ReadOnlyString value) {
+    json_object *position_obj = json_object_new_string(value);
     if (position_obj == NULL) return kMallocFailureError;
 
-    return json_object_object_add(dest, "position", position_obj);
+    return json_object_object_add(dest, key, position_obj);
+}
+
+int HeadlessJsonAddPosition(json_object *dest, ReadOnlyString formal_position) {
+    return AddStringHelper(dest, "position", formal_position);
 }
 
 int HeadlessJsonAddAutoGuiPosition(json_object *dest,
                                    ReadOnlyString autogui_position) {
-    json_object *position_obj = json_object_new_string(autogui_position);
-    if (position_obj == NULL) return kMallocFailureError;
-
-    return json_object_object_add(dest, "autoguiPosition", position_obj);
+    return AddStringHelper(dest, "autoguiPosition", autogui_position);
 }
 
 int HeadlessJsonAddMove(json_object *dest, ReadOnlyString formal_move) {
-    json_object *move_obj = json_object_new_string(formal_move);
-    if (move_obj == NULL) return kMallocFailureError;
-
-    return json_object_object_add(dest, "move", move_obj);
+    return AddStringHelper(dest, "move", formal_move);
 }
 
 int HeadlessJsonAddAutoGuiMove(json_object *dest, ReadOnlyString autogui_move) {
-    json_object *move_obj = json_object_new_string(autogui_move);
-    if (move_obj == NULL) return kMallocFailureError;
+    return AddStringHelper(dest, "autoguiMove", autogui_move);
+}
 
-    return json_object_object_add(dest, "autoguiMove", move_obj);
+int HeadlessJsonAddFrom(json_object *dest, ReadOnlyString from) {
+    return AddStringHelper(dest, "from", from);
+}
+
+int HeadlessJsonAddTo(json_object *dest, ReadOnlyString to) {
+    return AddStringHelper(dest, "to", to);
+}
+
+int HeadlessJsonAddFull(json_object *dest, ReadOnlyString full) {
+    return AddStringHelper(dest, "full", full);
 }
 
 int HeadlessJsonAddValue(json_object *dest, Value value) {
     ReadOnlyString value_string = value < 0 ? "unsolved" : kValueStrings[value];
-    json_object *value_obj = json_object_new_string(value_string);
-    if (value_obj == NULL) return kMallocFailureError;
 
-    return json_object_object_add(dest, "positionValue", value_obj);
+    return AddStringHelper(dest, "positionValue", value_string);
 }
 
 int HeadlessJsonAddRemoteness(json_object *dest, int remoteness) {
@@ -77,4 +83,9 @@ int HeadlessJsonAddRemoteness(json_object *dest, int remoteness) {
 
 int HeadlessJsonAddMovesArray(json_object *dest, json_object *moves_array_obj) {
     return json_object_object_add(dest, "moves", moves_array_obj);
+}
+
+int HeadlessJsonAddPartmovesArray(json_object *dest,
+                                  json_object *partmoves_array_obj) {
+    return json_object_object_add(dest, "partMoves", partmoves_array_obj);
 }

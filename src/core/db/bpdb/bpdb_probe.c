@@ -44,7 +44,6 @@
 #include "core/types/gamesman_types.h"
 
 static const int kBlocksPerBuffer = 2;
-static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
 static const int kHeaderSize = sizeof(BpdbFileHeader);
 
 // (kNumValues - 2) because undecided and draw have no remoteness definition.

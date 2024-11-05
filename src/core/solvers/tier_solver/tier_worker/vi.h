@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.0
- * @date 2024-07-11
+ * @version 1.0.1
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,7 +28,6 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"

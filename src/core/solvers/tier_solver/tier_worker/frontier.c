@@ -39,15 +39,11 @@
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
+#include "core/concurrency.h"
 #include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
 static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
@@ -181,6 +177,3 @@ void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
     free(frontier->dividers[remoteness]);
     frontier->dividers[remoteness] = NULL;
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_PARALLEL_FOR

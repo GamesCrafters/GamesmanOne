@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array).
- * @version 2.0.0
- * @date 2024-04-07
+ * @version 3.0.0
+ * @date 2024-10-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,21 +37,26 @@ typedef struct CString {
     int64_t capacity; /**< Capacity of the dynamic space. */
 } CString;
 
+extern const CString kNullCString;
+extern const CString kErrorCString;
+
 /**
- * @brief Initializes an empty CSTRING.
+ * @brief Initializes an empty CSTRING, which contains only the NULL character
+ * ('\0').
  *
  * @param cstring Target CString, which is assumed to be uninitialized.
- * 
+ *
  * @return true on success,
  * @return false otherwise.
  */
-bool CStringInit(CString *cstring);
+bool CStringInitEmpty(CString *cstring);
 
 /**
- * @brief Initializes CSTRING to the same string as SRC.
+ * @brief Initializes CSTRING to the same string as SRC if SRC is non-NULL;
+ * initializes CSTRING to kNullCString otherwise.
  *
  * @details On success, CSTRING will have the same length as SRC with capacity
- * equal to its length.
+ * equal to its length if SRC is non-NULL.
  *
  * @param cstring Target CString, which is assumed to be uninitialized.
  * @param src Source string.
@@ -88,5 +93,9 @@ bool CStringAppend(CString *dest, const char *src);
  * @return false otherwise.
  */
 bool CStringResize(CString *cstring, int64_t size, char fill);
+
+bool CStringIsNull(const CString *cstring);
+
+bool CStringError(const CString *cstring);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_CSTRING_H_

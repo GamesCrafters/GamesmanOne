@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 2.0.0a1
- * @date 2024-07-10
+ * @version 2.0.0a2
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
+#include <stdint.h>   // intptr_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -62,8 +63,8 @@ int DbManagerInitDb(const Database *db, bool read_only,
     }
     current_db = db;
 
-    char *path = SetupDbPath(current_db, game_name, variant, data_path,
-                             read_only);
+    char *path =
+        SetupDbPath(current_db, game_name, variant, data_path, read_only);
     int error = current_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 
@@ -112,9 +113,7 @@ int DbManagerFlushSolvingTier(void *aux) {
 
 int DbManagerFreeSolvingTier(void) { return current_db->FreeSolvingTier(); }
 
-int DbManagerSetGameSolved(void) {
-    return current_db->SetGameSolved();
-}
+int DbManagerSetGameSolved(void) { return current_db->SetGameSolved(); }
 
 int DbManagerSetValue(Position position, Value value) {
     return current_db->SetValue(position, value);
@@ -130,6 +129,10 @@ Value DbManagerGetValue(Position position) {
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+    return current_db->TierMemUsage(tier, size);
 }
 
 int DbManagerLoadTier(Tier tier, int64_t size) {

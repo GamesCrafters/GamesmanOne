@@ -30,7 +30,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, realloc
+#include <stdlib.h>   // free, realloc, qsort
 #include <string.h>   // memset, memmove
 
 void Int64ArrayInit(Int64Array *array) {
@@ -101,8 +101,16 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     return false;
 }
 
-void Int64ArraySort(Int64Array *array,
-                    int (*comp)(const void *, const void *)) {
+static int Int64Comp(const void *a, const void *b) {
+    return *(int64_t *)a - *(int64_t *)b;
+}
+
+void Int64ArraySortAscending(Int64Array *array) {
+    qsort(array->array, array->size, sizeof(int64_t), Int64Comp);
+}
+
+void Int64ArraySortExplicit(Int64Array *array,
+                            int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
 }
 

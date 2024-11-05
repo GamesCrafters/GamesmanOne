@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Game solving functionality of headless mode.
- * @version 1.0.0
- * @date 2024-01-20
+ * @version 1.0.1
+ * @date 2024-09-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_HEADLESS_HSOLVE_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // intptr_t
 
 #include "core/types/gamesman_types.h"
 
@@ -46,9 +47,11 @@
  * @param verbose May take values 0, 1, or 2. If set to 0, no output will be
  * produced unless an error occurrs. If set to 1, the solver will print out the
  * default messages. If set to 2, additional information will be printed.
+ * @param memlimit Approximate heap memory limit in bytes.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessSolve(ReadOnlyString game_name, int variant_id,
-                  ReadOnlyString data_path, bool force, int verbose);
+                  ReadOnlyString data_path, bool force, int verbose,
+                  intptr_t memlimit);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HSOLVE_H_

@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Teeko.
  * @details https://en.wikipedia.org/wiki/Teeko
- * @version 1.0.0
- * @date 2024-08-10
+ * @version 1.0.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -307,11 +307,6 @@ static Position TeekoGetCanonicalPosition(TierPosition tier_position) {
     return ret;
 }
 
-// static PositionArray TeekoGetCanonicalChildPositions(
-//     TierPosition tier_position) {
-//     // TODO
-// }
-
 static TierArray TeekoGetChildTiers(Tier tier) {
     TierArray ret;
     TierArrayInit(&ret);
@@ -321,7 +316,7 @@ static TierArray TeekoGetChildTiers(Tier tier) {
     return ret;
 }
 
-static int TeekoGetTierName(char *name, Tier tier) {
+static int TeekoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     assert(tier >= 0 && tier <= 8);
     if (tier < 8) {
         sprintf(name, "%" PRITier "_dropped", tier);

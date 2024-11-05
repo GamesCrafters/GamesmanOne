@@ -9,8 +9,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.3.0
- * @date 2024-07-11
+ * @version 1.4.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,16 +33,18 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t
+#include <stdint.h>   // int64_t, intptr_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
+#include "core/solvers/tier_solver/tier_worker/it.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 #include "core/types/gamesman_types.h"
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
+static intptr_t mem;
 
 #ifdef USE_MPI
 #include <unistd.h>  // sleep
@@ -52,15 +54,21 @@ static int64_t current_db_chunk_size;
 
 // -----------------------------------------------------------------------------
 
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
+                    intptr_t memlimit) {
+    assert(db_chunk_size > 0);
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
-    assert(current_db_chunk_size > 0);
+    mem = memlimit;
 }
 
 int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
                     bool *solved) {
     switch (method) {
+        case kTierWorkerSolveMethodImmediateTransition:
+            return TierWorkerSolveITInternal(api_internal, tier, mem, force,
+                                             compare, solved);
+
         case kTierWorkerSolveMethodBackwardInduction:
             return TierWorkerSolveBIInternal(api_internal,
                                              current_db_chunk_size, tier, force,

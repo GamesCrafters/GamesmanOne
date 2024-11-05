@@ -143,7 +143,7 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
 
     int count = sprintf(full_path, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(full_path + count, tier);
+        GetTierName(tier, full_path + count);
     } else {
         sprintf(full_path + count, "%" PRITier, tier);
     }

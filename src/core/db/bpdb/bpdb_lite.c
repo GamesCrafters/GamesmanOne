@@ -37,6 +37,7 @@
 #include <stdlib.h>  // malloc, free, realloc
 #include <string.h>  // strlen
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/bpdb/bparray.h"
 #include "core/db/bpdb/bpdb_file.h"
@@ -47,13 +48,6 @@
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
-
-// Otherwise, the following macros do nothing.
-#else
-#define PRAGMA
-#define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
 // Database API.
@@ -105,8 +99,6 @@ const Database kBpdbLite = {
     .TierStatus = &BpdbLiteTierStatus,
     .GameStatus = &BpdbLiteGameStatus,
 };
-
-static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
 
 static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
@@ -200,7 +192,7 @@ static uint64_t GetRecord(Position position) {
 static int BpdbLiteSetGameSolved(void) {
     char *flag_filename = BpdbFileGetFullPathToFinishFlag(sandbox_path);
     if (flag_filename == NULL) return kMallocFailureError;
-    
+
     FILE *flag_file = GuardedFopen(flag_filename, "w");
     free(flag_filename);
     if (flag_file == NULL) return kFileSystemError;
@@ -265,7 +257,7 @@ static int BpdbLiteTierStatus(Tier tier) {
 
 static int BpdbLiteGameStatus(void) {
     static ConstantReadOnlyString kIndicatorFileName = ".finish";
-    char *indicator = 
+    char *indicator =
         (char *)malloc(strlen(sandbox_path) + strlen(kIndicatorFileName) + 1);
     if (indicator == NULL) return kDbGameStatusCheckError;
 
@@ -288,6 +280,3 @@ static Value GetValueFromRecord(uint64_t record) { return record % kNumValues; }
 static int GetRemotenessFromRecord(uint64_t record) {
     return record / kNumValues;
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_CRITICAL

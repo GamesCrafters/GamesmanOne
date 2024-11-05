@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the command line parsing module for headless mode.
- * @version 1.1.0
- * @date 2024-02-02
+ * @version 1.2.0
+ * @date 2024-09-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -48,6 +48,12 @@ static const struct option kLongOptions[] = {
         .has_arg = required_argument,
         .flag = NULL,
         .val = 'd',
+    },
+    {
+        .name = "memory",
+        .has_arg = required_argument,
+        .flag = NULL,
+        .val = 'M',
     },
     {
         .name = "force",
@@ -109,7 +115,8 @@ static void ParserError(const char *format, ...);
 
 static const char kDoc[] =
     "\nList of options:\n\n"
-    "\t-d, --data-path=PATH\tSpecify data path\n"
+    "\t-d, --data-path=PATH\tSpecify data path (default=\"data\")\n"
+    "\t-M, --memory=LIMIT\tSpecify heap memory limit in GiB (default=90%)"
     "\t-o, --output=PATH\tSpecify output file (default=stdout)\n"
     "\t-f, --force\t\tForce re-solve/re-analyze\n"
     "\t-q, --quiet\t\tProduce no output\n"
@@ -136,7 +143,7 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
     while (1) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        key = getopt_long(argc, argv, "d:f?o:qvV", kLongOptions, &option_index);
+        key = getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
         /* Detect the end of the options. */
         if (key == -1) break;
         ParseOption(key, option_index);
@@ -171,6 +178,10 @@ static void ParseOption(int key, int option_index) {
 
         case 'd':
             arguments.data_path = optarg;
+            break;
+        
+        case 'M':
+            arguments.memlimit = optarg;
             break;
 
         case 'f':

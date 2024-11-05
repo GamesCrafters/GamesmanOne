@@ -31,7 +31,19 @@
 #include <stdlib.h>   // malloc, free
 #include <string.h>   // memset, strlen
 
-bool CStringInit(CString *cstring) {
+const CString kNullCString = {
+    .str = NULL,
+    .length = 0,
+    .capacity = 0,
+};
+
+const CString kErrorCString = {
+    .str = NULL,
+    .length = -1,
+    .capacity = -1,
+};
+
+bool CStringInitEmpty(CString *cstring) {
     cstring->str = (char *)calloc(1, sizeof(char));
     if (cstring->str == NULL) return false;
 
@@ -42,7 +54,10 @@ bool CStringInit(CString *cstring) {
 }
 
 bool CStringInitCopy(CString *cstring, const char *src) {
-    if (src == NULL) return false;
+    if (src == NULL) {
+        *cstring = kNullCString;
+        return true;
+    }
 
     int64_t length = strlen(src);
     cstring->str = (char *)malloc(length + 1);
@@ -102,4 +117,16 @@ bool CStringResize(CString *cstring, int64_t size, char fill) {
     cstring->length = size;
 
     return true;
+}
+
+bool CStringIsNull(const CString *cstring) {
+    if (cstring->str != kNullCString.str) return false;
+    if (cstring->length != kNullCString.length) return false;
+    if (cstring->capacity != kNullCString.capacity) return false;
+    
+    return true;
+}
+
+bool CStringError(const CString *cstring) {
+    return cstring->length < 0 || cstring->capacity < 0;
 }

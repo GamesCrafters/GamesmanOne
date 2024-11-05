@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.4.0
- * @date 2024-07-11
+ * @version 1.5.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -174,7 +174,8 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
                                                   Tier symmetric);
 
-static int DefaultGetTierName(char *dest, Tier tier);
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]);
 
 // -----------------------------------------------------------------------------
 
@@ -284,14 +285,15 @@ static ReadOnlyString RegularSolverExplainTestError(int error) {
 }
 
 static int RegularSolverSolve(void *aux) {
-    static const RegularSolverSolveOptions kDefaultSolveOptions = {
+    RegularSolverSolveOptions default_options = {
         .force = false,
         .verbose = 1,
+        .memlimit = 0,  // Use default memory limit.
     };
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
-    if (options == NULL) options = &kDefaultSolveOptions;
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    if (options == NULL) options = &default_options;
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
     int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
                                 kDefaultTier, options->force, false, NULL);
     if (error != kNoError) {
@@ -632,9 +634,10 @@ static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
     return tier_position.position;
 }
 
-static int DefaultGetTierName(char *dest, Tier tier) {
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]) {
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    return sprintf(dest, "%s_%d", current_game_name, current_variant_id);
+    return sprintf(name, "%s_%d", current_game_name, current_variant_id);
 }

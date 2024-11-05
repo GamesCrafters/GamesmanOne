@@ -214,15 +214,19 @@ void AnalysisMergeCounts(Analysis *dest, const Analysis *part);
 // Aggregating (analysis of each tier into the analysis of the entire game)
 
 /**
- * @brief Converts the given ANALYSIS to non-canonical by zeroing all counter
- * fiels related to canonical positions and canonical moves.
+ * @brief Converts the given ANALYSIS to non-canonical by converting all tier
+ * positions to those in the non-canonical tier and zeroing all counter fields
+ * related to canonical positions and canonical moves.
  * @details Typical usage is to call this function once after loading the
  * analysis of the canonical tier from disk as the analysis of a symmetric
  * non-canonical tier. Since the tier being analyzed is non-canonical, all
  * positions and moves are non-canonical. Therefore, all related statistics must
  * be reset.
  */
-void AnalysisConvertToNoncanonical(Analysis *analysis);
+void AnalysisConvertToNoncanonical(
+    Analysis *analysis, Tier noncanonical,
+    Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
+                                           Tier symmetric));
 
 /**
  * @brief Aggregates the SRC Analysis into the DEST Analysis.

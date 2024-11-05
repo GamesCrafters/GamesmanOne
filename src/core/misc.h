@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.2.0
- * @date 2024-07-11
+ * @version 1.3.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,7 @@
 #include <stdio.h>    // FILE
 #include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
@@ -44,6 +45,14 @@ void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
 void NotReached(ReadOnlyString message);
+
+/**
+ * @brief Returns the amount of physical memory available on the system.
+ *
+ * @return Amount of physical memory or
+ * @return 0 if the detection fails.
+ */
+intptr_t GetPhysicalMemory(void);
 
 /**
  * @brief Same behavior as malloc() on success; terminates GAMESMAN on failure.
@@ -68,6 +77,23 @@ void *SafeCalloc(size_t n, size_t size);
  */
 char *SafeStrncpy(char *dest, const char *src, size_t n);
 
+/**
+ * @brief Prints \p prompt followed by a new line ('\n') and an arrow ("=>") to
+ * \c stdout, and then reads in X characters from \c stdin until a new line or
+ * EOF is encountered but only writes up to \p length_max characters to \p buf,
+ * not including the trailing new line character ('\n').
+ *
+ * @note \p buf is assumed to have enough space to hold at least \p length_max +
+ * 1 characters to include the terminal '\0'.
+ *
+ * @param prompt A prompt to be printed out that explains what the user input
+ * should be.
+ * @param buf Output parameter. The user input, up to \p length_max bytes, is
+ * stored in the contiguous space that this pointer is pointing to.
+ * @param length_max Maximum acceptable user input length in number of
+ * characters.
+ * @return \p buf.
+ */
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
 /**

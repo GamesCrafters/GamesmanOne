@@ -6,8 +6,8 @@
  *         Angela He,
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo - the board game designed by Thierry Chapeau.
- * @version 1.0.0
- * @date 2024-04-12
+ * @version 1.0.2
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

@@ -40,13 +40,9 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/bpdb/bpdict.h"
 #include "core/misc.h"
@@ -278,6 +274,3 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
     array->meta.stream_length = new_stream_length;
     return kNoError;
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_PARALLEL_FOR
