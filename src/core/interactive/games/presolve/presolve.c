@@ -127,9 +127,9 @@ static int TestCurrentGameVariant(ReadOnlyString key) {
                SolverManagerExplainTestError(error));
     } else {
         puts(
-            "\n************************\n"
-            "***** TESTS PASSED *****\n"
-            "************************\n");
+            "\n****************************\n"
+            "***** ALL TESTS PASSED *****\n"
+            "****************************\n");
     }
 
     return 0;

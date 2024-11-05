@@ -476,6 +476,7 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
     tier->GetPositionInSymmetricTier = &DefaultGetPositionInSymmetricTier;
     tier->GetChildTiers = &GetChildTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
+    tier->GetTierName = &DefaultGetTierName;
 }
 
 static void TogglePositionSymmetryRemoval(bool on) {
@@ -649,5 +650,7 @@ static int DefaultGetTierName(Tier tier,
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    return sprintf(name, "%s_%d", current_game_name, current_variant_id);
+    sprintf(name, "%s_%d", current_game_name, current_variant_id);
+
+    return kNoError;
 }
