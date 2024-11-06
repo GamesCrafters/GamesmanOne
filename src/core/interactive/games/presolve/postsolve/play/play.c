@@ -274,8 +274,8 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     MoveArray moves = InteractiveMatchGenerateMoves();
 
     // Print all valid move strings.
-    printf("Player %d's move [(u)ndo/", InteractiveMatchGetTurn() + 1);
-    if (solved) printf("(v)alues/");
+    printf("Player %d's move [(u)ndo", InteractiveMatchGetTurn() + 1);
+    if (solved) printf("/(v)alues");
     for (int64_t i = 0; i < moves.size; ++i) {
         game->gameplay_api->common->MoveToString(moves.array[i], move_string);
         printf("/[%s]", move_string);
