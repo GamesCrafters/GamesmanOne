@@ -125,7 +125,7 @@ static int8_t FindNeutron(const char board[static kBoardSize]) {
         if (board[i] == 'N') return i;
     }
 
-    NotReached("NeutronGenerateMoves: failed to find the neutron on board");
+    NotReached("FindNeutron: failed to find the neutron on board");
     return -1;
 }
 
@@ -192,6 +192,20 @@ static int8_t MovePiece(char board[static kBoardSize], int8_t src, int8_t dir) {
     return dest;
 }
 
+static bool PieceMoveAvailable(const char board[static kBoardSize], int turn) {
+    char piece_to_move = kTurnToPiece[turn];
+    for (int8_t i = 0; i < kBoardSize; ++i) {
+        if (board[i] != piece_to_move) continue;
+        for (int8_t dir = 0; dir < 8; ++dir) {
+            if (CanMoveInDirection(board, i, dir)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 static void GeneratePieceMoves(const char board[static kBoardSize], int turn,
                                int8_t n_src, int8_t n_dir, MoveArray *moves) {
     char piece_to_move = kTurnToPiece[turn];
@@ -229,27 +243,49 @@ static bool IsInHomeRows(int8_t i) {
     return (0 <= i && i < 5) || (20 <= i && i < 25);
 }
 
-static MoveArray NeutronGenerateMovesInternal(
-    Position pos, const char board[static kBoardSize], int turn) {
-    //
+static bool MoveAvailable(Position pos, char board[static kBoardSize],
+                          int turn) {
+    if (pos == kInitialPosition) return true;
+
+    int8_t n_src = FindNeutron(board);
+    bool found = false;
+    // For each possible neutron move
+    for (int8_t n_dir = 0; !found && n_dir < 8; ++n_dir) {
+        // Make the current neutron move and generate piece moves.
+        int8_t dest = MovePiece(board, n_src, n_dir);
+        // If cannot move the neutron in this direction, skip it.
+        if (dest == n_src) continue;
+        found = IsInHomeRows(dest) || PieceMoveAvailable(board, turn);
+
+        // Revert the neutron move. Safe to assume that n_src != dest.
+        board[n_src] = 'N';
+        board[dest] = '-';
+    }
+
+    return found;
+}
+
+/** \p board may be modified during the function call, but will be restored
+ *  upon returning. */
+static MoveArray NeutronGenerateMovesInternal(Position pos,
+                                              char board[static kBoardSize],
+                                              int turn) {
     MoveArray ret;
     MoveArrayInit(&ret);
-    char board_copy[kBoardSize];
-    memcpy(board_copy, board, kBoardSize);
 
     // If the given position is the initial position, generate piece moves
     // directly.
     if (pos == kInitialPosition) {
-        GeneratePieceMoves(board_copy, turn, -1, 0, &ret);
+        GeneratePieceMoves(board, turn, -1, 0, &ret);
         return ret;
     }
 
-    int8_t n_src = FindNeutron(board_copy);
+    int8_t n_src = FindNeutron(board);
 
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // Make the current neutron move and generate piece moves.
-        int8_t dest = MovePiece(board_copy, n_src, n_dir);
+        int8_t dest = MovePiece(board, n_src, n_dir);
         // If cannot move the neutron in this direction, skip it.
         if (dest == n_src) continue;
 
@@ -259,12 +295,12 @@ static MoveArray NeutronGenerateMovesInternal(
             m.unpacked.n_dir = n_dir;
             MoveArrayAppend(&ret, m.hashed);
         } else {
-            GeneratePieceMoves(board_copy, turn, n_src, n_dir, &ret);
+            GeneratePieceMoves(board, turn, n_src, n_dir, &ret);
         }
 
         // Revert the neutron move. Safe to assume that n_src != dest.
-        board_copy[n_src] = 'N';
-        board_copy[dest] = '-';
+        board[n_src] = 'N';
+        board[dest] = '-';
     }
 
     return ret;
@@ -302,10 +338,7 @@ static Value NeutronPrimitive(Position position) {
     }
 
     // Check if the current player is in a stalemate.
-    MoveArray moves = NeutronGenerateMoves(position);
-    bool no_moves = (moves.size == 0);
-    MoveArrayDestroy(&moves);
-    if (no_moves) return kLose;
+    if (!MoveAvailable(position, board, turn)) return kLose;
 
     return kUndecided;
 }
@@ -623,7 +656,6 @@ static bool NeutronIsValidMoveString(ReadOnlyString move_string) {
     if (tokens[2] == NULL || strcmp(tokens[2], "END") == 0) {
         return tokens[3] == NULL;
     }
-
     // Otherwise, also check for the last two tokens.
     if (!IsValidMoveTokenPair(tokens[2], tokens[3])) return false;
 
