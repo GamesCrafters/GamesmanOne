@@ -2,6 +2,7 @@
 add_subdirectory(dshogi)
 add_subdirectory(fsvp)
 add_subdirectory(gates)
+add_subdirectory(kaooa)
 add_subdirectory(mallqueenschess)
 add_subdirectory(mttt)
 add_subdirectory(mtttier)
