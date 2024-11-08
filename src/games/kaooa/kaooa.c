@@ -406,11 +406,14 @@ static int KaooaMoveToString(Move move, char *buffer) {
     return kNoError;
 }
 
-static bool KaooaIsValidMoveString(ReadOnlyString move_string) { return true; }
+static bool KaooaIsValidMoveString(ReadOnlyString move_string) {
+    int length = strlen(move_string);
+    return length >= 1 && length <= 4;
+}
 
 static Move KaooaStringToMove(ReadOnlyString move_string) {
     static ConstantReadOnlyString kDelim = " ";
-    char move_string_copy[6];
+    char move_string_copy[5];
     strcpy(move_string_copy, move_string);
     char *first = strtok(move_string_copy, kDelim);
     char *second = strtok(NULL, kDelim);
@@ -430,7 +433,7 @@ static const GameplayApiCommon KaooaGameplayApiCommon = {
     .GetInitialPosition = KaooaGetInitialPosition,
     .position_string_length_max = 1300,
 
-    .move_string_length_max = 5,
+    .move_string_length_max = 4,
     .MoveToString = KaooaMoveToString,
 
     .IsValidMoveString = KaooaIsValidMoveString,
