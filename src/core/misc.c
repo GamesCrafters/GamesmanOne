@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.3.0
- * @date 2024-09-07
+ * @version 1.4.0
+ * @date 2024-11-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,10 +31,11 @@
 #include <fcntl.h>      // open
 #include <inttypes.h>   // PRId64, PRIu64
 #include <lzma.h>       // lzma_physmem
+#include <stdarg.h>     // va_list, va_start, va_end
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
-#include <stdio.h>      // fgets, fprintf, stderr, FILE
+#include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
 #include <stdlib.h>     // exit, malloc, calloc, free
 #include <string.h>     // strcspn, strlen, strncpy
 #include <sys/stat.h>   // mkdir, struct stat
@@ -62,9 +63,7 @@ void NotReached(ReadOnlyString message) {
     exit(kNotReachedError);
 }
 
-intptr_t GetPhysicalMemory(void) {
-    return (intptr_t)lzma_physmem();    
-}
+intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
 
 void *SafeMalloc(size_t size) {
     void *ret = malloc(size);
@@ -95,6 +94,14 @@ char *SafeStrncpy(char *dest, const char *src, size_t n) {
     char *ret = strncpy(dest, src, n);
     dest[n - 1] = '\0';
     return ret;
+}
+
+void PrintfAndFlush(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    fflush(stdout);
+    va_end(args);
 }
 
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
@@ -243,6 +250,13 @@ int GuardedOpen(const char *filename, int flags) {
 int GuardedClose(int fd) {
     int error = close(fd);
     if (error == -1) perror("close");
+
+    return error;
+}
+
+int GuardedRename(const char *oldpath, const char *newpath) {
+    int error = rename(oldpath, newpath);
+    if (error == -1) perror("rename");
 
     return error;
 }

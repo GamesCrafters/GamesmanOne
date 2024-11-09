@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.0.2
- * @date 2024-09-07
+ * @version 1.0.3
+ * @date 2024-11-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -209,9 +209,9 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name><ext>", +2 for '/' and '\0'.
-    ConstantReadOnlyString extension = ".adb.xz";
+    static const char extension[] = ".adb.xz";
     char *full_path = (char *)calloc(
-        (strlen(sandbox_path) + kDbFileNameLengthMax + strlen(extension) + 2),
+        (strlen(sandbox_path) + kDbFileNameLengthMax + sizeof(extension) + 2),
         sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
@@ -229,11 +229,29 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     return full_path;
 }
 
+static char *GetFullPathToTempFile(Tier tier, GetTierNameFunc GetTierName) {
+    // Full path: "<full_path_to_tier_file>.tmp"
+    static const char extension[] = ".tmp";
+    char *full_path_to_tier_file = GetFullPathToFile(tier, GetTierName);
+    if (full_path_to_tier_file == NULL) return NULL;
+
+    size_t length = strlen(full_path_to_tier_file);
+    char *full_path =
+        (char *)realloc(full_path_to_tier_file, length + sizeof(extension) + 1);
+    if (full_path == NULL) {
+        free(full_path_to_tier_file);
+        return NULL;
+    }
+
+    strcat(full_path, extension);
+    return full_path;
+}
+
 static char *GetFullPathToFinishFlag(void) {
     // Full path: "<path>/.finish", +2 for '/' and '\0'.
-    ConstantReadOnlyString finish_flag_name = ".finish";
+    static const char finish_flag_name[] = ".finish";
     char *full_path = (char *)calloc(
-        (strlen(sandbox_path) + strlen(finish_flag_name) + 2), sizeof(char));
+        (strlen(sandbox_path) + sizeof(finish_flag_name) + 2), sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr,
                 "GetFullPathToFinishFlag: failed to calloc full_path.\n");
@@ -256,24 +274,42 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
     // Create db file.
+    int error = kNoError;
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
-    if (full_path == NULL) return kMallocFailureError;
-
-    int64_t compressed_size = XzraCompressStream(
-        full_path, false, block_size, lzma_level, enable_extreme_compression,
-        GetNumThreads(), RecordArrayGetData(&loaded_records[0]),
-        RecordArrayGetRawSize(&loaded_records[0]));
-    free(full_path);
-    switch (compressed_size) {
-        case -2:
-            return kFileSystemError;
-        case -3:
-            return kRuntimeError;
-        default:
-            break;
+    char *tmp_full_path =
+        GetFullPathToTempFile(current_tier, CurrentGetTierName);
+    if (full_path == NULL || tmp_full_path == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
     }
 
-    return kNoError;
+    // First compress to a temp file.
+    int64_t compressed_size =
+        XzraCompressStream(tmp_full_path, false, block_size, lzma_level,
+                           enable_extreme_compression, GetNumThreads(),
+                           RecordArrayGetData(&loaded_records[0]),
+                           RecordArrayGetRawSize(&loaded_records[0]));
+    switch (compressed_size) {
+        case -2:
+            error = kFileSystemError;
+            goto _bailout;
+        case -3:
+            error = kRuntimeError;
+            goto _bailout;
+    }
+
+    // If successful, rename the temp file into the desired tier DB name.
+    int rename_error = GuardedRename(tmp_full_path, full_path);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    free(full_path);
+    free(tmp_full_path);
+
+    return error;
 }
 
 static int ArrayDbFreeSolvingTier(void) {
