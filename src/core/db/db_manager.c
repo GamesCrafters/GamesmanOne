@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 2.0.0a2
- * @date 2024-08-25
+ * @version 2.0.0
+ * @date 2024-11-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,8 +27,8 @@
 #include "core/db/db_manager.h"
 
 #include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // intptr_t
+#include <stddef.h>   // NULL, size_t
+#include <stdint.h>   // intptr_t, int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -129,6 +129,23 @@ Value DbManagerGetValue(Position position) {
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+bool DbManagerCheckpointExists(Tier tier) {
+    return current_db->CheckpointExists(tier);
+}
+
+int DbManagerCheckpointSave(const void *status, size_t status_size) {
+    return current_db->CheckpointSave(status, status_size);
+}
+
+int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
+                            size_t status_size) {
+    return current_db->CheckpointLoad(tier, size, status, status_size);
+}
+
+int DbManagerCheckpointRemove(Tier tier) {
+    return current_db->CheckpointRemove(tier);
 }
 
 intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {

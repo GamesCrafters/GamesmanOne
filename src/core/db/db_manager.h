@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 2.0.0a2
- * @date 2024-08-25
+ * @version 2.0.0
+ * @date 2024-11-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,7 +27,9 @@
 #ifndef GAMESMANONE_CORE_DB_DB_MANAGER_H_
 #define GAMESMANONE_CORE_DB_DB_MANAGER_H_
 
-#include <stdint.h>  // int64_t
+#include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t, intptr_t
 
 #include "core/types/gamesman_types.h"
 
@@ -102,6 +104,12 @@ int DbManagerFlushSolvingTier(void *aux);
  */
 int DbManagerFreeSolvingTier(void);
 
+/**
+ * @brief Sets the current game as solved.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 int DbManagerSetGameSolved(void);
 
 /**
@@ -140,13 +148,117 @@ Value DbManagerGetValue(Position position);
  */
 int DbManagerGetRemoteness(Position position);
 
+/**
+ * @brief Returns whether there exists a checkpoint for \p tier. A
+ * checkpoint can be used to restore the solving progress of a tier.
+ *
+ * @param tier Check for any existing checkpoints for this tier.
+ * @return \c true if there exists a checkpoint for \p tier, or
+ * @return \c false otherwise.
+ */
+bool DbManagerCheckpointExists(Tier tier);
+
+/**
+ * @brief Saves a checkpoint for the current solving tier, including the
+ * current solving \p status, overwriting any existing checkpoint.
+ *
+ * @param status Pointer to data that stores the current solving status.
+ * @param status_size Size of \p status in bytes.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
+int DbManagerCheckpointSave(const void *status, size_t status_size);
+
+/**
+ * @brief Creates an in-memory DB for solving of the given \p tier of size
+ * \p size by loading its checkpoint and previous solving status. Does nothing
+ * and returns an error if a checkpoint cannot be found for \p tier.
+ *
+ * @param tier Tier to be initialized and loaded.
+ * @param size Size of \p tier in number of positions.
+ * @param status (Output parameter) Pointer to a buffer of size at least \p
+ * status_size bytes which will be used to load the solving status from the
+ * checkpoint. Must be of the same format and size as used when the
+ * checkpoint was saved with \c Database::CheckpointSave.
+ * @param status_size Size of \p status in bytes.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
+int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
+                            size_t status_size);
+
+/**
+ * @brief Removes the checkpoint for \p tier if exists.
+ *
+ * @param tier Remove the checkpoint for this tier.
+ * @return \c kNoError on success,
+ * @return \c kFileSystemError if no checkpoint is found for \p tier, or
+ * @return any other non-zero error code on failure.
+ */
+int DbManagerCheckpointRemove(Tier tier);
+
 // --------------------- (EXPERIMENTAL) Loading Interface ---------------------
 
+/**
+ * @brief Returns an upper bound, in bytes, on the amount of memory that
+ * will be used to load \p tier of \p size positions.
+ *
+ * @param tier Tier to be loaded.
+ * @param size Size of \p tier in number of positions.
+ * @return An upper bound on memory usage.
+ */
 intptr_t DbManagerTierMemUsage(Tier tier, int64_t size);
+
+/**
+ * @brief Loads the given \p tier of \p size positions into memory.
+ * @param tier Tier to be loaded.
+ * @param size Size of \p tier in number of positions.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 int DbManagerLoadTier(Tier tier, int64_t size);
+
+/**
+ * @brief Unloads the given \p tier from memory if it was previously loaded.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 int DbManagerUnloadTier(Tier tier);
+
+/**
+ * @brief Returns whether the given \p tier has been loaded.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 bool DbManagerIsTierLoaded(Tier tier);
+
+/**
+ * @brief Returns the value of position \p position in tier \p tier if
+ * \p tier has been loaded. Returns \c kErrorValue otherwise.
+ *
+ * @param tier A loaded tier.
+ * @param position Query the value of this position.
+ *
+ * @return The value of \p position in \p tier on success, or
+ * @return \c kErrorValue otherwise.
+ */
 Value DbManagerGetValueFromLoaded(Tier tier, Position position);
+
+/**
+ * @brief Returns the remoteness of position \p position in tier \p tier if
+ * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
+ *
+ * @param tier A loaded tier.
+ * @param position Query the remoteness of this position.
+ *
+ * @return The remoteness of \p position in \p tier on success, or
+ * @return \c kErrorRemoteness otherwise.
+ */
 int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
 
 // ----------------------------- Probing Interface -----------------------------
