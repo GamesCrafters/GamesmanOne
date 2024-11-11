@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -53,4 +53,4 @@ bool PositionArrayAppend(PositionArray *array, Position position);
 /** @brief Returns true if ARRAY contains POSITION, or false otherwise. */
 bool PositionArrayContains(PositionArray *array, Position position);
 
-#endif  // GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H_

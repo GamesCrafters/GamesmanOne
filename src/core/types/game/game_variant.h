@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
-#define GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
+#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H_
+#define GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/game/game_variant_option.h"
@@ -85,4 +85,4 @@ int GameVariantToIndex(const GameVariant *variant);
  */
 Int64Array VariantIndexToSelections(int index, const GameVariant *variant);
 
-#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H
+#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_VARIANT_H_

@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H
-#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H
+#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H_
+#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H_
 
 #include "core/types/solver/solver_option.h"
 
@@ -18,4 +18,4 @@ typedef struct SolverConfig {
     const int *selections;
 } SolverConfig;
 
-#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H
+#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_CONFIG_H_

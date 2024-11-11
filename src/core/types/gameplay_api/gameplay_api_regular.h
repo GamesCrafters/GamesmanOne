@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H_
 
 #include "core/types/base.h"
 #include "core/types/move_array.h"
@@ -78,4 +78,4 @@ typedef struct GameplayApiRegular {
     Value (*Primitive)(Position position);
 } GameplayApiRegular;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_REGULAR_H_

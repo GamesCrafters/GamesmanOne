@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_
 
 #include "core/types/base.h"
 
@@ -106,4 +106,4 @@ typedef struct GameplayApiCommon {
     Move (*StringToMove)(ReadOnlyString move_string);
 } GameplayApiCommon;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_

@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_
 
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
@@ -55,4 +55,4 @@ typedef struct GameplayApi {
     const GameplayApiTier *tier;       
 } GameplayApi;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_

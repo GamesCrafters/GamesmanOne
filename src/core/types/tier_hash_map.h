@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
-#define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
+#define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -157,4 +157,4 @@ bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
 bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
                              int64_t *value);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_

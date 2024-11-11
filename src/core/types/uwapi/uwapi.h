@@ -34,8 +34,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H
-#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H
+#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H_
+#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H_
 
 #include "core/types/uwapi/uwapi_regular.h"
 #include "core/types/uwapi/uwapi_tier.h"
@@ -53,4 +53,4 @@ typedef struct Uwapi {
     const UwapiTier *tier;       /**< API for tier games. */
 } Uwapi;
 
-#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H
+#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_H_

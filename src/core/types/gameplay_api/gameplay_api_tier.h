@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H_
 
 #include "core/types/base.h"
 #include "core/types/move_array.h"
@@ -84,4 +84,4 @@ typedef struct GameplayApiTier {
     Value (*Primitive)(TierPosition tier_position);
 } GameplayApiTier;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_TIER_H_

@@ -27,8 +27,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_H
-#define GAMESMANONE_CORE_TYPES_GAME_GAME_H
+#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_H_
+#define GAMESMANONE_CORE_TYPES_GAME_GAME_H_
 
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
@@ -149,4 +149,4 @@ typedef struct Game {
     int (*SetVariantOption)(int option, int selection);
 } Game;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_H
+#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_H_

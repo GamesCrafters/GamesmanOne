@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H
-#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H
+#ifndef GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H_
+#define GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H_
 
 #include "core/types/base.h"
 #include "core/types/solver/solver_config.h"
@@ -156,4 +156,4 @@ typedef struct Solver {
     int (*GetRemoteness)(TierPosition tier_position);
 } Solver;
 
-#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H
+#endif  // GAMESMANONE_CORE_TYPES_SOLVER_SOLVER_H_

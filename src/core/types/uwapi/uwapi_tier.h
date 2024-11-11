@@ -32,8 +32,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H
-#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H
+#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H_
+#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H_
 
 #include <stdbool.h>  // bool
 
@@ -222,4 +222,4 @@ typedef struct UwapiTier {
     PartmoveArray (*GeneratePartmoves)(TierPosition tier_position);
 } UwapiTier;
 
-#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H
+#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H_

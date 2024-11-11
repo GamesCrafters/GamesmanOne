@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H
-#define GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H
+#ifndef GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_
+#define GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_
 
 #include "core/data_structures/int64_hash_map.h"
 #include "core/types/base.h"
@@ -69,4 +69,4 @@ bool PositionHashSetContains(PositionHashSet *set, Position position);
  */
 bool PositionHashSetAdd(PositionHashSet *set, Position position);
 
-#endif  // GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H
+#endif  // GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_

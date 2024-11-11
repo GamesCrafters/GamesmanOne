@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_BASE_H
-#define GAMESMANONE_CORE_TYPES_BASE_H
+#ifndef GAMESMANONE_CORE_TYPES_BASE_H_
+#define GAMESMANONE_CORE_TYPES_BASE_H_
 
 #include <inttypes.h>  // PRId64
 #include <stdint.h>    // int64_t
@@ -87,4 +87,4 @@ typedef const char *ReadOnlyString;
  */
 typedef const ReadOnlyString ConstantReadOnlyString;
 
-#endif  // GAMESMANONE_CORE_TYPES_BASE_H
+#endif  // GAMESMANONE_CORE_TYPES_BASE_H_

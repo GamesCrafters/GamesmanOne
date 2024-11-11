@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_STACK_H
-#define GAMESMANONE_CORE_TYPES_TIER_STACK_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_STACK_H_
+#define GAMESMANONE_CORE_TYPES_TIER_STACK_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -70,4 +70,4 @@ Tier TierStackTop(const TierStack *stack);
 /** @brief Returns true if the given STACK is empty, or false otherwise. */
 bool TierStackEmpty(const TierStack *stack);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H_

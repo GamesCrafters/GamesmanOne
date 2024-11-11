@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H
-#define GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_
+#define GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -82,4 +82,4 @@ bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
  */
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_

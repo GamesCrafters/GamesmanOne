@@ -1,5 +1,5 @@
-#ifndef GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H
-#define GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H
+#ifndef GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H_
+#define GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H_
 
 #include "core/data_structures/cstring.h"
 
@@ -13,4 +13,4 @@ typedef struct Partmove {
 
 void PartMoveDestroy(Partmove *p);
 
-#endif  // GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H
+#endif  // GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_H_

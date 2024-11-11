@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -69,4 +69,4 @@ TierPosition TierPositionArrayBack(const TierPositionArray *array);
 bool TierPositionArrayContains(const TierPositionArray *array,
                                TierPosition target);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_

@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_TIER_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_TIER_ARRAY_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -88,4 +88,4 @@ bool TierArrayEmpty(const TierArray *array);
 void TierArraySortExplicit(TierArray *array,
                            int (*comp)(const void *, const void *));
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_ARRAY_H_

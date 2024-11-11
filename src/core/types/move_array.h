@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -75,4 +75,4 @@ void MoveArraySortExplicit(MoveArray *array,
 /** @brief Returns true if ARRAY contains MOVE, or false otherwise. */
 bool MoveArrayContains(const MoveArray *array, Move move);
 
-#endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
