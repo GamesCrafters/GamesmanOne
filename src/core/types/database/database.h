@@ -7,8 +7,8 @@
  * @details A Database is an abstract type of a database. To implement a new
  * Database, fully implement all member functions and set function pointers.
  * All member functions are required unless otherwise noted.
- * @version 1.1.1
- * @date 2024-08-25
+ * @version 1.2.0
+ * @date 2024-11-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,10 +27,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
-#define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
+#ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_
+#define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t, intptr_t
 
 #include "core/types/base.h"
@@ -68,8 +69,10 @@ typedef int (*GetTierNameFunc)(Tier tier,
  * @note To implement a new Database module, properly set the name of the new
  * DB and set each member function pointer to a function specific to the module.
  *
- * @note ALL Databases are Tier Databases because the game designer does not
- * have to interact with a Database directly.
+ * @note All fields are required unless otherwise specified.
+ *
+ * @note All Databases are Tier Databases because the game designer does not
+ * interact with a Database directly.
  */
 typedef struct Database {
     /** Internal name of the Database. Must contain no white spaces. */
@@ -101,7 +104,7 @@ typedef struct Database {
     // Solving API
 
     /**
-     * @brief Creates a in-memory DB for solving of the given TIER of SIZE
+     * @brief Creates an in-memory DB for solving of the given TIER of SIZE
      * positions.
      * @note This function is part of the Solving API.
      *
@@ -131,6 +134,9 @@ typedef struct Database {
      */
     int (*FreeSolvingTier)(void);
 
+    /**
+     * @brief Sets the current game as solved.
+     */
     int (*SetGameSolved)(void);
 
     /**
@@ -165,13 +171,113 @@ typedef struct Database {
      */
     int (*GetRemoteness)(Position position);
 
+    /**
+     * @brief Returns whether there exists a checkpoint for \p tier. A
+     * checkpoint can be used to restore the solving progress of a tier.
+     */
+    bool (*CheckpointExists)(Tier tier);
+
+    /**
+     * @brief Saves a checkpoint for the current solving tier, including the
+     * current solving \p status, overwriting any existing checkpoint.
+     *
+     * @param status Pointer to data that stores the current solving status.
+     * @param status_size Size of \p status in bytes.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
+     */
+    int (*CheckpointSave)(const void *status, size_t status_size);
+
+    /**
+     * @brief Creates an in-memory DB for solving of the given \p tier of size
+     * \p size by loading its checkpoint and previous solving status. Does
+     * nothing and returns an error if a checkpoint cannot be found for \p tier.
+     *
+     * @param tier Tier to be initialized and loaded.
+     * @param size Size of \p tier in number of positions.
+     * @param status (Output parameter) Pointer to a buffer of size at least \p
+     * status_size bytes which will be used to load the solving status from the
+     * checkpoint. Must be of the same format and size as used when the
+     * checkpoint was saved with \c Database::CheckpointSave.
+     * @param status_size Size of \p status in bytes.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
+     */
+    int (*CheckpointLoad)(Tier tier, int64_t size, void *status,
+                          size_t status_size);
+
+    /**
+     * @brief Removes the checkpoint for \p tier if exists.
+     *
+     * @param tier Remove the checkpoint for this tier.
+     * @return \c kNoError on success,
+     * @return \c kFileSystemError if no checkpoint is found for \p tier, or
+     * @return any other non-zero error code on failure.
+     */
+    int (*CheckpointRemove)(Tier tier);
+
     // Loading API
 
+    /**
+     * @brief Returns an upper bound, in bytes, on the amount of memory that
+     * will be used to load \p tier of \p size positions.
+     *
+     * @param tier Tier to be loaded.
+     * @param size Size of \p tier in number of positions.
+     * @return An upper bound on memory usage.
+     */
     intptr_t (*TierMemUsage)(Tier tier, int64_t size);
+
+    /**
+     * @brief Loads the given \p tier of \p size positions into memory.
+     * @param tier Tier to be loaded.
+     * @param size Size of \p tier in number of positions.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
+     */
     int (*LoadTier)(Tier tier, int64_t size);
+
+    /**
+     * @brief Unloads the given \p tier from memory if it was previously loaded.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
+     */
     int (*UnloadTier)(Tier tier);
+
+    /**
+     * @brief Returns whether the given \p tier has been loaded.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
+     */
     bool (*IsTierLoaded)(Tier tier);
+
+    /**
+     * @brief Returns the value of position \p position in tier \p tier if
+     * \p tier has been loaded. Returns \c kErrorValue otherwise.
+     *
+     * @param tier A loaded tier.
+     * @param position Query the value of this position.
+     *
+     * @return The value of \p position in \p tier on success, or
+     * @return \c kErrorValue otherwise.
+     */
     Value (*GetValueFromLoaded)(Tier tier, Position position);
+
+    /**
+     * @brief Returns the remoteness of position \p position in tier \p tier if
+     * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
+     *
+     * @param tier A loaded tier.
+     * @param position Query the remoteness of this position.
+     *
+     * @return The remoteness of \p position in \p tier on success, or
+     * @return \c kErrorRemoteness otherwise.
+     */
     int (*GetRemotenessFromLoaded)(Tier tier, Position position);
 
     // Probing API
@@ -246,4 +352,4 @@ typedef struct Database {
     int (*GameStatus)(void);
 } Database;
 
-#endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H
+#endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_
