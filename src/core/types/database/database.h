@@ -136,6 +136,9 @@ typedef struct Database {
 
     /**
      * @brief Sets the current game as solved.
+     *
+     * @return \c kNoError on success, or
+     * @return non-zero error code otherwise.
      */
     int (*SetGameSolved)(void);
 
@@ -156,18 +159,20 @@ typedef struct Database {
     int (*SetRemoteness)(Position position, int remoteness);
 
     /**
-     * @brief Returns the value of the given POSITION from in-memory DB.
+     * @brief Returns the value of the given \p position from in-memory DB.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return Value of the given \p position on success, or
+     * @return \c kErrorValue otherwise.
      */
     Value (*GetValue)(Position position);
 
     /**
-     * @brief Returns the remoteness of the given POSITION from in-memory DB.
+     * @brief Returns the remoteness of the given \p position from in-memory DB.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return Remoteness of the given \p position on success, or
+     * @return \c kErrorRemoteness otherwise.
      */
     int (*GetRemoteness)(Position position);
 
