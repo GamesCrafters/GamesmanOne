@@ -457,7 +457,7 @@ static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position) {
 }
 
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeFillBuffer(probe, tier_position)) return kIllegalRemoteness;
+    if (!ProbeFillBuffer(probe, tier_position)) return kErrorRemoteness;
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.remoteness;
 }

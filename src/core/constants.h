@@ -69,7 +69,7 @@ enum CommonConstants {
 /** @brief Gamesman constants. */
 enum GamesmanConstants {
     /** Illegal remoteness which can be returned as an error. */
-    kIllegalRemoteness = -1,
+    kErrorRemoteness = -1,
     /** Illegal variant which can be returned as an error. */
     kIllegalVariantIndex = -1,
 };
