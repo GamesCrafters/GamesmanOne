@@ -142,6 +142,7 @@ const ArrayDbOptions kArrayDbOptionsInit = {
     .compression_level = 6,        // LZMA level 6.
     .extreme_compression = false,  // Extreme compression disabled.
 };
+static const int kDefaultLz4Level = 0;  //
 
 // Global options
 
@@ -403,8 +404,8 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
                             status};
     const size_t input_sizes[] = {RecordArrayGetRawSize(&loaded_records[0]),
                                   status_size};
-    int compressed_size = Lz4UtilsCompressStreams(inputs, input_sizes, 2,
-                                                  lzma_level, tmp_full_path);
+    int compressed_size = Lz4UtilsCompressStreams(
+        inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path);
     switch (compressed_size) {
         case -1:
             NotReached("ArrayDbCheckpointSave: (BUG) malformed input array(s)");
