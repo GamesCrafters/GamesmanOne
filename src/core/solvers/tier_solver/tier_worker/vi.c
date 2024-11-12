@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.2
- * @date 2024-11-11
+ * @version 1.0.3
+ * @date 2024-11-12
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -86,6 +86,10 @@ static int max_tie_remoteness;
 // Last checkpoint time.
 static time_t prev_checkpoint;
 
+// Time cost to save the previous checkpoint in seconds. Updated every
+// checkpoint.
+static double checkpoint_save_cost;
+
 // ------------------------------ Step0Initialize ------------------------------
 
 static bool Step0_0SetupChildTiers(void) {
@@ -110,6 +114,16 @@ static bool Step0_0SetupChildTiers(void) {
     return true;
 }
 
+// Typically returns an overestimated result.
+static double GetCheckpointSaveCostEstimate(void) {
+    static const double kOverhead = 1;
+    static const double kTypicalHDDSpeed = 200 << 20;  // 200 MiB/s
+
+    return kOverhead +
+           (double)DbManagerTierMemUsage(this_tier, this_tier_size) /
+               kTypicalHDDSpeed;
+}
+
 static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
     api_internal = api;
     this_tier = tier;
@@ -118,6 +132,8 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
     this_tier_size = api_internal->GetTierSize(tier);
     max_win_lose_remoteness = 0;
     max_tie_remoteness = 0;
+    checkpoint_save_cost = GetCheckpointSaveCostEstimate();
+
     return true;
 }
 
@@ -278,21 +294,20 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
 }
 
 static bool CheckpointNeeded(time_t prev, time_t curr) {
-    // Assume that there is a one second overhead to save a checkpoint.
-    // This prevents repeated checkpoint savings when the DB array is very
-    // small.
-    static const double kOverhead = 1;
-    static const double kTypicalHDDSpeed = 100 << 20;  // 100 MiB/s
-    const double save_cost =
-        kOverhead + (double)DbManagerTierMemUsage(this_tier, this_tier_size) /
-                        kTypicalHDDSpeed;
-
-    return (difftime(curr, prev) > save_cost * 2.0);
+    // Suppose it takes the same amount of time to save and load the same
+    // checkpoint. If it takes less time to save and load a checkpoint than it
+    // does to redo what was done since the previous checkpoint, then it is worth
+    // saving a new checkpoint.
+    return (difftime(curr, prev) > checkpoint_save_cost * 2.0);
 }
 
 static int CheckpointSave(int step, int remoteness) {
+    clock_t begin = clock();
     CheckpointStatus ct = {.step = step, .remoteness = remoteness};
-    return DbManagerCheckpointSave(&ct, sizeof(ct));
+    int ret = DbManagerCheckpointSave(&ct, sizeof(ct));
+    checkpoint_save_cost = ((double)(clock() - begin)) / CLOCKS_PER_SEC;
+
+    return ret;
 }
 
 static bool Step4_0IterateWinLose(int remoteness) {
@@ -309,6 +324,7 @@ static bool Step4_0IterateWinLose(int remoteness) {
     while (ConcurrentBoolLoad(&updated) || i <= max_win_lose_remoteness + 1) {
         // Save a checkpoint if needed.
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
+        PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
             if (CheckpointSave(kIteratingWinLose, i) != kNoError) return false;
             prev_checkpoint = time(NULL);
@@ -325,7 +341,6 @@ static bool Step4_0IterateWinLose(int remoteness) {
         }
 
         if (ConcurrentBoolLoad(&failed)) return false;
-        PrintfAndFlush(checkpoint ? "," : ".");
         ++i;
     }
     puts("done");
@@ -381,6 +396,7 @@ static bool Step4_1IterateTie(int remoteness) {
     while (ConcurrentBoolLoad(&updated) || i <= max_tie_remoteness + 1) {
         // Save a checkpoint if needed.
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
+        PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
             if (CheckpointSave(kIteratingTie, i) != kNoError) return false;
             prev_checkpoint = time(NULL);
@@ -397,7 +413,6 @@ static bool Step4_1IterateTie(int remoteness) {
         }
 
         if (ConcurrentBoolLoad(&failed)) return false;
-        PrintfAndFlush(checkpoint ? "," : ".");
         ++i;
     }
     puts("done");
