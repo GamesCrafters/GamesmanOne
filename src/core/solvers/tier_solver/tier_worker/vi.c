@@ -296,8 +296,8 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
 static bool CheckpointNeeded(time_t prev, time_t curr) {
     // Suppose it takes the same amount of time to save and load the same
     // checkpoint. If it takes less time to save and load a checkpoint than it
-    // does to redo what was done since the previous checkpoint, then it is worth
-    // saving a new checkpoint.
+    // does to redo what was done since the previous checkpoint, then it is
+    // worth saving a new checkpoint.
     return (difftime(curr, prev) > checkpoint_save_cost * 2.0);
 }
 
@@ -310,14 +310,14 @@ static int CheckpointSave(int step, int remoteness) {
     return ret;
 }
 
-static bool Step4_0IterateWinLose(int remoteness) {
+static bool Step4_0IterateWinLose(int initial_remoteness) {
     ConcurrentBool updated, failed;
     ConcurrentBoolInit(&updated, true);
     ConcurrentBoolInit(&failed, false);
 
     PrintfAndFlush("Value iteration: begin iterations for W/L positions");
     int i;
-    for (i = 1; i < remoteness; ++i) {
+    for (i = 1; i < initial_remoteness; ++i) {
         printf(".");  // Restore previous progress from checkpoint.
     }
     fflush(stdout);
@@ -382,14 +382,14 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
     return true;
 }
 
-static bool Step4_1IterateTie(int remoteness) {
+static bool Step4_1IterateTie(int initial_remoteness) {
     ConcurrentBool updated, failed;
     ConcurrentBoolInit(&updated, true);
     ConcurrentBoolInit(&failed, false);
 
     PrintfAndFlush("Value iteration: begin iterations for T positions");
     int i;
-    for (i = 1; i < remoteness; ++i) {
+    for (i = 1; i < initial_remoteness; ++i) {
         printf(".");  // Restore previous progress from checkpoint.
     }
     fflush(stdout);
@@ -423,12 +423,13 @@ static bool Step4_1IterateTie(int remoteness) {
 static bool Step4Iterate(int step, int remoteness) {
     bool success = true;
     if (step <= kIteratingWinLose) {
-        success = Step4_0IterateWinLose(remoteness);
+        success =
+            Step4_0IterateWinLose(step == kIteratingWinLose ? remoteness : 1);
         if (!success) return false;
     }
 
     if (step <= kIteratingTie) {
-        success = Step4_1IterateTie(remoteness);
+        success = Step4_1IterateTie(step == kIteratingTie ? remoteness : 1);
         if (!success) return false;
     }
 
