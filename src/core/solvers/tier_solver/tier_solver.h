@@ -358,7 +358,7 @@ enum TierSolverTestErrors {
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
     int verbose;       /**< Level of details to output. */
-    bool force;        /**< Whether to force (re)analyze the game. */
+    bool force;        /**< Whether to force (re)solve the game. */
     intptr_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverSolveOptions;
 
