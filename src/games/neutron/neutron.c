@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Neutron.
  * @details https://www.di.fc.ul.pt/~jpn/gv/neutron.htm
- * @version 1.0.0
- * @date 2024-08-22
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #include "games/neutron/neutron.h"
 
 #include <assert.h>  // assert
+#include <ctype.h>   // toupper
 #include <stddef.h>  // NULL
 #include <stdint.h>  // int64_t
 #include <stdlib.h>  // atoi, strtok
@@ -715,6 +716,257 @@ static const GameplayApi kNeutronGameplayApi = {
     .regular = &kNeutronGameplayApiRegular,
 };
 
+// ========================= kNeutronUwapiRegular =========================
+
+// Formal position format:
+// """
+// [turn]_[board (25x)]
+// OR a single 'I' character for the initial position.
+// """
+static bool NeutronIsLegalFormalPosition(ReadOnlyString formal_position) {
+    int len = strlen(formal_position);
+    // Special case for the initial position
+    if (len == 1) return toupper(formal_position[0] == 'I');
+    if (len != kBoardSize + 2) return false;
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+
+    // Count the number of each type of piece.
+    int x_count = 0, o_count = 0, n_count = 0;
+    for (int i = 2; i < kBoardSize + 2; ++i) {
+        char c = toupper(formal_position[i]);
+        if (c == 'X') {
+            ++x_count;
+        } else if (c == 'O') {
+            ++o_count;
+        } else if (c == 'N') {
+            ++n_count;
+        } else if (c != '-') {  // Illegal character detected.
+            return false;
+        }
+    }
+
+    if (n_count != 1) return false;  // There must be exactly 1 neutron piece.
+    if (x_count != 5 || o_count != 5) return false;  // 5 pieces each.
+
+    return true;
+}
+
+static Position NeutronFormalPositionToPosition(
+    ReadOnlyString formal_position) {
+    // Special case for the initial position.
+    if (formal_position[0] == 'I') return kInitialPosition;
+
+    // Hash
+    char board[kBoardSize];
+    memcpy(board, formal_position + 2, kBoardSize);
+    for (int i = 0; i < kBoardSize; ++i) {
+        board[i] = toupper(board[i]);
+    }
+    int turn = formal_position[0] - '0';
+
+    return GenericHashHash(board, turn);
+}
+
+static CString NeutronPositionToFormalPosition(Position position) {
+    // Special case for the initial position.
+    if (position == kInitialPosition) {
+        CString ret;
+        CStringInitCopy(&ret, "I");
+        return ret;
+    }
+
+    // Must be NULL-terminated for AutoGuiMakePosition.
+    char board[kBoardSize + 1] = {0};
+
+    // Unhash
+    if (!Unhash(position, board)) {
+        NotReached(
+            "NeutronPositionToFormalPosition: failed to unhash position");
+    }
+    int turn = GetTurn(position);
+
+    return AutoGuiMakePosition(turn, board);
+}
+
+static CString NeutronPositionToAutoGuiPosition(Position position) {
+    // Return a hard-coded string for the initial position.
+    if (position == kInitialPosition) {
+        return AutoGuiMakePosition(1, kInitialBoard);
+    }
+
+    // For all other positions, use the same format as formal.
+    return NeutronPositionToFormalPosition(position);
+}
+
+static ConstantReadOnlyString kBoardIndexToLegend[] = {
+    "a5", "b5", "c5", "d5", "e5", "a4", "b4", "c4", "d4",
+    "e4", "a3", "b3", "c3", "d3", "e3", "a2", "b2", "c2",
+    "d2", "e2", "a1", "b1", "c1", "d1", "e1",
+};
+
+static CString NeutronMoveToFormalMove(Position position, Move move) {
+    // The following logic works for both part-moves and full-moves.
+    char buffer[12];
+    NeutronMove m = {.hashed = move};
+    if (m.unpacked.n_src < 0) {  // No neutron move
+        sprintf(buffer, "%s %s", kBoardIndexToLegend[m.unpacked.p_src],
+                kDirectionStr[m.unpacked.p_dir]);
+    } else if (m.unpacked.p_src < 0) {  // No piece move
+        sprintf(buffer, "N %s", kDirectionStr[m.unpacked.n_dir]);
+    } else {
+        sprintf(buffer, "N %s %s %s", kDirectionStr[m.unpacked.n_dir],
+                kBoardIndexToLegend[m.unpacked.p_src],
+                kDirectionStr[m.unpacked.p_dir]);
+    }
+    CString ret;
+    CStringInitCopy(&ret, buffer);
+
+    return ret;
+}
+
+static int SrcDirToDestCenter(int8_t src, int8_t dir) {
+    return ((int)src) * 8 + dir;  // Prevent overflow
+}
+
+static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
+    (void)position;  // Unused.
+    static const char kSoundChar = 'x';
+    NeutronMove m = {.hashed = move};
+    if (m.unpacked.n_src < 0) {  // No neutron move.
+        return AutoGuiMakeMoveM(
+            m.unpacked.p_src,
+            SrcDirToDestCenter(m.unpacked.p_src, m.unpacked.p_dir), kSoundChar);
+    } else if (m.unpacked.p_src < 0) {  // No piece move.
+        return AutoGuiMakeMoveM(
+            m.unpacked.n_src,
+            SrcDirToDestCenter(m.unpacked.n_src, m.unpacked.n_dir), kSoundChar);
+    } else {  // A full multipart move does not have a AutoGUI string.
+        return kNullCString;
+    }
+
+    return kNullCString;
+}
+
+static CString AddNeutronPartmove(Position pos,
+                                  const char board[kBoardSize + 1], int turn,
+                                  int8_t n_src, int8_t n_dir,
+                                  PartmoveArray *partmoves) {
+    NeutronMove m = kNeutronMoveInit;
+    m.unpacked.n_src = n_src;
+    m.unpacked.n_dir = n_dir;
+    CString autogui_move = NeutronMoveToAutoGuiMove(pos, m.hashed);
+    CString formal_move = NeutronMoveToFormalMove(pos, m.hashed);
+    CString to = AutoGuiMakePosition(turn, board);
+    int ret = PartmoveArrayEmplaceBack(partmoves, autogui_move.str,
+                                       formal_move.str, NULL, to.str, NULL);
+    CStringDestroy(&autogui_move);
+    CStringDestroy(&formal_move);
+
+    return to;
+}
+
+static void AddPiecePartmove(Position pos, const char board[kBoardSize + 1],
+                             const CString *from, int8_t n_src, int8_t n_dir,
+                             int8_t p_src, int8_t p_dir,
+                             PartmoveArray *partmoves) {
+    NeutronMove m = kNeutronMoveInit;
+    m.unpacked.p_src = p_src;
+    m.unpacked.p_dir = p_dir;
+    CString autogui_move = NeutronMoveToAutoGuiMove(pos, m.hashed);
+    CString formal_move = NeutronMoveToFormalMove(pos, m.hashed);
+
+    m.unpacked.n_src = n_src;
+    m.unpacked.n_dir = n_dir;
+    CString full = NeutronMoveToFormalMove(pos, m.hashed);
+    PartmoveArrayEmplaceBack(partmoves, autogui_move.str, formal_move.str,
+                             from->str, NULL, full.str);
+    CStringDestroy(&autogui_move);
+    CStringDestroy(&formal_move);
+    CStringDestroy(&full);
+}
+
+static void GeneratePiecePartmoves(Position pos,
+                                   const char board[static kBoardSize + 1],
+                                   int turn, const CString *from, int8_t n_src,
+                                   int8_t n_dir, PartmoveArray *partmoves) {
+    char piece_to_move = kTurnToPiece[turn];
+    for (int8_t i = 0; i < kBoardSize; ++i) {
+        if (board[i] != piece_to_move) continue;
+        for (int8_t dir = 0; dir < 8; ++dir) {
+            if (CanMoveInDirection(board, i, dir)) {
+                AddPiecePartmove(pos, board, from, n_src, n_dir, i, dir,
+                                 partmoves);
+            }
+        }
+    }
+}
+
+static PartmoveArray NeutronGeneratePartmovesInternal(
+    Position pos, char board[static kBoardSize + 1], int turn) {
+    //
+    PartmoveArray ret;
+    PartmoveArrayInit(&ret);
+
+    // If the given position is the initial position, then all moves are full
+    // single-part moves and they are not handled in this function.
+    if (pos == kInitialPosition) return ret;
+
+    int8_t n_src = FindNeutron(board);
+    // For each possible neutron move
+    for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
+        // Make the current neutron move and generate piece moves.
+        int8_t dest = MovePiece(board, n_src, n_dir);
+
+        // If cannot move the neutron in this direction, skip it.
+        if (dest == n_src) continue;
+        // If game is already over after the current neutron move, then the move
+        // is also a full move. Skip it.
+        if (IsInHomeRows(dest)) continue;
+
+        CString intermediate =
+            AddNeutronPartmove(pos, board, turn, n_src, n_dir, &ret);
+        GeneratePiecePartmoves(pos, board, turn, &intermediate, n_src, n_dir,
+                               &ret);
+        CStringDestroy(&intermediate);
+
+        // Revert the neutron move. Safe to assume that n_src != dest.
+        board[n_src] = 'N';
+        board[dest] = '-';
+    }
+
+    return ret;
+}
+
+static PartmoveArray NeutronGeneratePartmoves(Position position) {
+    // Unhash
+    char board[kBoardSize + 1];
+    Unhash(position, board);
+    int turn = GetTurn(position);
+
+    return NeutronGeneratePartmovesInternal(position, board, turn);
+}
+
+static const UwapiRegular kNeutronUwapiRegular = {
+    .GenerateMoves = NeutronGenerateMoves,
+    .DoMove = NeutronDoMove,
+    .Primitive = NeutronPrimitive,
+
+    .IsLegalFormalPosition = NeutronIsLegalFormalPosition,
+    .FormalPositionToPosition = NeutronFormalPositionToPosition,
+    .PositionToFormalPosition = NeutronPositionToFormalPosition,
+    .PositionToAutoGuiPosition = NeutronPositionToAutoGuiPosition,
+    .MoveToFormalMove = NeutronMoveToFormalMove,
+    .MoveToAutoGuiMove = NeutronMoveToAutoGuiMove,
+    .GetInitialPosition = NeutronGetInitialPosition,
+    .GeneratePartmoves = NeutronGeneratePartmoves,
+    .GetRandomLegalPosition = NULL,  // Not available for this game.
+};
+
+static const Uwapi kNeutronUwapi = {.regular = &kNeutronUwapiRegular};
+
+// ================================ NeutronInit ================================
+
 static int NeutronInit(void *aux) {
     (void)aux;  // Unused.
     GenericHashReinitialize();
@@ -736,10 +988,14 @@ static int NeutronInit(void *aux) {
     return kNoError;
 }
 
+// ============================== NeutronFinalize ==============================
+
 static int NeutronFinalize(void) {
     PositionHashSetDestroy(&kChildrenOfInitialPosition);
     return kNoError;
 }
+
+// ================================= kNeutron =================================
 
 /** @brief Neutron */
 const Game kNeutron = {
@@ -748,11 +1004,11 @@ const Game kNeutron = {
     .solver = &kRegularSolver,
     .solver_api = &kNeutronSolverApi,
     .gameplay_api = &kNeutronGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kNeutronUwapi,
 
     .Init = NeutronInit,
     .Finalize = NeutronFinalize,
 
-    .GetCurrentVariant = NULL,  // No other variants
-    .SetVariantOption = NULL,   // No other variants
+    .GetCurrentVariant = NULL,  // No other variants for now
+    .SetVariantOption = NULL,   // No other variants for now
 };
