@@ -61,7 +61,8 @@ static json_object *JsonCreateBasicPositionObject(const Game *game,
 static json_object *JsonCreateChildPositionObject(const Game *game,
                                                   Position parent, Move move);
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj);
+    const Game *game, Position position, json_object *moves_array_obj,
+    json_object *partmoves_array_obj);
 
 static int JsonPrintTierPositionResponse(const Game *game,
                                          TierPosition tier_position);
@@ -135,9 +136,9 @@ static int InitAndCheckGame(ReadOnlyString game_name, int variant_id,
     bool implements_regular = ImplementsRegularUwapi(game);
     bool implements_tier = ImplementsTierUwapi(game);
     if (!implements_regular && !implements_tier) {
-        fprintf(
-            stderr,
-            "missing UWAPI function definition, check the game implementation\n");
+        fprintf(stderr,
+                "missing UWAPI function definition, check the game "
+                "implementation\n");
         return kNotImplementedError;
     }
 
@@ -335,7 +336,8 @@ static MoveArray GetMovesFromPosition(const Game *game, Position position) {
     return moves;
 }
 
-static PartmoveArray GetPartmovesFromPosition(const Game *game, Position position) {
+static PartmoveArray GetPartmovesFromPosition(const Game *game,
+                                              Position position) {
     PartmoveArray partmoves;
     if (game->uwapi->regular->GeneratePartmoves == NULL) {
         // Multipart moves not implemented.
@@ -399,8 +401,8 @@ static int JsonPrintPositionResponse(const Game *game, Position position) {
         partmove_edge_obj = NULL;
     }
 
-    parent_obj =
-        JsonCreateParentPositionObject(game, position, moves_array_obj);
+    parent_obj = JsonCreateParentPositionObject(game, position, moves_array_obj,
+                                                partmoves_array_obj);
     if (parent_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -482,12 +484,14 @@ static json_object *JsonCreateChildPositionObject(const Game *game,
 }
 
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj) {
+    const Game *game, Position position, json_object *moves_array_obj,
+    json_object *partmoves_array_obj) {
     //
     json_object *ret = JsonCreateBasicPositionObject(game, position);
     if (ret == NULL) return NULL;
 
     int error = HeadlessJsonAddMovesArray(ret, moves_array_obj);
+    error |= HeadlessJsonAddPartmovesArray(ret, partmoves_array_obj);
     if (error) {
         json_object_put(ret);
         return NULL;
