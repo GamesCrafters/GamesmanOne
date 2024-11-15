@@ -162,9 +162,9 @@ typedef struct UwapiRegular {
     /**
      * @brief Returns the AutoGUI move as a dynamically allocated CString
      * corresponding to the given MOVE at the given POSITION if MOVE is a
-     * full-move. Returns \c kNullCString if MOVE is a part-move. Returns \c
-     * kErrorCString if an error occurred. Note that all moves are full moves if
-     * the game does not implement multipart moves.
+     * single-part move. Returns \c kNullCString if MOVE is a multipart move.
+     * Returns \c kErrorCString if an error occurred. Note that all moves are
+     * single-part if the game does not implement multipart moves.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
