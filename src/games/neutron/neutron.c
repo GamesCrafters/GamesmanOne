@@ -806,10 +806,13 @@ static ConstantReadOnlyString kBoardIndexToLegend[] = {
 };
 
 static CString NeutronMoveToFormalMove(Position position, Move move) {
+    (void)position;  // Unused.
+
     // The following logic works for both part-moves and full-moves.
     char buffer[12];
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
+        assert(m.unpacked.p_src >= 0);
         sprintf(buffer, "%s %s", kBoardIndexToLegend[m.unpacked.p_src],
                 kDirectionStr[m.unpacked.p_dir]);
     } else if (m.unpacked.p_src < 0) {  // No piece move
@@ -825,22 +828,38 @@ static CString NeutronMoveToFormalMove(Position position, Move move) {
     return ret;
 }
 
-static int SrcDirToDestCenter(int8_t src, int8_t dir) {
-    return ((int)src) * 8 + dir;  // Prevent overflow
+static int GetMoveDestination(const char board[kBoardSize], int8_t src,
+                              int8_t dir) {
+    int8_t row = src / kBoardCols;
+    int8_t col = src % kBoardCols;
+    int8_t row_off = kDirections[dir][0];
+    int8_t col_off = kDirections[dir][1];
+    while (OnBoard(row + row_off, col + col_off) &&
+           board[ToIndex(row + row_off, col + col_off)] == '-') {
+        row += row_off;
+        col += col_off;
+    }
+
+    return ToIndex(row, col);
 }
 
 static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
-    (void)position;  // Unused.
     static const char kSoundChar = 'x';
+
+    // Unhash
+    char board[kBoardSize];
+    if (!Unhash(position, board)) return kNullCString;
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move.
         return AutoGuiMakeMoveM(
             m.unpacked.p_src,
-            SrcDirToDestCenter(m.unpacked.p_src, m.unpacked.p_dir), kSoundChar);
+            GetMoveDestination(board, m.unpacked.p_src, m.unpacked.p_dir),
+            kSoundChar);
     } else if (m.unpacked.p_src < 0) {  // No piece move.
         return AutoGuiMakeMoveM(
             m.unpacked.n_src,
-            SrcDirToDestCenter(m.unpacked.n_src, m.unpacked.n_dir), kSoundChar);
+            GetMoveDestination(board, m.unpacked.n_src, m.unpacked.n_dir),
+            kSoundChar);
     } else {  // A full multipart move does not have a AutoGUI string.
         return kNullCString;
     }
@@ -858,17 +877,16 @@ static CString AddNeutronPartmove(Position pos,
     CString autogui_move = NeutronMoveToAutoGuiMove(pos, m.hashed);
     CString formal_move = NeutronMoveToFormalMove(pos, m.hashed);
     CString to = AutoGuiMakePosition(turn, board);
-    int ret = PartmoveArrayEmplaceBack(partmoves, autogui_move.str,
-                                       formal_move.str, NULL, to.str, NULL);
+    PartmoveArrayEmplaceBack(partmoves, autogui_move.str, formal_move.str, NULL,
+                             to.str, NULL);
     CStringDestroy(&autogui_move);
     CStringDestroy(&formal_move);
 
     return to;
 }
 
-static void AddPiecePartmove(Position pos, const char board[kBoardSize + 1],
-                             const CString *from, int8_t n_src, int8_t n_dir,
-                             int8_t p_src, int8_t p_dir,
+static void AddPiecePartmove(Position pos, const CString *from, int8_t n_src,
+                             int8_t n_dir, int8_t p_src, int8_t p_dir,
                              PartmoveArray *partmoves) {
     NeutronMove m = kNeutronMoveInit;
     m.unpacked.p_src = p_src;
@@ -895,8 +913,7 @@ static void GeneratePiecePartmoves(Position pos,
         if (board[i] != piece_to_move) continue;
         for (int8_t dir = 0; dir < 8; ++dir) {
             if (CanMoveInDirection(board, i, dir)) {
-                AddPiecePartmove(pos, board, from, n_src, n_dir, i, dir,
-                                 partmoves);
+                AddPiecePartmove(pos, from, n_src, n_dir, i, dir, partmoves);
             }
         }
     }
@@ -920,15 +937,16 @@ static PartmoveArray NeutronGeneratePartmovesInternal(
 
         // If cannot move the neutron in this direction, skip it.
         if (dest == n_src) continue;
-        // If game is already over after the current neutron move, then the move
-        // is also a full move. Skip it.
-        if (IsInHomeRows(dest)) continue;
 
-        CString intermediate =
-            AddNeutronPartmove(pos, board, turn, n_src, n_dir, &ret);
-        GeneratePiecePartmoves(pos, board, turn, &intermediate, n_src, n_dir,
-                               &ret);
-        CStringDestroy(&intermediate);
+        // If game is already over after the current neutron move, then the move
+        // is also a full move, which should be skipped by this function.
+        if (!IsInHomeRows(dest)) {
+            CString intermediate =
+                AddNeutronPartmove(pos, board, turn, n_src, n_dir, &ret);
+            GeneratePiecePartmoves(GenericHashHash(board, turn), board, turn,
+                                   &intermediate, n_src, n_dir, &ret);
+            CStringDestroy(&intermediate);
+        }
 
         // Revert the neutron move. Safe to assume that n_src != dest.
         board[n_src] = 'N';
@@ -940,7 +958,7 @@ static PartmoveArray NeutronGeneratePartmovesInternal(
 
 static PartmoveArray NeutronGeneratePartmoves(Position position) {
     // Unhash
-    char board[kBoardSize + 1];
+    char board[kBoardSize + 1] = {0};
     Unhash(position, board);
     int turn = GetTurn(position);
 
