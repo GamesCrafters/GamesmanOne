@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm implementation.
- * @version 1.0.0
- * @date 2024-09-05
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -390,17 +390,20 @@ static void Step3Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              intptr_t memlimit, bool force, bool compare,
+                              intptr_t memlimit,
+                              const TierWorkerSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
-    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) goto _done;
+    if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+        goto _done;
+    }
 
     /* Immediate transition main algorithm. */
     if (!Step0Initialize(api, tier, memlimit)) goto _bailout;
     if (!Step1Iterate()) goto _bailout;
     Step2FlushDb();
-    if (compare && !CompareDb()) goto _bailout;
+    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
 
 _done:

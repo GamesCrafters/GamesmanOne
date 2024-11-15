@@ -470,7 +470,8 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
         total_size += largest_child_size;
     } else {
         for (int64_t i = 0; i < canonical_children.size; ++i) {
-            total_size += api_internal->GetTierSize(canonical_children.array[i]);
+            total_size +=
+                api_internal->GetTierSize(canonical_children.array[i]);
         }
     }
     TierArrayDestroy(&canonical_children);
@@ -527,7 +528,7 @@ static int GetMethodForTierType(TierType type) {
             return kTierWorkerSolveMethodBackwardInduction;
 
         case kTierTypeLoopy:
-            return kTierWorkerSolveMethodBackwardInduction;
+            return kTierWorkerSolveMethodValueIteration;
     }
 
     NotReached("GetMethodForTierType: unknown tier type");
@@ -536,6 +537,11 @@ static int GetMethodForTierType(TierType type) {
 
 #ifndef USE_MPI
 static int SolveTierGraph(bool force, int verbose) {
+    TierWorkerSolveOptions options = {
+        .compare = false,
+        .force = force,
+        .verbose = verbose,
+    };
     double time_elapsed = 0.0;
     if (verbose > 0) {
         printf("Begin solving all %" PRId64 " tiers (%" PRId64
@@ -549,8 +555,8 @@ static int SolveTierGraph(bool force, int verbose) {
             time_t begin = time(NULL);
             bool solved;
             TierType type = api_internal->GetTierType(tier);
-            int error = TierWorkerSolve(GetMethodForTierType(type), tier, force,
-                                        false, &solved);
+            int error = TierWorkerSolve(GetMethodForTierType(type), tier,
+                                        &options, &solved);
             if (error == 0) {
                 // Solve succeeded.
                 SolveUpdateTierGraph(tier);
@@ -996,7 +1002,8 @@ static void PrintTierGraphAnalysis(void) {
     for (int64_t i = 0; i < children.size; ++i) {
         api_internal->GetTierName(children.array[i], name);
         printf("[%s] (#%" PRITier "), ", name, children.array[i]);
-        const Tier canonical = api_internal->GetCanonicalTier(children.array[i]);
+        const Tier canonical =
+            api_internal->GetCanonicalTier(children.array[i]);
         api_internal->GetTierName(canonical, name);
         if (TierHashSetContains(&dedup, canonical)) {
             printf("which is already loaded as [%s] (#%" PRITier ")\n", name,

@@ -9,8 +9,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.4.0
- * @date 2024-09-07
+ * @version 1.5.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,7 +52,7 @@ static intptr_t mem;
 #include "core/solvers/tier_solver/tier_mpi.h"
 #endif  // USE_MPI
 
-// -----------------------------------------------------------------------------
+// ============================== TierWorkerInit ==============================
 
 void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
                     intptr_t memlimit) {
@@ -62,20 +62,26 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
     mem = memlimit;
 }
 
-int TierWorkerSolve(int method, Tier tier, bool force, bool compare,
-                    bool *solved) {
+// ============================== TierWorkerSolve ==============================
+
+const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions = {
+    .compare = false,
+    .force = false,
+    .verbose = 1,
+};
+
+int TierWorkerSolve(int method, Tier tier,
+                    const TierWorkerSolveOptions *options, bool *solved) {
+    if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            return TierWorkerSolveITInternal(api_internal, tier, mem, force,
-                                             compare, solved);
-
+            return TierWorkerSolveITInternal(api_internal, tier, mem, options,
+                                             solved);
         case kTierWorkerSolveMethodBackwardInduction:
-            return TierWorkerSolveBIInternal(api_internal,
-                                             current_db_chunk_size, tier, force,
-                                             compare, solved);
-
+            return TierWorkerSolveBIInternal(
+                api_internal, current_db_chunk_size, tier, options, solved);
         case kTierWorkerSolveMethodValueIteration:
-            return TierWorkerSolveVIInternal(api_internal, tier, force, compare,
+            return TierWorkerSolveVIInternal(api_internal, tier, options,
                                              solved);
         default:
             break;

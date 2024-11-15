@@ -297,8 +297,14 @@ static int RegularSolverSolve(void *aux) {
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &default_options;
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+
+    TierWorkerSolveOptions tier_worker_options = {
+        .compare = false,
+        .force = options->force,
+        .verbose = options->verbose,
+    };
     int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
-                                kDefaultTier, options->force, false, NULL);
+                                kDefaultTier, &tier_worker_options, NULL);
     if (error != kNoError) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
                 error);

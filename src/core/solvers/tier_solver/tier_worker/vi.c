@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.3
- * @date 2024-11-12
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -69,6 +69,9 @@ typedef struct {
 // Reference to the set of tier solver API functions for the current game.
 static const TierSolverApi *api_internal;
 
+// Level of verbosity.
+static int verbose;
+
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
 
@@ -124,9 +127,11 @@ static double GetCheckpointSaveCostEstimate(void) {
                kTypicalHDDSpeed;
 }
 
-static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
+static bool Step0Initialize(const TierSolverApi *api, Tier tier,
+                            int verbosity) {
     api_internal = api;
     this_tier = tier;
+    verbose = verbosity;
     if (!Step0_0SetupChildTiers()) return false;
 
     this_tier_size = api_internal->GetTierSize(tier);
@@ -185,10 +190,10 @@ static bool Step1LoadChildren(void) {
  */
 static bool Step2SetupSolvingTier(CheckpointStatus *ct) {
     if (DbManagerCheckpointExists(this_tier)) {
-        PrintfAndFlush("Loading checkpoint...");
+        if (verbose > 1) PrintfAndFlush("Loading checkpoint...");
         int error =
             DbManagerCheckpointLoad(this_tier, this_tier_size, ct, sizeof(*ct));
-        puts(error == kNoError ? "done" : "failed");
+        if (verbose > 1) puts(error == kNoError ? "done" : "failed");
         return (error == kNoError);
     }
 
@@ -206,7 +211,7 @@ static bool IsCanonicalPosition(Position position) {
 }
 
 static void Step3ScanTier(void) {
-    PrintfAndFlush("Value iteration: scanning tier... ");
+    if (verbose > 1) PrintfAndFlush("Value iteration: scanning tier... ");
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         TierPosition tier_position = {.tier = this_tier, .position = pos};
@@ -225,7 +230,7 @@ static void Step3ScanTier(void) {
             DbManagerSetRemoteness(pos, 0);
         }  // Otherwise, do nothing.
     }
-    puts("done");
+    if (verbose > 1) puts("done");
 }
 
 // ------------------------------- Step4Iterate -------------------------------
@@ -315,16 +320,19 @@ static bool Step4_0IterateWinLose(int initial_remoteness) {
     ConcurrentBoolInit(&updated, true);
     ConcurrentBoolInit(&failed, false);
 
-    PrintfAndFlush("Value iteration: begin iterations for W/L positions");
-    int i;
-    for (i = 1; i < initial_remoteness; ++i) {
-        printf(".");  // Restore previous progress from checkpoint.
+    int i = initial_remoteness;
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin iterations for W/L positions");
+        for (i = 1; i < initial_remoteness; ++i) {
+            printf(".");  // Restore previous progress bar from checkpoint.
+        }
+        fflush(stdout);
     }
-    fflush(stdout);
+
     while (ConcurrentBoolLoad(&updated) || i <= max_win_lose_remoteness + 1) {
         // Save a checkpoint if needed.
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
-        PrintfAndFlush(checkpoint ? "," : ".");
+        if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
             if (CheckpointSave(kIteratingWinLose, i) != kNoError) return false;
             prev_checkpoint = time(NULL);
@@ -343,7 +351,7 @@ static bool Step4_0IterateWinLose(int initial_remoteness) {
         if (ConcurrentBoolLoad(&failed)) return false;
         ++i;
     }
-    puts("done");
+    if (verbose > 1) puts("done");
 
     return true;
 }
@@ -387,16 +395,19 @@ static bool Step4_1IterateTie(int initial_remoteness) {
     ConcurrentBoolInit(&updated, true);
     ConcurrentBoolInit(&failed, false);
 
-    PrintfAndFlush("Value iteration: begin iterations for T positions");
-    int i;
-    for (i = 1; i < initial_remoteness; ++i) {
-        printf(".");  // Restore previous progress from checkpoint.
+    int i = initial_remoteness;
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin iterations for T positions");
+        for (i = 1; i < initial_remoteness; ++i) {
+            printf(".");  // Restore previous progress from checkpoint.
+        }
+        fflush(stdout);
     }
-    fflush(stdout);
+
     while (ConcurrentBoolLoad(&updated) || i <= max_tie_remoteness + 1) {
         // Save a checkpoint if needed.
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
-        PrintfAndFlush(checkpoint ? "," : ".");
+        if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
             if (CheckpointSave(kIteratingTie, i) != kNoError) return false;
             prev_checkpoint = time(NULL);
@@ -415,7 +426,7 @@ static bool Step4_1IterateTie(int initial_remoteness) {
         if (ConcurrentBoolLoad(&failed)) return false;
         ++i;
     }
-    puts("done");
+    if (verbose > 1) puts("done");
 
     return true;
 }
@@ -450,7 +461,10 @@ static bool Step5MarkDrawPositions(void) {
         prev_checkpoint = time(NULL);
     }
 
-    PrintfAndFlush("Value iteration: begin marking D positions... ");
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin marking D positions... ");
+    }
+
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         Value val = DbManagerGetValue(pos);
@@ -460,7 +474,7 @@ static bool Step5MarkDrawPositions(void) {
             DbManagerSetValue(pos, kUndecided);
         }
     }
-    puts("done");
+    if (verbose > 1) puts("done");
 
     return true;
 }
@@ -468,7 +482,7 @@ static bool Step5MarkDrawPositions(void) {
 // ------------------------------- Step6FlushDb -------------------------------
 
 static void Step6FlushDb(void) {
-    PrintfAndFlush("Value iteration: flusing DB... ");
+    if (verbose > 1) PrintfAndFlush("Value iteration: flusing DB... ");
     if (DbManagerFlushSolvingTier(NULL) != 0) {
         fprintf(stderr,
                 "Step6FlushDb: an error has occurred while flushing of the "
@@ -482,7 +496,7 @@ static void Step6FlushDb(void) {
                 "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
-    puts("done");
+    if (verbose > 1) puts("done");
 }
 
 // --------------------------------- CompareDb ---------------------------------
@@ -553,17 +567,18 @@ static bool Step7Cleanup(void) {
 // ------------------------- TierWorkerSolveVIInternal -------------------------
 // -----------------------------------------------------------------------------
 
-int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier, bool force,
-                              bool compare, bool *solved) {
+int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
+                              const TierWorkerSolveOptions *options,
+                              bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
-    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+    if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
         ret = kNoError;  // Success.
         goto _bailout;
     }
 
     /* Value Iteration main algorithm. */
-    if (!Step0Initialize(api, tier)) goto _bailout;
+    if (!Step0Initialize(api, tier, options->verbose)) goto _bailout;
     if (!Step1LoadChildren()) goto _bailout;
     CheckpointStatus ct = {.step = kNotStarted, .remoteness = -1};
     if (!Step2SetupSolvingTier(&ct)) goto _bailout;
@@ -575,7 +590,7 @@ int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier, bool force,
     }
     if (!Step5MarkDrawPositions()) goto _bailout;
     Step6FlushDb();
-    if (compare && !CompareDb()) goto _bailout;
+    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
     ret = kNoError;  // Success.
 

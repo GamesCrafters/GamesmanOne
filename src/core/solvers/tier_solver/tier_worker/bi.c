@@ -8,8 +8,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.0.1
- * @date 2024-09-07
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,9 +41,9 @@
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
+#include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/frontier.h"
 #include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
-#include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
@@ -749,11 +749,11 @@ static void Step7Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveBIInternal(const TierSolverApi *api, int64_t db_chunk_size,
-                              Tier tier, bool force, bool compare,
+                              Tier tier, const TierWorkerSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
-    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+    if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
         ret = kNoError;  // Success.
         goto _bailout;
     }
@@ -766,7 +766,7 @@ int TierWorkerSolveBIInternal(const TierSolverApi *api, int64_t db_chunk_size,
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();
     Step6SaveValues();
-    if (compare && !CompareDb()) goto _bailout;
+    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
     ret = kNoError;  // Success.
 
