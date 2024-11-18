@@ -32,9 +32,9 @@ static int PartmoveArrayExpand(PartmoveArray *pa) {
     return 0;
 }
 
-int PartmoveArrayEmplaceBack(PartmoveArray *pa, const char *autogui_move,
-                             const char *formal_move, const char *from,
-                             const char *to, const char *full) {
+int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
+                             CString *formal_move, CString *from, CString *to,
+                             CString *full) {
     // Make sure there is enough space for the new entry in PA.
     if (pa->size == pa->capacity) {
         int error = PartmoveArrayExpand(pa);
@@ -42,11 +42,11 @@ int PartmoveArrayEmplaceBack(PartmoveArray *pa, const char *autogui_move,
     }
     assert(pa->size < pa->capacity);
 
-    CStringInitCopy(&pa->array[pa->size].autogui_move, autogui_move);
-    CStringInitCopy(&pa->array[pa->size].formal_move, formal_move);
-    CStringInitCopy(&pa->array[pa->size].from, from);
-    CStringInitCopy(&pa->array[pa->size].to, to);
-    CStringInitCopy(&pa->array[pa->size].full, full);
+    CStringInitMove(&pa->array[pa->size].autogui_move, autogui_move);
+    CStringInitMove(&pa->array[pa->size].formal_move, formal_move);
+    CStringInitMove(&pa->array[pa->size].from, from);
+    CStringInitMove(&pa->array[pa->size].to, to);
+    CStringInitMove(&pa->array[pa->size].full, full);
     ++pa->size;
 
     return kNoError;

@@ -772,7 +772,7 @@ static CString NeutronPositionToFormalPosition(Position position) {
     // Special case for the initial position.
     if (position == kInitialPosition) {
         CString ret;
-        CStringInitCopy(&ret, "I");
+        CStringInitCopyCharArray(&ret, "I");
         return ret;
     }
 
@@ -823,7 +823,7 @@ static CString NeutronMoveToFormalMove(Position position, Move move) {
                 kDirectionStr[m.unpacked.p_dir]);
     }
     CString ret;
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -877,10 +877,10 @@ static CString AddNeutronPartmove(Position pos,
     CString autogui_move = NeutronMoveToAutoGuiMove(pos, m.hashed);
     CString formal_move = NeutronMoveToFormalMove(pos, m.hashed);
     CString to = AutoGuiMakePosition(turn, board);
-    PartmoveArrayEmplaceBack(partmoves, autogui_move.str, formal_move.str, NULL,
-                             to.str, NULL);
-    CStringDestroy(&autogui_move);
-    CStringDestroy(&formal_move);
+    CString to_copy;
+    CStringInitCopy(&to_copy, &to);
+    PartmoveArrayEmplaceBack(partmoves, &autogui_move, &formal_move, NULL,
+                             &to_copy, NULL);
 
     return to;
 }
@@ -897,11 +897,10 @@ static void AddPiecePartmove(Position pos, const CString *from, int8_t n_src,
     m.unpacked.n_src = n_src;
     m.unpacked.n_dir = n_dir;
     CString full = NeutronMoveToFormalMove(pos, m.hashed);
-    PartmoveArrayEmplaceBack(partmoves, autogui_move.str, formal_move.str,
-                             from->str, NULL, full.str);
-    CStringDestroy(&autogui_move);
-    CStringDestroy(&formal_move);
-    CStringDestroy(&full);
+    CString from_copy;
+    CStringInitCopy(&from_copy, from);
+    PartmoveArrayEmplaceBack(partmoves, &autogui_move, &formal_move,
+                             &from_copy, NULL, &full);
 }
 
 static void GeneratePiecePartmoves(Position pos,
@@ -1002,6 +1001,7 @@ static int NeutronInit(void *aux) {
         Position child = NeutronDoMove(kInitialPosition, moves.array[i]);
         PositionHashSetAdd(&kChildrenOfInitialPosition, child);
     }
+    MoveArrayDestroy(&moves);
 
     return kNoError;
 }

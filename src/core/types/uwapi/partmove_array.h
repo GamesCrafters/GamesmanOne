@@ -3,6 +3,7 @@
 
 #include <stdint.h>  // int64_t
 
+#include "core/data_structures/cstring.h"
 #include "core/types/uwapi/partmove.h"
 
 typedef struct PartmoveArray {
@@ -14,8 +15,8 @@ typedef struct PartmoveArray {
 void PartmoveArrayInit(PartmoveArray *pa);
 void PartmoveArrayDestroy(PartmoveArray *pa);
 
-int PartmoveArrayEmplaceBack(PartmoveArray *pa, const char *autogui_move,
-                             const char *formal_move, const char *from,
-                             const char *to, const char *full);
+int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
+                             CString *formal_move, CString *from, CString *to,
+                             CString *full);
 
 #endif  // GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_ARRAY_H
