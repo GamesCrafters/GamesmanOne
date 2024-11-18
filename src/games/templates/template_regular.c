@@ -361,7 +361,7 @@ static Position TemplateRegularFormalPositionToPosition(
 static CString TemplateRegularPositionToFormalPosition(Position position) {
     // TODO
     CString formal_position;
-    CStringInitCopy(&formal_position, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&formal_position, "");  // This creates an empty CString.
 
     return formal_position;
 }
@@ -369,7 +369,7 @@ static CString TemplateRegularPositionToFormalPosition(Position position) {
 static CString TemplateRegularPositionToAutoGuiPosition(Position position) {
     // TODO
     CString autogui_position;
-    CStringInitCopy(&autogui_position, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&autogui_position, "");  // This creates an empty CString.
 
     return autogui_position;
 }
@@ -377,7 +377,7 @@ static CString TemplateRegularPositionToAutoGuiPosition(Position position) {
 static CString TemplateRegularMoveToFormalMove(Position position, Move move) {
     // TODO
     CString formal_move;
-    CStringInitCopy(&formal_move, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&formal_move, "");  // This creates an empty CString.
 
     return formal_move;
 }
@@ -385,7 +385,7 @@ static CString TemplateRegularMoveToFormalMove(Position position, Move move) {
 static CString TemplateRegularMoveToAutoGuiMove(Position position, Move move) {
     // TODO
     CString autogui_move;
-    CStringInitCopy(&autogui_move, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&autogui_move, "");  // This creates an empty CString.
 
     return autogui_move;
 }

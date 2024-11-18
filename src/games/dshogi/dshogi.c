@@ -809,7 +809,7 @@ static CString DobutsuShogiPositionToFormalPosition(Position position) {
     }
 
     CString ret;
-    CStringInitCopy(&ret, formal_position);
+    CStringInitCopyCharArray(&ret, formal_position);
 
     return ret;
 }
@@ -845,7 +845,7 @@ static CString DobutsuShogiPositionToAutoGuiPosition(Position position) {
     }
 
     CString ret;
-    CStringInitCopy(&ret, autogui_position);
+    CStringInitCopyCharArray(&ret, autogui_position);
 
     return ret;
 }
@@ -870,7 +870,7 @@ static CString DobutsuShogiMoveToFormalMove(Position position, Move move) {
     char buffer[kInt32Base10StringLengthMax + 5];
     sprintf(buffer, "%s %s", src_str, kFormalMoveMap[dest]);
     CString ret;
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -888,7 +888,7 @@ static CString DobutsuShogiMoveToAutoGuiMove(Position position, Move move) {
         int center = (src - kBoardSize) * kBoardSize + dest + kBoardSize + 6;
         sprintf(autogui_move, "A_%d_%d_y", src - kBoardSize, center);
     }
-    CStringInitCopy(&ret, autogui_move);
+    CStringInitCopyCharArray(&ret, autogui_move);
 
     return ret;
 }

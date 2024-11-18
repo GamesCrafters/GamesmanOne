@@ -940,7 +940,7 @@ static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
     char buf[2 + 2 * kInt32Base10StringLengthMax];
     sprintf(buf, "%d %d", src, dest);
     CString ret;
-    CStringInitCopy(&ret, buf);
+    CStringInitCopyCharArray(&ret, buf);
 
     return ret;
 }
@@ -973,7 +973,7 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     char buf[16];
     sprintf(buf, "M_%d_%d_x", src, dest_center);
     CString ret;
-    CStringInitCopy(&ret, buf);
+    CStringInitCopyCharArray(&ret, buf);
 
     return ret;
 }

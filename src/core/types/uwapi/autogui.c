@@ -55,7 +55,7 @@ CString AutoGuiMakeMoveA(char token, int center, char sound) {
     } else {
         sprintf(buffer, "A_%c_%d", token, center);
     }
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -68,7 +68,7 @@ CString AutoGuiMakeMoveM(int src, int dest, char sound) {
     } else {
         sprintf(buffer, "M_%d_%d", src, dest);
     }
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -81,7 +81,7 @@ CString AutoGuiMakeMoveL(int src, int dest, char sound) {
     } else {
         sprintf(buffer, "L_%d_%d", src, dest);
     }
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -96,7 +96,7 @@ CString AutoGuiMakeMoveT(ReadOnlyString text, int center, char sound) {
     } else {
         sprintf(buffer, "T_%s_%d", text, center);
     }
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
     free(buffer);
 
     return ret;

@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array) implementation.
- * @version 2.0.0
- * @date 2024-04-07
+ * @version 3.0.0
+ * @date 2024-11-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -53,7 +53,23 @@ bool CStringInitEmpty(CString *cstring) {
     return true;
 }
 
-bool CStringInitCopy(CString *cstring, const char *src) {
+bool CStringInitCopy(CString *init, const CString *other) {
+    if (other == NULL) {
+        *init = kNullCString;
+        return true;
+    }
+
+    init->str = (char *)malloc(other->capacity);
+    if (init->str == NULL) return false;
+
+    strcpy(init->str, other->str);
+    init->length = other->length;
+    init->capacity = other->capacity;
+
+    return true;
+}
+
+bool CStringInitCopyCharArray(CString *cstring, const char *src) {
     if (src == NULL) {
         *cstring = kNullCString;
         return true;
@@ -66,7 +82,18 @@ bool CStringInitCopy(CString *cstring, const char *src) {
     strcpy(cstring->str, src);
     cstring->length = length;
     cstring->capacity = length + 1;
+    
     return true;
+}
+
+void CStringInitMove(CString *init, CString *other) {
+    if (other == NULL) {
+        *init = kNullCString;
+        return;
+    }
+
+    *init = *other;
+    memset(other, 0, sizeof(*other));
 }
 
 void CStringDestroy(CString *cstring) {

@@ -595,7 +595,7 @@ static CString TeekoTierPositionToFormalPosition(TierPosition tier_position) {
     GenericHashUnhashLabel(tier_position.tier, tier_position.position,
                            formal_position + 2);
     CString ret;
-    CStringInitCopy(&ret, formal_position);
+    CStringInitCopyCharArray(&ret, formal_position);
 
     return ret;
 }
@@ -614,7 +614,7 @@ static CString TeekoMoveToFormalMove(TierPosition tier_position, Move move) {
         ExpandMove(move, &src, &dest);
         sprintf(formal_move, "%d %d", src, dest);
     }
-    CStringInitCopy(&ret, formal_move);
+    CStringInitCopyCharArray(&ret, formal_move);
 
     return ret;
 }
@@ -629,7 +629,7 @@ static CString TeekoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
         ExpandMove(move, &src, &dest);
         sprintf(autogui_move, "M_%d_%d_x", src, dest);
     }
-    CStringInitCopy(&ret, autogui_move);
+    CStringInitCopyCharArray(&ret, autogui_move);
 
     return ret;
 }
