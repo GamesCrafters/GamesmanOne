@@ -835,3 +835,137 @@ static void UnhashMove(Move move, int *from, int *to)
     *from = move >> 5;
     *to = move & 0x1F;
 }
+
+
+/////////////////////////UWAPI Set-up//////////////////////////
+
+static const UwapiRegular kKaooaUwapiRegular = {
+    .GenerateMoves = MkaooaGenerateMoves,
+    .DoMove = MkaooaDoMove,
+    .Primitive = MkaooaPrimitive,
+
+    .IsLegalFormalPosition = KaooaIsLegalFormalPosition,
+    .FormalPositionToPosition = KaooaFormalPositionToPosition,
+    .PositionToFormalPosition = KaooaPositionToFormalPosition,
+    .PositionToAutoGuiPosition = KaooaPositionToAutoGuiPosition,
+    .MoveToFormalMove = KaooaMoveToFormalMove,
+    .MoveToAutoGuiMove = KaooaMoveToAutoGuiMove,
+    .GetInitialPosition = MkaooaGetInitialPosition,
+    .GetRandomLegalPosition = NULL,  // Not available for this game.
+};
+
+static const Uwapi kKaooaUwapi = {.regular = &kKaooaUwapiRegular};
+
+// C -> 0, V -> 1 , all others mapped to -1. Initialized by InitPieceToIndex. 
+static int8_t kPieceToIndex[1];
+
+static void InitPieceToIndex(void) {
+    kPieceToIndex[(int)'C'] = 0;
+    kPieceToIndex[(int)'V'] = 1;
+}
+
+static bool KaooaIsValidConfig(const int *config) {
+    if (config[0] < 0 || config[0] > 6){
+        //Max 6 crows (for now).
+        return false;
+    } else if (config[1] < 0 || config[1] > 1) {
+        //Max 1 vulture
+        return false;
+    }
+    return true;
+}
+
+static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
+    // String length must match regular format.
+    //TODO: Formal position str length --> 10? 18?
+    // if (strlen(formal_position) != kKaooaFormalPositionStrlen) {
+    //     return false;
+    // }
+
+    // The first char must be either 1 or 2.
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+
+    int config[11] = {0};
+    char board[boardSize];
+    for (int i = 0; i < boardSize; ++i) {
+        board[i] = formal_position[i + 2];
+        // Each board piece char must be valid.
+        if (kPieceToIndex[(int)board[i]] < 0) return false;
+        ++config[kPieceToIndex[(int)board[i]]];
+    }
+    //TODO: Don't think this is needed?
+    // for (int i = kBoardSize; i < kBoardStrSize; ++i) {
+    //     board[i] = config[i - 1] = formal_position[i + 3] - '0';
+    // }
+
+    // The piece configuration must be valid.
+    if (!KaooaIsValidConfig(config)) return false;
+
+    // TODO: Check the number of Crow pieces captured by the Vulture player.
+    return true;
+}
+
+static Position KaooaFormalPositionToPosition(
+    ReadOnlyString formal_position) {
+    //
+    char board[11];
+    memcpy(board, formal_position + 2, boardSize);
+
+    return GenericHashHash(board, formal_position[0] - '0');
+}
+
+static CString KaooaPositionToFormalPosition(Position position) {
+    // Unhash
+    char board[11];
+    bool success = GenericHashUnhash(position, board);
+    assert(success);
+    (void)success;
+    int turn = GenericHashGetTurn(position);
+    char formal_position[] = "1_CV--------";  // Placeholder.
+    formal_position[0] = '0' + turn;
+    memcpy(formal_position + 2, board, boardSize);
+
+    CString ret;
+    CStringInitCopy(&ret, formal_position);
+
+    return ret;
+}
+
+// AutoGui position format:
+// """
+// [turn]_[board (10x)]
+// """
+
+
+static CString KaooaPositionToAutoGuiPosition(Position position) {
+    CString ret = KaooaPositionToFormalPosition(position);
+    // AutoGUI currently does not support mapping '-' (the blank piece) to
+    // images. Must use a different character here.
+     for (int64_t i = 0; i < ret.length; ++i) {
+        if (ret.str[i] == '-') ret.str[i] = 'B';
+    }
+
+    return ret;
+}
+
+static void UnpackMove(Move move, int *src, int *dest) {
+    *dest = move % boardSize;
+    *src = move / boardSize;
+}
+
+static CString KaooaMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused;
+    int src, dest;
+    UnpackMove(move, &src, &dest);
+    char buf[2 + 2 * kInt32Base10StringLengthMax];
+    sprintf(buf, "%d %d", src, dest);
+    CString ret;
+    CStringInitCopy(&ret, buf);
+
+    return ret;
+}
+
+static CString KaooaMovetoAutoGuiMove(Position position, Move move){
+    CString ret;
+    return ret;
+}
