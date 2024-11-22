@@ -965,7 +965,7 @@ static CString KaooaMoveToFormalMove(TierPosition tier_position, Move move) {
     return ret;
 }
 
-static CString KaooaMovetoAutoGuiMove(Position position, Move move){
+static CString KaooaMoveToAutoGuiMove(Position position, Move move){
     CString ret;
     return ret;
 }
