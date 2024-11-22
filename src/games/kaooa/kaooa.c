@@ -163,7 +163,7 @@ static int MkaooaInit(void *aux)
     GenericHashReinitialize();
     // MB TODO: Figure out what this array should be
     // int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1};
-    static const int pieces_init_array[13] = {BLANK, 3, 10, C, 0, 6, V, 0, 1, -2, 0, 6, -1};
+    static const int pieces_init_array[13] = {BLANK, 2, 10, C, 0, 7, V, 0, 1, -2, 0, 7, -1};
     bool success = GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
     if (!success)
     {
@@ -245,7 +245,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
     // NOTE: The following is an example of how possible moves were calculated for a piece in All Queens Chess.
     // You will not need to write as much because pieces in Kaooa generally have much less moves available to them.
     // You do not need to change the code above
-    bool can_drop = board[10] < 6;
+    bool can_drop = board[10] < 7;
     int move_count;
     int *possible_moves;
 
@@ -419,8 +419,8 @@ static Value MkaooaPrimitive(Position position)
 
     // char another_board[boardSize + 1];
     // GenericHashUnhash(position, another_board);
-
-    if (board[10] - count_char_in_board(board, C) >= 3)
+    //     7        -        4            =      4
+    if (board[10] - count_char_in_board(board, C) >= 3) // crows dropped - cur crows = crows eaten
     {
         return kLose;
     }
