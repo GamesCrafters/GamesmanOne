@@ -54,6 +54,9 @@
 #define V 'V'
 #define BLANK '-'
 
+#define MAX_CROW_COUNT 6
+#define MAX_VULTURE_COUNT 1
+
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
 
@@ -163,7 +166,7 @@ static int MkaooaInit(void *aux)
     GenericHashReinitialize();
     // MB TODO: Figure out what this array should be
     // int pieces_init_array[13] = {BLANK, 10, 10, C, 0, 6, V, 0, 1, CROWS_DROPPED_COUNT, 0, 6, -1};
-    static const int pieces_init_array[13] = {BLANK, 3, 10, C, 0, 6, V, 0, 1, -2, 0, 6, -1};
+    static const int pieces_init_array[13] = {BLANK, 3, 10, C, 0, MAX_CROW_COUNT, V, 0, MAX_VULTURE_COUNT, -2, 0, 6, -1};
     bool success = GenericHashAddContext(0, boardSize, pieces_init_array, NULL, 0);
     if (!success)
     {
@@ -856,6 +859,8 @@ static const UwapiRegular kKaooaUwapiRegular = {
 
 static const Uwapi kKaooaUwapi = {.regular = &kKaooaUwapiRegular};
 
+int kKaooaFormalPositionStrlen = 12; 
+
 // C -> 0, V -> 1 , all others mapped to -1. Initialized by InitPieceToIndex. 
 static int8_t kPieceToIndex[1];
 
@@ -864,49 +869,40 @@ static void InitPieceToIndex(void) {
     kPieceToIndex[(int)'V'] = 1;
 }
 
-static bool KaooaIsValidConfig(const int *config) {
-    if (config[0] < 0 || config[0] > 6){
-        //Max 6 crows (for now).
-        return false;
-    } else if (config[1] < 0 || config[1] > 1) {
-        //Max 1 vulture
-        return false;
-    }
-    return true;
-}
+static bool KaooaIsValidConfig(const int *config);
 
 static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     // String length must match regular format.
-    //TODO: Formal position str length --> 10? 18?
-    // if (strlen(formal_position) != kKaooaFormalPositionStrlen) {
-    //     return false;
-    // }
+    // TODO: Formal position str length --> 10? 18?
+    if (strlen(formal_position) != kKaooaFormalPositionStrlen) {
+        return false;
+    }
 
     // The first char must be either 1 or 2.
     if (formal_position[0] != '1' && formal_position[0] != '2') return false;
 
-    int config[11] = {0};
-    char board[boardSize];
-    for (int i = 0; i < boardSize; ++i) {
-        board[i] = formal_position[i + 2];
-        // Each board piece char must be valid.
-        if (kPieceToIndex[(int)board[i]] < 0) return false;
-        ++config[kPieceToIndex[(int)board[i]]];
+    if (formal_position[1] != '-') return false; 
+
+    int c_count = 0; 
+    int v_count = 0; 
+
+    for (int i = 2; i < strlen(formal_position); i++) {
+        if (formal_position[i] != BLANK || formal_position[i] != C || formal_position[i] != V) {
+            return false; 
+        } 
+        if (formal_position[i] == C) {
+            c_count++; 
+        } else if (formal_position[i] == V) {
+            v_count++; 
+        }
     }
-    //TODO: Don't think this is needed?
-    // for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-    //     board[i] = config[i - 1] = formal_position[i + 3] - '0';
-    // }
 
-    // The piece configuration must be valid.
-    if (!KaooaIsValidConfig(config)) return false;
+    if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) return false; 
 
-    // TODO: Check the number of Crow pieces captured by the Vulture player.
     return true;
 }
 
-static Position KaooaFormalPositionToPosition(
-    ReadOnlyString formal_position) {
+static Position KaooaFormalPositionToPosition(ReadOnlyString formal_position) {
     //
     char board[11];
     memcpy(board, formal_position + 2, boardSize);
@@ -938,11 +934,22 @@ static CString KaooaPositionToFormalPosition(Position position) {
 
 
 static CString KaooaPositionToAutoGuiPosition(Position position) {
-    CString ret = KaooaPositionToFormalPosition(position);
-    // AutoGUI currently does not support mapping '-' (the blank piece) to
-    // images. Must use a different character here.
-     for (int64_t i = 0; i < ret.length; ++i) {
-        if (ret.str[i] == '-') ret.str[i] = 'B';
+
+    char board[11];
+    GenericHashUnhash(position, board);
+    CString ret;
+    
+    // if (!CStringInitCopy(&ret, "1_---------")) return ret; // TODO: not sure what this is for
+    ret.str[0] = GenericHashGetTurn(position) - '0';
+
+    for (int i = 0; i < 9; ++i) {
+        if (board[i] == BLANK) {
+            ret.str[i + 2] = '-'; 
+        } else if (board[i] == V) {
+            ret.str[i + 2] = 'x'; 
+        } else {
+            ret.str[i + 2] = 'o'; 
+        }
     }
 
     return ret;
@@ -953,19 +960,21 @@ static void UnpackMove(Move move, int *src, int *dest) {
     *src = move / boardSize;
 }
 
-static CString KaooaMoveToFormalMove(TierPosition tier_position, Move move) {
-    (void)tier_position;  // Unused;
-    int src, dest;
-    UnpackMove(move, &src, &dest);
-    char buf[2 + 2 * kInt32Base10StringLengthMax];
-    sprintf(buf, "%d %d", src, dest);
-    CString ret;
-    CStringInitCopy(&ret, buf);
+static CString KaooaMoveToFormalMove(Position position, Move move) {
+    int from, to;
+    UnhashMove(move, &from, &to);
+
+    CString ret; 
+    ret.str[0] = from - '0'; 
+    ret.str[1] = to - '0'; 
 
     return ret;
 }
 
-static CString KaooaMoveToAutoGuiMove(Position position, Move move){
-    CString ret;
-    return ret;
+static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
+    int from, to;
+    UnhashMove(move, &from, &to);
+
+    CString ret; 
+    
 }
