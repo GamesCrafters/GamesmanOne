@@ -911,78 +911,48 @@ static Position KaooaFormalPositionToPosition(ReadOnlyString formal_position) {
 }
 
 static CString KaooaPositionToFormalPosition(Position position) {
-    // Unhash
-    char board[11];
-    bool success = GenericHashUnhash(position, board);
-    assert(success);
-    (void)success;
-    int turn = GenericHashGetTurn(position);
-    char formal_position[] = "1_CV--------";  // Placeholder.
-    formal_position[0] = '0' + turn;
-    memcpy(formal_position + 2, board, boardSize);
-
-    CString ret;
-    CStringInitCopy(&ret, formal_position);
-
-    return ret;
+    return KaooaPositionToAutoGuiPosition(position);
 }
-
 // AutoGui position format:
 // """
 // [turn]_[board (10x)]
 // """
-
-
 static CString KaooaPositionToAutoGuiPosition(Position position) {
-
     char board[11];
     GenericHashUnhash(position, board);
     CString ret;
-    
-    // if (!CStringInitCopy(&ret, "1_---------")) return ret; // TODO: not sure what this is for
-    ret.str[0] = GenericHashGetTurn(position) - '0';
-
+    char autogui_position[] = "1_CV--------";
+    autogui_position[0] = GenericHashGetTurn(position) - '0';
     for (int i = 0; i < 9; ++i) {
-        if (board[i] == BLANK) {
-            ret.str[i + 2] = '-'; 
-        } else if (board[i] == V) {
-            ret.str[i + 2] = 'x'; 
-        } else {
-            ret.str[i + 2] = 'o'; 
+        if (board[i] == V) {
+            autogui_position[i + 2] = 'x';
+        } else if (board[i] == C) {
+            autogui_position[i + 2] = 'o';
         }
     }
-
+    CStringInitCopy(&ret, autogui_position);
     return ret;
 }
-
 static void UnpackMove(Move move, int *src, int *dest) {
     *dest = move % boardSize;
     *src = move / boardSize;
 }
-
 static CString KaooaMoveToFormalMove(Position position, Move move) {
-    int from, to;
-    UnhashMove(move, &from, &to);
-
-    CString ret; 
-    ret.str[0] = from - '0'; 
-    ret.str[1] = to - '0'; 
-
-    return ret;
+    return KaooaMoveToAutoGuiMove(position, move);
 }
-
 static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     int from, to;
     UnhashMove(move, &from, &to);
-    char autogui_move[5];
-    CString ret; 
-
+    char autogui_move[] = "A_-_3";
+    CString ret;
     if (from == to) {
-        sprintf(autogui_move, "A_-_%d", from);
+        autogui_move[4] = from - '0';
     } else {
-        sprintf(autogui_move, "M_%d_%d", from, to);
+        // sprintf(autogui_move, "M_%d_%d", from, to);
+        autogui_move[0] = 'M';
+        autogui_move[2] = from - '0';
+        autogui_move[4] = to - '0';
     }
-
     CStringInitCopy(&ret, autogui_move);
-    return ret; 
+    return ret;
 }
