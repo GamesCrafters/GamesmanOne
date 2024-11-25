@@ -1,4 +1,6 @@
 
+
+
 /**
  * @file kaooa.c
  * @author Robert Shi (robertyishi@berkeley.edu)
@@ -490,11 +492,18 @@ static int KaooaFinalize(void) { return kNoError; }
 
 static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position); 
 static TierPosition KaooaFormalPositionToPosition(ReadOnlyString formal_position); 
-static CString KaooaPositionToFormalPosition(Position position); 
-static CString KaooaMoveToFormalMove(Position position, Move move); 
+static CString KaooaPositionToFormalPosition(TierPosition position); 
+static CString KaooaMoveToFormalMove(TierPosition position, Move move); 
 
-static CString KaooaPositionToAutoGuiPosition(Position position); 
-static CString KaooaMoveToAutoGuiMove(Position position, Move move); 
+static CString KaooaPositionToAutoGuiPosition(TierPosition position); 
+static CString KaooaMoveToAutoGuiMove(TierPosition position, Move move); 
+
+#define C 'C'
+#define V 'V'
+#define BLANK '-'
+#define MAX_CROW_COUNT 7
+#define MAX_VULTURE_COUNT 1
+#define BOARD_SIZE 10
 
 static const UwapiTier kKaooaUwapiTier = {
     .GetInitialTier = &KaooaGetInitialTier, 
@@ -505,22 +514,21 @@ static const UwapiTier kKaooaUwapiTier = {
     .DoMove = KaooaDoMove,
     .Primitive = KaooaPrimitive,
 
-    .IsLegalFormalPosition = KaooaIsLegalFormalPosition,
-    .FormalPositionToTierPosition = KaooaFormalPositionToPosition,
-    .PositionToFormalPosition = KaooaPositionToFormalPosition,
-    .MoveToFormalMove = KaooaMoveToFormalMove,
+    .IsLegalFormalPosition = KaooaIsLegalFormalPosition, // correct
+    .FormalPositionToTierPosition = KaooaFormalPositionToPosition, // TODO (hopefully not used)
+    .TierPositionToFormalPosition = KaooaPositionToFormalPosition, // Using autogui
+    .MoveToFormalMove = KaooaMoveToFormalMove, // Using autogui
 
-    .PositionToAutoGuiPosition = KaooaPositionToAutoGuiPosition,
+    .TierPositionToAutoGuiPosition = KaooaPositionToAutoGuiPosition,
     .MoveToAutoGuiMove = KaooaMoveToAutoGuiMove,
-    .GetInitialPosition = KaooaGetInitialPosition,
-
-    .GetRandomLegalPosition = NULL,  // Not available for this game.
+    .GetInitialPosition = KaooaGetInitialPosition, // correct
 };
 
 static const Uwapi kKaooaUwapi = {.tier = &kKaooaUwapiTier};
 
+
 static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
-    if (strlen(formal_position) != 12) {
+    if (strlen(formal_position) != BOARD_SIZE + 1) {
         return false;
     }
 
@@ -529,38 +537,140 @@ static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
 
     if (formal_position[1] != '_') return false; 
 
-    // int c_count = 0; 
-    // int v_count = 0; 
+    int c_count = 0; 
+    int v_count = 0; 
 
-    // // for (int i = 2; i < strlen(formal_position); i++) {
-    // //     if (formal_position[i] != BLANK || formal_position[i] != C || formal_position[i] != V) {
-    // //         printf("\nillegal char: %c\n", formal_position[i]); 
-    // //         return false; 
-    // //     } 
-    // //     if (formal_position[i] == C) {
-    // //         c_count++; 
-    // //     } else if (formal_position[i] == V) {
-    // //         v_count++; 
-    // //     }
-    // // }
+    for (int i = 2; i < strlen(formal_position); i++) {
+        if (formal_position[i] != BLANK && formal_position[i] != C && formal_position[i] != V) {
+            return false; 
+        } 
+        if (formal_position[i] == C) {
+            c_count++; 
+        } else if (formal_position[i] == V) {
+            v_count++; 
+        }
+    }
 
-
-    // if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) {
-    //     // printf("\ncond 1: %d\n", c_count > MAX_CROW_COUNT); 
-    //     // printf("\ncond 2: %d\n", v_count > MAX_VULTURE_COUNT); 
-    //     return false; 
-    // }; 
+    if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) {
+        return false; 
+    }; 
 
     return true;
 }
 
 
+static TierPosition KaooaFormalPositionToPosition(ReadOnlyString formal_position) {
+    // char board[11];
+    // memcpy(board, formal_position + 2, boardSize);
+    // return GenericHashHash(board, formal_position[0] - '0');
+
+    // ConstantReadOnlyString board = formal_position + 2;
+    // int turn = formal_position[0] - '0';
+    // int num_blanks = 0, num_c = 0, num_o = 0;
+    // for (int i = 0; i < GetBoardSize(); ++i) {
+    //     num_blanks += (board[i] == kBlank);
+    //     num_c += (board[i] == kX);
+    //     num_o += (board[i] == kO);
+    // }
+
+    printf("\nCalling formal position to position\n"); 
+
+    TierPosition ret; 
+    return ret;
+}
+
+
+static CString KaooaPositionToFormalPosition(TierPosition position) {
+    return KaooaPositionToAutoGuiPosition(position);
+}
+
+
+static CString KaooaMoveToFormalMove(TierPosition position, Move move) {
+    return KaooaMoveToAutoGuiMove(position, move);
+}
+
+
+static CString KaooaPositionToAutoGuiPosition(TierPosition tier_position) {
+    // char board[11];
+    // GenericHashUnhash(position, board);
+    // CString ret;
+    // char autogui_position[] = "1_CV--------";
+    // autogui_position[0] = GenericHashGetTurn(position) - '0';
+    // for (int i = 0; i < 9; ++i) {
+    //     if (board[i] == V) {
+    //         autogui_position[i + 2] = 'x';
+    //     } else if (board[i] == C) {
+    //         autogui_position[i + 2] = 'o';
+    //     }
+    // }
+    // CStringInitCopy(&ret, autogui_position);
+    // return ret;
+
+    CString ret;
+    CStringInit(&ret);
+    CStringResize(&ret, 2 + BOARD_SIZE, '\0');
+
+    // Set turn.
+    int turn = GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    ret.str[0] = '0' + turn;
+    ret.str[1] = '_';
+
+    // Set board.
+    GenericHashUnhashLabel(tier_position.tier, tier_position.position, ret.str + 2);
+
+    return ret; 
+}
+
+
+static CString KaooaMoveToAutoGuiMove(TierPosition position, Move move) {
+    // int from, to;
+    // UnhashMove(move, &from, &to);
+    // char autogui_move[] = "A_-_3";
+    // CString ret;
+    // if (from == to) {
+    //     autogui_move[4] = from - '0';
+    // } else {
+    //     // sprintf(autogui_move, "M_%d_%d", from, to);
+    //     autogui_move[0] = 'M';
+    //     autogui_move[2] = from - '0';
+    //     autogui_move[4] = to - '0';
+    // }
+    // CStringInitCopy(&ret, autogui_move);
+    // return ret;
+
+    KaooaMove m = {.hashed = move};
+    char autogui_move[] = "A_-_3";
+    CString ret;
+    int from = m.unpacked.src; 
+    int to = m.unpacked.dest; 
+    if (from == to) {
+        autogui_move[4] = from - '0';
+    } else {
+        autogui_move[0] = 'M';
+        autogui_move[2] = from - '0';
+        autogui_move[4] = to - '0';
+    }
+    CStringInitCopy(&ret, autogui_move);
+    return ret;
+    // assert(m.unpacked.dest >= 0);
+    // if (m.unpacked.src < 0) {  // Placement
+    //     board[m.unpacked.dest] = kPieceToPlaceAtTurn[turn];
+    // } else if (m.unpacked.capture < 0) {  // Movement without capturing
+    //     board[m.unpacked.dest] = board[m.unpacked.src];
+    //     board[m.unpacked.src] = '-';
+    // } else {  // Move and capture.
+    //     assert(turn == 2);
+    //     board[m.unpacked.dest] = 'V';
+    //     board[m.unpacked.capture] = board[m.unpacked.src] = '-';
+    // }
+}
+
 
 
 // ================================== kKaooa ==================================
 
-const Game kKaooa = {
-    .name = "kaooa",
+const Game kMkaooa = {
+    .name = "mkaooa",
     .formal_name = "Kaooa",
     .solver = &kTierSolver,
     .solver_api = &kKaooaSolverApi,
@@ -570,3 +680,6 @@ const Game kKaooa = {
     .Init = KaooaInit,
     .Finalize = KaooaFinalize,
 };
+
+
+

@@ -895,17 +895,17 @@ static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     // printf("\nc count: %d\n", c_count); 
     // printf("\nv count: %d\n", v_count); 
 
-    // for (int i = 2; i < strlen(formal_position); i++) {
-    //     if (formal_position[i] != BLANK || formal_position[i] != C || formal_position[i] != V) {
-    //         printf("\nillegal char: %c\n", formal_position[i]); 
-    //         return false; 
-    //     } 
-    //     if (formal_position[i] == C) {
-    //         c_count++; 
-    //     } else if (formal_position[i] == V) {
-    //         v_count++; 
-    //     }
-    // }
+    for (int i = 2; i < strlen(formal_position); i++) {
+        if (formal_position[i] != BLANK && formal_position[i] != C && formal_position[i] != V) {
+            printf("\nillegal char: %c\n", formal_position[i]); 
+            return false; 
+        } 
+        if (formal_position[i] == C) {
+            c_count++; 
+        } else if (formal_position[i] == V) {
+            v_count++; 
+        }
+    }
 
 
     if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) {
