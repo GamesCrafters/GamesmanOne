@@ -1615,7 +1615,7 @@ static CString KaooaPositionToAutoGuiPosition(Position position) {
     GenericHashUnhash(position, board);
     CString ret;
     char autogui_position[] = "1_CV--------";
-    autogui_position[0] = GenericHashGetTurn(position) - '0';
+    autogui_position[0] = '0' + GenericHashGetTurn(position);
     for (int i = 0; i < 9; ++i) {
         if (board[i] == V) {
             autogui_position[i + 2] = 'V';
@@ -1639,12 +1639,12 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     char autogui_move[] = "A_-_3";
     CString ret;
     if (from == to) {
-        autogui_move[4] = from - '0';
+        autogui_move[4] = '0' + from;
     } else {
         // sprintf(autogui_move, "M_%d_%d", from, to);
         autogui_move[0] = 'M';
-        autogui_move[2] = from - '0';
-        autogui_move[4] = to - '0';
+        autogui_move[2] = '0' + from;
+        autogui_move[4] = '0' + to;
     }
     CStringInitCopy(&ret, autogui_move);
     return ret;
