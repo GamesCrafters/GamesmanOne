@@ -974,7 +974,15 @@ static CString KaooaMoveToFormalMove(Position position, Move move) {
 static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     int from, to;
     UnhashMove(move, &from, &to);
-
+    char autogui_move[5];
     CString ret; 
-    
+
+    if (from == to) {
+        sprintf(autogui_move, "A_-_%d", from);
+    } else {
+        sprintf(autogui_move, "M_%d_%d", from, to);
+    }
+
+    CStringInitCopy(&ret, autogui_move);
+    return ret; 
 }
