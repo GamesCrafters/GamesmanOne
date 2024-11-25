@@ -135,26 +135,26 @@ const Game kMkaooa = {
 // Helper Functions
 
 // Variants
-static ConstantReadOnlyString kMkaooaRuleChoices[] = {
-    "6 crows",
-    "7 crows",
-};
+// static ConstantReadOnlyString kMkaooaRuleChoices[] = {
+//     "6 crows",
+//     "7 crows",
+// };
 
-static const GameVariantOption kMkaooaRules = {
-    .name = "rules",
-    .num_choices = sizeof(kMkaooaRuleChoices) / sizeof(kMkaooaRuleChoices[0]),
-    .choices = kMkaooaRuleChoices,
-};
+// static const GameVariantOption kMkaooaRules = {
+//     .name = "rules",
+//     .num_choices = sizeof(kMkaooaRuleChoices) / sizeof(kMkaooaRuleChoices[0]),
+//     .choices = kMkaooaRuleChoices,
+// };
 
 // M: Zero terminator ??
 #define NUM_OPTIONS 2 // 1 option and 1 zero-terminator
 static GameVariantOption kaooa_variant_options[NUM_OPTIONS];
 static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0}; // 6 crows, 7 crows
 #undef NUM_OPTIONS
-static GameVariant current_variant = {
-    .options = kaooa_variant_options,
-    .selections = kaooa_variant_option_selections,
-};
+// static GameVariant current_variant = {
+//     .options = kaooa_variant_options,
+//     .selections = kaooa_variant_option_selections,
+// };
 
 // this is good
 static void UnhashMove(Move move, int *from, int *to);
