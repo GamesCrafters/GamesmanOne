@@ -1560,23 +1560,29 @@ static bool KaooaIsValidConfig(const int *config);
 static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     // String length must match regular format.
     // TODO: Formal position str length --> 10? 18?
+    // printf("\nCalling is legal formal position\n"); 
     if (strlen(formal_position) != kKaooaFormalPositionStrlen) {
+        printf("\nIllegal 1"); 
         return false;
     }
 
     // The first char must be either 1 or 2.
-    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[0] != '1' && formal_position[0] != '2') {
+        printf("\nIllegal 2"); 
+        return false; 
+    }
 
-    if (formal_position[1] != '_') return false; 
+    if (formal_position[1] != '_') {
+        printf("\nIllegal 3"); 
+        return false; 
+    }; 
 
     int c_count = 0; 
     int v_count = 0; 
 
-    // printf("\nc count: %d\n", c_count); 
-    // printf("\nv count: %d\n", v_count); 
-
     for (int i = 2; i < strlen(formal_position); i++) {
         if (formal_position[i] != BLANK && formal_position[i] != C && formal_position[i] != V) {
+            printf("\nIllegal 4"); 
             return false; 
         } 
         if (formal_position[i] == C) {
@@ -1588,6 +1594,7 @@ static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
 
 
     if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) {
+        printf("\nIllegal 5"); 
         return false; 
     }; 
 
@@ -1599,6 +1606,8 @@ static Position KaooaFormalPositionToPosition(ReadOnlyString formal_position) {
     //
     char board[11];
     memcpy(board, formal_position + 2, boardSize);
+
+    board[10] = 0; 
 
     return GenericHashHash(board, formal_position[0] - '0');
 }
