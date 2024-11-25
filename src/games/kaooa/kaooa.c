@@ -36,6 +36,7 @@
 #include <stdint.h>  // int64_t
 #include <stdio.h>   // fprintf, stderr
 #include <stdlib.h>  // atoi
+#include <string.h> //strcpy, strlen
 
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -80,6 +81,8 @@ static bool MkaooaIsValidMoveString(ReadOnlyString move_string);
 static Move MkaooaStringToMove(ReadOnlyString move_string);
 bool is_in_impossible_trap(int impossible_trap[], int size, int value);
 
+
+
 // Solver API Setup
 static const RegularSolverApi kSolverApi = {
     .GetNumPositions = &MkaooaGetNumPositions,
@@ -116,20 +119,6 @@ static const GameplayApiRegular kGameplayApiRegular = {
 static const GameplayApi kGameplayApi = {
     .common = &kGamePlayApiCommon,
     .regular = &kGameplayApiRegular,
-};
-
-const Game kMkaooa = {
-    .name = "mkaooa",
-    .formal_name = "Kaooa",
-    .solver = &kRegularSolver,
-    .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
-
-    .Init = &MkaooaInit,
-    .Finalize = &MkaooaFinalize,
-
-    .GetCurrentVariant = NULL,
-    .SetVariantOption = NULL,
 };
 
 // Helper Functions
@@ -842,6 +831,15 @@ static void UnhashMove(Move move, int *from, int *to)
 
 /////////////////////////UWAPI Set-up//////////////////////////
 
+static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position); 
+static Position KaooaFormalPositionToPosition(ReadOnlyString formal_position); 
+static CString KaooaPositionToFormalPosition(Position position); 
+static CString KaooaMoveToFormalMove(Position position, Move move); 
+
+static CString KaooaPositionToAutoGuiPosition(Position position); 
+static CString KaooaMoveToAutoGuiMove(Position position, Move move); 
+
+
 static const UwapiRegular kKaooaUwapiRegular = {
     .GenerateMoves = MkaooaGenerateMoves,
     .DoMove = MkaooaDoMove,
@@ -850,10 +848,12 @@ static const UwapiRegular kKaooaUwapiRegular = {
     .IsLegalFormalPosition = KaooaIsLegalFormalPosition,
     .FormalPositionToPosition = KaooaFormalPositionToPosition,
     .PositionToFormalPosition = KaooaPositionToFormalPosition,
-    .PositionToAutoGuiPosition = KaooaPositionToAutoGuiPosition,
     .MoveToFormalMove = KaooaMoveToFormalMove,
+
+    .PositionToAutoGuiPosition = KaooaPositionToAutoGuiPosition,
     .MoveToAutoGuiMove = KaooaMoveToAutoGuiMove,
     .GetInitialPosition = MkaooaGetInitialPosition,
+
     .GetRandomLegalPosition = NULL,  // Not available for this game.
 };
 
@@ -877,27 +877,45 @@ static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     if (strlen(formal_position) != kKaooaFormalPositionStrlen) {
         return false;
     }
+    // printf("mr"); 
 
     // The first char must be either 1 or 2.
     if (formal_position[0] != '1' && formal_position[0] != '2') return false;
 
-    if (formal_position[1] != '-') return false; 
+    // printf("bj"); 
+
+    if (formal_position[1] != '_') return false; 
+
+    // printf("bj2"); 
+
 
     int c_count = 0; 
     int v_count = 0; 
 
-    for (int i = 2; i < strlen(formal_position); i++) {
-        if (formal_position[i] != BLANK || formal_position[i] != C || formal_position[i] != V) {
-            return false; 
-        } 
-        if (formal_position[i] == C) {
-            c_count++; 
-        } else if (formal_position[i] == V) {
-            v_count++; 
-        }
-    }
+    // printf("\nc count: %d\n", c_count); 
+    // printf("\nv count: %d\n", v_count); 
 
-    if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) return false; 
+    // for (int i = 2; i < strlen(formal_position); i++) {
+    //     if (formal_position[i] != BLANK || formal_position[i] != C || formal_position[i] != V) {
+    //         printf("\nillegal char: %c\n", formal_position[i]); 
+    //         return false; 
+    //     } 
+    //     if (formal_position[i] == C) {
+    //         c_count++; 
+    //     } else if (formal_position[i] == V) {
+    //         v_count++; 
+    //     }
+    // }
+
+
+    if (c_count > MAX_CROW_COUNT || v_count > MAX_VULTURE_COUNT) {
+        // printf("\ncond 1: %d\n", c_count > MAX_CROW_COUNT); 
+        // printf("\ncond 2: %d\n", v_count > MAX_VULTURE_COUNT); 
+        return false; 
+    }; 
+
+    // printf("bj3"); 
+
 
     return true;
 }
@@ -956,3 +974,18 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     CStringInitCopy(&ret, autogui_move);
     return ret;
 }
+
+const Game kMkaooa = {
+    .name = "mkaooa",
+    .formal_name = "Kaooa",
+    .solver = &kRegularSolver,
+    .solver_api = (const void *)&kSolverApi,
+    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .uwapi = &kKaooaUwapi, 
+
+    .Init = &MkaooaInit,
+    .Finalize = &MkaooaFinalize,
+
+    .GetCurrentVariant = NULL,
+    .SetVariantOption = NULL,
+};
