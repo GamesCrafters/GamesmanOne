@@ -128,8 +128,8 @@ const Game kMkaooa = {
     .Init = &MkaooaInit,
     .Finalize = &MkaooaFinalize,
 
-    .GetCurrentVariant = &MkaooaGetCurrentVariant,
-    .SetVariantOption = &MkaooaSetVariantOption,
+    .GetCurrentVariant = NULL,
+    .SetVariantOption = NULL,
 };
 
 // Helper Functions
