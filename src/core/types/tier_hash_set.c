@@ -4,8 +4,8 @@
  *         GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash set implementation.
- * @version 1.0.1
- * @date 2024-09-09
+ * @version 1.0.2
+ * @date 2024-11-28
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,19 +26,19 @@
 
 #include "core/types/tier_hash_set.h"
 
-#include "core/data_structures/int64_hash_map.h"
+#include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 
 void TierHashSetInit(TierHashSet *set, double max_load_factor) {
-    Int64HashMapInit(set, max_load_factor);
+    Int64HashSetInit(set, max_load_factor);
 }
 
-void TierHashSetDestroy(TierHashSet *set) { Int64HashMapDestroy(set); }
+void TierHashSetDestroy(TierHashSet *set) { Int64HashSetDestroy(set); }
 
 bool TierHashSetContains(const TierHashSet *set, Tier tier) {
-    return Int64HashMapContains(set, tier);
+    return Int64HashSetContains(set, tier);
 }
 
 bool TierHashSetAdd(TierHashSet *set, Tier tier) {
-    return Int64HashMapSet(set, tier, 0);
+    return Int64HashSetAdd(set, tier);
 }

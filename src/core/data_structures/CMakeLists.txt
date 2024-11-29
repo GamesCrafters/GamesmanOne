@@ -4,6 +4,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map_sc.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.h)
 
 set(SOURCES
@@ -12,6 +13,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map_sc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.c)
 
 target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
