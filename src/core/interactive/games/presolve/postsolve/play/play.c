@@ -6,7 +6,7 @@
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // strncmp
+#include <string.h>   // strcmp
 
 #include "core/constants.h"
 #include "core/interactive/games/presolve/match.h"
@@ -302,15 +302,19 @@ static void MakeComputerMove(void) {
     MoveArrayDestroy(&moves);
 }
 
-static bool PromptForAndProcessUserMove(const Game *game) {
+static int PromptForAndProcessUserMove(const Game *game) {
     int move_string_size =
         game->gameplay_api->common->move_string_length_max + 2;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
     MoveArray moves = InteractiveMatchGenerateMoves();
 
-    // Print all valid move strings.
-    printf("Player %d's move [(u)ndo", InteractiveMatchGetTurn() + 1);
+    // Print all valid in-game menu options
+    printf("[(u)ndo");
     if (solved) printf("/(v)alues");
+    printf("/(a)bort]\n");
+
+    // Print all valid move strings.
+    printf("Player %d's move [", InteractiveMatchGetTurn() + 1);
     for (int64_t i = 0; i < moves.size; ++i) {
         game->gameplay_api->common->MoveToString(moves.array[i], move_string);
         printf("/[%s]", move_string);
@@ -324,34 +328,34 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
-    if (strncmp(move_string, "v", 1) == 0) {  // Print values for all moves.
+    if (strcmp(move_string, "v") == 0) {  // Print values for all moves.
         if (solved) {
             PrintSortedMoveValues(game);
         } else {
             printf("Game is not solved, so move values cannot be shown.\n");
         }
-        return true;
+        return 0;
     }
-    if (strncmp(move_string, "q", 1) == 0) GamesmanExit();  // Exit GAMESMAN.
-    if (strncmp(move_string, "b", 1) == 0) return true;     // Exit game.
-    if (strncmp(move_string, "u", 1) == 0) {                // Undo.
+    if (strcmp(move_string, "q") == 0) GamesmanExit();  // Exit GAMESMAN.
+    if (strcmp(move_string, "a") == 0) return 2;        // Abort game.
+    if (strcmp(move_string, "u") == 0) {                // Undo.
         return InteractiveMatchUndo();
     }
     if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
-        return false;
+        return 1;
     }
     Move user_move = game->gameplay_api->common->StringToMove(move_string);
     if (!MoveArrayContains(&moves, user_move)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
-        return false;
+        return 1;
     }
     MoveArrayDestroy(&moves);
     free(move_string);
     InteractiveMatchCommitMove(user_move);
-    return true;
+    return 0;
 }
 
 static void PrintGameResult(ReadOnlyString game_formal_name) {
@@ -359,10 +363,7 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
     int turn = InteractiveMatchGetTurn();
     switch (value) {
         case kUndecided:
-            fprintf(stderr,
-                    "PlayGame: (BUG) game ended at a non-primitive position. "
-                    "Check the implementation of gameplay. Aborting...\n");
-            exit(EXIT_FAILURE);
+            puts("Game aborted\n");
             break;
         case kLose:
             printf("Player %d wins!\n", (!turn) + 1);
@@ -411,10 +412,11 @@ int InteractivePlay(ReadOnlyString key) {
         if (InteractiveMatchPlayerIsComputer(turn)) {
             // Generate computer move
             MakeComputerMove();
-        } else if (!PromptForAndProcessUserMove(game)) {
-            // If user entered an unknown command, restart the loop.
-            continue;
         }
+        int code = PromptForAndProcessUserMove(game);
+        if (code == 1) continue;  // Unknown command, restart the loop.
+        if (code == 2) break;     // Aborting
+
         // Else, move has been successfully processed. Print the new position.
         PrintCurrentPosition(game);
         primitive_value = InteractiveMatchPrimitive();
