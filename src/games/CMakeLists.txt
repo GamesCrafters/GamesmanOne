@@ -1,6 +1,7 @@
 # Add subdirectories for each component
 add_subdirectory(dshogi)
 add_subdirectory(fsvp)
+add_subdirectory(gobblet)
 add_subdirectory(mallqueenschess)
 add_subdirectory(mttt)
 add_subdirectory(mtttier)
