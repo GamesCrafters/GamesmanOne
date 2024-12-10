@@ -61,8 +61,8 @@
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
 
-static const GameVariant *MkaooaGetCurrentVariant(void);
-static int MkaooaSetVariantOption(int option, int selection);
+//static const GameVariant *MkaooaGetCurrentVariant(void); 
+//static int MkaooaSetVariantOption(int option, int selection);
 
 static int64_t MkaooaGetNumPositions(void);
 static Position MkaooaGetInitialPosition(void);
@@ -137,8 +137,8 @@ static const GameplayApi kGameplayApi = {
 
 // M: Zero terminator ??
 #define NUM_OPTIONS 2 // 1 option and 1 zero-terminator
-static GameVariantOption kaooa_variant_options[NUM_OPTIONS];
-static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0}; // 6 crows, 7 crows
+//static GameVariantOption kaooa_variant_options[NUM_OPTIONS];
+//static int kaooa_variant_option_selections[NUM_OPTIONS] = {0, 0}; // 6 crows, 7 crows
 #undef NUM_OPTIONS
 // static GameVariant current_variant = {
 //     .options = kaooa_variant_options,
@@ -170,18 +170,13 @@ static int MkaooaInit(void *aux)
 
 static int MkaooaFinalize(void) { return kNoError; }
 
-static const GameVariant *MkaooaGetCurrentVariant(void)
-{
-    return NULL; // Later MB TODO
-}
+// static const GameVariant *MkaooaGetCurrentVariant(void)
+// {
+//     return NULL; // Later MB TODO
+// }
 
 // start off with 6 crows
-static int MkaooaSetVariantOption(int option, int selection)
-{
-    (void)option;
-    (void)selection;
-    return 0; // Later MB TODO
-}
+//
 
 // TODO: Hash initial board configuration
 static Position MkaooaGetInitialPosition(void)
@@ -627,7 +622,7 @@ static int MkaooaPositionToString(Position position, char *buffer)
         "  [3]                 [2]        %c                  %c      \n"
         "           LEGEND                        TURN: %c           \n"
         "EATEN CROWS: %d\n";
-    "                                                               ";
+    
     int eaten_crows = board[10] - count_char_in_board(board, C);
     int actual_length = snprintf(
         buffer, kGamePlayApiCommon.position_string_length_max + 1, kFormat,
@@ -762,18 +757,18 @@ static const Uwapi kKaooaUwapi = {.regular = &kKaooaUwapiRegular};
 int kKaooaFormalPositionStrlen = 12; 
 
 // C -> 0, V -> 1 , all others mapped to -1. Initialized by InitPieceToIndex. 
-static int8_t kPieceToIndex[1];
+// static int8_t kPieceToIndex[1];
 
-static void InitPieceToIndex(void) {
-    kPieceToIndex[(int)'C'] = 0;
-    kPieceToIndex[(int)'V'] = 1;
-}
+// static void InitPieceToIndex(void) {
+//     kPieceToIndex[(int)'C'] = 0;
+//     kPieceToIndex[(int)'V'] = 1;
+// }
 
-static bool KaooaIsValidConfig(const int *config);
+//static bool KaooaIsValidConfig(const int *config);
 
 static bool KaooaIsLegalFormalPosition(ReadOnlyString formal_position) {
     // String length must match regular format.
-
+    (void) formal_position; 
     return true;
 }
 
@@ -814,12 +809,14 @@ static CString KaooaPositionToAutoGuiPosition(Position position) {
     CStringAppend(&ret, n); 
     return ret;
 }
-static void UnpackMove(Move move, int *src, int *dest) {
-    *dest = move % boardSize;
-    *src = move / boardSize;
-}
+// static void UnpackMove(Move move, int *src, int *dest) {
+//     *dest = move % boardSize;
+//     *src = move / boardSize;
+// }
 
 static CString KaooaMoveToFormalMove(Position position, Move move) {
+
+    (void) position; 
 
     int from, to;
     UnhashMove(move, &from, &to);
@@ -844,6 +841,7 @@ static CString KaooaMoveToFormalMove(Position position, Move move) {
 }
 
 static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
+    (void) position; 
     int from, to;
     UnhashMove(move, &from, &to);
     char autogui_move[] = "A_-_3";
@@ -873,4 +871,4 @@ const Game kMkaooa = {
 
     .GetCurrentVariant = NULL,
     .SetVariantOption = NULL,
-};
+}; 
