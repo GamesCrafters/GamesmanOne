@@ -1,18 +1,14 @@
 /**
  * @file kaooa.h
- * @author 
- *         Xiang Zheng
- *         Sriya Kantipudi
- *         Maria Rufova
- *         Benji Xu
- *         Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and 
- * adapted to the new system.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author Xiang Zheng
+ * @author Sriya Kantipudi
+ * @author Maria Rufova
+ * @author Benji Xu
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Kaooa
- *
- * @version 1.1.0
- * @date 2024-10-18
+ * @version 1.0.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
