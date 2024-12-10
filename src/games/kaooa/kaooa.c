@@ -506,12 +506,16 @@ static Position MkaooaDoMove(Position position, Move move) {
     }
 }
 
-static bool MkaooaIsLegalPosition(
-    Position position) {  // MB TODO: Do we need to implement this?
-    // Don't need to implement.
-    // printf("\nIn IsLegalPosition");
-    (void)position;
-    return true;
+static bool MkaooaIsLegalPosition(Position position) {
+    char board[boardSize + 1];
+    GenericHashUnhash(position, board);
+    int crow_count = 0;
+    for (int i = 0; i < 10; ++i) {
+        crow_count += board[i] == C;
+    }
+
+    // Positions with more crows on board than ever placed are invalid.
+    return crow_count <= board[10];
 }
 
 // MB TODO: Not considering symmetries rn, but think about if we actually need
