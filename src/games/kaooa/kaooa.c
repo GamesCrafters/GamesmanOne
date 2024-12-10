@@ -234,7 +234,7 @@ static MoveArray MkaooaGenerateMoves(Position position)
     // You do not need to change the code above
     bool can_drop = board[10] < 6;
     int move_count;
-    int *possible_moves;
+    int possible_moves[4];
 
     for (int i = 0; i < boardSize; i++)
     {
@@ -247,7 +247,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
             {
                 // out-circle:
                 move_count = 2;
-                possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i + 5 + check_lower_bound(i + 5, 5) * 5;
                 possible_moves[1] = i + 4 + check_lower_bound(i + 4, 5) * 5;
             }
@@ -255,7 +254,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
             {
                 // in-circle:
                 move_count = 4;
-                possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i - 5;
                 possible_moves[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
                 possible_moves[2] = i + 1 + check_upper_bound(i + 1, 9) * 5;
@@ -268,7 +266,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
                     MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[j]));
                 }
             }
-            free(possible_moves);
         }
         else if (turn == C && board[i] == BLANK && can_drop)
         // C's turn and can drop
@@ -294,7 +291,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
                 // out-circle:
                 // direct move
                 move_count = 2;
-                possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i + 5 + check_lower_bound(i + 5, 5) * 5;
                 possible_moves[1] = i + 4 + check_lower_bound(i + 4, 5) * 5;
 
@@ -305,10 +301,9 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
                     }
                 }
-                free(possible_moves);
 
                 // jump move
-                int *adjacent_positions = (int *)malloc(move_count * sizeof(int));
+                int adjacent_positions[2];
                 adjacent_positions[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 adjacent_positions[1] = i + 5 + check_lower_bound(i + 5, 5) * 5;
 
@@ -328,14 +323,12 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
                     }
                 }
-                free(adjacent_positions);
             }
             else
             {
                 // in-circle:
                 // direct move
                 move_count = 4;
-                possible_moves = (int *)malloc(move_count * sizeof(int));
                 possible_moves[0] = i - 5;
                 possible_moves[1] = i - 1 + check_lower_bound(i - 1, 5) * 5;
                 possible_moves[2] = i + 1 + check_upper_bound(i + 1, 9) * 5;
@@ -348,10 +341,9 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[k]));
                     }
                 }
-                free(possible_moves);
 
                 // jump move
-                int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+                int adjacent_positions[2];
                 adjacent_positions[0] = i - 1 + check_lower_bound(i - 1, 5) * 5;
                 adjacent_positions[1] = i + 1 + check_upper_bound(i + 1, 9) * 5;
                 if (board[adjacent_positions[0]] == C)
@@ -370,7 +362,6 @@ static MoveArray MkaooaGenerateMoves(Position position)
                         MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
                     }
                 }
-                free(adjacent_positions);
             }
         }
     }
@@ -418,7 +409,7 @@ static Value MkaooaPrimitive(Position position)
         {
             if (i < 5)
             {
-                int *possible_trap = (int *)malloc(4 * sizeof(int));
+                int possible_trap[4];
                 possible_trap[0] = i + 4 + check_lower_bound(i + 4, 5) * 5;
                 possible_trap[1] = i + 5;
                 possible_trap[2] = i + 6 + check_upper_bound(i + 6, 9) * 5;
@@ -434,12 +425,12 @@ static Value MkaooaPrimitive(Position position)
             }
             if (i >= 5)
             {
-                int *impossible_trap = (int *)malloc(4 * sizeof(int));
+                int impossible_trap[4];
                 impossible_trap[0] = (i - 2) % 5;
                 impossible_trap[1] = (i - 2) % 5 + 5;
                 impossible_trap[2] = (i - 2) % 5 + 4 + check_lower_bound((i - 2) % 5 + 4, 5) * 5;
                 impossible_trap[3] = i;
-                int *possible_trap = (int *)malloc(6 * sizeof(int));
+                int possible_trap[6];
                 int count = 0;
                 for (int j = 0; j < 10; j++)
                 {
@@ -527,7 +518,7 @@ static Position MkaooaDoMove(Position position, Move move)
         }
         else
         {
-            int *adjacent_positions = (int *)malloc(2 * sizeof(int));
+            int adjacent_positions[2];
             adjacent_positions[0] = from + 4 + check_lower_bound(from + 4, 5) * 5;
             adjacent_positions[1] = from + 4 + check_lower_bound(from + 5, 5) * 5;
             if (is_in_adjacent_positions(adjacent_positions, 2, to))
