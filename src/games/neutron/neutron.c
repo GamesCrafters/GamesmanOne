@@ -860,7 +860,7 @@ static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
             m.unpacked.n_src,
             GetMoveDestination(board, m.unpacked.n_src, m.unpacked.n_dir),
             kSoundChar);
-    } else {  // A full multipart move does not have a AutoGUI string.
+    } else {  // A full multipart move does not have an AutoGUI string.
         return kNullCString;
     }
 
