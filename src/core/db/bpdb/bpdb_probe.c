@@ -5,11 +5,11 @@
  * @author Sameer Nayyar: improved the algorithm for BpArray compression
  * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
  * BpDict.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the probe for the Bit-Perfect Database.
- * @version 1.1.1
- * @date 2024-07-10
+ * @version 1.1.2
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -44,7 +44,6 @@
 #include "core/types/gamesman_types.h"
 
 static const int kBlocksPerBuffer = 2;
-static const int kNumValues = 5;  // undecided, lose, draw, tie, win.
 static const int kHeaderSize = sizeof(BpdbFileHeader);
 
 // (kNumValues - 2) because undecided and draw have no remoteness definition.

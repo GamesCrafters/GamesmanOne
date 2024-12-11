@@ -4,7 +4,7 @@
  * access to gzip archives.
  * @author Robert Shi (robertyishi@berkeley.edu): OpenMP parallelization and
  * implementation of MGZ.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of In-Memory Gzip.
  * @version 1.0.0

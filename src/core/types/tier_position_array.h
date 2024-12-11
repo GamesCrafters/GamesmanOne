@@ -1,12 +1,11 @@
 /**
  * @file tier_position_array.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic TierPosition array.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -69,4 +68,4 @@ TierPosition TierPositionArrayBack(const TierPositionArray *array);
 bool TierPositionArrayContains(const TierPositionArray *array,
                                TierPosition target);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_

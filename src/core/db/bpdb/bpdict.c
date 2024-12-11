@@ -5,7 +5,7 @@
  * @author Sameer Nayyar: improved the algorithm for BpArray compression
  * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
  * BpDict.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of compression and decompression dictionaries for
  * Bit-Perfect Array.

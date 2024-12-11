@@ -1,11 +1,11 @@
 /**
  * @file int64_array.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 1.0.0
- * @date 2023-08-19
+ * @version 2.0.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,7 +30,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, realloc
+#include <stdlib.h>   // free, realloc, qsort
 #include <string.h>   // memset, memmove
 
 void Int64ArrayInit(Int64Array *array) {
@@ -101,8 +101,16 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     return false;
 }
 
-void Int64ArraySort(Int64Array *array,
-                    int (*comp)(const void *, const void *)) {
+static int Int64Comp(const void *a, const void *b) {
+    return *(int64_t *)a - *(int64_t *)b;
+}
+
+void Int64ArraySortAscending(Int64Array *array) {
+    qsort(array->array, array->size, sizeof(int64_t), Int64Comp);
+}
+
+void Int64ArraySortExplicit(Int64Array *array,
+                            int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
 }
 

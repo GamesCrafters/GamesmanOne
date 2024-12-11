@@ -6,11 +6,11 @@
  * implementation as a separate module from the tier solver, replaced
  * linked-lists with dynamic arrays for optimization, and implemented
  * thread-safety for the new OpenMP multithreaded tier solver.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Frontier type.
- * @version 2.0.1
- * @date 2024-10-06
+ * @version 2.0.2
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,15 +39,11 @@
 #include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
+#include "core/concurrency.h"
 #include "core/types/gamesman_types.h"  // PositionArray
 
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL_FOR
 #endif  // _OPENMP
 
 static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
@@ -181,6 +177,3 @@ void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
     free(frontier->dividers[remoteness]);
     frontier->dividers[remoteness] = NULL;
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_PARALLEL_FOR

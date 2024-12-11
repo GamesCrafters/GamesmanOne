@@ -1,15 +1,15 @@
 /**
  * @file gameplay_api.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief GAMESMAN interactive game play API.
  * @details A GameplayApi defines a set of functions that the GAMESMAN
  * interactive system will use to provide a command line interface for gameplay.
  * All games must implement all required fields in GameplayApi::common and one
  * of the other API collections depending on the type of the game.
- * @version 1.0.0
- * @date 2024-01-22
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,8 +28,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_
 
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
@@ -55,4 +55,4 @@ typedef struct GameplayApi {
     const GameplayApiTier *tier;       
 } GameplayApi;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_

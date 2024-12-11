@@ -1,11 +1,11 @@
 /**
  * @file gamesman_headless.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN headless mode.
- * @version 1.1.1
- * @date 2024-02-02
+ * @version 1.2.0
+ * @date 2024-09-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,6 +27,7 @@
 #include "core/gamesman_headless.h"
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // intptr_t,
 #include <stdlib.h>   // atoi
 #ifdef USE_MPI
 #include <mpi.h>
@@ -39,6 +40,16 @@
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
+
+/**
+ * @brief Convert the input memory limit string \p str, which is in GiB, into
+ * an integer memory limit, which is in bytes.
+ */
+static intptr_t ParseMemLimit(ReadOnlyString str) {
+    if (str == NULL || *str == '\0') return 0;
+    
+    return (intptr_t)atoi(str) << 30;
+}
 
 int GamesmanHeadlessMain(int argc, char **argv) {
 #ifdef USE_MPI
@@ -60,6 +71,7 @@ int GamesmanHeadlessMain(int argc, char **argv) {
     HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
     char *data_path = arguments.data_path;
+    intptr_t memlimit = ParseMemLimit(arguments.memlimit);
     bool force = arguments.force;
     char *position = arguments.position;
     int verbose = HeadlessGetVerbosity(arguments.verbose, arguments.quiet);
@@ -71,7 +83,8 @@ int GamesmanHeadlessMain(int argc, char **argv) {
 
     switch (arguments.action) {
         case kHeadlessSolve:
-            error = HeadlessSolve(game, variant_id, data_path, force, verbose);
+            error = HeadlessSolve(game, variant_id, data_path, force, verbose,
+                                  memlimit);
             break;
         case kHeadlessAnalyze:
             error =

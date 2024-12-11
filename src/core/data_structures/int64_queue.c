@@ -1,7 +1,7 @@
 /**
  * @file int64_queue.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of int64_t queue using dynamic array.
  * @version 1.0.0

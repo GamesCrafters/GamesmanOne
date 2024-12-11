@@ -1,12 +1,11 @@
 /**
  * @file tier_queue.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tier queue.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_QUEUE_H
-#define GAMESMANONE_CORE_TYPES_TIER_QUEUE_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_
+#define GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_
 
 #include "core/data_structures/int64_queue.h"
 #include "core/types/base.h"
@@ -60,4 +59,4 @@ Tier TierQueuePop(TierQueue *queue);
 /** @brief Returns the tier at the front of the QUEUE without popping it. */
 Tier TierQueueFront(const TierQueue *queue);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_QUEUE_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_

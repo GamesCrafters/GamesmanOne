@@ -1,11 +1,11 @@
 /**
  * @file analysis.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 1.0.1
- * @date 2024-02-15
+ * @version 1.1.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -94,9 +94,9 @@ void AnalysisInit(Analysis *analysis) {
     analysis->longest_tie_position = kIllegalTierPosition;
 
     analysis->max_num_moves = -1;
-    analysis->largest_win_remoteness = kIllegalRemoteness;
-    analysis->largest_lose_remoteness = kIllegalRemoteness;
-    analysis->largest_tie_remoteness = kIllegalRemoteness;
+    analysis->largest_win_remoteness = kErrorRemoteness;
+    analysis->largest_lose_remoteness = kErrorRemoteness;
+    analysis->largest_tie_remoteness = kErrorRemoteness;
 }
 
 int AnalysisWrite(const Analysis *analysis, int fd) {
@@ -241,13 +241,47 @@ void AnalysisMergeCounts(Analysis *dest, const Analysis *part) {
 
 // Aggregating
 
-void AnalysisConvertToNoncanonical(Analysis *analysis) {
+static bool TierPositionIsLegal(const TierPosition *tp) {
+    return tp->tier != kIllegalTierPosition.tier &&
+           tp->position != kIllegalTierPosition.position;
+}
+
+void AnalysisConvertToNoncanonical(
+    Analysis *analysis, Tier noncanonical,
+    Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
+                                           Tier symmetric)) {
+    // Convert all position examples to those in the non-canonical tier.
+    for (int i = 0; i < kNumRemotenesses; ++i) {
+        if (TierPositionIsLegal(&analysis->win_examples[i])) {
+            analysis->win_examples[i].position = GetPositionInSymmetricTier(
+                analysis->win_examples[i], noncanonical);
+            analysis->win_examples[i].tier = noncanonical;
+        }
+        if (TierPositionIsLegal(&analysis->lose_examples[i])) {
+            analysis->lose_examples[i].position = GetPositionInSymmetricTier(
+                analysis->lose_examples[i], noncanonical);
+            analysis->lose_examples[i].tier = noncanonical;
+        }
+        if (TierPositionIsLegal(&analysis->tie_examples[i])) {
+            analysis->tie_examples[i].position = GetPositionInSymmetricTier(
+                analysis->tie_examples[i], noncanonical);
+            analysis->tie_examples[i].tier = noncanonical;
+        }
+    }
+    if (TierPositionIsLegal(&analysis->draw_example)) {
+        analysis->draw_example.position =
+            GetPositionInSymmetricTier(analysis->draw_example, noncanonical);
+        analysis->draw_example.tier = noncanonical;
+    }
+
+    // Zero out all canonical position counters because the entire tier is
+    // non-canonical.
     analysis->canonical_win_count = 0;
     analysis->canonical_lose_count = 0;
     analysis->canonical_tie_count = 0;
     analysis->canonical_draw_count = 0;
     analysis->canonical_move_count = 0;
-    for (int64_t i = 0; i < kNumRemotenesses; ++i) {
+    for (int i = 0; i < kNumRemotenesses; ++i) {
         analysis->canonical_win_summary[i] = 0;
         analysis->canonical_lose_summary[i] = 0;
         analysis->canonical_tie_summary[i] = 0;

@@ -1,7 +1,7 @@
 /**
  * @file arraydb.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Simple array database which stores value-remoteness pairs in a 16-bit
  * record array.
@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.1.0
+ * @date 2024-11-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

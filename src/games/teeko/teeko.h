@@ -1,12 +1,12 @@
 /**
  * @file teeko.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Teeko and its variants by John Scarne.
  * @details https://en.wikipedia.org/wiki/Teeko
- * @version 1.0.0
- * @date 2024-08-10
+ * @version 1.0.1
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

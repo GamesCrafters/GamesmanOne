@@ -1,12 +1,11 @@
 /**
  * @file move_array.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Move array.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 2.0.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
-#define GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
+#ifndef GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
+#define GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -69,9 +68,10 @@ bool MoveArrayPopBack(MoveArray *array);
  * first argument is greater than the second and zero if the arguments are
  * equivalent.
  */
-void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *));
+void MoveArraySortExplicit(MoveArray *array,
+                           int (*comp)(const void *, const void *));
 
 /** @brief Returns true if ARRAY contains MOVE, or false otherwise. */
 bool MoveArrayContains(const MoveArray *array, Move move);
 
-#endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_

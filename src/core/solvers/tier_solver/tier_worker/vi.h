@@ -1,11 +1,11 @@
 /**
  * @file vi.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.0
- * @date 2024-07-11
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,9 +28,9 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
 
 /**
@@ -38,16 +38,16 @@
  *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to solve.
- * @param force Set this to true to force re-solve \p tier.
- * @param compare Set this to true to compare newly solved results to the ones
- * stored in the reference database, which is assumed to be initialized.
+ * @param options Pointer to a \c TierWorkerSolveOptions object which contains
+ * the options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
-int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier, bool force,
-                              bool compare, bool *solved);
+int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
+                              const TierWorkerSolveOptions *options,
+                              bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_

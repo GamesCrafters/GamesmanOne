@@ -7,7 +7,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Kaooa implementation
- * @version 1.0.0
+ * @version 1.0.1
  * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -722,7 +722,7 @@ static CString KaooaPositionToAutoGuiPosition(Position position) {
             autogui_position[i + 2] = 'C';
         }
     }
-    CStringInitCopy(&ret, autogui_position);
+    CStringInitCopyCharArray(&ret, autogui_position);
     char n[2];
     n[0] = board[10] + '0';
     n[1] = '\0';
@@ -755,7 +755,7 @@ static CString KaooaMoveToFormalMove(Position position, Move move) {
         formal_move[6] = '\0';
     }
 
-    CStringInitCopy(&ret, formal_move);
+    CStringInitCopyCharArray(&ret, formal_move);
     return ret;
 }
 
@@ -773,7 +773,7 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
         autogui_move[2] = '0' + from;
         autogui_move[4] = '0' + to;
     }
-    CStringInitCopy(&ret, autogui_move);
+    CStringInitCopyCharArray(&ret, autogui_move);
     return ret;
 }
 

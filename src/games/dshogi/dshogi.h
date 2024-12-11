@@ -1,13 +1,13 @@
 /**
  * @file dshogi.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dōbutsu shōgi, also known as "animal shogi," or "Let's Catch the
  * Lion!" Japanese: 「どうぶつしょうぎ」.
  * @details https://en.wikipedia.org/wiki/D%C5%8Dbutsu_sh%C5%8Dgi
- * @version 1.0.0
- * @date 2024-07-26
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

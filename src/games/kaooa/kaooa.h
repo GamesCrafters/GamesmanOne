@@ -7,7 +7,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Kaooa
- * @version 1.0.0
+ * @version 1.0.1
  * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

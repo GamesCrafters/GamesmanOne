@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(GamesmanOne VERSION 1.0.5 DESCRIPTION 2024.12.06)
+project(GamesmanOne VERSION 1.1.0 DESCRIPTION 2024.12.10)
 
 option(DISABLE_OPENMP "Disable OpenMP." OFF)
 option(USE_MPI "Enable MPI." OFF)

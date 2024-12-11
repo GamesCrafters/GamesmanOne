@@ -1,12 +1,11 @@
 /**
  * @file move_array.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Move array implementation.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 2.0.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -44,8 +43,9 @@ bool MoveArrayPopBack(MoveArray *array) {
     return true;
 }
 
-void MoveArraySort(MoveArray *array, int (*comp)(const void *, const void *)) {
-    Int64ArraySort(array, comp);
+void MoveArraySortExplicit(MoveArray *array,
+                           int (*comp)(const void *, const void *)) {
+    Int64ArraySortExplicit(array, comp);
 }
 
 bool MoveArrayContains(const MoveArray *array, Move move) {

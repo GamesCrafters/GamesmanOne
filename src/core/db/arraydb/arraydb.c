@@ -1,7 +1,7 @@
 /**
  * @file arraydb.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Simple array database which stores value-remoteness pairs in a 16-bit
  * record array.
@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.1.0
+ * @date 2024-11-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,7 +33,8 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
+#include <stddef.h>   // NULL, size_t
+#include <stdint.h>   // intptr_t, uint64_t, int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // strcpy
@@ -47,6 +48,7 @@
 #include "core/db/arraydb/record_array.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
+#include "libs/lz4_utils/lz4_utils.h"
 #include "libs/xzra/xzra.h"
 
 // DB API
@@ -65,7 +67,13 @@ static int ArrayDbSetValue(Position position, Value value);
 static int ArrayDbSetRemoteness(Position position, int remoteness);
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
+static bool ArrayDbCheckpointExists(Tier tier);
+static int ArrayDbCheckpointSave(const void *status, size_t status_size);
+static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
+                                 size_t status_size);
+static int ArrayDbCheckpointRemove(Tier tier);
 
+static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size);
 static int ArrayDbLoadTier(Tier tier, int64_t size);
 static int ArrayDbUnloadTier(Tier tier);
 static bool ArrayDbIsTierLoaded(Tier tier);
@@ -96,13 +104,18 @@ const Database kArrayDb = {
     .SetRemoteness = ArrayDbSetRemoteness,
     .GetValue = ArrayDbGetValue,
     .GetRemoteness = ArrayDbGetRemoteness,
+    .CheckpointExists = ArrayDbCheckpointExists,
+    .CheckpointSave = ArrayDbCheckpointSave,
+    .CheckpointLoad = ArrayDbCheckpointLoad,
 
     // Loading
+    .TierMemUsage = ArrayDbTierMemUsage,
     .LoadTier = ArrayDbLoadTier,
     .UnloadTier = ArrayDbUnloadTier,
     .IsTierLoaded = ArrayDbIsTierLoaded,
     .GetValueFromLoaded = ArrayDbGetValueFromLoaded,
     .GetRemotenessFromLoaded = ArrayDbGetRemotenessFromLoaded,
+    .CheckpointRemove = ArrayDbCheckpointRemove,
 
     // Probing
     .ProbeInit = ArrayDbProbeInit,
@@ -129,6 +142,7 @@ const ArrayDbOptions kArrayDbOptionsInit = {
     .compression_level = 6,        // LZMA level 6.
     .extreme_compression = false,  // Extreme compression disabled.
 };
+static const int kDefaultLz4Level = 0;  //
 
 // Global options
 
@@ -143,8 +157,6 @@ static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
 static Tier current_tier;
-static int64_t current_tier_size;
-static RecordArray records;
 static TierHashMapSC loaded_tier_to_index;
 static RecordArray loaded_records[kArrayDbNumLoadedTiersMax];
 
@@ -169,8 +181,6 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     current_variant = variant;
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
-    current_tier_size = kIllegalSize;
-    memset(&records, 0, sizeof(records));
     TierHashMapSCInit(&loaded_tier_to_index, 0.5);
     memset(&loaded_records, 0, sizeof(loaded_records));
 
@@ -180,7 +190,6 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
 static void ArrayDbFinalize(void) {
     free(sandbox_path);
     sandbox_path = NULL;
-    RecordArrayDestroy(&records);
     TierHashMapSCDestroy(&loaded_tier_to_index);
     for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
         RecordArrayDestroy(&loaded_records[i]);
@@ -188,11 +197,25 @@ static void ArrayDbFinalize(void) {
 }
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
-    assert(current_tier == kIllegalTier && current_tier_size == kIllegalSize);
-    current_tier = tier;
-    current_tier_size = size;
+    if (current_tier != kIllegalTier) {
+        fprintf(stderr,
+                "ArrayDbCreateSolvingTier: failed to create solving tier due "
+                "to an existing solving tier\n");
+        return kRuntimeError;
+    }
 
-    return RecordArrayInit(&records, current_tier_size);
+    // Initialize the 0-th loaded record as the solving tier's record array.
+    int error = RecordArrayInit(&loaded_records[0], size);
+    if (error != kNoError) return error;
+
+    // Add the solving tier's index to the map.
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, 0)) {
+        RecordArrayDestroy(&loaded_records[0]);
+        return kMallocFailureError;
+    }
+
+    current_tier = tier;
+    return kNoError;
 }
 
 /**
@@ -202,9 +225,9 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name><ext>", +2 for '/' and '\0'.
-    ConstantReadOnlyString extension = ".adb.xz";
+    static const char extension[] = ".adb.xz";
     char *full_path = (char *)calloc(
-        (strlen(sandbox_path) + kDbFileNameLengthMax + strlen(extension) + 2),
+        (strlen(sandbox_path) + kDbFileNameLengthMax + sizeof(extension) + 2),
         sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
@@ -213,7 +236,7 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
 
     int count = sprintf(full_path, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(full_path + count, tier);
+        GetTierName(tier, full_path + count);
     } else {
         sprintf(full_path + count, "%" PRITier, tier);
     }
@@ -222,11 +245,41 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     return full_path;
 }
 
+static char *GetFullPathPlusExtension(Tier tier, GetTierNameFunc GetTierName,
+                                      ReadOnlyString extension) {
+    char *full_path_to_tier_file = GetFullPathToFile(tier, GetTierName);
+    if (full_path_to_tier_file == NULL) return NULL;
+
+    size_t length = strlen(full_path_to_tier_file);
+    char *full_path =
+        (char *)realloc(full_path_to_tier_file, length + strlen(extension) + 1);
+    if (full_path == NULL) {
+        free(full_path_to_tier_file);
+        return NULL;
+    }
+
+    strcat(full_path, extension);
+    return full_path;
+}
+
+static char *GetFullPathToTempFile(Tier tier, GetTierNameFunc GetTierName) {
+    return GetFullPathPlusExtension(tier, GetTierName, ".tmp");
+}
+
+static char *GetFullPathToCheckpoint(Tier tier, GetTierNameFunc GetTierName) {
+    return GetFullPathPlusExtension(tier, GetTierName, ".chk");
+}
+
+static char *GetFullPathToTempCheckpoint(Tier tier,
+                                         GetTierNameFunc GetTierName) {
+    return GetFullPathPlusExtension(tier, GetTierName, ".chk.tmp");
+}
+
 static char *GetFullPathToFinishFlag(void) {
     // Full path: "<path>/.finish", +2 for '/' and '\0'.
-    ConstantReadOnlyString finish_flag_name = ".finish";
+    static const char finish_flag_name[] = ".finish";
     char *full_path = (char *)calloc(
-        (strlen(sandbox_path) + strlen(finish_flag_name) + 2), sizeof(char));
+        (strlen(sandbox_path) + sizeof(finish_flag_name) + 2), sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr,
                 "GetFullPathToFinishFlag: failed to calloc full_path.\n");
@@ -249,30 +302,48 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     (void)aux;  // Unused.
 
     // Create db file.
+    int error = kNoError;
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
-    if (full_path == NULL) return kMallocFailureError;
-
-    int64_t compressed_size = XzraCompressStream(
-        full_path, false, block_size, lzma_level, enable_extreme_compression,
-        GetNumThreads(), RecordArrayGetData(&records),
-        RecordArrayGetRawSize(&records));
-    free(full_path);
-    switch (compressed_size) {
-        case -2:
-            return kFileSystemError;
-        case -3:
-            return kRuntimeError;
-        default:
-            break;
+    char *tmp_full_path =
+        GetFullPathToTempFile(current_tier, CurrentGetTierName);
+    if (full_path == NULL || tmp_full_path == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
     }
 
-    return kNoError;
+    // First compress to a temp file.
+    int64_t compressed_size =
+        XzraCompressStream(tmp_full_path, false, block_size, lzma_level,
+                           enable_extreme_compression, GetNumThreads(),
+                           RecordArrayGetData(&loaded_records[0]),
+                           RecordArrayGetRawSize(&loaded_records[0]));
+    switch (compressed_size) {
+        case -2:
+            error = kFileSystemError;
+            goto _bailout;
+        case -3:
+            error = kRuntimeError;
+            goto _bailout;
+    }
+
+    // If successful, rename the temp file into the desired tier DB name.
+    int rename_error = GuardedRename(tmp_full_path, full_path);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    free(full_path);
+    free(tmp_full_path);
+
+    return error;
 }
 
 static int ArrayDbFreeSolvingTier(void) {
-    RecordArrayDestroy(&records);
+    RecordArrayDestroy(&loaded_records[0]);
+    TierHashMapSCRemove(&loaded_tier_to_index, current_tier);
     current_tier = kIllegalTier;
-    current_tier_size = kIllegalSize;
 
     return kNoError;
 }
@@ -280,7 +351,7 @@ static int ArrayDbFreeSolvingTier(void) {
 static int ArrayDbSetGameSolved(void) {
     char *flag_filename = GetFullPathToFinishFlag();
     if (flag_filename == NULL) return kMallocFailureError;
-    
+
     FILE *flag_file = GuardedFopen(flag_filename, "w");
     free(flag_filename);
     if (flag_file == NULL) return kFileSystemError;
@@ -292,31 +363,143 @@ static int ArrayDbSetGameSolved(void) {
 }
 
 static int ArrayDbSetValue(Position position, Value value) {
-    RecordArraySetValue(&records, position, value);
+    RecordArraySetValue(&loaded_records[0], position, value);
 
     return kNoError;
 }
 
 static int ArrayDbSetRemoteness(Position position, int remoteness) {
-    RecordArraySetRemoteness(&records, position, remoteness);
+    RecordArraySetRemoteness(&loaded_records[0], position, remoteness);
 
     return kNoError;
 }
 
 static Value ArrayDbGetValue(Position position) {
-    return RecordArrayGetValue(&records, position);
+    return RecordArrayGetValue(&loaded_records[0], position);
 }
 
 static int ArrayDbGetRemoteness(Position position) {
-    return RecordArrayGetRemoteness(&records, position);
+    return RecordArrayGetRemoteness(&loaded_records[0], position);
+}
+
+bool ArrayDbCheckpointExists(Tier tier) {
+    char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
+    bool ret = full_path && FileExists(full_path);
+    free(full_path);
+
+    return ret;
+}
+
+int ArrayDbCheckpointSave(const void *status, size_t status_size) {
+    int error = kNoError;
+    char *full_path = GetFullPathToCheckpoint(current_tier, CurrentGetTierName);
+    char *tmp_full_path =
+        GetFullPathToTempCheckpoint(current_tier, CurrentGetTierName);
+    if (full_path == NULL || tmp_full_path == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+    const void *inputs[] = {RecordArrayGetReadOnlyData(&loaded_records[0]),
+                            status};
+    const size_t input_sizes[] = {RecordArrayGetRawSize(&loaded_records[0]),
+                                  status_size};
+    int compressed_size = Lz4UtilsCompressStreams(
+        inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path);
+    switch (compressed_size) {
+        case -1:
+            NotReached("ArrayDbCheckpointSave: (BUG) malformed input array(s)");
+            break;
+        case -2:
+            error = kMallocFailureError;
+            goto _bailout;
+        case -3:
+            error = kFileSystemError;
+            goto _bailout;
+    }
+
+    // If successful, rename the temp file into the desired checkpoint filename.
+    int rename_error = GuardedRename(tmp_full_path, full_path);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    free(full_path);
+    free(tmp_full_path);
+
+    return error;
+}
+
+int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
+                          size_t status_size) {
+    if (current_tier != kIllegalTier) {
+        fprintf(stderr,
+                "ArrayDbCheckpointLoad: failed to load solving tier checkpoint "
+                "due to an existing solving tier\n");
+        return kRuntimeError;
+    }
+
+    // Initialize the 0-th loaded record as the solving tier's record array.
+    int error = RecordArrayInit(&loaded_records[0], size);
+    if (error != kNoError) return error;
+
+    // Get full path to the checkpoint file.
+    char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
+    if (full_path == NULL) {
+        RecordArrayDestroy(&loaded_records[0]);
+        return kMallocFailureError;
+    }
+
+    // Decompress the checkpoint file into the record array and status.
+    void *out_buffers[] = {RecordArrayGetData(&loaded_records[0]), status};
+    size_t out_sizes[] = {RecordArrayGetRawSize(&loaded_records[0]),
+                          status_size};
+    int64_t decomp_size =
+        Lz4UtilsDecompressFileMultistream(full_path, out_buffers, out_sizes, 2);
+    free(full_path);
+    if (decomp_size < 0) {
+        RecordArrayDestroy(&loaded_records[0]);
+        return kRuntimeError;
+    }
+
+    // Add the solving tier's index to the map.
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, 0)) {
+        RecordArrayDestroy(&loaded_records[0]);
+        return kMallocFailureError;
+    }
+
+    current_tier = tier;
+    return kNoError;
+}
+
+static int ArrayDbCheckpointRemove(Tier tier) {
+    char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
+    int error = GuardedRemove(full_path);
+    free(full_path);
+    if (error != 0) return kFileSystemError;
+
+    return kNoError;
+}
+
+static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
+    (void)tier;
+    return size * 2;
+}
+
+static int GetFirstUnusedRecordArrayIndex(void) {
+    int i;  // The 0-th space is reserved for the solving tier.
+    for (i = 1; i < kArrayDbNumLoadedTiersMax; ++i) {
+        if (loaded_records[i].records == NULL) break;
+    }
+
+    return i;
 }
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {
     // Find the first unused slot in the loaded records array.
-    int i;
-    for (i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
-        if (loaded_records[i].records == NULL) break;
-    }
+    int i = GetFirstUnusedRecordArrayIndex();
     if (i == kArrayDbNumLoadedTiersMax) {
         fprintf(stderr,
                 "ArrayDbLoadTier: cannot load more than %d tiers at the same "
@@ -334,18 +517,21 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, i)) {
-        RecordArrayDestroy(&loaded_records[i]);
-        free(full_path);
-        return kMallocFailureError;
-    }
-
     uint64_t mem = XzraDecompressionMemUsage(
         block_size, lzma_level, enable_extreme_compression, GetNumThreads());
-    XzraDecompressFile(RecordArrayGetData(&loaded_records[i]),
-                       size * kArrayDbRecordSize, GetNumThreads(), mem,
-                       full_path);
+    int64_t decomp_size = XzraDecompressFile(
+        RecordArrayGetData(&loaded_records[i]), size * kArrayDbRecordSize,
+        GetNumThreads(), mem, full_path);
     free(full_path);
+    if (decomp_size < 0) {
+        RecordArrayDestroy(&loaded_records[i]);
+        return kRuntimeError;
+    }
+
+    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, i)) {
+        RecordArrayDestroy(&loaded_records[i]);
+        return kMallocFailureError;
+    }
 
     return kNoError;
 }
@@ -360,10 +546,12 @@ static int GetLoadedTierIndex(Tier tier) {
 
 static int ArrayDbUnloadTier(Tier tier) {
     int index = GetLoadedTierIndex(tier);
-    if (index >= 0) {
-        RecordArrayDestroy(&loaded_records[index]);
-        TierHashMapSCRemove(&loaded_tier_to_index, tier);
-    }
+
+    // Either not found or attempting to unload the solving tier.
+    if (index <= 0) return kRuntimeError;
+
+    RecordArrayDestroy(&loaded_records[index]);
+    TierHashMapSCRemove(&loaded_tier_to_index, tier);
 
     return kNoError;
 }
@@ -467,7 +655,7 @@ static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
                     "ArrayDbProbeRemoteness: failed to load tier %" PRITier
                     "\n",
                     tier_position.tier);
-            return kIllegalRemoteness;
+            return kErrorRemoteness;
         }
     }
 

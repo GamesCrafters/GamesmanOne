@@ -1,11 +1,11 @@
 /**
  * @file vi.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.0.0
- * @date 2024-07-11
+ * @version 1.1.0
+ * @date 2024-11-14
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,28 +26,40 @@
 
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 
+#include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stdio.h>    // fprintf, stderr
+#include <stdint.h>   // int32_t, int64_t
+#include <stdio.h>    // puts, printf, fprintf, stderr
 
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
+#include "libs/lz4_utils/lz4_utils.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
-#include <omp.h>        // OpenMP pragmas
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-
-#else  // _OPENMP not defined, the following macros do nothing.
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
+#include <omp.h>
 #endif  // _OPENMP
+
+// ----------------------------------- Types -----------------------------------
+
+enum ValueIterationSteps {
+    kNotStarted,
+    kScanningTier,
+    kIteratingWinLose,
+    kIteratingTie,
+    kMarkingDraw,
+};
+
+typedef struct {
+    int32_t step;
+    int32_t remoteness;
+} CheckpointStatus;
+
+// ----------------------------- Global Variables -----------------------------
 
 // Note on multithreading:
 //   Be careful that "if (!condition) success = false;" is not equivalent to
@@ -57,40 +69,87 @@
 // Reference to the set of tier solver API functions for the current game.
 static const TierSolverApi *api_internal;
 
+// Level of verbosity.
+static int verbose;
+
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
-// Array of child tiers with this_tier appended to the back.
+
+// Child tiers of the tier being solved.
 static TierArray child_tiers;
 
-static int largest_win_lose_remoteness;
-static int largest_tie_remoteness;
+// The maximum remoteness discovered at any winning/losing positions in the
+// child tiers of this tier.
+static int max_win_lose_remoteness;
+
+// The maximum remoteness discovered at any tying positions in the child tiers
+// of this tier.
+static int max_tie_remoteness;
+
+// Last checkpoint time.
+static time_t prev_checkpoint;
+
+// Time cost to save the previous checkpoint in seconds. Updated every
+// checkpoint.
+static double checkpoint_save_cost;
 
 // ------------------------------ Step0Initialize ------------------------------
 
-static bool Step0Initialize(const TierSolverApi *api, Tier tier) {
+static bool Step0_0SetupChildTiers(void) {
+    TierArray raw = api_internal->GetChildTiers(this_tier);
+    if (raw.size == kIllegalSize) return false;
+
+    TierHashSet dedup;
+    TierHashSetInit(&dedup, 0.5);
+    TierArrayInit(&child_tiers);
+    for (int64_t i = 0; i < raw.size; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(raw.array[i]);
+
+        // Another child tier is symmetric to this one and was already added.
+        if (TierHashSetContains(&dedup, canonical)) continue;
+
+        TierHashSetAdd(&dedup, canonical);
+        TierArrayAppend(&child_tiers, canonical);
+    }
+    TierHashSetDestroy(&dedup);
+    TierArrayDestroy(&raw);
+
+    return true;
+}
+
+// Typically returns an overestimated result.
+static double GetCheckpointSaveCostEstimate(void) {
+    static const double kOverhead = 1;
+    static const double kTypicalHDDSpeed = 200 << 20;  // 200 MiB/s
+
+    return kOverhead +
+           (double)DbManagerTierMemUsage(this_tier, this_tier_size) /
+               kTypicalHDDSpeed;
+}
+
+static bool Step0Initialize(const TierSolverApi *api, Tier tier,
+                            int verbosity) {
     api_internal = api;
     this_tier = tier;
-    child_tiers = api_internal->GetChildTiers(this_tier);
-    if (child_tiers.size == kIllegalSize) return false;
+    verbose = verbosity;
+    if (!Step0_0SetupChildTiers()) return false;
 
     this_tier_size = api_internal->GetTierSize(tier);
-    largest_win_lose_remoteness = 0;
-    largest_tie_remoteness = 0;
+    max_win_lose_remoteness = 0;
+    max_tie_remoteness = 0;
+    checkpoint_save_cost = GetCheckpointSaveCostEstimate();
+
     return true;
 }
 
 // ----------------------------- Step1LoadChildren -----------------------------
 
 static bool Step1LoadChildren(void) {
-    bool success = true;
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         Tier child_tier = child_tiers.array[i];
         int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
-        if (error != kNoError) {
-            success = false;
-            break;
-        }
+        if (error != kNoError) return false;
 
         // Scan for largest remotenesses
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
@@ -100,16 +159,16 @@ static bool Step1LoadChildren(void) {
                 case kWin:
                 case kLose: {
                     int r = DbManagerGetRemotenessFromLoaded(child_tier, pos);
-                    if (r > largest_win_lose_remoteness) {
-                        largest_win_lose_remoteness = r;
+                    if (r > max_win_lose_remoteness) {
+                        max_win_lose_remoteness = r;
                     }
                     break;
                 }
 
                 case kTie: {
                     int r = DbManagerGetRemotenessFromLoaded(child_tier, pos);
-                    if (r > largest_tie_remoteness) {
-                        largest_tie_remoteness = r;
+                    if (r > max_tie_remoteness) {
+                        max_tie_remoteness = r;
                     }
                     break;
                 }
@@ -120,50 +179,58 @@ static bool Step1LoadChildren(void) {
         }
     }
 
-    return success;
+    return true;
 }
 
 // --------------------------- Step2SetupSolvingTier ---------------------------
 
-static bool Step2SetupSolvingTier(void) {
+/**
+ * @brief Loads a checkpoint and its metadata into \p ct if exists, or creates a
+ * new solving tier and leave \p ct unmodified otherwise.
+ */
+static bool Step2SetupSolvingTier(CheckpointStatus *ct) {
+    if (DbManagerCheckpointExists(this_tier)) {
+        if (verbose > 1) PrintfAndFlush("Loading checkpoint...");
+        int error =
+            DbManagerCheckpointLoad(this_tier, this_tier_size, ct, sizeof(*ct));
+        if (verbose > 1) puts(error == kNoError ? "done" : "failed");
+        return (error == kNoError);
+    }
+
     int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
     return true;
 }
 
+// ------------------------------- Step3ScanTier -------------------------------
+
 static bool IsCanonicalPosition(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
     return api_internal->GetCanonicalPosition(tier_position) == position;
 }
 
-// ------------------------------- Step3ScanTier -------------------------------
-
 static void Step3ScanTier(void) {
-    printf("Value iteration: scanning tier... ");
-    fflush(stdout);
-    PRAGMA_OMP_PARALLEL {
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(256)
-        for (Position pos = 0; pos < this_tier_size; ++pos) {
-            TierPosition tier_position = {.tier = this_tier, .position = pos};
-            if (!api_internal->IsLegalPosition(tier_position) ||
-                !IsCanonicalPosition(pos)) {
-                // Temporarily mark illegal and non-canonical positions as
-                // drawing. These values will be changed to undecided later.
-                DbManagerSetValue(pos, kDraw);
-                continue;
-            }
-
-            Value value = api_internal->Primitive(tier_position);
-            if (value != kUndecided) {  // If tier_position is primitive...
-                // Set its value immediately.
-                DbManagerSetValue(pos, value);
-                DbManagerSetRemoteness(pos, 0);
-            }  // Otherwise, do nothing.
+    if (verbose > 1) PrintfAndFlush("Value iteration: scanning tier... ");
+    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    for (Position pos = 0; pos < this_tier_size; ++pos) {
+        TierPosition tier_position = {.tier = this_tier, .position = pos};
+        if (!api_internal->IsLegalPosition(tier_position) ||
+            !IsCanonicalPosition(pos)) {
+            // Temporarily mark illegal and non-canonical positions as
+            // drawing. These values will be changed to undecided later.
+            DbManagerSetValue(pos, kDraw);
+            continue;
         }
-    }
 
-    printf("done\n");
+        Value value = api_internal->Primitive(tier_position);
+        if (value != kUndecided) {  // If tier_position is primitive...
+            // Set its value immediately.
+            DbManagerSetValue(pos, value);
+            DbManagerSetRemoteness(pos, 0);
+        }  // Otherwise, do nothing.
+    }
+    if (verbose > 1) puts("done");
 }
 
 // ------------------------------- Step4Iterate -------------------------------
@@ -231,29 +298,61 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     return true;
 }
 
-static bool Step4_0IterateWinLose(void) {
-    bool updated = true;
-    bool failed = false;
+static bool CheckpointNeeded(time_t prev, time_t curr) {
+    // Suppose it takes the same amount of time to save and load the same
+    // checkpoint. If it takes less time to save and load a checkpoint than it
+    // does to redo what was done since the previous checkpoint, then it is
+    // worth saving a new checkpoint.
+    return (difftime(curr, prev) > checkpoint_save_cost * 2.0);
+}
 
-    printf("Value iteration: begin iterations for W/L positions");
-    fflush(stdout);
-    for (int i = 1; updated || i <= largest_win_lose_remoteness + 1; ++i) {
-        updated = false;
+static int CheckpointSave(int step, int remoteness) {
+    clock_t begin = clock();
+    CheckpointStatus ct = {.step = step, .remoteness = remoteness};
+    int ret = DbManagerCheckpointSave(&ct, sizeof(ct));
+    checkpoint_save_cost = ((double)(clock() - begin)) / CLOCKS_PER_SEC;
+
+    return ret;
+}
+
+static bool Step4_0IterateWinLose(int initial_remoteness) {
+    ConcurrentBool updated, failed;
+    ConcurrentBoolInit(&updated, true);
+    ConcurrentBoolInit(&failed, false);
+
+    int i = initial_remoteness;
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin iterations for W/L positions");
+        for (i = 1; i < initial_remoteness; ++i) {
+            printf(".");  // Restore previous progress bar from checkpoint.
+        }
+        fflush(stdout);
+    }
+
+    while (ConcurrentBoolLoad(&updated) || i <= max_win_lose_remoteness + 1) {
+        // Save a checkpoint if needed.
+        bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
+        if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
+        if (checkpoint) {
+            if (CheckpointSave(kIteratingWinLose, i) != kNoError) return false;
+            prev_checkpoint = time(NULL);
+        }
+
+        ConcurrentBoolStore(&updated, false);
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(128)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
             bool success = IterateWinLoseProcessPosition(i, pos, &pos_updated);
-            if (!success) failed = true;
-            if (pos_updated) updated = true;
+            if (!success) ConcurrentBoolStore(&failed, true);
+            if (pos_updated) ConcurrentBoolStore(&updated, true);
         }
 
-        if (failed) return false;
-        printf(".");
-        fflush(stdout);
+        if (ConcurrentBoolLoad(&failed)) return false;
+        ++i;
     }
+    if (verbose > 1) puts("done");
 
-    printf("done\n");
     return true;
 }
 
@@ -291,38 +390,59 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
     return true;
 }
 
-static bool Step4_1IterateTie(void) {
-    bool updated = false;
-    bool failed = false;
+static bool Step4_1IterateTie(int initial_remoteness) {
+    ConcurrentBool updated, failed;
+    ConcurrentBoolInit(&updated, true);
+    ConcurrentBoolInit(&failed, false);
 
-    printf("Value iteration: begin iterations for T positions");
-    fflush(stdout);
-    for (int i = 1; updated || i <= largest_tie_remoteness + 1; ++i) {
-        updated = false;
+    int i = initial_remoteness;
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin iterations for T positions");
+        for (i = 1; i < initial_remoteness; ++i) {
+            printf(".");  // Restore previous progress from checkpoint.
+        }
+        fflush(stdout);
+    }
+
+    while (ConcurrentBoolLoad(&updated) || i <= max_tie_remoteness + 1) {
+        // Save a checkpoint if needed.
+        bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
+        if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
+        if (checkpoint) {
+            if (CheckpointSave(kIteratingTie, i) != kNoError) return false;
+            prev_checkpoint = time(NULL);
+        }
+
+        ConcurrentBoolStore(&updated, false);
         PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
             bool success = IterateTieProcessPosition(i, pos, &pos_updated);
-            if (!success) failed = true;
-            if (pos_updated) updated = true;
+            if (!success) ConcurrentBoolStore(&failed, true);
+            if (pos_updated) ConcurrentBoolStore(&updated, true);
         }
 
-        if (failed) return false;
-        printf(".");
-        fflush(stdout);
+        if (ConcurrentBoolLoad(&failed)) return false;
+        ++i;
     }
+    if (verbose > 1) puts("done");
 
-    printf("done\n");
     return true;
 }
 
-static bool Step4Iterate(void) {
-    bool success = Step4_0IterateWinLose();
-    if (!success) return false;
+static bool Step4Iterate(int step, int remoteness) {
+    bool success = true;
+    if (step <= kIteratingWinLose) {
+        success =
+            Step4_0IterateWinLose(step == kIteratingWinLose ? remoteness : 1);
+        if (!success) return false;
+    }
 
-    success = Step4_1IterateTie();
-    if (!success) return false;
+    if (step <= kIteratingTie) {
+        success = Step4_1IterateTie(step == kIteratingTie ? remoteness : 1);
+        if (!success) return false;
+    }
 
     // The child tiers are no longer needed.
     for (int64_t i = 0; i < child_tiers.size; ++i) {
@@ -334,9 +454,17 @@ static bool Step4Iterate(void) {
 
 // -------------------------- Step5MarkDrawPositions --------------------------
 
-static void Step5MarkDrawPositions(void) {
-    printf("Value iteration: begin marking D positions... ");
-    fflush(stdout);
+static bool Step5MarkDrawPositions(void) {
+    // Save a checkpoint if needed.
+    if (CheckpointNeeded(prev_checkpoint, time(NULL))) {
+        if (CheckpointSave(kMarkingDraw, 0) != kNoError) return false;
+        prev_checkpoint = time(NULL);
+    }
+
+    if (verbose > 1) {
+        PrintfAndFlush("Value iteration: begin marking D positions... ");
+    }
+
     PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         Value val = DbManagerGetValue(pos);
@@ -346,14 +474,15 @@ static void Step5MarkDrawPositions(void) {
             DbManagerSetValue(pos, kUndecided);
         }
     }
-    printf("done\n");
+    if (verbose > 1) puts("done");
+
+    return true;
 }
 
 // ------------------------------- Step6FlushDb -------------------------------
 
 static void Step6FlushDb(void) {
-    printf("Value iteration: flusing DB... ");
-    fflush(stdout);
+    if (verbose > 1) PrintfAndFlush("Value iteration: flusing DB... ");
     if (DbManagerFlushSolvingTier(NULL) != 0) {
         fprintf(stderr,
                 "Step6FlushDb: an error has occurred while flushing of the "
@@ -367,7 +496,7 @@ static void Step6FlushDb(void) {
                 "current tier's in-memory database. Tier: %" PRITier "\n",
                 this_tier);
     }
-    printf("done\n");
+    if (verbose > 1) puts("done");
 }
 
 // --------------------------------- CompareDb ---------------------------------
@@ -417,7 +546,11 @@ _bailout:
 
 // ------------------------------- Step7Cleanup -------------------------------
 
-static void Step7Cleanup(void) {
+static bool Step7Cleanup(void) {
+    int error = kNoError;
+    if (DbManagerCheckpointExists(this_tier)) {
+        error = DbManagerCheckpointRemove(this_tier);
+    }
     this_tier = kIllegalTier;
     this_tier_size = kIllegalSize;
     for (int64_t i = 0; i < child_tiers.size; ++i) {
@@ -426,34 +559,45 @@ static void Step7Cleanup(void) {
     }
     TierArrayDestroy(&child_tiers);
     DbManagerFreeSolvingTier();
+
+    return error == kNoError;
 }
 
 // -----------------------------------------------------------------------------
 // ------------------------- TierWorkerSolveVIInternal -------------------------
 // -----------------------------------------------------------------------------
 
-int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier, bool force,
-                              bool compare, bool *solved) {
+int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
+                              const TierWorkerSolveOptions *options,
+                              bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
-    if (!force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
+    if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
         ret = kNoError;  // Success.
         goto _bailout;
     }
 
     /* Value Iteration main algorithm. */
-    if (!Step0Initialize(api, tier)) goto _bailout;
+    if (!Step0Initialize(api, tier, options->verbose)) goto _bailout;
     if (!Step1LoadChildren()) goto _bailout;
-    if (!Step2SetupSolvingTier()) goto _bailout;
-    Step3ScanTier();
-    if (!Step4Iterate()) goto _bailout;
-    Step5MarkDrawPositions();
+    CheckpointStatus ct = {.step = kNotStarted, .remoteness = -1};
+    if (!Step2SetupSolvingTier(&ct)) goto _bailout;
+
+    prev_checkpoint = time(NULL);  // Enable checkpoints from here.
+    if (ct.step <= kScanningTier) Step3ScanTier();
+    if (ct.step <= kIteratingTie && !Step4Iterate(ct.step, ct.remoteness)) {
+        goto _bailout;
+    }
+    if (!Step5MarkDrawPositions()) goto _bailout;
     Step6FlushDb();
-    if (compare && !CompareDb()) goto _bailout;
+    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
     ret = kNoError;  // Success.
 
 _bailout:
-    Step7Cleanup();
+    if (!Step7Cleanup()) {
+        fprintf(stdout,
+                "TierWorkerSolveVIInternal: bug detected at cleanup step\n");
+    }
     return ret;
 }

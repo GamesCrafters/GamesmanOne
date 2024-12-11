@@ -4,7 +4,7 @@
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Extracted the reverse tier
  * graph implementation as a separate module from the tier solver
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The ReverseTierGraph type.
  * @version 1.1.0

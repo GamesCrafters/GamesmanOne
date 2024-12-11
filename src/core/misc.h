@@ -1,11 +1,11 @@
 /**
  * @file misc.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.2.0
- * @date 2024-07-11
+ * @version 1.4.0
+ * @date 2024-11-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,7 @@
 #include <stdio.h>    // FILE
 #include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
@@ -44,6 +45,14 @@ void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
 void NotReached(ReadOnlyString message);
+
+/**
+ * @brief Returns the amount of physical memory available on the system.
+ *
+ * @return Amount of physical memory or
+ * @return 0 if the detection fails.
+ */
+intptr_t GetPhysicalMemory(void);
 
 /**
  * @brief Same behavior as malloc() on success; terminates GAMESMAN on failure.
@@ -68,6 +77,29 @@ void *SafeCalloc(size_t n, size_t size);
  */
 char *SafeStrncpy(char *dest, const char *src, size_t n);
 
+/**
+ * @brief Equivalent to first calling printf with the given parameters and then
+ * calling fflush(stdout).
+ */
+void PrintfAndFlush(const char *format, ...);
+
+/**
+ * @brief Prints \p prompt followed by a new line ('\n') and an arrow ("=>") to
+ * \c stdout, and then reads in X characters from \c stdin until a new line or
+ * EOF is encountered but only writes up to \p length_max characters to \p buf,
+ * not including the trailing new line character ('\n').
+ *
+ * @note \p buf is assumed to have enough space to hold at least \p length_max +
+ * 1 characters to include the terminal '\0'.
+ *
+ * @param prompt A prompt to be printed out that explains what the user input
+ * should be.
+ * @param buf Output parameter. The user input, up to \p length_max bytes, is
+ * stored in the contiguous space that this pointer is pointing to.
+ * @param length_max Maximum acceptable user input length in number of
+ * characters.
+ * @return \p buf.
+ */
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
 /**
@@ -128,7 +160,7 @@ int BailOutFclose(FILE *stream, int error);
 /**
  * @brief Same behavior as fseek on success; calls perror and returns the error
  * code returned by fseek, which is always -1.
- * @link https://man7.org/linux/man-pages/man3/fseek.3.html
+ * Reference: https://man7.org/linux/man-pages/man3/fseek.3.html
  */
 int GuardedFseek(FILE *stream, long off, int whence);
 
@@ -137,7 +169,7 @@ int GuardedFseek(FILE *stream, long off, int whence);
  * and returns a non-zero error code otherwise.
  * @details The fread function never sets errno and therefore perror does not
  * generate helpful error messages.
- * @link https://man7.org/linux/man-pages/man3/fread.3.html
+ * Reference: https://man7.org/linux/man-pages/man3/fread.3.html
  *
  * @return 0 on success; returns 2 if EOF is reached before N items are read, or
  * 3 if there is an error with STREAM.
@@ -153,21 +185,28 @@ int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream);
 /**
  * @brief Same behavior as open on success; calls perror and returns -1
  * otherwise.
- * @link https://man7.org/linux/man-pages/man2/open.2.html
+ * Reference: https://man7.org/linux/man-pages/man2/open.2.html
  */
 int GuardedOpen(const char *filename, int flags);
 
 /**
  * @brief Same behavior as close on success; calls perror and returns -1
  * otherwise.
- * @link https://man7.org/linux/man-pages/man2/close.2.html
+ * Reference: https://man7.org/linux/man-pages/man2/close.2.html
  */
 int GuardedClose(int fd);
 
 /**
+ * @brief Same behavior as rename on success; calls perror and returns -1
+ * otherwise.
+ * Reference: https://man7.org/linux/man-pages/man2/rename.2.html
+ */
+int GuardedRename(const char *oldpath, const char *newpath);
+
+/**
  * @brief Same behavior as remove on success; calls perror and returns -1
  * otherwise.
- * @link https://man7.org/linux/man-pages/man3/remove.3.html
+ * Reference: https://man7.org/linux/man-pages/man3/remove.3.html
  */
 int GuardedRemove(const char *pathname);
 
@@ -189,7 +228,7 @@ int BailOutClose(int fd, int error);
 /**
  * @brief Calls lseek and returns 0 if the value returned by lseek matches
  * OFFSET; calls perror and returns -1 otherwise.
- * @link https://man7.org/linux/man-pages/man2/lseek.2.html
+ * Reference: https://man7.org/linux/man-pages/man2/lseek.2.html
  */
 int GuardedLseek(int fd, off_t offset, int whence);
 
@@ -286,7 +325,7 @@ bool FileExists(ReadOnlyString filename);
  * the error.
  *
  * @authors Jonathon Reinhart and Carl Norum
- * @link http://stackoverflow.com/a/2336245/119527,
+ * Reference: http://stackoverflow.com/a/2336245/119527,
  * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
  */
 int MkdirRecursive(ReadOnlyString path);

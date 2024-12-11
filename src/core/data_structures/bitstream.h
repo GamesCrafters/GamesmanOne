@@ -1,11 +1,11 @@
 /**
  * @file bitstream.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Fixed-size bit stream.
- * @version 1.0.0
- * @date 2023-10-18
+ * @version 1.1.0
+ * @date 2024-09-05
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,15 +27,15 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_BITSTREAM_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_BITSTREAM_H_
 
-#include <stdint.h>  // uint8_t, int64_t
+#include <stdbool.h>  // bool
+#include <stdint.h>   // uint8_t, int64_t
 
-/**
- * @brief Fixed-size bit stream.
- */
+/** @brief Fixed-size bit stream. */
 typedef struct BitStream {
     uint8_t *stream;   /**< Bit stream as raw bytes. */
     int64_t size;      /**< Size of the bit stream in number of bits. */
     int64_t num_bytes; /**< Size of stream in bytes. */
+    int64_t count;     /**< Counter for the number of bits set to true. */
 } BitStream;
 
 /**
@@ -67,8 +67,17 @@ int BitStreamClear(BitStream *stream, int64_t i);
 
 /**
  * @brief Returns the I-th bit of STREAM.
- * @return 1 if the I-th bit of STREAM is set, 0 otherwise.
+ * @return \c true if the I-th bit of STREAM is set,
+ * @return \c false otherwise.
  */
-int BitStreamGet(const BitStream *stream, int64_t i);
+bool BitStreamGet(const BitStream *stream, int64_t i);
+
+/**
+ * @brief Returns the number of bits set to \c true in \p stream.
+ *
+ * @param stream Target bit stream.
+ * @return Number of bits set to \c true.
+ */
+int64_t BitStreamCount(const BitStream *stream);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_BITSTREAM_H_

@@ -1,11 +1,11 @@
 /**
  * @file cstring.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array).
- * @version 2.0.0
- * @date 2024-04-07
+ * @version 3.0.0
+ * @date 2024-11-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,27 +38,64 @@ typedef struct CString {
 } CString;
 
 /**
- * @brief Initializes an empty CSTRING.
+ * @brief This \c CString object is used as a "NULL" value.
+ */
+extern const CString kNullCString;
+
+/**
+ * @brief This \c CString object is used to indicate an error.
+ */
+extern const CString kErrorCString;
+
+/**
+ * @brief Initializes an empty CSTRING, which contains only the NULL character
+ * ('\0').
  *
  * @param cstring Target CString, which is assumed to be uninitialized.
- * 
+ *
  * @return true on success,
  * @return false otherwise.
  */
-bool CStringInit(CString *cstring);
+bool CStringInitEmpty(CString *cstring);
 
 /**
- * @brief Initializes CSTRING to the same string as SRC.
+ * @brief Initializes CSTRING to the same string as OTHER if OTHER is non-NULL;
+ * initializes CSTRING to kNullCString otherwise.
  *
  * @details On success, CSTRING will have the same length as SRC with capacity
- * equal to its length.
+ * equal to its length if SRC is non-NULL.
+ *
+ * @param init Target CString, which is assumed to be uninitialized.
+ * @param src Source CString.
+ * @return true on success,
+ * @return false otherwise.
+ */
+bool CStringInitCopy(CString *init, const CString *other);
+
+/**
+ * @brief Initializes CSTRING to the same string as SRC if SRC is non-NULL;
+ * initializes CSTRING to kNullCString otherwise.
+ *
+ * @details On success, CSTRING will have the same length as SRC with capacity
+ * equal to its length if SRC is non-NULL.
  *
  * @param cstring Target CString, which is assumed to be uninitialized.
  * @param src Source string.
  * @return true on success,
  * @return false otherwise.
  */
-bool CStringInitCopy(CString *cstring, const char *src);
+bool CStringInitCopyCharArray(CString *cstring, const char *src);
+
+/**
+ * @brief Initializes \p init by taking ownership of \p other if \p other is
+ * non-NULL. In this case, \p other is left in an undefined state after the call
+ * to this function. If \p other is \c NULL, then \p init is initialized to
+ * \c kNullCString.
+ *
+ * @param init \c CString to initialize.
+ * @param other \c CString to move.
+ */
+void CStringInitMove(CString *init, CString *other);
 
 /** @brief Destroys the given CSTRING. */
 void CStringDestroy(CString *cstring);
@@ -88,5 +125,15 @@ bool CStringAppend(CString *dest, const char *src);
  * @return false otherwise.
  */
 bool CStringResize(CString *cstring, int64_t size, char fill);
+
+/**
+ * @brief Returns \c true if \p cstring is \c kNullCString, or false otherwise.
+ */
+bool CStringIsNull(const CString *cstring);
+
+/**
+ * @brief Returns \c true if \p cstring is \c kErrorCString, or false otherwise.
+ */
+bool CStringError(const CString *cstring);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_CSTRING_H_

@@ -1,7 +1,7 @@
 /**
  * @file game_list.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definition for the list of all games.
  * @version 1.0.0
@@ -34,10 +34,12 @@
 
 #include "games/dshogi/dshogi.h"
 #include "games/fsvp/fsvp.h"
+#include "games/gates/gates.h"
 #include "games/kaooa/kaooa.h"
 #include "games/mallqueenschess/mallqueenschess.h"
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
+#include "games/neutron/neutron.h"
 #include "games/quixo/quixo.h"
 #include "games/teeko/teeko.h"
 
@@ -45,6 +47,6 @@
 // NULL-terminated.
 
 const Game *const kAllGames[] = {
-    &kTeeko,   &kDobutsuShogi, &kQuixo,           &kFsvp,
-    &kMtttier, &kMttt,         &kMallqueenschess, &kMkaooa, NULL,
+    &kNeutron, &kGates,   &kTeeko, &kDobutsuShogi,    &kQuixo,
+    &kFsvp,    &kMtttier, &kMttt,  &kMallqueenschess, &kMkaooa, NULL,
 };

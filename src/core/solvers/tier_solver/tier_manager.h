@@ -6,15 +6,15 @@
  * handle tier graph traversal and management into its own module, and
  * redesigned retrograde tier analysis process to enable concurrent solving
  * of multiple tiers.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Manager module of the Loopy Tier Solver.
  *
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.3.0
- * @date 2024-07-11
+ * @version 1.4.1
+ * @date 2024-09-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,6 +37,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 
@@ -73,9 +74,10 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose);
  *
  * @param api Tier solver API to test.
  * @param seed Seed for random number generation.
+ * @param test_size Maximum number of positions to test in each tier.
  * @return 0 on success, or
  * @return one of the values from TierSolverTestErrors defined in tier_solver.h.
  */
-int TierManagerTest(const TierSolverApi *api, long seed);
+int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
