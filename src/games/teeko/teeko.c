@@ -1,7 +1,7 @@
 /**
  * @file teeko.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Teeko.
  * @details https://en.wikipedia.org/wiki/Teeko

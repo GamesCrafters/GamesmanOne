@@ -1,7 +1,7 @@
 /**
  * @file database.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Database type and associated constants.
  * @details A Database is an abstract type of a database. To implement a new

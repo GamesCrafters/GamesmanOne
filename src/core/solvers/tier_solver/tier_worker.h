@@ -6,7 +6,7 @@
  * solving of a single tier into its own module, implemented multithreading
  * using OpenMP, and reformatted functions for readability. New algorithm
  * using value iteration.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
  * @version 1.5.0

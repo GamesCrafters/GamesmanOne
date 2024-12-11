@@ -1,7 +1,7 @@
 /**
  * @file neutron.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Neutron.
  * @details https://www.di.fc.ul.pt/~jpn/gv/neutron.htm

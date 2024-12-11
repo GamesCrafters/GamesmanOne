@@ -1,7 +1,7 @@
 /**
  * @file lz4_utils.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief LZ4 utilities
  * @version 0.2.0

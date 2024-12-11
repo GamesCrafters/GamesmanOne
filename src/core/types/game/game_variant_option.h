@@ -1,13 +1,13 @@
 /**
  * @file game_variant_option.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The GameVariantOption type and related constants.
  * @details A GameVariantOption defines an option of a game. A set of options
  * choices make up the rule of a variant of a game.
- * @version 1.0.0
- * @date 2024-01-21
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

@@ -5,11 +5,11 @@
  * @author Sameer Nayyar: improved the algorithm for BpArray compression
  * @author Robert Shi (robertyishi@berkeley.edu): improved and implemented
  *         BpArray.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Bit-Perfect array of unsigned integers.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

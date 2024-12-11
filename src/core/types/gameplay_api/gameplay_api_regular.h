@@ -1,15 +1,15 @@
 /**
  * @file gameplay_api_regular.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The GameplayApiRegular type.
  * @details A GameplayApiRegular object contains a set of API functions that all
  * regular (non-tier) games should implement as part of their gameplay API. All
  * member variables and functions of GameplayApiRegular are REQUIRED unless
  * otherwise specified.
- * @version 1.0.0
- * @date 2024-01-21
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

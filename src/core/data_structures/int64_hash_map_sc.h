@@ -1,7 +1,7 @@
 /**
  * @file int64_hash_map_sc.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Separate chaining int64_t to int64_t hash map.
  * @details This hash map implementation allows removal of map entries at the

@@ -1,7 +1,7 @@
 /**
  * @file uwapi.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief High-level container of helper methods that are used by games to
  * generate responses for GamesCraftersUWAPI (Universal Web API.)
@@ -13,9 +13,8 @@
  * online game generator.
  * @link https://github.com/GamesCrafters/GamesCraftersUWAPI
  * @link https://github.com/GamesCrafters/GamesmanUni
- *
- * @version 1.0.0
- * @date 2024-01-23
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

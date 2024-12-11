@@ -6,11 +6,11 @@
  * implementation as a separate module from the tier solver, replaced
  * linked-lists with dynamic arrays for optimization, and implemented
  * thread-safety for the new OpenMP multithreaded tier solver.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Frontier type.
- * @version 2.0.1
- * @date 2024-10-06
+ * @version 2.0.2
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

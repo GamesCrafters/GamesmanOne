@@ -1,7 +1,7 @@
 /**
  * @file tier_hash_map.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of linear-probing Tier hash map.
  * @version 1.0.1

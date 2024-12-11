@@ -1,7 +1,7 @@
 /**
  * @file fsvp.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the game of Fair Shares and Varied Pairs.
  * @version 1.0.0

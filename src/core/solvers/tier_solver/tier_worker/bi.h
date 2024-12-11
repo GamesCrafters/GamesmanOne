@@ -5,7 +5,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
  * solving of a single tier into its own module, implemented multithreading
  * using OpenMP, and reformatted functions for readability.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm.
  * @version 1.1.0

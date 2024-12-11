@@ -1,7 +1,7 @@
 /**
  * @file neutron.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Neutron by Robert Kraus.
  * @details https://www.di.fc.ul.pt/~jpn/gv/neutron.htm

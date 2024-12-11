@@ -1,7 +1,7 @@
 /**
  * @file db_probe.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Database probe type.
  * @details A DbProbe is an abstract type for a database probe, which is used to
@@ -9,8 +9,8 @@
  * considered a helper type for the Database type, which uses this structure to
  * cache most recently used data from on-disk database. The behavior depends on
  * the implementation of the corresponding Databse.
- * @version 1.0.0
- * @date 2024-01-19
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

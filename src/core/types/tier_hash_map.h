@@ -1,7 +1,7 @@
 /**
  * @file tier_hash_map.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash map that maps Tiers to 64-bit signed
  * integers.

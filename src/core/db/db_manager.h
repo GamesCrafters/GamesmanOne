@@ -1,7 +1,7 @@
 /**
  * @file db_manager.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
  * @version 2.0.0
@@ -199,7 +199,7 @@ int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
  */
 int DbManagerCheckpointRemove(Tier tier);
 
-// --------------------- (EXPERIMENTAL) Loading Interface ---------------------
+// ----------------------------- Loading Interface -----------------------------
 
 /**
  * @brief Returns an upper bound, in bytes, on the amount of memory that

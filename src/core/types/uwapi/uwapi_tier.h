@@ -1,7 +1,7 @@
 /**
  * @file uwapi_tier.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The UwapiTier type.
  * @details A UwapiTier object defines a set of helper functions that must be

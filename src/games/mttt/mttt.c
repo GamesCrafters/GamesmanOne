@@ -4,12 +4,11 @@
  * GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and
  * adapted to the new system.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Toe.
- *
  * @version 1.1.1
- * @date 2024-01-04
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
