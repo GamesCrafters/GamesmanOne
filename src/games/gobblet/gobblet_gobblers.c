@@ -95,7 +95,7 @@ static const int kSymmetryMatrix[8][9] = {
 // ========================= kGobbletGobblersSolverApi =========================
 
 static Tier GobbletGobblersGetInitialTier(void) {
-    GobbletGobblersTier t;
+    GobbletGobblersTier t = kGobbletGobblersTierInit;
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 2; ++j) {
             t.configs[i].count[j] = 2;
@@ -175,11 +175,12 @@ static void GetHeights(int8_t heights[static 9],
 
 static void GetFaces(char faces[static 9], const GobbletGobblersPosition *p) {
     memset(faces, '-', 9);
-    for (int size = 2; size >= 0; --size) {
-        for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 9; ++i) {
+        for (int size = 2; size >= 0; --size) {
             if (p->board[size][i] != '-') {
                 assert(p->board[size][i] == 'X' || p->board[size][i] == 'O');
                 faces[i] = p->board[size][i];
+                break;
             }
         }
     }
@@ -197,7 +198,7 @@ static void GenerateMovesAddPiece(MoveArray *moves, int turn,
         for (m.unpacked.dest = 0; m.unpacked.dest < 9; ++m.unpacked.dest) {
             if (heights[m.unpacked.dest] >= size) continue;
             m.unpacked.add_size = size;
-            MoveArrayAppend(&moves, m.hash);
+            MoveArrayAppend(moves, m.hash);
         }
     }
 }
@@ -211,7 +212,7 @@ static void GenerateMovesMovePiece(MoveArray *moves, int turn,
         if (faces[m.unpacked.src] != piece) continue;
         for (m.unpacked.dest = 0; m.unpacked.dest < 9; ++m.unpacked.dest) {
             if (heights[m.unpacked.dest] >= heights[m.unpacked.src]) continue;
-            MoveArrayAppend(&moves, m.hash);
+            MoveArrayAppend(moves, m.hash);
         }
     }
 }
@@ -220,8 +221,8 @@ static MoveArray GenerateMovesInternal(GobbletGobblersTier t,
                                        const GobbletGobblersPosition *p) {
     int8_t heights[9];
     char faces[9];
-    GetHeights(heights, &p);
-    GetFaces(faces, &p);
+    GetHeights(heights, p);
+    GetFaces(faces, p);
 
     MoveArray ret;
     MoveArrayInit(&ret);
@@ -297,6 +298,9 @@ static TierPosition DoMoveAddPiece(GobbletGobblersTier t,
             p->board[2][m.unpacked.dest] == '-'));
     p->board[size][m.unpacked.dest] = piece;
 
+    // Adjust turn
+    p->turn = 3 - p->turn;
+
     // Hash
     TierPosition ret = {.tier = t.hash, .position = Hash(t, p)};
 
@@ -319,6 +323,9 @@ static TierPosition DoMoveMovePiece(GobbletGobblersTier t,
     p->board[size][dest] = p->board[size][src];
     p->board[size][src] = '-';
 
+    // Adjust turn
+    p->turn = 3 - p->turn;
+
     // Hash
     TierPosition ret = {.tier = t.hash, .position = Hash(t, p)};
 
@@ -328,7 +335,7 @@ static TierPosition DoMoveMovePiece(GobbletGobblersTier t,
 static TierPosition DoMoveInternal(GobbletGobblersTier t,
                                    GobbletGobblersPosition p,
                                    GobbletGobblersMove m) {
-    if (m.unpacked.add_size < 0) return DoMoveAddPiece(t, &p, m);
+    if (m.unpacked.add_size >= 0) return DoMoveAddPiece(t, &p, m);
 
     return DoMoveMovePiece(t, &p, m);
 }
@@ -345,6 +352,7 @@ static TierPosition GobbletGobblersDoMove(TierPosition tier_position,
 }
 
 static bool GobbletGobblersIsLegalPosition(TierPosition tier_position) {
+    (void)tier_position;
     return true;
 }
 
@@ -453,8 +461,99 @@ static const TierSolverApi kGobbletGobblersSolverApi = {
 
 // ======================== kGobbletGobblersGameplayApi ========================
 
+static const char kPositionFormat[] =
+    "        LEGEND         |          TOTAL\n"
+    "                       |    [%c]     [%c]     [%c]\n"
+    "( 1       2       3 )  |  %c [%c]   %c [%c]   %c [%c]\n"
+    "                       |    [%c]     [%c]     [%c]\n"
+    "                       |\n"
+    "                       |    [%c]     [%c]     [%c]\n"
+    "( 4       5       6 )  |  %c [%c]   %c [%c]   %c [%c]\n"
+    "                       |    [%c]     [%c]     [%c]\n"
+    "                       |\n"
+    "                       |    [%c]     [%c]     [%c]\n"
+    "( 7       8       9 )  |  %c [%c]   %c [%c]   %c [%c]\n"
+    "                       |    [%c]     [%c]     [%c]\n";
+
 static int GobbletGobblersTierPositionToString(TierPosition tier_position,
-                                               char *buffer) {}
+                                               char *buffer) {
+    GobbletGobblersTier t;
+    GobbletGobblersPosition p;
+    bool success = Unhash(tier_position, &t, &p);
+    if (!success) return kGenericHashError;
+
+    char faces[9];
+    GetFaces(faces, &p);
+    sprintf(buffer, kPositionFormat,
+
+            p.board[2][0], p.board[2][1], p.board[2][2], faces[0],
+            p.board[1][0], faces[1], p.board[1][1], faces[2], p.board[1][2],
+            p.board[0][0], p.board[0][1], p.board[0][2],
+
+            p.board[2][3], p.board[2][4], p.board[2][5], faces[3],
+            p.board[1][3], faces[4], p.board[1][4], faces[5], p.board[1][5],
+            p.board[0][3], p.board[0][4], p.board[0][5],
+
+            p.board[2][6], p.board[2][7], p.board[2][8], faces[6],
+            p.board[1][6], faces[7], p.board[1][7], faces[8], p.board[1][8],
+            p.board[0][6], p.board[0][7], p.board[0][8]);
+
+    return kNoError;
+}
+
+static int GobbletGobblersMoveToString(Move move, char *buffer) {
+    GobbletGobblersMove m = {.hash = move};
+    if (m.unpacked.add_size < 0) {  // Moving a piece
+        sprintf(buffer, "move %d %d", m.unpacked.src + 1, m.unpacked.dest + 1);
+    } else {  // Adding a piece
+        sprintf(buffer, "add %d %d", m.unpacked.add_size + 1,
+                m.unpacked.dest + 1);
+    }
+
+    return kNoError;
+}
+
+static bool GobbletGobblersIsValidMoveString(ReadOnlyString move_string) {
+    if (strlen(move_string) > 8) return false;
+    char move_string_copy[9];
+    strcpy(move_string_copy, move_string);
+    static const char *delim = " ";
+    char *token = strtok(move_string_copy, delim);
+    if (strcmp(token, "add") && strcmp(token, "move")) return false;
+
+    return true;
+}
+
+static Move GobbletGobblersStringToMove(ReadOnlyString move_string) {
+    char move_string_copy[9];
+    strcpy(move_string_copy, move_string);
+    static const char *delim = " ";
+    char *token = strtok(move_string_copy, delim);
+    GobbletGobblersMove m = kGobbletGobblersMoveInit;
+    if (strcmp(token, "add") == 0) {
+        token = strtok(NULL, delim);
+        m.unpacked.add_size = atoi(token) - 1;
+    } else {
+        assert(strcmp(token, "move") == 0);
+        token = strtok(NULL, delim);
+        m.unpacked.src = atoi(token) - 1;
+    }
+    token = strtok(NULL, delim);
+    m.unpacked.dest = atoi(token) - 1;
+
+    return m.hash;
+}
+
+static const GameplayApiCommon GobbletGobblersGameplayApiCommon = {
+    .GetInitialPosition = GobbletGobblersGetInitialPosition,
+    .position_string_length_max = sizeof(kPositionFormat),
+
+    .move_string_length_max = 8,
+    .MoveToString = GobbletGobblersMoveToString,
+
+    .IsValidMoveString = GobbletGobblersIsValidMoveString,
+    .StringToMove = GobbletGobblersStringToMove,
+};
 
 static const GameplayApiTier GobbletGobblersGameplayApiTier = {
     .GetInitialTier = GobbletGobblersGetInitialTier,
@@ -467,7 +566,7 @@ static const GameplayApiTier GobbletGobblersGameplayApiTier = {
 };
 
 static const GameplayApi kGobbletGobblersGameplayApi = {
-    .common = NULL,
+    .common = &GobbletGobblersGameplayApiCommon,
     .tier = &GobbletGobblersGameplayApiTier,
 };
 
@@ -484,10 +583,10 @@ static int GobbletGobblersInit(void *aux) {
     RemainingPieceConfig rpc;
     for (rpc.count[X] = 0; rpc.count[X] <= 2; ++rpc.count[X]) {
         for (rpc.count[O] = 0; rpc.count[O] <= 2; ++rpc.count[O]) {
-            pieces_init[X * 3 + 1] = pieces_init[X * 3 + 2] = rpc.count[X];
-            pieces_init[O * 3 + 1] = pieces_init[O * 3 + 2] = rpc.count[O];
+            pieces_init[X * 3 + 1] = pieces_init[X * 3 + 2] = 2 - rpc.count[X];
+            pieces_init[O * 3 + 1] = pieces_init[O * 3 + 2] = 2 - rpc.count[O];
             pieces_init[Blank * 3 + 1] = pieces_init[Blank * 3 + 2] =
-                9 - rpc.count[X] - rpc.count[O];
+                5 + rpc.count[X] + rpc.count[O];
             bool success =
                 GenericHashAddContext(1, 9, pieces_init, NULL, rpc.hash);
             if (!success) return kGenericHashError;
