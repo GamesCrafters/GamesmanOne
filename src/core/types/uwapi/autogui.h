@@ -36,10 +36,10 @@
  * funciton is responsible for deallocating the \c CString returned.
  *
  * @param turn Either 1 or 2, indicating whose turn it is.
- * @param board A NULL-terminated string, typically a board string. However, the
- * GUI designer may decide to include more entities than board slots, in which
- * case the string should be an entity string instead. Must be of length less
- * than or equal to the number of centers specified in UWAPI.
+ * @param entities A NULL-terminated string, typically a board string. However,
+ * the GUI designer may decide to include more entities than board slots, in
+ * which case the string should be an entity string instead. Must be of length
+ * less than or equal to the number of centers specified in UWAPI.
  * @return Formatted AutoGUI position string.
  */
 CString AutoGuiMakePosition(int turn, ReadOnlyString entities);
@@ -59,8 +59,8 @@ CString AutoGuiMakeMoveA(char token, int center, char sound);
 /**
  * @brief Returns a formatted AutoGUI v2/3 M-type move string. The caller of
  * this funciton is responsible for deallocating the \c CString returned.
- * 
- * @param src Index of the source center. 
+ *
+ * @param src Index of the source center.
  * @param dest Index of the destination center.
  * @param sound Character for the sound effect. Pass the zero-terminator '\0' to
  * omit the sound character and fall back to AutoGUI v2.
@@ -71,8 +71,8 @@ CString AutoGuiMakeMoveM(int src, int dest, char sound);
 /**
  * @brief Returns a formatted AutoGUI v2/3 L-type move string. The caller of
  * this funciton is responsible for deallocating the \c CString returned.
- * 
- * @param src Index of the source center. 
+ *
+ * @param src Index of the source center.
  * @param dest Index of the destination center.
  * @param sound Character for the sound effect. Pass the zero-terminator '\0' to
  * omit the sound character and fall back to AutoGUI v2.
@@ -83,7 +83,7 @@ CString AutoGuiMakeMoveL(int src, int dest, char sound);
 /**
  * @brief Returns a formatted AutoGUI v2/3 T-type move string. The caller of
  * this funciton is responsible for deallocating the \c CString returned.
- * 
+ *
  * @param text Text to be displayed as the move token.
  * @param center Index of the center at which the move token will be displayed.
  * @param sound Character for the sound effect. Pass the zero-terminator '\0' to
