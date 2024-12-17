@@ -1,13 +1,12 @@
 /**
  * @file tier_hash_map.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash map that maps Tiers to 64-bit signed
  * integers.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-09-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
-#define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
+#define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -90,7 +89,7 @@ bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value);
  * @brief Returns true if the given MAP contains an entry with key equal to
  * TIER, or false otherwise.
  */
-bool TierHashMapContains(TierHashMap *map, Tier tier);
+bool TierHashMapContains(const TierHashMap *map, Tier tier);
 
 /**
  * @brief Returns an invalid iterator to the entry before the first entry of
@@ -158,4 +157,4 @@ bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
 bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
                              int64_t *value);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_

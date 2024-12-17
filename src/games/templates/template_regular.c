@@ -1,12 +1,11 @@
 /**
  * @file template_regular.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Template for regular (non-tier) games - implementation.
- * @version 1.0.0
- * @date 2024-02-07
- *
+ * @brief Template for regular (single-tier) games - implementation.
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @todo 1. Copy this file and template_regular.h to your game's directory.
  *       2. Rename both file to your game's name. Make sure they have the same
@@ -361,7 +360,7 @@ static Position TemplateRegularFormalPositionToPosition(
 static CString TemplateRegularPositionToFormalPosition(Position position) {
     // TODO
     CString formal_position;
-    CStringInitCopy(&formal_position, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&formal_position, "");  // This creates an empty CString.
 
     return formal_position;
 }
@@ -369,7 +368,7 @@ static CString TemplateRegularPositionToFormalPosition(Position position) {
 static CString TemplateRegularPositionToAutoGuiPosition(Position position) {
     // TODO
     CString autogui_position;
-    CStringInitCopy(&autogui_position, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&autogui_position, "");  // This creates an empty CString.
 
     return autogui_position;
 }
@@ -377,7 +376,7 @@ static CString TemplateRegularPositionToAutoGuiPosition(Position position) {
 static CString TemplateRegularMoveToFormalMove(Position position, Move move) {
     // TODO
     CString formal_move;
-    CStringInitCopy(&formal_move, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&formal_move, "");  // This creates an empty CString.
 
     return formal_move;
 }
@@ -385,7 +384,7 @@ static CString TemplateRegularMoveToFormalMove(Position position, Move move) {
 static CString TemplateRegularMoveToAutoGuiMove(Position position, Move move) {
     // TODO
     CString autogui_move;
-    CStringInitCopy(&autogui_move, "");  // This creates an empty CString.
+    CStringInitCopyCharArray(&autogui_move, "");  // This creates an empty CString.
 
     return autogui_move;
 }

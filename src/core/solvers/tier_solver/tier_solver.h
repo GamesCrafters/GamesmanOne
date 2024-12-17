@@ -4,11 +4,11 @@
  * of tier solver (solveretrograde.c in GamesmanClassic.)
  * @author Robert Shi (robertyishi@berkeley.edu): Modularized, multithreaded
  * tier solver with various optimizations.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The loopy tier solver.
- * @version 1.5.0
- * @date 2024-07-11
+ * @brief The generic tier solver capable of handling loopy and loop-free tiers.
+ * @version 1.6.1
+ * @date 2024-09-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,6 +37,29 @@
 
 /** @brief The Tier Solver. */
 extern const Solver kTierSolver;
+
+typedef enum {
+    /**
+     * @brief A tier T is of this type if, for all positions P in T, the child
+     * positions of P is not in T. This also implies that T is loop-free.
+     */
+    kTierTypeImmediateTransition,
+
+    /**
+     * @brief A tier T is of this type if it is loop-free. That is, there are no
+     * cycles in the position graph of T.
+     */
+    kTierTypeLoopFree,
+
+    /**
+     * @brief A tier T is of this type if it is loopy, or if its loopiness is
+     * unclear.
+     * 
+     * @note The loopy algorithm also works on loop-free tiers. Hence, this is
+     * the default type of a tier if its type is not specified.
+     */
+    kTierTypeLoopy,
+} TierType;
 
 /**
  * @brief Tier Solver API.
@@ -254,6 +277,17 @@ typedef struct TierSolverApi {
     TierArray (*GetChildTiers)(Tier tier);
 
     /**
+     * @brief Returns the type of \p tier.
+     *
+     * @note Refer to the documentation of \c TierType for the definition of
+     * each tier type in tier_solver.h.
+     *
+     * @note This function is OPTIONAL. If not implemented, all tiers will be
+     * treated as loopy.
+     */
+    TierType (*GetTierType)(Tier tier);
+
+    /**
      * @brief Returns the canonical tier symmetric to the given TIER. Returns
      * TIER if itself is canonical.
      *
@@ -282,20 +316,31 @@ typedef struct TierSolverApi {
      * @note This function is OPTIONAL. If set to NULL, the tier database files
      * will use the TIER value as their file names.
      *
-     * @param name Tier name output buffer.
      * @param tier Get name of this tier.
+     * @param name Tier name output buffer.
      * @return 0 on success, or
      * @return non-zero error code on failure.
      */
-    int (*GetTierName)(char *name, Tier tier);
+    int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 } TierSolverApi;
 
 /** @brief All detectable error types by the tier solver test function. */
 enum TierSolverTestErrors {
-    kTierSolverTestNoError,           /**< No error. */
-    kTierSolverTestDependencyError,   /**< Test failed due to a prior error. */
-    kTierSolverTestGetTierNameError,  /**< Failed to get tier name. */
-    kTierSolverTestIllegalChildError, /**< Illegal child position detected. */
+    kTierSolverTestNoError,          /**< No error. */
+    kTierSolverTestDependencyError,  /**< Test failed due to a prior error. */
+    kTierSolverTestGetTierNameError, /**< Failed to get tier name. */
+    /** Illegal child tier detected. */
+    kTierSolverTestIllegalChildTierError,
+    /** Illegal child position detected. */
+    kTierSolverTestIllegalChildPosError,
+    /** The positions returned by the game-specific GetCanonicalChildPositions
+       did not match those returned by the default function which calls
+       GenerateMoves and DoMove. */
+    kTierSolverTestGetCanonicalChildPositionsMismatch,
+    /** The number of canonical positions returned by the game-specific
+       GetNumberOfCanonicalChildPositions did not match the value returned by
+       the default function which calls GenerateMoves and DoMove. */
+    kTierSolverTestGetNumberOfCanonicalChildPositionsMismatch,
     /** Applying tier symmetry within the same tier returned a different
        position. */
     kTierSolverTestTierSymmetrySelfMappingError,
@@ -312,8 +357,9 @@ enum TierSolverTestErrors {
 
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
-    int verbose; /**< Level of details to output. */
-    bool force;  /**< Whether to force (re)analyze the game. */
+    int verbose;       /**< Level of details to output. */
+    bool force;        /**< Whether to force (re)solve the game. */
+    intptr_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverSolveOptions;
 
 /** @brief Analyzer options of the Tier Solver. */

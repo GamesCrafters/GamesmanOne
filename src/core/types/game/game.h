@@ -1,14 +1,14 @@
 /**
  * @file game.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Game type and related constants.
  * @details The Game type is an abstract type of a generic game that can be
  * solved through the GAMESMAN system. To implement a new game, correctly set
  * all members variables and function pointers that are marked as REQUIRED.
- * @version 1.0.0
- * @date 2024-01-21
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,8 +27,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_H
-#define GAMESMANONE_CORE_TYPES_GAME_GAME_H
+#ifndef GAMESMANONE_CORE_TYPES_GAME_GAME_H_
+#define GAMESMANONE_CORE_TYPES_GAME_GAME_H_
 
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
@@ -149,4 +149,4 @@ typedef struct Game {
     int (*SetVariantOption)(int option, int selection);
 } Game;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_H
+#endif  // GAMESMANONE_CORE_TYPES_GAME_GAME_H_

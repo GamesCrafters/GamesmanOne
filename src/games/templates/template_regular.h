@@ -1,12 +1,11 @@
 /**
  * @file template_regular.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Template for regular (non-tier) games.
- * @version 1.0.0
- * @date 2024-02-07
- *
+ * @brief Template for regular (single-tier) games.
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @todo 1. Copy this file and template_regular.c to your game's directory.
  *       2. Rename both file to your game's name. Make sure they have the same

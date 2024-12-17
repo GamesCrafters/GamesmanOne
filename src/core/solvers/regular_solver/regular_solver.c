@@ -1,15 +1,15 @@
 /**
  * @file regular_solver.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Regular Solver.
  *
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.4.0
- * @date 2024-07-11
+ * @version 1.5.0
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -54,6 +54,10 @@
 static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
+
+static int RegularSolverTest(long seed);
+static ReadOnlyString RegularSolverExplainTestError(int error);
+
 static int RegularSolverSolve(void *aux);
 static int RegularSolverAnalyze(void *aux);
 static int RegularSolverGetStatus(void);
@@ -69,6 +73,9 @@ const Solver kRegularSolver = {
 
     .Init = &RegularSolverInit,
     .Finalize = &RegularSolverFinalize,
+
+    .Test = &RegularSolverTest,
+    .ExplainTestError = &RegularSolverExplainTestError,
 
     .Solve = &RegularSolverSolve,
     .Analyze = &RegularSolverAnalyze,
@@ -165,7 +172,11 @@ static int DefaultGetNumberOfCanonicalChildPositions(
 static TierPositionArray DefaultGetCanonicalChildPositions(
     TierPosition tier_position);
 
-static int DefaultGetTierName(char *dest, Tier tier);
+static TierType DefaultGetTierType(Tier tier);
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric);
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]);
 
 // -----------------------------------------------------------------------------
 
@@ -211,17 +222,89 @@ static int RegularSolverFinalize(void) {
     return kNoError;
 }
 
+static int RegularSolverTest(long seed) {
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
+    TierArray empty;
+    TierArrayInit(&empty);
+    printf(
+        "Enter the maximum number of positions to test [Default: 1000000]: ");
+    char input[kInt64Base10StringLengthMax + 1];
+    int64_t test_size = 1000000;
+    if (fgets(input, sizeof(input), stdin) != NULL) {
+        // Check if the user pressed Enter without entering a number
+        if (input[0] != '\n') {
+            test_size = strtoll(input, NULL, 10);
+            if (test_size < 0) {
+                printf("Invalid input. Using default test size [1000000]\n");
+                test_size = 1000000;
+            }
+        }
+    }
+    int ret = TierWorkerTest(kDefaultTier, &empty, seed, test_size);
+    TierArrayDestroy(&empty);
+
+    return ret;
+}
+
+enum RegularSolverTestErrors {
+    /** No error. */
+    kRegularSolverTestNoError = kTierSolverTestNoError,
+    /** Test failed due to a prior error. */
+    kRegularSolverTestDependencyError = kTierSolverTestDependencyError,
+    /** Illegal child position detected. */
+    kRegularSolverTestIllegalChildPosError =
+        kTierSolverTestIllegalChildPosError,
+    /** One of the canonical child positions of a legal canonical position was
+       found not to have that legal position as its parent. */
+    kRegularSolverTestChildParentMismatchError =
+        kTierSolverTestChildParentMismatchError,
+    /** One of the canonical parent positions of a legal canonical position was
+       found not to have that legal position as its child. */
+    kRegularSolverTestParentChildMismatchError =
+        kTierSolverTestParentChildMismatchError,
+};
+
+static ReadOnlyString RegularSolverExplainTestError(int error) {
+    switch (error) {
+        case kRegularSolverTestNoError:
+            return "no error";
+        case kRegularSolverTestDependencyError:
+            return "another error occurred before the test begins";
+        case kRegularSolverTestIllegalChildPosError:
+            return "an illegal position was found to be a child position of "
+                   "some legal position";
+        case kRegularSolverTestChildParentMismatchError:
+            return "one of the canonical child positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "parent";
+        case kRegularSolverTestParentChildMismatchError:
+            return "one of the canonical parent positions of a legal canonical "
+                   "position was found not to have that legal position as its "
+                   "child";
+    }
+
+    return "unknown error, which usually indicates a bug in the regular "
+           "solver's test code";
+}
+
 static int RegularSolverSolve(void *aux) {
-    static const RegularSolverSolveOptions kDefaultSolveOptions = {
+    RegularSolverSolveOptions default_options = {
         .force = false,
         .verbose = 1,
+        .memlimit = 0,  // Use default memory limit.
     };
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
-    if (options == NULL) options = &kDefaultSolveOptions;
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+    if (options == NULL) options = &default_options;
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+
+    TierWorkerSolveOptions tier_worker_options = {
+        .compare = false,
+        .force = options->force,
+        .verbose = options->verbose,
+    };
     int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
-                                kDefaultTier, options->force, false, NULL);
+                                kDefaultTier, &tier_worker_options, NULL);
     if (error != kNoError) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
                 error);
@@ -394,9 +477,12 @@ static void ConvertApi(const RegularSolverApi *regular, TierSolverApi *tier) {
         tier->GetCanonicalChildPositions = &DefaultGetCanonicalChildPositions;
     }
 
-    tier->GetPositionInSymmetricTier = NULL;
+    // TODO: add support for loop-free games.
+    tier->GetTierType = &DefaultGetTierType;
+    tier->GetPositionInSymmetricTier = &DefaultGetPositionInSymmetricTier;
     tier->GetChildTiers = &GetChildTiers;
     tier->GetCanonicalTier = &GetCanonicalTier;
+    tier->GetTierName = &DefaultGetTierName;
 }
 
 static void TogglePositionSymmetryRemoval(bool on) {
@@ -554,9 +640,23 @@ static TierPositionArray DefaultGetCanonicalChildPositions(
     return children;
 }
 
-static int DefaultGetTierName(char *dest, Tier tier) {
+static TierType DefaultGetTierType(Tier tier) {
+    (void)tier;  // Unused.
+    return kTierTypeLoopy;
+}
+
+static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
+                                                  Tier symmetric) {
+    (void)symmetric;  // Unused.
+    return tier_position.position;
+}
+
+static int DefaultGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]) {
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    return sprintf(dest, "%s_%d", current_game_name, current_variant_id);
+    sprintf(name, "%s_%d", current_game_name, current_variant_id);
+
+    return kNoError;
 }

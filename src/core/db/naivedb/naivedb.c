@@ -1,12 +1,12 @@
 /**
  * @file naivedb.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.1
- * @date 2024-10-06
+ * @version 1.2.2
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -143,7 +143,7 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
 
     int count = sprintf(full_path, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(full_path + count, tier);
+        GetTierName(tier, full_path + count);
     } else {
         sprintf(full_path + count, "%" PRITier, tier);
     }
@@ -457,7 +457,7 @@ static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position) {
 }
 
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeFillBuffer(probe, tier_position)) return kIllegalRemoteness;
+    if (!ProbeFillBuffer(probe, tier_position)) return kErrorRemoteness;
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.remoteness;
 }

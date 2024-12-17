@@ -1,11 +1,11 @@
 /**
  * @file tier_analyzer.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.2.0
- * @date 2024-07-11
+ * @version 1.2.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,7 @@
 
 #include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
+#include "core/concurrency.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
 #include "core/misc.h"
@@ -42,19 +43,6 @@
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
-
-// Otherwise, the following macros do nothing.
-#else
-#define PRAGMA
-#define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_CRITICAL(name)
 #endif  // _OPENMP
 
 static const TierSolverApi *api_internal;
@@ -118,8 +106,7 @@ int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     this_tier = tier;
     if (api_internal == NULL) goto _bailout;
     if (!force) {
-        Tier canonical = api_internal->GetCanonicalTier(tier);
-        int status = AnalysisStatus(canonical);
+        int status = AnalysisStatus(tier);
         if (status == kAnalysisTierCheckError) {
             ret = kAnalysisTierCheckError;
             goto _bailout;
@@ -257,21 +244,22 @@ static BitStream LoadDiscoveryMap(Tier tier) {
 }
 
 static bool Step2LoadFringe(void) {
-    bool success = true;
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < this_tier_size; ++position) {
-            if (!success) continue;
+            if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
             if (BitStreamGet(&this_tier_map, position)) {
                 if (!PositionArrayAppend(&fringe[tid], position)) {
-                    success = false;
+                    ConcurrentBoolStore(&success, false);
                 }
             }
         }
     }
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 static bool Step3Discover(Analysis *dest) {
@@ -306,17 +294,17 @@ static void UpdateFringeId(int *fringe_id, int64_t i,
 }
 
 static bool DiscoverHelper(Analysis *dest) {
-    bool success = true;
     int64_t *fringe_offsets = MakeFringeOffsets();
     if (fringe_offsets == NULL) return false;
 
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
         int fringe_id = 0;
-
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
-            if (!success) continue;  // Fail fast.
+            if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
             TierPosition parent;
@@ -327,7 +315,7 @@ static bool DiscoverHelper(Analysis *dest) {
 
             TierPositionArray children = GetChildPositions(parent, dest);
             if (children.size < 0) {
-                success = false;
+                ConcurrentBoolStore(&success, false);
                 continue;
             }
             for (int64_t j = 0; j < children.size; ++j) {
@@ -344,7 +332,7 @@ static bool DiscoverHelper(Analysis *dest) {
     free(fringe_offsets);
     fringe_offsets = NULL;
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 static bool DiscoverHelperProcessThisTier(Position child, int tid) {
@@ -460,7 +448,8 @@ static bool Step4SaveChildMaps(void) {
 }
 
 static bool Step5Analyze(Analysis *dest) {
-    bool success = true;
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     int error = DbManagerLoadTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
@@ -470,11 +459,12 @@ static bool Step5Analyze(Analysis *dest) {
         AnalysisInit(&parts[i]);
     }
 
-    // PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
     PRAGMA_OMP_PARALLEL {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (int64_t i = 0; i < this_tier_size; ++i) {
+            if (!ConcurrentBoolLoad(&success)) continue;  // fail fast.
+
             // Skip if the current position is not reachable.
             if (!BitStreamGet(&this_tier_map, i)) continue;
 
@@ -487,9 +477,9 @@ static bool Step5Analyze(Analysis *dest) {
             int remoteness =
                 DbManagerGetRemotenessFromLoaded(this_tier, canonical);
             bool is_canonical = (tier_position.position == canonical);
-            error = AnalysisCount(&parts[tid], tier_position, value, remoteness,
-                                  is_canonical);
-            if (error != 0) success = false;
+            int error = AnalysisCount(&parts[tid], tier_position, value,
+                                      remoteness, is_canonical);
+            if (error != 0) ConcurrentBoolStore(&success, false);
         }
     }
     for (int i = 0; i < num_threads; ++i) {
@@ -498,17 +488,19 @@ static bool Step5Analyze(Analysis *dest) {
     free(parts);
 
     error = DbManagerUnloadTier(this_tier);
-    if (error != kNoError) success = false;
+    if (error != kNoError) ConcurrentBoolStore(&success, false);
     BitStreamDestroy(&this_tier_map);
 
-    return success;
+    return ConcurrentBoolLoad(&success);
 }
 
 static bool Step6SaveAnalysis(const Analysis *dest) {
     bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
     if (!success) return false;
 
-    StatManagerRemoveDiscoveryMap(this_tier);
+    if (this_tier != api_internal->GetInitialTier()) {
+        StatManagerRemoveDiscoveryMap(this_tier);
+    }
     return true;
 }
 
@@ -578,9 +570,3 @@ static void InitFringe(PositionArray *target) {
         PositionArrayInit(&target[i]);
     }
 }
-
-#undef PRAGMA
-#undef PRAGMA_OMP_PARALLEL
-#undef PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC
-#undef PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC
-#undef PRAGMA_OMP_CRITICAL

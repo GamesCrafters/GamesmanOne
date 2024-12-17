@@ -1,11 +1,11 @@
 /**
  * @file constants.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * @version 1.1.1
- * @date 2024-01-24
+ * @version 2.0.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -69,7 +69,7 @@ enum CommonConstants {
 /** @brief Gamesman constants. */
 enum GamesmanConstants {
     /** Illegal remoteness which can be returned as an error. */
-    kIllegalRemoteness = -1,
+    kErrorRemoteness = -1,
     /** Illegal variant which can be returned as an error. */
     kIllegalVariantIndex = -1,
 };

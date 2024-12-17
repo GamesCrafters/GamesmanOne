@@ -6,7 +6,7 @@
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // strncmp
+#include <string.h>   // strcmp
 
 #include "core/constants.h"
 #include "core/interactive/games/presolve/match.h"
@@ -15,9 +15,10 @@
 #include "core/types/gamesman_types.h"
 
 static bool solved;
-static int minRemotenessOfLoseChildren;
-static int minRemotenessOfTieChildren;
-static int maxRemotenessOfWinChildren;
+static int lose_children_remoteness_min;
+static int tie_children_remoteness_min;
+static int win_children_remoteness_max;
+static Int64HashMap move_values, move_remotenesses;
 
 static void PrintPrediction(void) {
     int turn = InteractiveMatchGetTurn();
@@ -94,13 +95,13 @@ static void PrintCurrentPosition(const Game *game) {
  */
 int GetMoveRank(Value childValue, int remoteness) {
     if (childValue == kLose) {
-        return remoteness - minRemotenessOfLoseChildren;
+        return remoteness - lose_children_remoteness_min;
     } else if (childValue == kTie) {
-        return remoteness - minRemotenessOfTieChildren + kRemotenessMax;
+        return remoteness - tie_children_remoteness_min + kRemotenessMax;
     } else if (childValue == kDraw) {
         return kRemotenessMax * 2;
     } else if (childValue == kWin) {
-        return maxRemotenessOfWinChildren - remoteness + kRemotenessMax * 3;
+        return win_children_remoteness_max - remoteness + kRemotenessMax * 3;
     } else {
         return 0;
     }
@@ -118,14 +119,14 @@ int GetMoveRank(Value childValue, int remoteness) {
 int MoveCompare(const void *move1, const void *move2) {
     Move m1 = *((Move *)move1);
     Move m2 = *((Move *)move2);
-
-    TierPosition current = InteractiveMatchGetCurrentPosition();
-    TierPosition child1 = InteractiveMatchDoMove(current, m1);
-    TierPosition child2 = InteractiveMatchDoMove(current, m2);
-    Value value1 = SolverManagerGetValue(child1);
-    Value value2 = SolverManagerGetValue(child2);
-    int remoteness1 = SolverManagerGetRemoteness(child1);
-    int remoteness2 = SolverManagerGetRemoteness(child2);
+    Int64HashMapIterator it = Int64HashMapGet(&move_values, m1);
+    Value value1 = Int64HashMapIteratorValue(&it);
+    it = Int64HashMapGet(&move_values, m2);
+    Value value2 = Int64HashMapIteratorValue(&it);
+    it = Int64HashMapGet(&move_remotenesses, m1);
+    int remoteness1 = Int64HashMapIteratorValue(&it);
+    it = Int64HashMapGet(&move_remotenesses, m2);
+    int remoteness2 = Int64HashMapIteratorValue(&it);
 
     return GetMoveRank(value1, remoteness1) - GetMoveRank(value2, remoteness2);
 }
@@ -142,10 +143,10 @@ static void PrintMovesOfValue(const Game *game, MoveArray *moves,
             game->gameplay_api->common->MoveToString(moves->array[i],
                                                      move_string);
             if (childValue == kDraw) {
-                printf("\t\t\t\t%s\tDraw\n", move_string);
+                printf("\t\t\t%-16s\tDraw\n", move_string);
             } else {
                 int remoteness = SolverManagerGetRemoteness(child);
-                printf("\t\t\t\t%s\t%d\n", move_string, remoteness);
+                printf("\t\t\t%-16s\t%d\n", move_string, remoteness);
             }
         }
     }
@@ -158,33 +159,66 @@ static void PrintMovesOfValue(const Game *game, MoveArray *moves,
  */
 void SetExtremeChildRemotenesses(TierPosition current, MoveArray *moves) {
     // Initialize extreme remotenesses
-    minRemotenessOfLoseChildren = kRemotenessMax;
-    minRemotenessOfTieChildren = kRemotenessMax;
-    maxRemotenessOfWinChildren = 0;
+    lose_children_remoteness_min = kRemotenessMax;
+    tie_children_remoteness_min = kRemotenessMax;
+    win_children_remoteness_max = 0;
 
     for (int64_t i = 0; i < moves->size; i++) {
         TierPosition child = InteractiveMatchDoMove(current, moves->array[i]);
         int remoteness = SolverManagerGetRemoteness(child);
         switch (SolverManagerGetValue(child)) {
             case kWin:
-                if (remoteness > maxRemotenessOfWinChildren) {
-                    maxRemotenessOfWinChildren = remoteness;
+                if (remoteness > win_children_remoteness_max) {
+                    win_children_remoteness_max = remoteness;
                 }
                 break;
             case kTie:
-                if (remoteness < minRemotenessOfTieChildren) {
-                    minRemotenessOfTieChildren = remoteness;
+                if (remoteness < tie_children_remoteness_min) {
+                    tie_children_remoteness_min = remoteness;
                 }
                 break;
             case kLose:
-                if (remoteness < minRemotenessOfLoseChildren) {
-                    minRemotenessOfLoseChildren = remoteness;
+                if (remoteness < lose_children_remoteness_min) {
+                    lose_children_remoteness_min = remoteness;
                 }
                 break;
             default:
                 break;
         }
     }
+}
+
+static void MoveValueCacheCleanup(void) {
+    if (move_values.size) Int64HashMapDestroy(&move_values);
+    memset(&move_values, 0, sizeof(move_values));
+    if (move_remotenesses.size) Int64HashMapDestroy(&move_remotenesses);
+    memset(&move_remotenesses, 0, sizeof(move_remotenesses));
+}
+
+static bool LoadMoveValues(const MoveArray *moves) {
+    MoveValueCacheCleanup();
+    Int64HashMapInit(&move_values, 0.5);
+    Int64HashMapInit(&move_remotenesses, 0.5);
+    for (int64_t i = 0; i < moves->size; ++i) {
+        TierPosition current = InteractiveMatchGetCurrentPosition();
+        TierPosition child = InteractiveMatchDoMove(current, moves->array[i]);
+        Value value = SolverManagerGetValue(child);
+        if (!Int64HashMapSet(&move_values, moves->array[i], value)) {
+            fprintf(stderr,
+                    "LoadMoveValues: failed to create new map entry for move "
+                    "value\n");
+            return false;
+        }
+        int remoteness = SolverManagerGetRemoteness(child);
+        if (!Int64HashMapSet(&move_remotenesses, moves->array[i], remoteness)) {
+            fprintf(stderr,
+                    "LoadMoveValues: failed to create new map entry for move "
+                    "remoteness\n");
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /**
@@ -201,18 +235,19 @@ static bool PrintSortedMoveValues(const Game *game) {
 
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
+    if (!LoadMoveValues(&moves)) return false;
     SetExtremeChildRemotenesses(current, &moves);
-    MoveArraySort(&moves, MoveCompare);
+    MoveArraySortExplicit(&moves, MoveCompare);
 
     printf("\n\t==========================================================\n");
     printf("\n\t\tHere are the values of all possible moves:\n\n");
-    printf("\t\t\t\tMove \tRemoteness\n");
-    printf("\t\tWinning Moves:\n");
+    printf("\t\t\tMove            \tRemoteness\n");
+    printf("\t\tWinning:\n");
     PrintMovesOfValue(game, &moves, current, move_string, kLose);
-    printf("\t\tTying Moves:\n");
+    printf("\t\tTying:\n");
     PrintMovesOfValue(game, &moves, current, move_string, kTie);
     PrintMovesOfValue(game, &moves, current, move_string, kDraw);
-    printf("\t\tLosing Moves:\n");
+    printf("\t\tLosing:\n");
     PrintMovesOfValue(game, &moves, current, move_string, kWin);
     printf("\n\t==========================================================\n");
     printf("\n");
@@ -267,14 +302,19 @@ static void MakeComputerMove(void) {
     MoveArrayDestroy(&moves);
 }
 
-static bool PromptForAndProcessUserMove(const Game *game) {
+static int PromptForAndProcessUserMove(const Game *game) {
     int move_string_size =
-        game->gameplay_api->common->move_string_length_max + 1;
+        game->gameplay_api->common->move_string_length_max + 2;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
     MoveArray moves = InteractiveMatchGenerateMoves();
 
+    // Print all valid in-game menu options
+    printf("[(u)ndo");
+    if (solved) printf("/(v)alues");
+    printf("/(a)bort]\n");
+
     // Print all valid move strings.
-    printf("Player %d's move [(u)ndo", InteractiveMatchGetTurn() + 1);
+    printf("Player %d's move [", InteractiveMatchGetTurn() + 1);
     for (int64_t i = 0; i < moves.size; ++i) {
         game->gameplay_api->common->MoveToString(moves.array[i], move_string);
         printf("/[%s]", move_string);
@@ -282,40 +322,40 @@ static bool PromptForAndProcessUserMove(const Game *game) {
     printf("]: ");
 
     // Prompt for input.
-    if (fgets(move_string, move_string_size + 1, stdin) == NULL) {
+    if (fgets(move_string, move_string_size, stdin) == NULL) {
         fprintf(stderr, "PlayTierGame: unexpected fgets error. Aborting...\n");
         exit(EXIT_FAILURE);
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
-    
-    if (strncmp(move_string, "v", 1) == 0) { // Print values for all moves.
+
+    if (strcmp(move_string, "v") == 0) {  // Print values for all moves.
         if (solved) {
             PrintSortedMoveValues(game);
         } else {
             printf("Game is not solved, so move values cannot be shown.\n");
         }
-        return true;
+        return 0;
     }
-    if (strncmp(move_string, "q", 1) == 0) GamesmanExit();  // Exit GAMESMAN.
-    if (strncmp(move_string, "b", 1) == 0) return true;     // Exit game.
-    if (strncmp(move_string, "u", 1) == 0) {                // Undo.
+    if (strcmp(move_string, "q") == 0) GamesmanExit();  // Exit GAMESMAN.
+    if (strcmp(move_string, "a") == 0) return 2;        // Abort game.
+    if (strcmp(move_string, "u") == 0) {                // Undo.
         return InteractiveMatchUndo();
     }
     if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
-        return false;
+        return 1;
     }
     Move user_move = game->gameplay_api->common->StringToMove(move_string);
     if (!MoveArrayContains(&moves, user_move)) {
         printf("Sorry, I don't know that option. Try another.\n");
         free(move_string);
-        return false;
+        return 1;
     }
     MoveArrayDestroy(&moves);
     free(move_string);
     InteractiveMatchCommitMove(user_move);
-    return true;
+    return 0;
 }
 
 static void PrintGameResult(ReadOnlyString game_formal_name) {
@@ -323,10 +363,7 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
     int turn = InteractiveMatchGetTurn();
     switch (value) {
         case kUndecided:
-            fprintf(stderr,
-                    "PlayGame: (BUG) game ended at a non-primitive position. "
-                    "Check the implementation of gameplay. Aborting...\n");
-            exit(EXIT_FAILURE);
+            puts("Game aborted\n");
             break;
         case kLose:
             printf("Player %d wins!\n", (!turn) + 1);
@@ -354,6 +391,8 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
 
 int InteractivePlay(ReadOnlyString key) {
     (void)key;  // Unused.
+    memset(&move_values, 0, sizeof(move_values));
+    memset(&move_remotenesses, 0, sizeof(move_remotenesses));
 
     if (!InteractiveMatchRestart()) {
         fprintf(stderr,
@@ -373,10 +412,11 @@ int InteractivePlay(ReadOnlyString key) {
         if (InteractiveMatchPlayerIsComputer(turn)) {
             // Generate computer move
             MakeComputerMove();
-        } else if (!PromptForAndProcessUserMove(game)) {
-            // If user entered an unknown command, restart the loop.
-            continue;
         }
+        int code = PromptForAndProcessUserMove(game);
+        if (code == 1) continue;  // Unknown command, restart the loop.
+        if (code == 2) break;     // Aborting
+
         // Else, move has been successfully processed. Print the new position.
         PrintCurrentPosition(game);
         primitive_value = InteractiveMatchPrimitive();
@@ -384,5 +424,6 @@ int InteractivePlay(ReadOnlyString key) {
     }
     PrintGameResult(game->formal_name);
 
+    MoveValueCacheCleanup();
     return 0;
 }

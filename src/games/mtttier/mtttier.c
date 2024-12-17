@@ -5,11 +5,11 @@
  * @author Max Delgadillo: developed of the first tiered version using generic
  * hash.
  * @author Robert Shi (robertyishi@berkeley.edu): adapted to the new system.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Tic-Tac-Tier.
- * @version 1.0.5
- * @date 2024-03-18
+ * @version 1.0.7
+ * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -63,8 +63,9 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position);
 static PositionArray MtttierGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray MtttierGetChildTiers(Tier tier);
-
-static int MtttierGetTierName(char *dest, Tier tier);
+static TierType MtttierGetTierType(Tier tier);
+static int MtttierGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]);
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
@@ -94,6 +95,7 @@ static const TierSolverApi kSolverApi = {
     .GetCanonicalParentPositions = &MtttierGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = NULL,
     .GetChildTiers = &MtttierGetChildTiers,
+    .GetTierType = &MtttierGetTierType,
     .GetCanonicalTier = NULL,
 
     .GetTierName = &MtttierGetTierName,
@@ -221,9 +223,6 @@ static int64_t MtttierGetTierSize(Tier tier) {
 static MoveArray MtttierGenerateMoves(TierPosition tier_position) {
     MoveArray moves;
     MoveArrayInit(&moves);
-
-    if (MtttierPrimitive(tier_position) != kUndecided) return moves;
-
     char board[9] = {0};
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     for (Move i = 0; i < 9; ++i) {
@@ -346,8 +345,14 @@ static TierArray MtttierGetChildTiers(Tier tier) {
     return children;
 }
 
-static int MtttierGetTierName(char *dest, Tier tier) {
-    return sprintf(dest, "%" PRITier "p", tier);
+static TierType MtttierGetTierType(Tier tier) {
+    (void)tier;  // No tier loops back to itself.
+    return kTierTypeImmediateTransition;
+}
+
+static int MtttierGetTierName(Tier tier,
+                              char name[static kDbFileNameLengthMax + 1]) {
+    return sprintf(name, "%" PRITier "p", tier);
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
@@ -447,7 +452,7 @@ static CString MtttierTierPositionToFormalPosition(TierPosition tier_position) {
     for (int i = 0; i < 9; ++i) {
         board[i] = tolower(board[i]);
     }
-    CStringInitCopy(&ret, board);
+    CStringInitCopyCharArray(&ret, board);
 
     return ret;
 }
@@ -462,7 +467,7 @@ static CString MtttierTierPositionToAutoGuiPosition(
     if (!success) return ret;
 
     char turn = WhoseTurn(board) == 'X' ? '1' : '2';
-    if (!CStringInitCopy(&ret, "1_---------")) return ret;
+    if (!CStringInitCopyCharArray(&ret, "1_---------")) return ret;
 
     ret.str[0] = turn;
     for (int i = 0; i < 9; ++i) {
@@ -475,7 +480,7 @@ static CString MtttierTierPositionToAutoGuiPosition(
 static CString MtttierMoveToFormalMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused.
     CString ret;
-    if (!CStringInitCopy(&ret, "0")) return ret;
+    if (!CStringInitCopyCharArray(&ret, "0")) return ret;
 
     assert(move >= 0 && move < 9);
     ret.str[0] = '0' + move;
@@ -489,7 +494,7 @@ static CString MtttierMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);
     if (!success) return ret;
-    if (!CStringInitCopy(&ret, "A_x_0")) return ret;
+    if (!CStringInitCopyCharArray(&ret, "A_x_0")) return ret;
 
     char turn = WhoseTurn(board);
     ret.str[2] = turn == 'X' ? 'x' : 'o';

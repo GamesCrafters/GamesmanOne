@@ -1,7 +1,7 @@
 /**
  * @file uwapi_regular.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The UwapiRegular type.
  * @details A UwapiRegular object defines a set of helper functions that must be
@@ -12,9 +12,8 @@
  * and database querying service for the GamesmanUni online game generator.
  * @link https://github.com/GamesCrafters/GamesCraftersUWAPI
  * @link https://github.com/GamesCrafters/GamesmanUni
- *
- * @version 1.0.0
- * @date 2024-01-23
+ * @version 1.1.0
+ * @date 2024-10-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,11 +32,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H
-#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H
+#ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H_
+#define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H_
 
 #include "core/data_structures/cstring.h"
 #include "core/types/base.h"
+#include "core/types/uwapi/partmove_array.h"
 
 /**
  * @brief A collection of helper methods that are used by regular games to
@@ -108,8 +108,11 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the formal position as a dynamically allocated CString
-     * corresponding to the given hashed POSITION. The caller of this function
-     * is responsible for destroying the CString returned.
+     * corresponding to the given hashed POSITION. Returns \c kErrorCString if
+     * an error occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details A formal position is a human-editable (and hopefully
      * human-readable) string that uniquely defines a position. For example, a
@@ -119,8 +122,11 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the AutoGUI position as a dynamically allocated CString
-     * corresponding to the given hashed POSITION. The caller of this function
-     * is responsible for destroying the CString returned.
+     * corresponding to the given hashed POSITION. Returns \c kErrorCString if
+     * an error occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details An AutoGUI position is a position string recognized by the
      * GamesmanUni online game generator. It not only uniquely defines a
@@ -133,8 +139,11 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the formal move as a dynamically allocated CString
-     * corresponding to the given MOVE at the given POSITION. The caller of this
-     * function is responsible for destroying the CString returned.
+     * corresponding to the given MOVE at the given POSITION. Returns \c
+     * kErrorCString if an error occurred.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details A formal move is a human-redable string that uniquely defines
      * a move that is available at the given POSITION. It should be unambiguous
@@ -152,8 +161,13 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the AutoGUI move as a dynamically allocated CString
-     * corresponding to the given MOVE at the given POSITION. The caller of this
-     * function is responsible for destroying the CString returned.
+     * corresponding to the given MOVE at the given POSITION if MOVE is a
+     * single-part move. Returns \c kNullCString if MOVE is a multipart move.
+     * Returns \c kErrorCString if an error occurred. Note that all moves are
+     * single-part if the game does not implement multipart moves.
+     *
+     * @note The caller of this function is responsible for destroying the
+     * CString returned.
      *
      * @details An AutoGUI move is a move string recognized by the GamesmanUni
      * online game generator. It not only unabiguously describes a move at a
@@ -169,6 +183,8 @@ typedef struct UwapiRegular {
      * to the given MOVE at the given POSITION.
      */
     CString (*MoveToAutoGuiMove)(Position position, Move move);
+
+    PartmoveArray (*GeneratePartmoves)(Position position);
 
     /**
      * @brief Returns the initial position of the current game variant.
@@ -191,4 +207,4 @@ typedef struct UwapiRegular {
     Position (*GetRandomLegalPosition)(void);
 } UwapiRegular;
 
-#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H
+#endif  // GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_REGULAR_H_

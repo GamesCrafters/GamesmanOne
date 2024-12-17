@@ -6,8 +6,8 @@
  *         Angela He,
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 1.0.1
- * @date 2024-04-20
+ * @version 1.0.2
+ * @date 2024-08-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -64,7 +64,7 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray QuixoGetChildTiers(Tier tier);
-static int QuixoGetTierName(char *name, Tier tier);
+static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 
 // Gameplay
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer);
@@ -740,7 +740,7 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     return children;
 }
 
-static int QuixoGetTierName(char *name, Tier tier) {
+static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     int num_blanks, num_x, num_o;
     UnhashTier(tier, &num_blanks, &num_x, &num_o);
     if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;
@@ -906,7 +906,7 @@ static TierPosition QuixoFormalPositionToTierPosition(
 
 static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
     CString ret;
-    CStringInit(&ret);
+    CStringInitEmpty(&ret);
     CStringResize(&ret, 2 + GetBoardSize(), '\0');
 
     // Set turn.
@@ -940,7 +940,7 @@ static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
     char buf[2 + 2 * kInt32Base10StringLengthMax];
     sprintf(buf, "%d %d", src, dest);
     CString ret;
-    CStringInitCopy(&ret, buf);
+    CStringInitCopyCharArray(&ret, buf);
 
     return ret;
 }
@@ -973,7 +973,7 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     char buf[16];
     sprintf(buf, "M_%d_%d_x", src, dest_center);
     CString ret;
-    CStringInitCopy(&ret, buf);
+    CStringInitCopyCharArray(&ret, buf);
 
     return ret;
 }

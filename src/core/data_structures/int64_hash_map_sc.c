@@ -1,14 +1,14 @@
 /**
  * @file int64_hash_map_sc.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Separate chaining int64_t to int64_t hash map.
  * @details This hash map implementation allows removal of map entries at the
  * cost of being considerably slower than the regular open addressing hash map
  * provided by int64_hash_map.h.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.0.1
+ * @date 2024-09-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -155,6 +155,8 @@ bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
 }
 
 void Int64HashMapSCRemove(Int64HashMapSC *map, int64_t key) {
+    if (map->num_buckets == 0) return;
+    
     int64_t index = Hash(key, map->num_buckets);
     Int64HashMapSCEntry *entry = map->buckets[index];
     Int64HashMapSCEntry **prev_next = &map->buckets[index];

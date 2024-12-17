@@ -1,11 +1,11 @@
 /**
  * @file hjson.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Json parser helper method collection for headless mode.
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 1.1.0
+ * @date 2024-10-21
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -57,6 +57,24 @@ int HeadlessJsonAddMove(json_object *dest, ReadOnlyString formal_move);
 int HeadlessJsonAddAutoGuiMove(json_object *dest, ReadOnlyString autogui_move);
 
 /**
+ * @brief Adds {"from: <FROM>"} to the DEST json object.
+ * @return 0 on success, non-zero error code otherwise.
+ */
+int HeadlessJsonAddFrom(json_object *dest, ReadOnlyString from);
+
+/**
+ * @brief Adds {"to: <TO>"} to the DEST json object.
+ * @return 0 on success, non-zero error code otherwise.
+ */
+int HeadlessJsonAddTo(json_object *dest, ReadOnlyString to);
+
+/**
+ * @brief Adds {"full: <FULL>"} to the DEST json object.
+ * @return 0 on success, non-zero error code otherwise.
+ */
+int HeadlessJsonAddFull(json_object *dest, ReadOnlyString full);
+
+/**
  * @brief Adds {"value: <VALUE>"} to the DEST json object.
  * @return 0 on success, non-zero error code otherwise.
  */
@@ -69,7 +87,7 @@ int HeadlessJsonAddValue(json_object *dest, Value value);
 int HeadlessJsonAddRemoteness(json_object *dest, int remoteness);
 
 /**
- * @brief Adds {"moves: MOVE_ARRAY_OBJECT"} to the DEST json object.
+ * @brief Adds {"moves: MOVES_ARRAY_OBJ"} to the DEST json object.
  *
  * @param dest Destination object.
  * @param move_array_obj A json object that contains an array of moves and
@@ -77,5 +95,16 @@ int HeadlessJsonAddRemoteness(json_object *dest, int remoteness);
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessJsonAddMovesArray(json_object *dest, json_object *moves_array_obj);
+
+/**
+ * @brief Adds {"partMoves: PARTMOVES_ARRAY_OBJ"} to the DEST json object.
+ *
+ * @param dest Destination object.
+ * @param move_array_obj A json object that contains an array of part-moves.
+ * Must be of type json_type_array.
+ * @return 0 on success, non-zero error code otherwise.
+ */
+int HeadlessJsonAddPartmovesArray(json_object *dest,
+                                  json_object *partmoves_array_obj);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HJSON_H_

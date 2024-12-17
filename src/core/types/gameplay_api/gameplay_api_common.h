@@ -1,7 +1,7 @@
 /**
  * @file gameplay_api_common.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The GameplayApiCommon type.
  * @details A GameplayApiCommon object contains a set of constants and API
@@ -10,8 +10,8 @@
  * set all constants and implement all required functions as specified by the
  * type definition. All member variables and functions of GameplayApiCommon are
  * REQUIRED unless otherwise specified.
- * @version 1.0.0
- * @date 2024-01-21
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
-#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
+#ifndef GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_
+#define GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_
 
 #include "core/types/base.h"
 
@@ -106,4 +106,4 @@ typedef struct GameplayApiCommon {
     Move (*StringToMove)(ReadOnlyString move_string);
 } GameplayApiCommon;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H
+#endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_COMMON_H_

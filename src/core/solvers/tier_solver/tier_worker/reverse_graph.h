@@ -6,7 +6,7 @@
  * implementation as a separate module from the tier solver, replaced
  * linked-lists with dynamic arrays for optimization, and implemented
  * thread-safety for the new OpenMP multithreaded tier solver.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Reverse Position graph generated from the Position graph of the game.
  * @version 1.1.0

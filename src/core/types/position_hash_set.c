@@ -1,12 +1,11 @@
 /**
  * @file position_hash_set.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Position hash set implementation.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-11-28
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,19 +26,19 @@
 
 #include "core/types/position_hash_set.h"
 
-#include "core/data_structures/int64_hash_map.h"
+#include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 
 void PositionHashSetInit(PositionHashSet *set, double max_load_factor) {
-    Int64HashMapInit(set, max_load_factor);
+    Int64HashSetInit(set, max_load_factor);
 }
 
-void PositionHashSetDestroy(PositionHashSet *set) { Int64HashMapDestroy(set); }
+void PositionHashSetDestroy(PositionHashSet *set) { Int64HashSetDestroy(set); }
 
 bool PositionHashSetContains(PositionHashSet *set, Position position) {
-    return Int64HashMapContains(set, position);
+    return Int64HashSetContains(set, position);
 }
 
 bool PositionHashSetAdd(PositionHashSet *set, Position position) {
-    return Int64HashMapSet(set, position, 0);
+    return Int64HashSetAdd(set, position);
 }

@@ -3,11 +3,11 @@
  * @author Scott Lindeneau: designer of the original version.
  * @author Robert Shi (robertyishi@berkeley.edu): Adaptation to GamesmanOne,
  *         optimizations, and additional features.
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash Context module.
- * @version 1.2.0
- * @date 2024-07-27
+ * @version 1.2.1
+ * @date 2024-12-10
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -486,7 +486,7 @@ static bool HashStep0Initialize(GenericHashContext *context,
         if (piece_index < 0) {
             fprintf(
                 stderr,
-                "HashStep0Initialize: invalid piece '%c'(%x) at board[%d]\n",
+                "HashStep0Initialize: invalid piece '%c'(0x%x) at board[%d]\n",
                 board[i], board[i], i);
             return false;
         }

@@ -1,7 +1,7 @@
 /**
  * @file solver_manager.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Solver manager module which handles solver loading, solving, and
  * database status checking.

@@ -1,13 +1,13 @@
 /**
  * @file dshogi.c
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of Dōbutsu shōgi, also known as "animal shogi," or
  * "Let's Catch the Lion!" Japanese: 「どうぶつしょうぎ」.
  * @details https://en.wikipedia.org/wiki/D%C5%8Dbutsu_sh%C5%8Dgi
- * @version 1.0.0
- * @date 2024-07-26
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -809,7 +809,7 @@ static CString DobutsuShogiPositionToFormalPosition(Position position) {
     }
 
     CString ret;
-    CStringInitCopy(&ret, formal_position);
+    CStringInitCopyCharArray(&ret, formal_position);
 
     return ret;
 }
@@ -845,7 +845,7 @@ static CString DobutsuShogiPositionToAutoGuiPosition(Position position) {
     }
 
     CString ret;
-    CStringInitCopy(&ret, autogui_position);
+    CStringInitCopyCharArray(&ret, autogui_position);
 
     return ret;
 }
@@ -870,7 +870,7 @@ static CString DobutsuShogiMoveToFormalMove(Position position, Move move) {
     char buffer[kInt32Base10StringLengthMax + 5];
     sprintf(buffer, "%s %s", src_str, kFormalMoveMap[dest]);
     CString ret;
-    CStringInitCopy(&ret, buffer);
+    CStringInitCopyCharArray(&ret, buffer);
 
     return ret;
 }
@@ -888,7 +888,7 @@ static CString DobutsuShogiMoveToAutoGuiMove(Position position, Move move) {
         int center = (src - kBoardSize) * kBoardSize + dest + kBoardSize + 6;
         sprintf(autogui_move, "A_%d_%d_y", src - kBoardSize, center);
     }
-    CStringInitCopy(&ret, autogui_move);
+    CStringInitCopyCharArray(&ret, autogui_move);
 
     return ret;
 }

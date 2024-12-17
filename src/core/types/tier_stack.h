@@ -1,12 +1,11 @@
 /**
  * @file tier_stack.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tier stack.
- *
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_STACK_H
-#define GAMESMANONE_CORE_TYPES_TIER_STACK_H
+#ifndef GAMESMANONE_CORE_TYPES_TIER_STACK_H_
+#define GAMESMANONE_CORE_TYPES_TIER_STACK_H_
 
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
@@ -70,4 +69,4 @@ Tier TierStackTop(const TierStack *stack);
 /** @brief Returns true if the given STACK is empty, or false otherwise. */
 bool TierStackEmpty(const TierStack *stack);
 
-#endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H
+#endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H_

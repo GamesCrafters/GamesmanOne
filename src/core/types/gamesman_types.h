@@ -1,11 +1,11 @@
 /**
  * @file gamesman_types.h
  * @author Robert Shi (robertyishi@berkeley.edu)
- *         GamesCrafters Research Group, UC Berkeley
+ * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Declarations of GAMESMAN types.
- * @version 1.2.0
- * @date 2024-01-04
+ * @version 1.3.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -46,6 +46,7 @@
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/tier_queue.h"
 #include "core/types/tier_stack.h"
+#include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 
 #endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_
