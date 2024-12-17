@@ -163,11 +163,12 @@ static int64_t GobbletGobblersGetTierSize(Tier tier) {
 static void GetHeights(int8_t heights[static 9],
                        const GobbletGobblersPosition *p) {
     memset(heights, -1, 9);
-    for (int size = 2; size >= 0; --size) {
-        for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 9; ++i) {
+        for (int size = 2; size >= 0; --size) {
             if (p->board[size][i] != '-') {
                 assert(p->board[size][i] == 'X' || p->board[size][i] == 'O');
                 heights[i] = size;
+                break;
             }
         }
     }
@@ -434,7 +435,7 @@ static TierArray GobbletGobblersGetChildTiers(Tier tier) {
     return ret;
 }
 
-static int GobbletGobblersGetTierName(char *name, Tier tier) {
+static int GobbletGobblersGetTierName(Tier tier, char *name) {
     GobbletGobblersTier t = {.hash = tier};
     sprintf(name, "%d%d%d%d%d%d", t.configs[0].count[0], t.configs[0].count[1],
             t.configs[1].count[0], t.configs[1].count[1], t.configs[2].count[0],
