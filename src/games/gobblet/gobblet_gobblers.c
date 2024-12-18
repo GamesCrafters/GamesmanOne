@@ -747,7 +747,7 @@ static CString GobbletGobblersMoveToFormalMove(TierPosition tier_position,
 }
 
 // Format (moving a piece): "M_<faces_src>_<faces_dest>_x"
-// Format (adding a piece): "A_h_<board_dest>_x", where 'h' is the hitbox
+// Format (adding a piece): "A_-_<board_dest>_x"
 static CString GobbletGobblersMoveToAutoGuiMove(TierPosition tier_position,
                                                 Move move) {
     (void)tier_position;  // Unused.
@@ -758,7 +758,7 @@ static CString GobbletGobblersMoveToAutoGuiMove(TierPosition tier_position,
 
     // Adding a piece
     int center = 9 + 9 * m.unpacked.add_size + m.unpacked.dest;
-    return AutoGuiMakeMoveA('h', center, 'x');
+    return AutoGuiMakeMoveA('-', center, 'x');
 }
 
 static const UwapiTier kGobbletGobblersUwapiTier = {
