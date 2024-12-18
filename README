@@ -7,7 +7,7 @@
 2. Run the installer script in the base directory
     ```
     cd GamesmanOne
-    bash ./gamesman_install.sh
+    bash ./gamesman_install.sh --install
     ```
    GamesmanOne will be automatically configured and installed. Run `bin/gamesman` to launch the system.
 
