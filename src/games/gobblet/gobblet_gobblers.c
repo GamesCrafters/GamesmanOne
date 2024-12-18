@@ -28,12 +28,13 @@
 #include "games/gobblet/gobblet_gobblers.h"
 
 #include <assert.h>   // assert
+#include <ctype.h>    // toupper
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, int8_t
-#include <stdio.h>    //
+#include <stdio.h>    // sprintf
 #include <stdlib.h>   // atoi
-#include <string.h>   // memset
+#include <string.h>   // memset, strlen
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -75,7 +76,14 @@ typedef union {
 
 // ================================= Constants =================================
 
-static const GobbletGobblersTier kGobbletGobblersTierInit = {.hash = 0};
+static const GobbletGobblersTier kGobbletGobblersTierInit = {
+    .configs =
+        {
+            {.count = {2, 2}},
+            {.count = {2, 2}},
+            {.count = {2, 2}},
+        },
+};
 
 static const GobbletGobblersMove kGobbletGobblersMoveInit = {
     .unpacked = {.add_size = -1, .src = -1, .dest = -1},
@@ -95,14 +103,7 @@ static const int kSymmetryMatrix[8][9] = {
 // ========================= kGobbletGobblersSolverApi =========================
 
 static Tier GobbletGobblersGetInitialTier(void) {
-    GobbletGobblersTier t = kGobbletGobblersTierInit;
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            t.configs[i].count[j] = 2;
-        }
-    }
-
-    return t.hash;
+    return kGobbletGobblersTierInit.hash;
 }
 
 static Position Hash(GobbletGobblersTier t, const GobbletGobblersPosition *p) {
@@ -603,6 +604,183 @@ static int GobbletGobblersFinalize(void) { return kNoError; }
 
 // =========================== kGobbletGobblersUwapi ===========================
 
+static bool GobbletGobblersIsLegalFormalPosition(
+    ReadOnlyString formal_position) {
+    if (strlen(formal_position) != 29) return false;
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+    for (int size = 0; size < 3; ++size) {
+        int x_count = 0, o_count = 0;
+        for (int i = 0; i < 9; ++i) {
+            char token = toupper(formal_position[2 + size * 9 + i]);
+            switch (token) {
+                case 'X':
+                    ++x_count;
+                    break;
+                case 'O':
+                    ++o_count;
+                    break;
+                case '-':
+                    break;
+                default:
+                    return false;
+            }
+        }
+        if (x_count > 2 || o_count > 2) return false;
+    }
+
+    return true;
+}
+
+static TierPosition GobbletGobblersFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    GobbletGobblersTier t = kGobbletGobblersTierInit;
+    GobbletGobblersPosition p;
+    p.turn = formal_position[0] - '0';
+    for (int size = 0; size < 3; ++size) {
+        for (int i = 0; i < 9; ++i) {
+            char token = toupper(formal_position[2 + size * 9 + i]);
+            p.board[size][i] = token;
+            t.configs[size].count[X] -= (token == 'X');
+            t.configs[size].count[O] -= (token == 'O');
+        }
+    }
+    TierPosition ret = {.tier = t.hash, .position = Hash(t, &p)};
+
+    return ret;
+}
+
+// Format: "<turn>_<small_board><medium_board><large_board>"
+static CString GobbletGobblersTierPositionToFormalPosition(
+    TierPosition tier_position) {
+    // Unhash
+    GobbletGobblersTier t;
+    GobbletGobblersPosition p;
+    Unhash(tier_position, &t, &p);
+
+    char placeholder[30];
+    placeholder[0] = '0' + p.turn;
+    placeholder[1] = '_';
+    memcpy(&placeholder[2], p.board[0], 9);
+    memcpy(&placeholder[11], p.board[1], 9);
+    memcpy(&placeholder[20], p.board[2], 9);
+    placeholder[29] = '\0';
+
+    CString ret;
+    CStringInitCopyCharArray(&ret, placeholder);
+
+    return ret;
+}
+
+// Format:
+// "<turn>_<faces><small_board><medium_board><large_board>"
+// "<remaining_at_least_1_X><remaining_at_least_1_Y><remaining_at_least_1_Z>"
+// "<remaining_at_least_1_O><remaining_at_least_1_P><remaining_at_least_1_Q>"
+// "<remaining_at_least_2_X><remaining_at_least_2_Y><remaining_at_least_2_Z>"
+// "<remaining_at_least_2_O><remaining_at_least_2_P><remaining_at_least_2_Q>"
+//
+// For faces and remaining pieces:
+// Use 'X' for small X, 'Y' for medium X, 'Z' for large X;
+// Use 'O' for small O, 'P' for medium O, 'Q' for large O.
+static CString GobbletGobblersTierPositionToAutoGuiPosition(
+    TierPosition tier_position) {
+    // Unhash
+    GobbletGobblersTier t;
+    GobbletGobblersPosition p;
+    Unhash(tier_position, &t, &p);
+    char faces[9];
+    GetFaces(faces, &p);
+    int8_t heights[9];
+    GetHeights(heights, &p);
+
+    char entities[49];
+    int walker = 0;
+
+    // Faces + heights
+    for (int i = 0; i < 9; ++i) {
+        char face = faces[i];
+        if (face != '-') face += heights[i];
+        entities[walker++] = face;
+    }
+
+    // Boards
+    for (int size = 0; size < 3; ++size) {
+        memcpy(&entities[walker], p.board[size], 9);
+        walker += 9;
+    }
+
+    // Remaining pieces
+    for (int at_least = 1; at_least <= 2; ++at_least) {
+        for (int piece = X; piece <= O; ++piece) {
+            for (int size = 0; size < 3; ++size) {
+                entities[walker++] = (t.configs[size].count[piece] >= at_least)
+                                         ? kTurnToPiece[piece + 1] + size
+                                         : '-';
+            }
+        }
+    }
+    entities[walker] = 0;
+    assert(walker == 48);
+
+    return AutoGuiMakePosition(p.turn, entities);
+}
+
+// Format (moving a piece): "M_<src>_<dest>"
+// Format (adding a piece): "A_<size>_<dest>"
+static CString GobbletGobblersMoveToFormalMove(TierPosition tier_position,
+                                               Move move) {
+    (void)tier_position;  // Unused.
+    char placeholder[2 * kInt32Base10StringLengthMax + 4];
+    GobbletGobblersMove m = {.hash = move};
+    static const char sizes[] = "SML";
+    if (m.unpacked.add_size < 0) {  // Moving a piece
+        sprintf(placeholder, "M_%d_%d", m.unpacked.src, m.unpacked.dest);
+    } else {
+        sprintf(placeholder, "A_%c_%d", sizes[m.unpacked.add_size],
+                m.unpacked.dest);
+    }
+
+    CString ret;
+    CStringInitCopyCharArray(&ret, placeholder);
+
+    return ret;
+}
+
+// Format (moving a piece): "M_<faces_src>_<faces_dest>_y"
+// Format (adding a piece): "A_-_<board_dest>_x"
+static CString GobbletGobblersMoveToAutoGuiMove(TierPosition tier_position,
+                                                Move move) {
+    (void)tier_position;  // Unused.
+    GobbletGobblersMove m = {.hash = move};
+    if (m.unpacked.add_size < 0) {  // Moving a piece
+        return AutoGuiMakeMoveM(m.unpacked.src, m.unpacked.dest, 'x');
+    }
+
+    // Adding a piece
+    int center = 9 + 9 * m.unpacked.add_size + m.unpacked.dest;
+    return AutoGuiMakeMoveA('-', center, 'y');
+}
+
+static const UwapiTier kGobbletGobblersUwapiTier = {
+    .GetInitialTier = GobbletGobblersGetInitialTier,
+    .GetInitialPosition = GobbletGobblersGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+
+    .GenerateMoves = GobbletGobblersGenerateMoves,
+    .DoMove = GobbletGobblersDoMove,
+    .Primitive = GobbletGobblersPrimitive,
+
+    .IsLegalFormalPosition = GobbletGobblersIsLegalFormalPosition,
+    .FormalPositionToTierPosition = GobbletGobblersFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = GobbletGobblersTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition =
+        GobbletGobblersTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = GobbletGobblersMoveToFormalMove,
+    .MoveToAutoGuiMove = GobbletGobblersMoveToAutoGuiMove,
+};
+
+static const Uwapi kGobbletGobblersUwapi = {.tier = &kGobbletGobblersUwapiTier};
+
 // ============================= kGobbletGobblers =============================
 
 const Game kGobbletGobblers = {
@@ -611,7 +789,7 @@ const Game kGobbletGobblers = {
     .solver = &kTierSolver,
     .solver_api = &kGobbletGobblersSolverApi,
     .gameplay_api = &kGobbletGobblersGameplayApi,
-    .uwapi = NULL,
+    .uwapi = &kGobbletGobblersUwapi,
 
     .Init = GobbletGobblersInit,
     .Finalize = GobbletGobblersFinalize,
