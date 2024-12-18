@@ -87,6 +87,4 @@ bool BitStreamGet(const BitStream *stream, int64_t i) {
     return (*byte_address) & mask;
 }
 
-int64_t BitStreamCount(const BitStream *stream) {
-    return stream->count;
-}
+int64_t BitStreamCount(const BitStream *stream) { return stream->count; }

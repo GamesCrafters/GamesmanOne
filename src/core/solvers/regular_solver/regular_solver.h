@@ -45,7 +45,7 @@ typedef enum {
     /**
      * @brief A single-tier game is of this type if it is loopy, or if its
      * loopiness is unclear.
-     * 
+     *
      * @note The loopy algorithm also works for loop-free games. Hence, this is
      * the default type of a game if its type is not specified.
      */

@@ -110,12 +110,12 @@ bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
     int64_t capacity = set->capacity;
     // Edge case: return false if set is empty.
     if (capacity == 0) return false;
-    
+
     int64_t index = Hash(key, capacity);
     while (set->entries[index].used) {
         if (set->entries[index].key == key) return true;
         index = NextIndex(index, capacity);
     }
-    
+
     return false;
 }

@@ -67,7 +67,7 @@ const Game *GameManagerGetCurrentGame(void);
 
 /**
  * @brief Returns whether the currently loaded game supports MPI.
- * 
+ *
  * @return 1 if yes,
  * @return 0 otherwise.
  */

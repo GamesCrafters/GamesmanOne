@@ -29,7 +29,7 @@
 
 #include "core/types/gamesman_types.h"
 
-/** 
+/**
  * @brief A NULL-terminated array of pointers to all games implemented for
  * GAMESMAN.
  */

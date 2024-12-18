@@ -143,7 +143,8 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
     while (1) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        key = getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
+        key =
+            getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
         /* Detect the end of the options. */
         if (key == -1) break;
         ParseOption(key, option_index);
@@ -179,7 +180,7 @@ static void ParseOption(int key, int option_index) {
         case 'd':
             arguments.data_path = optarg;
             break;
-        
+
         case 'M':
             arguments.memlimit = optarg;
             break;

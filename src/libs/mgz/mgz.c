@@ -243,7 +243,7 @@ mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
     if (lookup) {
         ret.lookup = space;
         space = NULL;  // Prevent freeing.
-    }                  // else ret.lookup is already set to NULL.
+    }  // else ret.lookup is already set to NULL.
     ret.num_blocks = num_blocks;
 
 _bailout:

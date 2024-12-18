@@ -28,12 +28,12 @@
 
 #include "games/mallqueenschess/mallqueenschess.h"
 
-#include <assert.h>    // assert
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // atoi
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // atoi
 
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -438,7 +438,8 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     leads to the smallest-ternary-number board in the input board's orbit
     (where the transformations are just rotation/reflection. */
     int bestSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+         symmetryNum++) {
         for (i = boardSize - 1; i >= 0; i--) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
@@ -451,7 +452,7 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
         }
     }
     char canonBoard[boardSize];
-    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+    for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
         canonBoard[i] = board[symmetries[bestSymmetryNum][i]];
     }
 
@@ -468,7 +469,8 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     leads to the smallest-ternary-number board in the input board's orbit
     (where the transformations are just rotation/reflection. */
     bestSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+         symmetryNum++) {
         for (i = boardSize - 1; i >= 0; i--) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
@@ -481,7 +483,7 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
         }
     }
     char canonSwappedBoard[boardSize] = {0};
-    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+    for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
         canonSwappedBoard[i] = board[symmetries[bestSymmetryNum][i]];
     }
 

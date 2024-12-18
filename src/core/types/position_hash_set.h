@@ -30,7 +30,7 @@
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 
-/** 
+/**
  * @brief Linear-probing Position hash set using Int64HashSet as underlying
  * type.
  */

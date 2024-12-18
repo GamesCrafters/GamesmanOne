@@ -82,7 +82,7 @@ bool CStringInitCopyCharArray(CString *cstring, const char *src) {
     strcpy(cstring->str, src);
     cstring->length = length;
     cstring->capacity = length + 1;
-    
+
     return true;
 }
 
@@ -150,7 +150,7 @@ bool CStringIsNull(const CString *cstring) {
     if (cstring->str != kNullCString.str) return false;
     if (cstring->length != kNullCString.length) return false;
     if (cstring->capacity != kNullCString.capacity) return false;
-    
+
     return true;
 }
 

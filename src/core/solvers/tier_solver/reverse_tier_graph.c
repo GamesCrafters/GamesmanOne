@@ -81,7 +81,7 @@ TierArray ReverseTierGraphPopParentsOf(ReverseTierGraph *graph, Tier child) {
     int index = TierHashMapIteratorValue(&it);
     TierArray ret = graph->parents_of[index];
     memset(&graph->parents_of[index], 0, sizeof(graph->parents_of[index]));
-    
+
     return ret;
 }
 
@@ -97,7 +97,7 @@ TierArray ReverseTierGraphGetParentsOf(ReverseTierGraph *graph, Tier child) {
     int index = TierHashMapIteratorValue(&it);
     TierArray ret;
     TierArrayInitCopy(&ret, &graph->parents_of[index]);
-    
+
     return ret;
 }
 

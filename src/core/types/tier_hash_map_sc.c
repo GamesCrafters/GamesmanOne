@@ -36,9 +36,7 @@ void TierHashMapSCInit(TierHashMapSC *map, double max_load_factor) {
     Int64HashMapSCInit(map, max_load_factor);
 }
 
-void TierHashMapSCDestroy(TierHashMapSC *map) {
-    Int64HashMapSCDestroy(map);
-}
+void TierHashMapSCDestroy(TierHashMapSC *map) { Int64HashMapSCDestroy(map); }
 
 bool TierHashMapSCContains(const TierHashMapSC *map, Tier tier) {
     return Int64HashMapSCContains(map, tier);
@@ -55,4 +53,3 @@ bool TierHashMapSCSet(TierHashMapSC *map, Tier tier, int64_t value) {
 void TierHashMapSCRemove(TierHashMapSC *map, Tier tier) {
     Int64HashMapSCRemove(map, tier);
 }
-

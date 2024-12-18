@@ -30,7 +30,8 @@
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 
-/** @brief Linear-probing Tier hash set using Int64HashSet as underlying type. */
+/** @brief Linear-probing Tier hash set using Int64HashSet as underlying type.
+ */
 typedef Int64HashSet TierHashSet;
 
 /**
@@ -53,7 +54,7 @@ void TierHashSetDestroy(TierHashSet *set);
 
 /**
  * @brief Tests if \p tier is in \p set.
- * 
+ *
  * @param set Set from which the given \p tier is looked up.
  * @param tier Tier value to look for.
  * @return true if \p set contains \p tier, or
@@ -64,7 +65,7 @@ bool TierHashSetContains(const TierHashSet *set, Tier tier);
 /**
  * @brief Adds \p tier to the given \p set, or does nothing if \p set
  * already contains \p tier.
- * 
+ *
  * @param set Set to add \p tier to.
  * @param tier Tier to add.
  * @return true on success,

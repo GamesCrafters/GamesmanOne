@@ -10,7 +10,7 @@ enum SavioSettingsConstants {
     kSavioAccountNameLengthMax = 31,
 
     // Time limit must be of the format "hh:mm:ss".
-    kSavioTimeLimitLengthMax = 8,  
+    kSavioTimeLimitLengthMax = 8,
 };
 
 typedef struct SavioPartition {

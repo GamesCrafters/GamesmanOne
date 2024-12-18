@@ -77,8 +77,7 @@ bool Int64HashMapSCContains(const Int64HashMapSC *map, int64_t key) {
     return false;
 }
 
-bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key,
-                        int64_t *value) {
+bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key, int64_t *value) {
     if (map->num_buckets == 0) return false;
 
     int64_t index = Hash(key, map->num_buckets);
@@ -156,7 +155,7 @@ bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
 
 void Int64HashMapSCRemove(Int64HashMapSC *map, int64_t key) {
     if (map->num_buckets == 0) return;
-    
+
     int64_t index = Hash(key, map->num_buckets);
     Int64HashMapSCEntry *entry = map->buckets[index];
     Int64HashMapSCEntry **prev_next = &map->buckets[index];

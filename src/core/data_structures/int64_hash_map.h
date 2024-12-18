@@ -80,7 +80,8 @@ typedef struct Int64HashMap {
  * }
  */
 typedef struct Int64HashMapIterator {
-    const Int64HashMap *map; /**< The Int64HashMap this iterator is being used on. */
+    const Int64HashMap
+        *map;      /**< The Int64HashMap this iterator is being used on. */
     int64_t index; /**< Internal index into the Int64HashMap.entries array. */
 } Int64HashMapIterator;
 

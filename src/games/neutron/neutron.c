@@ -899,8 +899,8 @@ static void AddPiecePartmove(Position pos, const CString *from, int8_t n_src,
     CString full = NeutronMoveToFormalMove(pos, m.hashed);
     CString from_copy;
     CStringInitCopy(&from_copy, from);
-    PartmoveArrayEmplaceBack(partmoves, &autogui_move, &formal_move,
-                             &from_copy, NULL, &full);
+    PartmoveArrayEmplaceBack(partmoves, &autogui_move, &formal_move, &from_copy,
+                             NULL, &full);
 }
 
 static void GeneratePiecePartmoves(Position pos,

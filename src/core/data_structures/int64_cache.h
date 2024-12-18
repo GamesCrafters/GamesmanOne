@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_CACHE_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_CACHE_H_
 
-#include <stddef.h>   // size_t
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 
 typedef struct Int64Cache Int64Cache;

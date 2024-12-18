@@ -8,7 +8,9 @@ int InteractiveCredits(ReadOnlyString key) {
     (void)key;
     printf("\n\t----- Credits -----\n\n");
     printf("Open Source Software Usage:\n");
-    printf("  - JSON-C - A JSON implementation in C: https://github.com/json-c/json-c\n");
+    printf(
+        "  - JSON-C - A JSON implementation in C: "
+        "https://github.com/json-c/json-c\n");
 
     return 0;
 }

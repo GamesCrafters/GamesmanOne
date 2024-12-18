@@ -64,7 +64,8 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray QuixoGetChildTiers(Tier tier);
-static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]);
+static int QuixoGetTierName(Tier tier,
+                            char name[static kDbFileNameLengthMax + 1]);
 
 // Gameplay
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer);
@@ -740,7 +741,8 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     return children;
 }
 
-static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
+static int QuixoGetTierName(Tier tier,
+                            char name[static kDbFileNameLengthMax + 1]) {
     int num_blanks, num_x, num_o;
     UnhashTier(tier, &num_blanks, &num_x, &num_o);
     if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;

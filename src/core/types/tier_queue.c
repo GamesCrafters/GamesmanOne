@@ -33,9 +33,7 @@ void TierQueueInit(TierQueue *queue) { Int64QueueInit(queue); }
 
 void TierQueueDestroy(TierQueue *queue) { Int64QueueDestroy(queue); }
 
-bool TierQueueEmpty(const TierQueue *queue) {
-    return Int64QueueIsEmpty(queue);
-}
+bool TierQueueEmpty(const TierQueue *queue) { return Int64QueueIsEmpty(queue); }
 
 int64_t TierQueueSize(const TierQueue *queue) { return Int64QueueSize(queue); }
 

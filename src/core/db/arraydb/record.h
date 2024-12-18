@@ -37,7 +37,7 @@ typedef uint16_t Record;
 
 /**
  * @brief Sets the value field of record \p rec to \p val.
- * 
+ *
  * @param rec Target record.
  * @param val New value.
  */
@@ -45,7 +45,7 @@ void RecordSetValue(Record *rec, Value val);
 
 /**
  * @brief Sets the remoteness field of record \p rec to \p remoteness.
- * 
+ *
  * @param rec Target record.
  * @param remoteness New remoteness.
  */
@@ -53,7 +53,7 @@ void RecordSetRemoteness(Record *rec, int remoteness);
 
 /**
  * @brief Returns the value field of record \p rec.
- * 
+ *
  * @param rec Source record.
  * @return Value field of \p rec.
  */
@@ -61,7 +61,7 @@ Value RecordGetValue(const Record *rec);
 
 /**
  * @brief Returns the remoteness field of record \p rec.
- * 
+ *
  * @param rec Source record.
  * @return Remoteness field of \p rec.
  */

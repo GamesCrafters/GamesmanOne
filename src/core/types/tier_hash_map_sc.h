@@ -43,5 +43,4 @@ bool TierHashMapSCGet(const TierHashMapSC *map, Tier tier, int64_t *value);
 bool TierHashMapSCSet(TierHashMapSC *map, Tier tier, int64_t value);
 void TierHashMapSCRemove(TierHashMapSC *map, Tier tier);
 
-
 #endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_

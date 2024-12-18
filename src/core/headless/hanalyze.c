@@ -32,13 +32,13 @@
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // free
 
-#include "core/types/gamesman_types.h"
+#include "core/game_manager.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/game_manager.h"
+#include "core/types/gamesman_types.h"
 
 static void *GenerateAnalyzeOptions(bool force, int verbose);
 

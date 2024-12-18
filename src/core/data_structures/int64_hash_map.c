@@ -59,7 +59,8 @@ void Int64HashMapDestroy(Int64HashMap *map) {
     map->size = 0;
 }
 
-static Int64HashMapIterator NewIterator(const Int64HashMap *map, int64_t index) {
+static Int64HashMapIterator NewIterator(const Int64HashMap *map,
+                                        int64_t index) {
     Int64HashMapIterator iterator;
     iterator.map = map;
     iterator.index = index;

@@ -307,7 +307,8 @@ static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
 
     // Read offset into the compressed bit stream.
     int64_t compressed_offset;
-    error = GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file, false);
+    error =
+        GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file, false);
     if (error) return BailOutFclose(db_file, -1);
 
     // Finalize.

@@ -122,7 +122,7 @@ void *RecordArrayGetData(RecordArray *array);
 
 /**
  * @brief Returns the size of \p array in number of \c Records.
- * 
+ *
  * @param array Target array.
  * @return Size of \p array in number of \c Records.
  */
@@ -130,7 +130,7 @@ int64_t RecordArrayGetSize(const RecordArray *array);
 
 /**
  * @brief Returns the size of \p array in bytes.
- * 
+ *
  * @param array Target array.
  * @return Size of \p array in bytes.
  */

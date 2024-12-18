@@ -61,6 +61,6 @@ int InteractiveGames(ReadOnlyString key) {
                        (ConstantReadOnlyString *)keys,
                        (const HookFunctionPointer *)hooks, NULL);
     FreeAll(num_items, items, keys, hooks);
-    
+
     return ret;
 }
