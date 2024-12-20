@@ -75,7 +75,7 @@ static void PrintCurrentPosition(const Game *game) {
                 "PlayTierGame: %s's PositionToString function returned error "
                 "code %d. Aborting...\n",
                 game->formal_name, error);
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     printf("%s\t", position_string);
     free(position_string);
@@ -339,7 +339,7 @@ static int PromptForAndProcessUserMove(const Game *game) {
     // Prompt for input.
     if (fgets(move_string, move_string_size, stdin) == NULL) {
         fprintf(stderr, "PlayTierGame: unexpected fgets error. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
@@ -401,7 +401,7 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
                 "PlayGame: (BUG) game ended at a position of unknown value %d. "
                 "Check the implementation of %s. Aborting...\n",
                 (int)value, game_formal_name);
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
             break;
     }
 }
@@ -415,7 +415,7 @@ int InteractivePlay(ReadOnlyString key) {
         fprintf(stderr,
                 "InteractivePlay: (BUG) attempting to launch game when the "
                 "game is uninitialized. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
 
     const Game *game = InteractiveMatchGetCurrentGame();

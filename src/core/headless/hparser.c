@@ -191,7 +191,7 @@ static void ParseOption(int key, int option_index) {
 
         case 'h':
             PrintUsage();
-            exit(0);
+            exit(0);  // NOLINT(concurrency-mt-unsafe)
 
         case 'o':
             arguments.output = optarg;
@@ -207,11 +207,11 @@ static void ParseOption(int key, int option_index) {
 
         case 'V':
             PrintVersion(stdout);
-            exit(0);
+            exit(0);  // NOLINT(concurrency-mt-unsafe)
 
         default:
             PrintUsage();
-            exit(kHeadlessError);
+            exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
     }
 }
 
@@ -231,7 +231,7 @@ static void ParseArgument(char *arg, int arg_num) {
             break;
         default:
             fprintf(stderr, "too many arguments\n");
-            exit(kHeadlessError);
+            exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
     }
 }
 
@@ -292,6 +292,6 @@ static void ParserError(const char *format, ...) {
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 
-    va_end(args);  // Clean up the argument list
-    exit(kHeadlessError);
+    va_end(args);          // Clean up the argument list
+    exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
 }

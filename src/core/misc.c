@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.4.0
- * @date 2024-11-09
+ * @version 1.4.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,7 +41,7 @@
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
-#include <unistd.h>     // close
+#include <unistd.h>     // close, _exit
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 #ifdef USE_MPI
 #include <mpi.h>
@@ -52,7 +52,7 @@
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
-    exit(kNoError);
+    exit(kNoError);  // NOLINT(concurrency-mt-unsafe)
 }
 
 void NotReached(ReadOnlyString message) {
@@ -60,7 +60,8 @@ void NotReached(ReadOnlyString message) {
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
-    exit(kNotReachedError);
+    fflush(stderr);
+    _exit(kNotReachedError);
 }
 
 intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
@@ -72,7 +73,8 @@ void *SafeMalloc(size_t size) {
                 "SafeMalloc: failed to allocate %zd bytes. This ususally "
                 "indicates a bug.\n",
                 size);
-        exit(kMallocFailureError);
+        fflush(stderr);
+        _exit(kMallocFailureError);
     }
     return ret;
 }
@@ -85,7 +87,8 @@ void *SafeCalloc(size_t n, size_t size) {
                 "bytes. This ususally "
                 "indicates a bug.\n",
                 n, size);
-        exit(kMallocFailureError);
+        fflush(stderr);
+        _exit(kMallocFailureError);
     }
     return ret;
 }

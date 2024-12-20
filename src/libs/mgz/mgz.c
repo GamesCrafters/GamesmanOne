@@ -142,7 +142,8 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
                 fprintf(stderr,
                         "MgzDeflate: (FATAL) deflate returned "
                         "Z_STREAM_ERROR.\n");
-                exit(1);
+                fflush(stderr);
+                _exit(1);
             }
             uInt have = kChunkSize - strm.avail_out;
             uInt copied =
@@ -267,7 +268,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
         fprintf(stderr,
                 "MgzParallelCreate: (FATAL) failed to write to "
                 "outfile.\n");
-        exit(1);
+        fflush(stderr);
+        _exit(1);
     }
     if (lookup) {
         /* Write block size. */
@@ -275,7 +277,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
             fprintf(stderr,
                     "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
-            exit(1);
+            fflush(stderr);
+            _exit(1);
         }
 
         /* Write lookup table. */
@@ -284,7 +287,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
             fprintf(stderr,
                     "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
-            exit(1);
+            fflush(stderr);
+            _exit(1);
         }
     }
     free(res.out);

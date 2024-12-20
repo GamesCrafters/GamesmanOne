@@ -205,7 +205,7 @@ static bool BasicDbApiImplemented(const Database *db) {
         fprintf(stderr,
                 "BasicDbApiImplemented: (BUG) A Database does not have its "
                 "name properly initialized. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     if (db->Init == NULL) return false;
     if (db->FlushSolvingTier == NULL) return false;

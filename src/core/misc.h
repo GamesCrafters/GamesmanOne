@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.4.0
- * @date 2024-11-09
+ * @version 1.4.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,7 +40,11 @@
 
 #include "core/types/gamesman_types.h"
 
-/** @brief Exits GAMESMAN. */
+/**
+ * @brief Gracefully exits GAMESMAN.
+ * @warning This function calls exit() which is not MT-safe. Do not call this
+ * function in a multithreaded code section.
+ */
 void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */

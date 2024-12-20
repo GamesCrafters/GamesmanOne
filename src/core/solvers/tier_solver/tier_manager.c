@@ -528,7 +528,7 @@ static int GetMethodForTierType(TierType type) {
             return kTierWorkerSolveMethodBackwardInduction;
 
         case kTierTypeLoopy:
-            return kTierWorkerSolveMethodValueIteration;
+            return kTierWorkerSolveMethodBackwardInduction;
     }
 
     NotReached("GetMethodForTierType: unknown tier type");
