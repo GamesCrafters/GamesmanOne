@@ -34,7 +34,7 @@
 #include <stdint.h>   // int64_t, int8_t
 #include <stdio.h>    // sprintf
 #include <stdlib.h>   // atoi
-#include <string.h>   // memset, strlen
+#include <string.h>   // memset, strlen, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -520,7 +520,8 @@ static bool GobbletGobblersIsValidMoveString(ReadOnlyString move_string) {
     char move_string_copy[9];
     strcpy(move_string_copy, move_string);
     static const char *delim = " ";
-    char *token = strtok(move_string_copy, delim);
+    char *saveptr;
+    char *token = strtok_r(move_string_copy, delim, &saveptr);
     if (strcmp(token, "add") && strcmp(token, "move")) return false;
 
     return true;
@@ -530,17 +531,18 @@ static Move GobbletGobblersStringToMove(ReadOnlyString move_string) {
     char move_string_copy[9];
     strcpy(move_string_copy, move_string);
     static const char *delim = " ";
-    char *token = strtok(move_string_copy, delim);
+    char *saveptr;
+    char *token = strtok_r(move_string_copy, delim, &saveptr);
     GobbletGobblersMove m = kGobbletGobblersMoveInit;
     if (strcmp(token, "add") == 0) {
-        token = strtok(NULL, delim);
+        token = strtok_r(NULL, delim, &saveptr);
         m.unpacked.add_size = atoi(token) - 1;
     } else {
         assert(strcmp(token, "move") == 0);
-        token = strtok(NULL, delim);
+        token = strtok_r(NULL, delim, &saveptr);
         m.unpacked.src = atoi(token) - 1;
     }
-    token = strtok(NULL, delim);
+    token = strtok_r(NULL, delim, &saveptr);
     m.unpacked.dest = atoi(token) - 1;
 
     return m.hash;

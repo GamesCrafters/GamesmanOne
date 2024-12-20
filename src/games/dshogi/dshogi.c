@@ -33,8 +33,8 @@
 #include <stdbool.h>  // bool, false
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // atoi, strtok
-#include <string.h>   // strcpy, strlen
+#include <stdlib.h>   // atoi
+#include <string.h>   // strcpy, strlen, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -678,17 +678,21 @@ static bool DobutsuShogiIsValidMoveString(ReadOnlyString move_string) {
     if (isalpha(move_string[0]) && move_string[1] != ' ') return false;
 
     char buffer[6];
+    char *token, *saveptr;
     strcpy(buffer, move_string);
     if (isalpha(move_string[0])) {
         // If begins with one of 'g', 'e', 'c', validate only the dest index.
-        strtok(buffer, " ");  // Get rid of the first chunk
+        strtok_r(buffer, " ", &saveptr);  // Get rid of the first chunk
     } else {
         // Otherwise, we also need to validate src.
-        int src = atoi(strtok(buffer, " "));
+        token = strtok_r(buffer, " ", &saveptr);
+        if (token == NULL) return false;
+        int src = atoi(token);
         if (src < 1 || src > kBoardSize) return false;
     }
 
-    int dest = atoi(strtok(NULL, " "));
+    token = strtok_r(NULL, " ", &saveptr);
+    int dest = atoi(token);
     if (dest < 1 || dest > kBoardSize) return false;
 
     return true;
@@ -701,9 +705,10 @@ static Move DobutsuShogiStringToMove(ReadOnlyString move_string) {
         dest = atoi(move_string + 2) - 1;  // 1-indexed.
     } else {
         char buffer[6];
+        char *saveptr;
         strcpy(buffer, move_string);
-        src = atoi(strtok(buffer, " ")) - 1;  // 1-indexed.
-        dest = atoi(strtok(NULL, " ")) - 1;   // 1-indexed.
+        src = atoi(strtok_r(buffer, " ", &saveptr)) - 1;  // 1-indexed.
+        dest = atoi(strtok_r(NULL, " ", &saveptr)) - 1;   // 1-indexed.
     }
 
     return ConstructMove(src, dest);

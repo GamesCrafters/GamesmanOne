@@ -5,7 +5,7 @@
 #include <stddef.h>  // NULL
 #include <stdio.h>   // sprintf
 #include <stdlib.h>  // atoi
-#include <string.h>  // memcpy
+#include <string.h>  // memcpy, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -1185,10 +1185,11 @@ static bool GatesIsValidMoveString(ReadOnlyString move_string) {
 static Move GatesStringToMove(ReadOnlyString move_string) {
     static ConstantReadOnlyString delim = " ";
     char move_string_copy[20];
+    char *saveptr;
     strcpy(move_string_copy, move_string);
-    char *tokens[10] = {strtok(move_string_copy, delim)};
+    char *tokens[10] = {strtok_r(move_string_copy, delim, &saveptr)};
     for (int i = 1; i < 8; ++i) {
-        tokens[i] = strtok(NULL, delim);
+        tokens[i] = strtok_r(NULL, delim, &saveptr);
     }
 
     GatesMove m = kGatesMoveInit;

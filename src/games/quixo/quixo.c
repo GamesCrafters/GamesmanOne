@@ -33,7 +33,7 @@
 #include <stddef.h>   // NULL
 #include <stdio.h>    // fprintf, stderr, sprintf
 #include <stdlib.h>   // atoi
-#include <string.h>   // memset
+#include <string.h>   // memset, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -826,15 +826,16 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
     if (move_string == NULL) return false;
     if (strlen(move_string) < 3 || strlen(move_string) > 5) return false;
 
-    // Make a copy of move_string bc strtok mutates the original move_string
+    // Make a copy of move_string bc strtok_r mutates the original move_string
     char copy_string[6];
     strcpy(copy_string, move_string);
 
-    char *token = strtok(copy_string, " ");
+    char *saveptr;
+    char *token = strtok_r(copy_string, " ", &saveptr);
     if (token == NULL) return false;
     int src = atoi(token);
 
-    token = strtok(NULL, " ");
+    token = strtok_r(NULL, " ", &saveptr);
     if (token == NULL) return false;
     int dest = atoi(token);
 
@@ -850,9 +851,10 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
 static Move QuixoStringToMove(ReadOnlyString move_string) {
     // Strings of format "source destination". Ex: "6 10"
     char copy_string[6];
+    char *saveptr;
     strcpy(copy_string, move_string);
-    int src = atoi(strtok(copy_string, " "));
-    int dest = atoi(strtok(NULL, " "));
+    int src = atoi(strtok_r(copy_string, " ", &saveptr));
+    int dest = atoi(strtok_r(NULL, " ", &saveptr));
 
     return ConstructMove(src - 1, dest - 1);
 }

@@ -31,8 +31,8 @@
 #include <ctype.h>   // toupper
 #include <stddef.h>  // NULL
 #include <stdint.h>  // int64_t
-#include <stdlib.h>  // atoi, strtok
-#include <string.h>  // strlen
+#include <stdlib.h>  // atoi
+#include <string.h>  // strlen, strtok_r
 
 #include "core/generic_hash/generic_hash.h"
 #include "core/misc.h"
@@ -644,10 +644,10 @@ static bool NeutronIsValidMoveString(ReadOnlyString move_string) {
 
     char move_string_copy[12];
     strcpy(move_string_copy, move_string);
-    char *tokens[4];
-    tokens[0] = strtok(move_string_copy, kMoveStrDelim);
+    char *tokens[4], *saveptr;
+    tokens[0] = strtok_r(move_string_copy, kMoveStrDelim, &saveptr);
     for (int i = 1; i < 4; ++i) {
-        tokens[i] = strtok(NULL, kMoveStrDelim);
+        tokens[i] = strtok_r(NULL, kMoveStrDelim, &saveptr);
     }
 
     // Validate the first two tokens
@@ -666,10 +666,10 @@ static bool NeutronIsValidMoveString(ReadOnlyString move_string) {
 static Move NeutronStringToMove(ReadOnlyString move_string) {
     char move_string_copy[12];
     strcpy(move_string_copy, move_string);
-    char *tokens[4];
-    tokens[0] = strtok(move_string_copy, kMoveStrDelim);
+    char *tokens[4], *saveptr;
+    tokens[0] = strtok_r(move_string_copy, kMoveStrDelim, &saveptr);
     for (int i = 1; i < 4; ++i) {
-        tokens[i] = strtok(NULL, kMoveStrDelim);
+        tokens[i] = strtok_r(NULL, kMoveStrDelim, &saveptr);
     }
 
     NeutronMove m = kNeutronMoveInit;
