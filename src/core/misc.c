@@ -135,8 +135,10 @@ double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
 
 char *GetTimeStampString(void) {
     time_t rawtime = time(NULL);
-    char *time_str = ctime(&rawtime);
+    static char time_str[26];  // 26 bytes as requested by ctime_r.
+    ctime_r(&rawtime, time_str);
     time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+
     return time_str;
 }
 

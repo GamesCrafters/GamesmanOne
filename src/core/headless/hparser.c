@@ -143,8 +143,10 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
     while (1) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
+        // NOLINTBEGIN(concurrency-mt-unsafe)
         key =
             getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
+        // NOLINTEND(concurrency-mt-unsafe)
         /* Detect the end of the options. */
         if (key == -1) break;
         ParseOption(key, option_index);
