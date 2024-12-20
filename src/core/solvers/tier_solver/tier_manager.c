@@ -519,23 +519,8 @@ static void CreateTierGraphPrintError(int error) {
     }
 }
 
-static int GetMethodForTierType(TierType type) {
-    switch (type) {
-        case kTierTypeImmediateTransition:
-            return kTierWorkerSolveMethodImmediateTransition;
-
-        case kTierTypeLoopFree:  // TODO: implement more efficient method.
-            return kTierWorkerSolveMethodBackwardInduction;
-
-        case kTierTypeLoopy:
-            return kTierWorkerSolveMethodBackwardInduction;
-    }
-
-    NotReached("GetMethodForTierType: unknown tier type");
-    return -1;  // Never reached.
-}
-
 #ifndef USE_MPI
+
 static int SolveTierGraph(bool force, int verbose) {
     TierWorkerSolveOptions options = {
         .compare = false,

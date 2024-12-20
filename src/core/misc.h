@@ -398,14 +398,8 @@ int64_t NChooseR(int n, int r);
 int64_t RoundUpDivide(int64_t n, int64_t d);
 
 #ifdef USE_MPI
-/**
- * @brief Bail-on-error \c MPI_Init.
- *
- * @param argc Pointer to the number of arguments.
- * @param argv Pointer to the argument vector.
- */
-void SafeMpiInit(int *argc, char ***argv);
 
+#ifdef _OPENMP
 /**
  * @brief Bail-on-error \c MPI_Init_thread.
  *
@@ -415,6 +409,15 @@ void SafeMpiInit(int *argc, char ***argv);
  * @param provided (Output parameter) level of provided thread support.
  */
 void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided);
+#else   // _OPENMP not defined
+/**
+ * @brief Bail-on-error \c MPI_Init.
+ *
+ * @param argc Pointer to the number of arguments.
+ * @param argv Pointer to the argument vector.
+ */
+void SafeMpiInit(int *argc, char ***argv);
+#endif  // _OPENMP
 
 /**
  * @brief Bail-on-error \c MPI_Finalize.

@@ -552,6 +552,17 @@ int64_t NChooseR(int n, int r) {
 int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
 
 #ifdef USE_MPI
+
+#ifdef _OPENMP
+void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
+    int error = MPI_Init_thread(argc, argv, required, provided);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiInitThread: failed with code %d\n", error);
+        fflush(stderr);
+        _exit(kMpiError);
+    }
+}
+#else   // _OPENMP not defined
 void SafeMpiInit(int *argc, char ***argv) {
     int error = MPI_Init(argc, argv);
     if (error != MPI_SUCCESS) {
@@ -559,20 +570,14 @@ void SafeMpiInit(int *argc, char ***argv) {
         exit(kMpiError);
     }
 }
-
-void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
-    int error = MPI_Init_thread(argc, argv, required, provided);
-    if (error != MPI_SUCCESS) {
-        fprintf(stderr, "SafeMpiInitThread: failed with code %d\n", error);
-        exit(kMpiError);
-    }
-}
+#endif  // _OPENMP
 
 void SafeMpiFinalize(void) {
     int error = MPI_Finalize();
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiFinalize: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 
@@ -581,7 +586,8 @@ int SafeMpiCommSize(MPI_Comm comm) {
     int error = MPI_Comm_size(comm, &ret);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiCommSize: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 
     return ret;
@@ -592,7 +598,8 @@ int SafeMpiCommRank(MPI_Comm comm) {
     int error = MPI_Comm_rank(comm, &ret);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiCommRank: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 
     return ret;
@@ -603,7 +610,8 @@ void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
     int error = MPI_Send(buf, count, datatype, dest, tag, comm);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiSend: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 
@@ -612,7 +620,8 @@ void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
     int error = MPI_Recv(buf, count, datatype, source, tag, comm, status);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiRecv: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 #endif  // USE_MPI
