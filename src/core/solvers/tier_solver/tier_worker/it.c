@@ -183,7 +183,7 @@ static Value GetParentValue(Value child_value) {
  * better; returns 0 if the two pairs are exactly the same.
  */
 static int OutcomeCompare(Value v1, int r1, Value v2, int r2) {
-    static_assert(kLose < kDraw && kDraw < kTie && kTie < kWin);
+    static_assert(kLose < kDraw && kDraw < kTie && kTie < kWin, "");
     if (v1 != v2) return v1 - v2;
 
     // v1 == v2

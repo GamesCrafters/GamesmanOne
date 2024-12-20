@@ -286,8 +286,8 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
     GatesTier ct = *t;  // Child GatesTier.
 
     // Scoring must occur if there is a tier transition from the movement phase.
-    static_assert(kGate1Moving + 1 == kGate2Moving);
-    static_assert(g == 1 && A == 2);
+    static_assert(kGate1Moving + 1 == kGate2Moving, "");
+    static_assert(g == 1 && A == 2, "");
     for (ct.phase = kGate1Moving; ct.phase <= kGate2Moving; ++ct.phase) {
         for (int p = A; p < kNumPieceTypes; ++p) {
             if (t->n[p] > 0) {
@@ -310,7 +310,7 @@ static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
     ct->phase = kMovement;
     TierArrayAppend(ret, GatesTierHash(ct));
 
-    static_assert(kGate1Moving + 1 == kGate2Moving);
+    static_assert(kGate1Moving + 1 == kGate2Moving, "");
     for (ct->phase = kGate1Moving; ct->phase <= kGate2Moving; ++ct->phase) {
         if (white_turn) {
             // Case B: white immediately scores.

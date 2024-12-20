@@ -543,7 +543,7 @@ static Value GatesPrimitive(TierPosition tier_position) {
     GatesTier t;
     GatesTierUnhash(tier_position.tier, &t);
 
-    static_assert(kGate1Moving < kGate2Moving);
+    static_assert(kGate1Moving < kGate2Moving, "");
     if (t.phase >= kGate1Moving) {
         // The game ends with the previous player winning by scoring their last
         // spike. Therefore, all primitive positions are losing.
@@ -625,16 +625,16 @@ static void PerformPieceMove(GatesTier *t, char board[static kBoardSize],
     switch (board[m.unpacked.move_dest]) {
         // Scoring a piece
         case 'G':
-        case 'g':
+        case 'g': {
             // Figure out which gate it is and change the tier phase to GM1 or
             // GM2 accordingly
-            static_assert(kGate1Moving + 1 == kGate2Moving);
+            static_assert(kGate1Moving + 1 == kGate2Moving, "");
             t->phase = kGate1Moving + GateIndex(board, m.unpacked.move_dest);
             --t->n[kPieceToTypeIndex[(int8_t)board[m.unpacked.move_src]]];
             board[m.unpacked.move_src] = '-';
             assert(m.unpacked.teleport_dest < 0);
             break;
-
+        }
         // Moving and perhaps teleporting.
         default: {
             t->phase = kMovement;
@@ -1265,7 +1265,7 @@ static bool InitChildDedupTiers(void) {
     GatesTier t;
     t.phase = kPlacement;
     t.n[G] = t.n[g] = t.n[A] = t.n[a] = t.n[Z] = t.n[z] = 2;
-    static_assert(A + 1 == a && a + 1 == Z && Z + 1 == z);
+    static_assert(A + 1 == a && a + 1 == Z && Z + 1 == z, "");
     for (int p = A; p <= z; ++p) {
         t.n[p] = 1;
         for (t.G1 = 0; t.G1 < kBoardSize; ++t.G1) {
