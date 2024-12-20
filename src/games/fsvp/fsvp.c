@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the game of Fair Shares and Varied Pairs.
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -298,7 +298,7 @@ static int FsvpPositionToString(Position position, char *buffer) {
             size += sprintf(buffer + size, "%d, ", i);
         }
     }
-    size += sprintf(buffer + size, "}");
+    sprintf(buffer + size, "}");
 
     return kNoError;
 }
@@ -313,7 +313,7 @@ static int FsvpMoveToString(Move move, char *buffer) {
     }
     move >>= 1;
     size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
-    size += sprintf(buffer + size, "%" PRId64, move % variant_size);      // y
+    sprintf(buffer + size, "%" PRId64, move % variant_size);              // y
 
     return kNoError;
 }

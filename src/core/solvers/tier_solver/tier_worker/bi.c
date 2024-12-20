@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -387,7 +387,7 @@ static bool Step3ScanTier(void) {
 
 static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
     int64_t *frontier_offsets =
-        (int64_t *)malloc((num_threads + 1) * sizeof(int64_t));
+        (int64_t *)calloc(num_threads + 1, sizeof(int64_t));
     if (frontier_offsets == NULL) return NULL;
 
     frontier_offsets[0] = 0;

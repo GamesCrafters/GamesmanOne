@@ -544,7 +544,7 @@ int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
                      "%" PRIField "%" PRIField "%" PRIField "%" PRIField,
                      t.n[A], t.n[a], t.n[Z], t.n[z]);
     if (t.n[G] > 0) count += sprintf(name + count, "_%" PRIField, t.G1);
-    if (t.n[G] > 1) count += sprintf(name + count, "_%" PRIField, t.G2);
+    if (t.n[G] > 1) sprintf(name + count, "_%" PRIField, t.G2);
 
     return kNoError;
 }

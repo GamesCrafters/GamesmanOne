@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set implementation.
- * @version 1.0.1
- * @date 2024-12-10
+ * @version 1.0.2
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -96,13 +96,10 @@ static bool TierPositionHashSetExpand(TierPositionHashSet *set) {
 
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     // Check if resizing is needed.
-    double load_factor;
-    if (set->capacity == 0) {
-        load_factor = INFINITY;
-    } else {
-        load_factor = (double)(set->size + 1) / (double)set->capacity;
-    }
-    if (load_factor > set->max_load_factor) {
+    double load_factor = (set->capacity == 0)
+                             ? INFINITY
+                             : (double)(set->size + 1) / (double)set->capacity;
+    if (set->capacity == 0 || load_factor > set->max_load_factor) {
         if (!TierPositionHashSetExpand(set)) return false;
     }
 

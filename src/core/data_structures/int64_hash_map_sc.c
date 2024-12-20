@@ -7,8 +7,8 @@
  * @details This hash map implementation allows removal of map entries at the
  * cost of being considerably slower than the regular open addressing hash map
  * provided by int64_hash_map.h.
- * @version 1.0.1
- * @date 2024-09-09
+ * @version 1.0.2
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -119,13 +119,11 @@ static bool Expand(Int64HashMapSC *map) {
 
 bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
     // Check if resizing is needed.
-    double load_factor;
-    if (map->num_buckets == 0) {
-        load_factor = INFINITY;
-    } else {
-        load_factor = (double)(map->num_entries + 1) / (double)map->num_buckets;
-    }
-    if (load_factor > map->max_load_factor) {
+    double load_factor =
+        (map->num_buckets == 0)
+            ? INFINITY
+            : (double)(map->num_entries + 1) / (double)map->num_buckets;
+    if ((map->num_buckets == 0) || load_factor > map->max_load_factor) {
         if (!Expand(map)) return false;
     }
 

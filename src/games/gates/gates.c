@@ -1166,11 +1166,9 @@ static int GatesMoveToString(Move move, char *buffer) {
         count += sprintf(buffer + count, "%sm %" PRId8 " %" PRId8,
                          first_chunk ? "" : " ", m.unpacked.move_src + 1,
                          m.unpacked.move_dest + 1);
-        first_chunk = false;
     }
     if (teleport) {
-        count +=
-            sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
+        sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
     }
 
     return kNoError;

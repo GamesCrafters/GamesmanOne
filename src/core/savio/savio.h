@@ -16,10 +16,10 @@ enum SavioSettingsConstants {
 typedef struct SavioPartition {
     ConstantReadOnlyString name;
     ConstantReadOnlyString desc;
+    double su_per_core_hour;
     int num_nodes;
     int num_cpu;
     int mem_gb;
-    double su_per_core_hour;
     bool per_node_allocation;
 } SavioPartition;
 

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 2.0.0
- * @date 2024-12-10
+ * @version 2.0.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -115,7 +115,10 @@ void Int64ArraySortExplicit(Int64Array *array,
 }
 
 bool Int64ArrayResize(Int64Array *array, int64_t size) {
-    if (size < 0) size = 0;
+    if (size <= 0) {
+        Int64ArrayDestroy(array);
+        return true;
+    }
 
     // Expand if necessary.
     if (array->capacity < size) {

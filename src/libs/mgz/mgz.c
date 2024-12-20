@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of In-Memory Gzip.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.0.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -225,6 +225,7 @@ mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
 
     /* Concatenate blocks to form the final output. */
     int64_t out_size = ConvertOutBlockSizesToLookup(space, num_blocks);
+    if (out_size == 0) goto _bailout;
     out = malloc(out_size);
     if (!out) goto _bailout;
 
