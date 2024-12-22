@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array.
- * @version 2.0.1
+ * @version 2.0.2
  * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

@@ -53,6 +53,7 @@
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
 */
 
+// NOLINTBEGIN(*)
 #define NN 312
 #define MM 156
 #define MATRIX_A 0xB5026F5AA96619E9ULL
@@ -162,3 +163,5 @@ double genrand64_real2(void) {
 double genrand64_real3(void) {
     return ((genrand64_int64() >> 12) + 0.5) * (1.0 / 4503599627370496.0);
 }
+
+// NOLINTEND(*)

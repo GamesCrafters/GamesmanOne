@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of In-Memory Gzip.
- * @version 1.0.1
- * @date 2024-12-20
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,8 +52,8 @@
 
 const uInt kChunkSize = 1 << 14;  // 16 KiB
 const uInt kIllegalChunkSize = kChunkSize + 1;
-const int kDefaultOutCapacity = kChunkSize << 1;
-const int kMgzMinBlockSize = kChunkSize;
+const int64_t kDefaultOutCapacity = (int64_t)kChunkSize << 1;
+const int64_t kMgzMinBlockSize = kChunkSize;
 const int64_t kDefaultBlockSize = 1 << 20;
 const int64_t kIllegalBlockSize = -1;
 
@@ -316,7 +316,7 @@ int64_t MgzRead(void *buf, int64_t size, int64_t offset, int fd, FILE *lookup) {
     /* Seek to the correct location. */
     int64_t block = offset / block_size;
     off_t into = offset % block_size;
-    if (fseek(lookup, block * sizeof(int64_t), SEEK_CUR) < 0) {
+    if (fseek(lookup, (long)(block * sizeof(int64_t)), SEEK_CUR) < 0) {
         fprintf(stderr,
                 "MgzRead: failed to seek to the given block in lookup "
                 "file.\n");

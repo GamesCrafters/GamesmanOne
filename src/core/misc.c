@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.4.1
- * @date 2024-12-20
+ * @version 1.4.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -157,18 +157,18 @@ char *SecondsToFormattedTimeString(double _seconds) {
     }
 
     int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds;
-    int64_t remainder = _seconds;
-    seconds = remainder % 60;
+    int64_t remainder = (int64_t)_seconds;
+    seconds = (int)(remainder % 60);
     remainder /= 60;
-    minutes = remainder % 60;
+    minutes = (int)(remainder % 60);
     remainder /= 60;
-    hours = remainder % 24;
+    hours = (int)(remainder % 24);
     remainder /= 24;
-    days = remainder % 30;
+    days = (int)(remainder % 30);
     remainder /= 30;
-    months = remainder %= 12;
+    months = (int)(remainder %= 12);
     remainder /= 12;
-    years = remainder > 9999 ? -1 : remainder;
+    years = (int)(remainder > 9999 ? -1 : remainder);
     if (years < 0) {
         sprintf(buf, "INFINITE");
     } else {

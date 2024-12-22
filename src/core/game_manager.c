@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Game Manager Module which handles game initialization and
  * finalization.
- * @version 1.1.1
- * @date 2024-02-29
+ * @version 1.1.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -112,14 +112,14 @@ int GameManagerSetVariant(int variant_id) {
     Int64Array selections = VariantIndexToSelections(variant_id, variant);
     if (selections.array == NULL) return kMallocFailureError;
 
-    for (int64_t i = 0; i < selections.size; ++i) {
-        int selection = selections.array[i];
+    for (int i = 0; i < (int)selections.size; ++i) {
+        int selection = (int)selections.array[i];
         int error = current_game->SetVariantOption(i, selection);
         if (error != 0) {
             fprintf(stderr,
                     "GameManagerSetVariant: failed to make selection %d to "
                     "option %d of game %s\n",
-                    selection, (int)i, current_game->name);
+                    selection, i, current_game->name);
             return error;
         }
     }

@@ -126,7 +126,7 @@ static bool Unhash(TierPosition tp, GobbletGobblersTier *t,
                    GobbletGobblersPosition *p) {
     t->hash = tp.tier;
     Position pos = tp.position;
-    p->turn = 1 + (pos & 1);
+    p->turn = 1 + (int)(pos & 1);
     pos >>= 1;
     for (int i = 2; i >= 0; --i) {
         int64_t label = t->configs[i].hash;
@@ -165,7 +165,7 @@ static void GetHeights(int8_t heights[static 9],
                        const GobbletGobblersPosition *p) {
     memset(heights, -1, 9);
     for (int i = 0; i < 9; ++i) {
-        for (int size = 2; size >= 0; --size) {
+        for (int8_t size = 2; size >= 0; --size) {
             if (p->board[size][i] != '-') {
                 assert(p->board[size][i] == 'X' || p->board[size][i] == 'O');
                 heights[i] = size;
@@ -178,7 +178,7 @@ static void GetHeights(int8_t heights[static 9],
 static void GetFaces(char faces[static 9], const GobbletGobblersPosition *p) {
     memset(faces, '-', 9);
     for (int i = 0; i < 9; ++i) {
-        for (int size = 2; size >= 0; --size) {
+        for (int8_t size = 2; size >= 0; --size) {
             if (p->board[size][i] != '-') {
                 assert(p->board[size][i] == 'X' || p->board[size][i] == 'O');
                 faces[i] = p->board[size][i];
@@ -314,9 +314,9 @@ static TierPosition DoMoveMovePiece(GobbletGobblersTier t,
                                     GobbletGobblersMove m) {
     // Locate exposed piece and determine its size
     int8_t src = m.unpacked.src;
-    int8_t size = (p->board[2][src] != '-')   ? 2
-                  : (p->board[1][src] != '-') ? 1
-                                              : 0;
+    int size = (p->board[2][src] != '-')   ? 2
+               : (p->board[1][src] != '-') ? 1
+                                           : 0;
     assert(p->board[size][src] == kTurnToPiece[p->turn]);
 
     // Move piece to dest
@@ -536,14 +536,14 @@ static Move GobbletGobblersStringToMove(ReadOnlyString move_string) {
     GobbletGobblersMove m = kGobbletGobblersMoveInit;
     if (strcmp(token, "add") == 0) {
         token = strtok_r(NULL, delim, &saveptr);
-        m.unpacked.add_size = atoi(token) - 1;
+        m.unpacked.add_size = (int8_t)(atoi(token) - 1);
     } else {
         assert(strcmp(token, "move") == 0);
         token = strtok_r(NULL, delim, &saveptr);
-        m.unpacked.src = atoi(token) - 1;
+        m.unpacked.src = (int8_t)(atoi(token) - 1);
     }
     token = strtok_r(NULL, delim, &saveptr);
-    m.unpacked.dest = atoi(token) - 1;
+    m.unpacked.dest = (int8_t)(atoi(token) - 1);
 
     return m.hash;
 }
@@ -643,8 +643,10 @@ static TierPosition GobbletGobblersFormalPositionToTierPosition(
         for (int i = 0; i < 9; ++i) {
             char token = toupper(formal_position[2 + size * 9 + i]);
             p.board[size][i] = token;
+            // NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
             t.configs[size].count[X] -= (token == 'X');
             t.configs[size].count[O] -= (token == 'O');
+            // NOLINTEND(cppcoreguidelines-narrowing-conversions)
         }
     }
     TierPosition ret = {.tier = t.hash, .position = Hash(t, &p)};
@@ -661,7 +663,7 @@ static CString GobbletGobblersTierPositionToFormalPosition(
     Unhash(tier_position, &t, &p);
 
     char placeholder[30];
-    placeholder[0] = '0' + p.turn;
+    placeholder[0] = (char)('0' + p.turn);
     placeholder[1] = '_';
     memcpy(&placeholder[2], p.board[0], 9);
     memcpy(&placeholder[11], p.board[1], 9);
@@ -701,6 +703,7 @@ static CString GobbletGobblersTierPositionToAutoGuiPosition(
     // Faces + heights
     for (int i = 0; i < 9; ++i) {
         char face = faces[i];
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         if (face != '-') face += heights[i];
         entities[walker++] = face;
     }
@@ -714,10 +717,12 @@ static CString GobbletGobblersTierPositionToAutoGuiPosition(
     // Remaining pieces
     for (int at_least = 1; at_least <= 2; ++at_least) {
         for (int piece = X; piece <= O; ++piece) {
-            for (int size = 0; size < 3; ++size) {
+            for (int8_t size = 0; size < 3; ++size) {
+                // NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
                 entities[walker++] = (t.configs[size].count[piece] >= at_least)
                                          ? kTurnToPiece[piece + 1] + size
                                          : '-';
+                // NOLINTEND(cppcoreguidelines-narrowing-conversions)
             }
         }
     }

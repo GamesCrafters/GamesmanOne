@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.1
- * @date 2024-12-20
+ * @version 1.1.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -180,7 +180,7 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     TierArrayAppend(&child_tiers, this_tier);
 
     // Initialize frontiers with size to hold all child tiers and this tier.
-    if (!Step0_1InitFrontiers(child_tiers.size)) return false;
+    if (!Step0_1InitFrontiers((int)(child_tiers.size))) return false;
 
     return true;
 }
@@ -259,7 +259,7 @@ static bool Step1_0LoadTierHelper(int child_index) {
 static bool Step1LoadChildren(void) {
     // Child tiers must be processed sequentially, otherwise the frontier
     // dividers wouldn't work.
-    int num_child_tiers = child_tiers.size - 1;
+    int num_child_tiers = (int)child_tiers.size - 1;
     for (int child_index = 0; child_index < num_child_tiers; ++child_index) {
         // Load child tier from disk.
         if (!Step1_0LoadTierHelper(child_index)) return false;
@@ -304,7 +304,8 @@ static bool IsCanonicalPosition(Position position) {
 static ChildPosCounterType Step3_0CountChildren(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
     if (!use_reverse_graph) {
-        return current_api.GetNumberOfCanonicalChildPositions(tier_position);
+        return (ChildPosCounterType)
+            current_api.GetNumberOfCanonicalChildPositions(tier_position);
     }
     // Else, count children manually and add position as their parent in the
     // reverse graph.
@@ -358,7 +359,7 @@ static bool Step3ScanTier(void) {
                 // Set its value immediately and push it into the frontier.
                 DbManagerSetValue(position, value);
                 DbManagerSetRemoteness(position, 0);
-                int this_tier_index = child_tiers.size - 1;
+                int this_tier_index = (int)child_tiers.size - 1;
                 if (!CheckAndLoadFrontier(this_tier_index, position, value, 0,
                                           tid)) {
                     ConcurrentBoolStore(&success, false);
@@ -505,7 +506,7 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
         // All parents are win/tie in (remoteness + 1) positions.
         DbManagerSetValue(parents.array[i], value);
         DbManagerSetRemoteness(parents.array[i], remoteness + 1);
-        int this_tier_index = child_tiers.size - 1;
+        int this_tier_index = (int)child_tiers.size - 1;
         bool success = FrontierAdd(frontier, parents.array[i], remoteness + 1,
                                    this_tier_index);
         if (!success) {  // OOM.
@@ -542,8 +543,8 @@ static ChildPosCounterType DecrementIfNonZero(AtomicChildPosCounterType *obj) {
         // to current_value. Otherwise, it updates current_value to the new
         // value of OBJ and returns false.
         bool success = atomic_compare_exchange_strong_explicit(
-            obj, &current_value, current_value - 1, memory_order_relaxed,
-            memory_order_relaxed);
+            obj, &current_value, (ChildPosCounterType)(current_value - 1),
+            memory_order_relaxed, memory_order_relaxed);
         // If decrement was successful, quit and return the original value of
         // OBJ that was swapped out.
         if (success) return current_value;
@@ -581,7 +582,7 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
         if (child_remaining == 1) {
             DbManagerSetValue(parents.array[i], kLose);
             DbManagerSetRemoteness(parents.array[i], remoteness + 1);
-            int this_tier_index = child_tiers.size - 1;
+            int this_tier_index = (int)child_tiers.size - 1;
             bool success = FrontierAdd(&lose_frontiers[tid], parents.array[i],
                                        remoteness + 1, this_tier_index);
             if (!success) {  // OOM.

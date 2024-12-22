@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array) implementation.
- * @version 3.0.0
- * @date 2024-11-18
+ * @version 3.0.1
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -75,7 +75,7 @@ bool CStringInitCopyCharArray(CString *cstring, const char *src) {
         return true;
     }
 
-    int64_t length = strlen(src);
+    int64_t length = (int64_t)strlen(src);
     cstring->str = (char *)malloc(length + 1);
     if (cstring->str == NULL) return false;
 
@@ -116,7 +116,7 @@ static bool CStringExpand(CString *cstring, int64_t target_size) {
 }
 
 bool CStringAppend(CString *dest, const char *src) {
-    int64_t append_length = strlen(src);
+    int64_t append_length = (int64_t)strlen(src);
     int64_t target_size = dest->length + append_length;
 
     // Expand if necessary.

@@ -40,6 +40,11 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
+// clang-tidy gives many warnings about narrowing conversion from 'int' to
+// 'int8_t' that are known to be correct. The following line turns them all
+// off. Consider re-enabling them before implementing new features.
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
+
 static int QuixoInit(void *aux);
 static int InitGenericHash(void);
 static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o);
@@ -1170,3 +1175,5 @@ static bool CheckDirection(const char *board, char piece, int i, int j,
 
     return false;
 }
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

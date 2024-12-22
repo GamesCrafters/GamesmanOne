@@ -6,8 +6,8 @@
  * @brief Implementation of Dōbutsu shōgi, also known as "animal shogi," or
  * "Let's Catch the Lion!" Japanese: 「どうぶつしょうぎ」.
  * @details https://en.wikipedia.org/wiki/D%C5%8Dbutsu_sh%C5%8Dgi
- * @version 1.0.1
- * @date 2024-12-10
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -222,7 +222,8 @@ static void InitMoveMatrix(void) {
 
                     int dest = slot + i_off * 3 + j_off;
                     kMoveMatrix[piece][slot]
-                               [kMoveMatrixNumMoves[piece][slot]++] = dest;
+                               [kMoveMatrixNumMoves[piece][slot]++] =
+                                   (int8_t)dest;
                 }
             }
         }
@@ -288,8 +289,8 @@ static bool CanCapture(char src, char dest) {
 static Move ConstructMove(int src, int dest) { return src * kBoardSize + dest; }
 
 static void ExpandMove(Move move, int *src, int *dest) {
-    *dest = move % kBoardSize;
-    *src = move / kBoardSize;
+    *dest = (int)(move % kBoardSize);
+    *src = (int)(move / kBoardSize);
 }
 
 static void ConvertCapturedToSky(char board[static kBoardStrSize]) {
@@ -298,7 +299,7 @@ static void ConvertCapturedToSky(char board[static kBoardStrSize]) {
         --count[kPieceTypeToIndex[(int)board[i]]];
     }
     for (int i = 0; i < 3; ++i) {
-        board[kBoardSize + i] = count[i] - board[kBoardSize + i];
+        board[kBoardSize + i] = (char)(count[i] - board[kBoardSize + i]);
     }
 }
 
@@ -434,18 +435,19 @@ static Position DoMoveInternal(const char board[static kBoardStrSize], int turn,
     if (src < kBoardSize) {  // Moving a piece on the board.
         int src_piece_idx = kPieceToIndex[(int)board_copy[src]];
         int chick_promote = ('H' - 'C') * kPromoteMatrix[src_piece_idx][dest];
-        board_copy[dest] = board_copy[src] + chick_promote;
+        board_copy[dest] = (char)(board_copy[src] + chick_promote);
         board_copy[src] = '-';
     } else {  // Moving a piece from the captured pile.
         // kIndexToPieceType maps to capital letters. If it is the sky player's
         // (player 2's) turn, convert to lower case by adding 32 ('a' - 'A') to
         // the character.
-        board_copy[dest] =
-            kIndexToPieceType[src - kBoardSize] + ('a' - 'A') * (turn == 2);
+        board_copy[dest] = (char)(kIndexToPieceType[src - kBoardSize] +
+                                  ('a' - 'A') * (turn == 2));
 
         // If it is currently the forest player's (player 1's) turn and we are
         // removing a piece from the captured pile, decrement the corresponding
         // counter.
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         board_copy[src] -= (turn == 1);
     }
 
@@ -757,7 +759,7 @@ static bool DobutsuShogiIsLegalFormalPosition(ReadOnlyString formal_position) {
     // The first char must be either 1 or 2.
     if (formal_position[0] != '1' && formal_position[0] != '2') return false;
 
-    int config[14] = {0};
+    char config[14] = {0};
     char board[kBoardStrSize];
     for (int i = 0; i < kBoardSize; ++i) {
         board[i] = formal_position[i + 2];
@@ -766,7 +768,7 @@ static bool DobutsuShogiIsLegalFormalPosition(ReadOnlyString formal_position) {
         ++config[kPieceToIndex[(int)board[i]]];
     }
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        board[i] = config[i - 1] = formal_position[i + 3] - '0';
+        board[i] = config[i - 1] = (char)(formal_position[i + 3] - '0');
     }
 
     // The piece configuration must be valid.
@@ -789,7 +791,7 @@ static Position DobutsuShogiFormalPositionToPosition(
     char board[kBoardStrSize];
     memcpy(board, formal_position + 2, kBoardSize);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        board[i] = formal_position[i + 3] - '0';
+        board[i] = (char)(formal_position[i + 3] - '0');
     }
 
     return GenericHashHash(board, formal_position[0] - '0');
@@ -803,14 +805,14 @@ static CString DobutsuShogiPositionToFormalPosition(Position position) {
     (void)success;
     int turn = GenericHashGetTurn(position);
     char formal_position[] = "1_------------_000_000";  // Placeholder.
-    formal_position[0] = '0' + turn;
+    formal_position[0] = (char)('0' + turn);
     memcpy(formal_position + 2, board, kBoardSize);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        formal_position[i + 3] = board[i] + '0';
+        formal_position[i + 3] = (char)(board[i] + '0');
     }
     ConvertCapturedToSky(board);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        formal_position[i + 7] = board[i] + '0';
+        formal_position[i + 7] = (char)(board[i] + '0');
     }
 
     CString ret;
@@ -837,7 +839,7 @@ static CString DobutsuShogiPositionToAutoGuiPosition(Position position) {
     (void)success;
     int turn = GenericHashGetTurn(position);
     char autogui_position[] = "1_------------GECgec";  // Placeholder.
-    autogui_position[0] = '0' + turn;
+    autogui_position[0] = (char)('0' + turn);
     memcpy(autogui_position + 2, board, kBoardSize);
     for (int i = 0; i < 3; ++i) {
         autogui_position[2 + kBoardSize + i] =

@@ -7,8 +7,8 @@
  * @details This hash map implementation allows removal of map entries at the
  * cost of being considerably slower than the regular open addressing hash map
  * provided by int64_hash_map.h.
- * @version 1.0.2
- * @date 2024-12-20
+ * @version 1.0.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -61,7 +61,7 @@ void Int64HashMapSCDestroy(Int64HashMapSC *map) {
 }
 
 static int64_t Hash(int64_t key, int64_t num_buckets) {
-    return ((uint64_t)key) % num_buckets;
+    return (int64_t)(((uint64_t)key) % num_buckets);
 }
 
 bool Int64HashMapSCContains(const Int64HashMapSC *map, int64_t key) {

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database file utilities.
- * @version 1.2.1
- * @date 2024-08-25
+ * @version 1.2.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -112,7 +112,7 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records);
  * @param bits_per_entry Number of bits used to store each entry.
  * @return Block size in bytes.
  */
-int BpdbFileGetBlockSize(int bits_per_entry);
+int64_t BpdbFileGetBlockSize(int bits_per_entry);
 
 /**
  * @brief Returns the status of TIER stored under the given SANDBOX_PATH for

@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 2.0.1
+ * @version 2.0.2
  * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -102,7 +102,10 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
 }
 
 static int Int64Comp(const void *a, const void *b) {
-    return *(int64_t *)a - *(int64_t *)b;
+    int64_t aa = *(const int64_t *)a;
+    int64_t bb = *(const int64_t *)b;
+
+    return (aa > bb) - (aa < bb);
 }
 
 void Int64ArraySortAscending(Int64Array *array) {
@@ -142,7 +145,7 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
 bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index) {
     if (index < 0 || index >= array->size) return false;
 
-    int64_t move_size = (array->size - index - 1) * sizeof(int64_t);
+    int64_t move_size = (array->size - index - 1) * (int64_t)sizeof(int64_t);
     memmove(&array->array[index], &array->array[index + 1], move_size);
     --array->size;
 

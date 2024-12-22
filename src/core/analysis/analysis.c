@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 1.1.0
- * @date 2024-12-10
+ * @version 1.1.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -748,7 +748,7 @@ static int PrintSummaryHeader(FILE *stream, int column_width) {
 
     fprintf(stream, "\t");
     for (int i = 0; i < num_headers; ++i) {
-        int spaces = column_width - strlen(headers[i]);
+        int spaces = column_width - (int)strlen(headers[i]);
         for (int j = 0; j < spaces; ++j) {
             fprintf(stream, " ");
         }

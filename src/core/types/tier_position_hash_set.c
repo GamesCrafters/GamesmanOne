@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set implementation.
- * @version 1.0.2
- * @date 2024-12-20
+ * @version 1.0.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -54,8 +54,8 @@ void TierPositionHashSetDestroy(TierPositionHashSet *set) {
 static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
     int64_t a = (int64_t)key.tier;
     int64_t b = (int64_t)key.position;
-    int64_t cantor_pairing = (a + b) * (a + b + 1) / 2 + a;
-    return ((uint64_t)cantor_pairing) % capacity;
+    uint64_t cantor_pairing = (a + b) * (a + b + 1) / 2 + a;
+    return (int64_t)(cantor_pairing % capacity);
 }
 
 bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {

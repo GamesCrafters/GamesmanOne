@@ -41,6 +41,11 @@
 
 // ============================= Type Definitions =============================
 
+// clang-tidy gives many warnings about narrowing conversion from 'int' to
+// 'int8_t' that are known to be correct. The following line turns them all
+// off. Consider re-enabling them before implementing new features.
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
+
 typedef union {
     struct {
         /** [-1, 25), 25 possible neutron move sources plus an additional value
@@ -1030,3 +1035,5 @@ const Game kNeutron = {
     .GetCurrentVariant = NULL,  // No other variants for now
     .SetVariantOption = NULL,   // No other variants for now
 };
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

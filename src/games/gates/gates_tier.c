@@ -68,6 +68,7 @@ void SwapG(GatesTier *t) {
 // =========================== GatesTierGetNumPieces ===========================
 
 GatesTierField GatesTierGetNumPieces(const GatesTier *t) {
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     return t->n[G] + t->n[g] + t->n[A] + t->n[a] + t->n[Z] + t->n[z];
 }
 

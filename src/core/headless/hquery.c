@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the position querying functionality of headless
  * mode.
- * @version 1.1.0
- * @date 2024-10-21
+ * @version 1.1.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -368,8 +368,8 @@ static int JsonPrintPositionResponse(const Game *game, Position position) {
         goto _bailout;
     }
 
-    moves_array_obj = json_object_new_array_ext(moves.size);
-    partmoves_array_obj = json_object_new_array_ext(partmoves.size);
+    moves_array_obj = json_object_new_array_ext((int)moves.size);
+    partmoves_array_obj = json_object_new_array_ext((int)partmoves.size);
     if (moves_array_obj == NULL || partmoves_array_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -513,8 +513,8 @@ static int JsonPrintTierPositionResponse(const Game *game,
         goto _bailout;
     }
 
-    moves_array_obj = json_object_new_array_ext(moves.size);
-    partmoves_array_obj = json_object_new_array_ext(partmoves.size);
+    moves_array_obj = json_object_new_array_ext((int)moves.size);
+    partmoves_array_obj = json_object_new_array_ext((int)partmoves.size);
     if (moves_array_obj == NULL || partmoves_array_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;

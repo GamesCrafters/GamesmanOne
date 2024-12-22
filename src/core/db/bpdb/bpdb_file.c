@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database file utilities.
- * @version 1.2.1
- * @date 2024-08-25
+ * @version 1.2.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -53,8 +53,8 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
                           GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name>.bpdb".
     static ConstantReadOnlyString kBpdbExtension = ".bpdb";
-    int path_length = strlen(sandbox_path) + 1 + kDbFileNameLengthMax +
-                      strlen(kBpdbExtension) + 1;
+    int path_length = (int)(strlen(sandbox_path) + 1 + kDbFileNameLengthMax +
+                            strlen(kBpdbExtension) + 1);
     char *full_path = (char *)malloc(path_length * sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to malloc full_path.\n");
@@ -75,7 +75,8 @@ char *BpdbFileGetFullPath(ConstantReadOnlyString sandbox_path, Tier tier,
 char *BpdbFileGetFullPathToFinishFlag(ConstantReadOnlyString sandbox_path) {
     // Full path: "<path>/.finish".
     static ConstantReadOnlyString kFinishFlagFileName = ".finish";
-    int path_length = strlen(sandbox_path) + strlen(kFinishFlagFileName) + 2;
+    int path_length =
+        (int)(strlen(sandbox_path) + strlen(kFinishFlagFileName) + 2);
     char *full_path = (char *)malloc(path_length * sizeof(char));
     if (full_path == NULL) {
         fprintf(
@@ -92,7 +93,7 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
     int32_t num_unique_values = BpArrayGetNumUniqueValues(records);
 
     BpdbFileHeader header;
-    header.decomp_dict_meta.size = num_unique_values * sizeof(int32_t);
+    header.decomp_dict_meta.size = num_unique_values * (int32_t)sizeof(int32_t);
     header.stream_meta = records->meta;
 
     // Compress stream using mgz
@@ -109,9 +110,10 @@ int BpdbFileFlush(ReadOnlyString full_path, const BpArray *records) {
     return FlushStep1WriteToFile(full_path, &header, decomp_dict, result);
 }
 
-int BpdbFileGetBlockSize(int bits_per_entry) {
+int64_t BpdbFileGetBlockSize(int bits_per_entry) {
     // Makes sure that each block contains an integer number of entries.
-    return NextMultiple(kMgzMinBlockSize, bits_per_entry * sizeof(uint64_t));
+    return NextMultiple(kMgzMinBlockSize,
+                        bits_per_entry * (int64_t)sizeof(uint64_t));
 }
 
 int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier,
@@ -133,14 +135,14 @@ int BpdbFileGetTierStatus(ConstantReadOnlyString sandbox_path, Tier tier,
 
 static mgz_res_t FlushStep0MgzCompress(BpdbFileHeader *header,
                                        const BpArray *stream) {
-    int block_size = BpdbFileGetBlockSize(stream->meta.bits_per_entry);
+    int64_t block_size = BpdbFileGetBlockSize(stream->meta.bits_per_entry);
     header->lookup_meta.block_size = block_size;
     mgz_res_t result =
         MgzParallelDeflate(stream->stream, stream->meta.stream_length,
                            kMgzCompressionLevel, block_size, kMgzLookupNeeded);
     if (result.out == NULL) return result;
 
-    header->lookup_meta.size = result.num_blocks * sizeof(int64_t);
+    header->lookup_meta.size = result.num_blocks * (int64_t)sizeof(int64_t);
     return result;
 }
 

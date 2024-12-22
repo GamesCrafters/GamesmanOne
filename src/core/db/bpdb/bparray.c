@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Bit-Perfect array of unsigned integers.
- * @version 1.0.1
- * @date 2024-12-10
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -48,7 +48,7 @@
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
-static const int kDefaultBitsPerEntry = 1;
+enum { kDefaultBitsPerEntry = 1 };
 
 /**
  * @brief Maximum number of bits per array entry.
@@ -70,7 +70,7 @@ static int64_t GetStreamLength(int64_t num_entries, int bits_per_entry);
 static uint64_t GetSegment(const BpArray *array, int64_t i);
 static void SetSegment(BpArray *array, int64_t i, uint64_t segment);
 static int64_t GetBitOffset(int64_t i, int bits_per_entry);
-static int64_t GetLocalBitOffset(int64_t i, int bits_per_entry);
+static int GetLocalBitOffset(int64_t i, int bits_per_entry);
 static int64_t GetByteOffset(int64_t i, int bits_per_entry);
 static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset);
 
@@ -120,7 +120,7 @@ uint64_t BpArrayGet(BpArray *array, int64_t i) {
     uint64_t segment = GetSegment(array, i);
     uint64_t value = (segment & mask) >> local_bit_offset;
 
-    return BpDictGetKey(&array->dict, value);
+    return BpDictGetKey(&array->dict, (int32_t)value);
 }
 
 int BpArraySet(BpArray *array, int64_t i, uint64_t entry) {
@@ -161,7 +161,7 @@ static int64_t GetStreamLength(int64_t num_entries, int bits_per_entry) {
     // 8 additional bytes are allocated so that it is always safe to read
     // 8 bytes for an entry.
     return RoundUpDivide(num_entries * bits_per_entry, kBitsPerByte) +
-           sizeof(uint64_t);
+           (int64_t)sizeof(uint64_t);
 }
 
 static uint64_t GetSegment(const BpArray *array, int64_t i) {
@@ -180,8 +180,8 @@ static int64_t GetBitOffset(int64_t i, int bits_per_entry) {
     return i * bits_per_entry;
 }
 
-static int64_t GetLocalBitOffset(int64_t i, int bits_per_entry) {
-    return GetBitOffset(i, bits_per_entry) % kBitsPerByte;
+static int GetLocalBitOffset(int64_t i, int bits_per_entry) {
+    return (int)(GetBitOffset(i, bits_per_entry) % kBitsPerByte);
 }
 
 static int64_t GetByteOffset(int64_t i, int bits_per_entry) {
@@ -194,15 +194,16 @@ static uint64_t GetEntryMask(int bits_per_entry, int local_bit_offset) {
 }
 
 static uint64_t CompressEntry(BpDict *dict, uint64_t entry) {
-    int32_t compressed = BpDictGet(dict, entry);
+    int32_t key = (int32_t)entry;
+    int32_t compressed = BpDictGet(dict, key);
     if (compressed < 0) {
-        int error = BpDictSet(dict, entry);
+        int error = BpDictSet(dict, key);
         if (error != 0) {
             fprintf(stderr, "BpArraySet: failed to set BpDict, code %d\n",
                     error);
             return error;
         }
-        compressed = BpDictGet(dict, entry);
+        compressed = BpDictGet(dict, key);
         assert(compressed >= 0);
     }
     return compressed;
@@ -242,7 +243,7 @@ static void CopyEntry(uint8_t *dest, const BpArray *src, int64_t i) {
 
     // Put new segment.
     int64_t byte_end = GetByteOffset(i + 1, bits_per_entry + 1);
-    int bytes_to_copy = byte_end - byte_offset + 1;
+    int64_t bytes_to_copy = byte_end - byte_offset + 1;
     memcpy(address, &segment, bytes_to_copy);
 }
 
@@ -270,7 +271,7 @@ static int ExpandHelper(BpArray *array, int new_bits_per_entry) {
 
     free(array->stream);
     array->stream = new_stream;
-    array->meta.bits_per_entry = new_bits_per_entry;
+    array->meta.bits_per_entry = (int8_t)new_bits_per_entry;
     array->meta.stream_length = new_stream_length;
     return kNoError;
 }

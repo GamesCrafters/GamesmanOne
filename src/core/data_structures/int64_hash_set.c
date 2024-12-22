@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t hash set implementation.
- * @version 1.0.1
- * @date 2024-12-20
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,7 +36,7 @@
 #include "core/misc.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
-    return ((uint64_t)key) % capacity;
+    return (int64_t)(((uint64_t)key) % capacity);
 }
 
 static int64_t NextIndex(int64_t index, int64_t capacity) {

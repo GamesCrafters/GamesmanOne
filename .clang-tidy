@@ -1,0 +1,20 @@
+Checks: >
+  -*,                    # Start by disabling all checks
+  bugprone-*,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-to-enum,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-interfaces-global-init,
+  misc-*
+  mpi-*,
+  performance-*,
+  portability-*
+
+HeaderFilterRegex: '.*'  # Analyze all files including headers
+FormatStyle: "Google"    # Use Google code formatting style
+UseColor: true

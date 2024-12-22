@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the common utility functions for headless mode.
- * @version 1.0.0
- * @date 2024-01-20
+ * @version 1.0.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -86,7 +86,7 @@ int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
 // -----------------------------------------------------------------------------
 
 static int MakeDirectory(ReadOnlyString output) {
-    int length = strlen(output);
+    int length = (int)strlen(output);
 
     // Path is not valid for a file if it's empty or its last character is '/'.
     if (length == 0 || output[length - 1] == '/') return -1;

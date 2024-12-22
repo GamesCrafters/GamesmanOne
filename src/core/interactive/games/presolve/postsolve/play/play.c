@@ -124,9 +124,9 @@ int MoveCompare(const void *move1, const void *move2) {
     it = Int64HashMapGet(&move_values, m2);
     Value value2 = Int64HashMapIteratorValue(&it);
     it = Int64HashMapGet(&move_remotenesses, m1);
-    int remoteness1 = Int64HashMapIteratorValue(&it);
+    int remoteness1 = (int)Int64HashMapIteratorValue(&it);
     it = Int64HashMapGet(&move_remotenesses, m2);
-    int remoteness2 = Int64HashMapIteratorValue(&it);
+    int remoteness2 = (int)Int64HashMapIteratorValue(&it);
 
     return GetMoveRank(value1, remoteness1) - GetMoveRank(value2, remoteness2);
 }

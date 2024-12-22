@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.2.2
- * @date 2024-12-20
+ * @version 1.2.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -409,11 +409,11 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     }
     // Using multiplication to avoid branching.
     int num_canonical_moves =
-        deduplication_set.size * IsCanonicalPosition(tier_position);
+        (int)deduplication_set.size * IsCanonicalPosition(tier_position);
     TierPositionHashSetDestroy(&deduplication_set);
 
     PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
-        AnalysisDiscoverMoves(dest, tier_position, moves.size,
+        AnalysisDiscoverMoves(dest, tier_position, (int)moves.size,
                               num_canonical_moves);
     }
     MoveArrayDestroy(&moves);

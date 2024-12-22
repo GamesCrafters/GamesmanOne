@@ -622,6 +622,6 @@ static Move MallqueenschessStringToMove(ReadOnlyString move_string) {
 }
 
 static void UnhashMove(Move move, int *from, int *to) {
-    *from = move >> 5;
-    *to = move & 0x1F;
+    *from = (int)(move >> 5);
+    *to = (int)(move & 0x1F);
 }

@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.2
- * @date 2024-12-10
+ * @version 1.2.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -178,7 +178,7 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
         return kFileSystemError;
     }
 
-    int64_t offset = tier_position.position * sizeof(NaiveDbEntry);
+    int64_t offset = tier_position.position * (int64_t)sizeof(NaiveDbEntry);
     if (fseek(file, offset, SEEK_SET) != 0) {
         perror("fseek");
         fclose(file);
@@ -267,7 +267,8 @@ static int NaiveDbFlushSolvingTier(void *aux) {
     }
 
     // Write records
-    int64_t n = fwrite(records, sizeof(records[0]), current_tier_size, file);
+    int64_t n =
+        (int64_t)fwrite(records, sizeof(records[0]), current_tier_size, file);
     if (n != current_tier_size) {
         perror("fwrite");
         fclose(file);
@@ -423,7 +424,8 @@ static int NaiveDbProbeDestroy(DbProbe *probe) {
 
 static bool ProbeBufferHit(DbProbe *probe, TierPosition tier_position) {
     if (probe->tier != tier_position.tier) return false;
-    int64_t record_offset = tier_position.position * sizeof(NaiveDbEntry);
+    int64_t record_offset =
+        tier_position.position * (int64_t)sizeof(NaiveDbEntry);
     if (record_offset < probe->begin) return false;
     if (record_offset >= probe->begin + probe->size) return false;
     return true;
@@ -436,13 +438,13 @@ static bool ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
             return false;
         }
         probe->tier = tier_position.tier;
-        probe->begin = tier_position.position * sizeof(NaiveDbEntry);
+        probe->begin = tier_position.position * (int64_t)sizeof(NaiveDbEntry);
     }
     return true;
 }
 
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
-    int64_t offset = position * sizeof(NaiveDbEntry) - probe->begin;
+    int64_t offset = position * (int64_t)sizeof(NaiveDbEntry) - probe->begin;
     assert(offset >= 0);
     NaiveDbEntry entry;
     memcpy(&entry, GenericPointerAdd(probe->buffer, offset),

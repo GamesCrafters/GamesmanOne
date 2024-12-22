@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.2.0
- * @date 2024-07-13
+ * @version 1.2.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -203,10 +203,10 @@ static char *SetupStatPath(ReadOnlyString game_name, int variant,
     static ConstantReadOnlyString kAnalysisDirName = "analysis";
     char *path = NULL;
 
-    int path_length = strlen(data_path) + 1;  // +1 for '/'.
-    path_length += strlen(game_name) + 1;
+    int path_length = (int)strlen(data_path) + 1;  // +1 for '/'.
+    path_length += (int)strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
-    path_length += strlen(kAnalysisDirName) + 1;
+    path_length += (int)strlen(kAnalysisDirName) + 1;
     path = (char *)calloc((path_length + 1), sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "SetupStatPath: failed to calloc path.\n");
@@ -245,10 +245,10 @@ static char *GetPathToTierDiscoveryMap(Tier tier) {
 static char *GetPathTo(Tier tier, ReadOnlyString extension) {
     // path = "<sandbox_path>/<tier><extension>"
     // file_name = "<tier><extension>"
-    int file_name_length = kInt64Base10StringLengthMax + strlen(extension);
+    int file_name_length = kInt64Base10StringLengthMax + (int)strlen(extension);
 
     // +1 for '/', and +1 for '\0'.
-    int path_length = strlen(sandbox_path) + 1 + file_name_length + 1;
+    int path_length = (int)strlen(sandbox_path) + 1 + file_name_length + 1;
     char *path = (char *)calloc(path_length, sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "GetPathToTierAnalysis: failed to calloc path.\n");

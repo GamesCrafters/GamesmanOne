@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.4.1
- * @date 2024-09-13
+ * @version 1.4.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -748,8 +748,9 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
 
         ReadOnlyString time_string;
         if (processed_size > 0) {
-            double time_remaining =
-                time_elapsed_seconds / processed_size * remaining_size;
+            double time_remaining = time_elapsed_seconds /
+                                    (double)processed_size *
+                                    (double)remaining_size;
             time_string = SecondsToFormattedTimeString(time_remaining);
         } else {
             time_string = "unknown";
@@ -775,9 +776,9 @@ static int64_t NumTiersAndStatusToValue(int num_tiers, int status) {
     return num_tiers * kNumStatus + status;
 }
 
-static int ValueToStatus(int64_t value) { return value % kNumStatus; }
+static int ValueToStatus(int64_t value) { return (int)(value % kNumStatus); }
 
-static int ValueToNumTiers(int64_t value) { return value / kNumStatus; }
+static int ValueToNumTiers(int64_t value) { return (int)(value / kNumStatus); }
 
 static int64_t GetValue(Tier tier) {
     TierHashMapIterator it = TierHashMapGet(&tier_graph, tier);

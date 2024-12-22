@@ -6,8 +6,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Generic Hash Context module.
- * @version 1.2.2
- * @date 2024-12-20
+ * @version 1.2.3
+ * @date 2024-12-22
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in
@@ -76,7 +76,8 @@ static void IndexToConfig(GenericHashContext *context, int64_t index,
     int num_total_pieces = context->num_pieces + context->num_unordered_pieces;
     for (int i = 0; i < num_total_pieces; ++i) {
         int num_possible_piece_numbers = GetNumPossiblePieceNumbers(context, i);
-        config[i] = context->mins[i] + (index % num_possible_piece_numbers);
+        config[i] =
+            context->mins[i] + (int)(index % num_possible_piece_numbers);
         index /= num_possible_piece_numbers;
     }
 }
@@ -115,13 +116,14 @@ static int64_t ConfigToRearrangement(GenericHashContext *context, int *config) {
  * rearrangement values as keys to the mapping array.
  */
 static int64_t Rearrange(GenericHashContext *context, const int *config,
-                         int rearrangement) {
+                         int64_t rearrangement) {
     if (context->rearranger_cache[rearrangement] < 0) {
-        int64_t pieces_rearranged = 0, result = 1;
+        int pieces_rearranged = 0;
+        int64_t result = 1;
         for (int piece_index = 0; piece_index < context->num_pieces - 1;
              ++piece_index) {
             pieces_rearranged += config[piece_index];
-            int64_t more_pieces = config[piece_index + 1];
+            int more_pieces = config[piece_index + 1];
             int64_t combinations =
                 NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
             result *= combinations;
@@ -193,7 +195,7 @@ static bool InitStep1_2SetupBoardPieces(GenericHashContext *context,
 
     for (int i = 0; pieces_init_array[i * 3] >= 0; ++i) {
         int piece = pieces_init_array[i * 3];
-        if (piece > INT8_MAX) {  // Max piece symbol value is INT8_MAX.
+        if (piece > CHAR_MAX) {  // Max piece symbol value is CHAR_MAX.
             fprintf(stderr, kIllegalPieceErrorFormat, piece);
             return false;
         } else if (piece < 0) {  // Negative piece symbols are not allowed.
@@ -206,7 +208,7 @@ static bool InitStep1_2SetupBoardPieces(GenericHashContext *context,
         }
 
         context->pieces[i] = (char)piece;
-        context->piece_index_mapping[piece] = i;
+        context->piece_index_mapping[piece] = (char)i;
         context->mins[i] = pieces_init_array[i * 3 + 1];
         context->maxs[i] = pieces_init_array[i * 3 + 2];
         if (context->mins[i] < 0 || context->mins[i] > context->maxs[i] ||
@@ -350,11 +352,12 @@ static bool InitStep2_3InitSpaces(GenericHashContext *context,
 
 /** @brief Rearrange with integer overflow checks. */
 static int64_t SafeRearrange(GenericHashContext *context, const int *config) {
-    int64_t pieces_rearranged = 0, result = 1;
+    int pieces_rearranged = 0;
+    int64_t result = 1;
     for (int piece_index = 0; piece_index < context->num_pieces - 1;
          ++piece_index) {
         pieces_rearranged += config[piece_index];
-        int64_t more_pieces = config[piece_index + 1];
+        int more_pieces = config[piece_index + 1];
         int64_t combinations =
             NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
         result = SafeMultiplyNonNegativeInt64(result, combinations);
@@ -610,7 +613,7 @@ static void UnhashStep0HashUncruncher(GenericHashContext *context,
             if (config[j] == 0) continue;
             prev_offset = curr_offset;
             --config[j];
-            int new_rearrangement =
+            int64_t new_rearrangement =
                 rearrangement - context->max_piece_mult_scan[j];
             curr_offset += Rearrange(context, config, new_rearrangement);
             ++config[j];
@@ -659,7 +662,7 @@ bool GenericHashContextUnhash(GenericHashContext *context, Position hash,
 
 int GenericHashContextGetTurn(GenericHashContext *context, Position hash) {
     if (context->player != 0) return context->player;
-    return (hash & 1) + 1;
+    return (int)((hash & 1) + 1);
 }
 
 #undef STACK_CONFIG_SIZE

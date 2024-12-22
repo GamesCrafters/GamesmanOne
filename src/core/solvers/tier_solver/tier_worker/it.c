@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm implementation.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -62,10 +62,10 @@ static TierArray canonical_child_tiers;
 // ------------------------------ Step0Initialize ------------------------------
 
 static int TierSizeComp(const void *t1, const void *t2) {
-    int64_t size1 = api_internal->GetTierSize(*(Tier *)t1);
-    int64_t size2 = api_internal->GetTierSize(*(Tier *)t2);
+    int64_t size1 = api_internal->GetTierSize(*(const Tier *)t1);
+    int64_t size2 = api_internal->GetTierSize(*(const Tier *)t2);
 
-    return size1 - size2;
+    return (size1 > size2) - (size1 < size2);
 }
 
 static bool Step0_0SetupChildTiers(void) {

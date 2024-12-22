@@ -445,7 +445,7 @@ static CString MtttMoveToFormalMove(Position position, Move move) {
     (void)position;  // Unused.
     CString ret;
     if (!CStringInitCopyCharArray(&ret, "0")) return ret;
-    ret.str[0] = '0' + move;
+    ret.str[0] = (char)('0' + move);
     return ret;
 }
 
@@ -457,7 +457,7 @@ static CString MtttMoveToAutoGuiMove(Position position, Move move) {
 
     BlankOX turn = WhoseTurn(board);
     ret.str[2] = turn == kX ? 'x' : 'o';
-    ret.str[4] = '0' + move;
+    ret.str[4] = (char)('0' + move);
     return ret;
 }
 

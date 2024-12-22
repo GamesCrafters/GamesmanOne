@@ -135,8 +135,8 @@ static Move ConstructMove(int src, int dest) {
 
 static void ExpandMove(Move move, int *src, int *dest) {
     move -= kBoardSize;
-    *dest = move % kBoardSize;
-    *src = move / kBoardSize;
+    *dest = (int)move % kBoardSize;
+    *src = (int)move / kBoardSize;
 }
 
 static bool OnBoard(int row, int col) {
@@ -403,7 +403,7 @@ static int TeekoMoveToString(Move move, char *buffer) {
 static bool TeekoIsValidMoveString(ReadOnlyString move_string) {
     if (move_string == NULL) return false;
 
-    int length = strlen(move_string);
+    int length = (int)strlen(move_string);
     if (length < 1 || length > 5) return false;
     int src, dest;
     int num_tokens = sscanf(move_string, "%d %d", &src, &dest);
@@ -525,7 +525,7 @@ static int TeekoInit(void *aux) {
 
     // Tiers 0 - 7 contain positions in the dropping phase.
     int piece_init[10] = {'X', 0, 0, 'O', 0, 0, '-', 0, 0, -1};
-    for (Tier t = 0; t < 8; ++t) {
+    for (int t = 0; t < 8; ++t) {
         piece_init[1] = piece_init[2] = (t + 1) / 2;
         piece_init[4] = piece_init[5] = t / 2;
         piece_init[7] = piece_init[8] =
@@ -592,7 +592,7 @@ static CString TeekoTierPositionToFormalPosition(TierPosition tier_position) {
     char formal_position[] = "1_-------------------------";  // placeholder
     int turn =
         GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
-    formal_position[0] = turn + '0';
+    formal_position[0] = (char)(turn + '0');
     GenericHashUnhashLabel(tier_position.tier, tier_position.position,
                            formal_position + 2);
     CString ret;

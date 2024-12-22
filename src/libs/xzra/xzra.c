@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief XZ utilities with random access.
- * @version 1.0.1
- * @date 2024-12-20
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -205,7 +205,7 @@ int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
     bool success =
         InitEncoder(&strm, block_size, level, extreme, num_threads) &&
         CompressFileHelper(&strm, infile, outfile);
-    int64_t ret = success ? strm.total_out : -3;
+    int64_t ret = success ? (int64_t)strm.total_out : -3;
     lzma_end(&strm);
     if (fclose(outfile)) {
         char buf[BUFSIZ];
@@ -268,7 +268,7 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
     bool success =
         InitEncoder(&strm, block_size, level, extreme, num_threads) &&
         CompressStreamHelper(&strm, in, in_size, outfile);
-    int64_t ret = success ? strm.total_out : -3;
+    int64_t ret = success ? (int64_t)strm.total_out : -3;
     lzma_end(&strm);
     if (fclose(outfile)) {
         char buf[BUFSIZ];
@@ -494,7 +494,7 @@ static int XzraGetIndex(lzma_index **index, FILE *f) {
     lzma_vli backward_size = GetBackwardSize(f);
     if (backward_size == LZMA_VLI_UNKNOWN) return 1;
 
-    fseek(f, -LZMA_STREAM_HEADER_SIZE - backward_size, SEEK_END);
+    fseek(f, -LZMA_STREAM_HEADER_SIZE - (int64_t)backward_size, SEEK_END);
     uint8_t *buf = (uint8_t *)malloc(backward_size * sizeof(uint8_t));
     if (buf == NULL) return 2;
 
@@ -672,7 +672,8 @@ static bool DecodeBlock(uint8_t *out, lzma_block *block,
 }
 
 static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
-    fseek(f, iter->block.compressed_file_offset, SEEK_SET);  // Seek to block.
+    // Seek to block.
+    fseek(f, (int64_t)iter->block.compressed_file_offset, SEEK_SET);
 
     // Allocate space for compressed block.
     uint8_t *block_buf = (uint8_t *)malloc(iter->block.total_size);
@@ -696,7 +697,8 @@ static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
         return 4;
     }
 
-    bool success = DecodeBlock(out, &b, iter->block.total_size, block_buf);
+    bool success =
+        DecodeBlock(out, &b, (int64_t)iter->block.total_size, block_buf);
     free(block_buf);
 
     return success ? 0 : 5;

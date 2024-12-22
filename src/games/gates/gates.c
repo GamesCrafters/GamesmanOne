@@ -14,6 +14,8 @@
 #include "core/types/gamesman_types.h"
 #include "games/gates/gates_tier.h"
 
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
+
 enum {
     kBoardAdjacency1SizeMax = 5,
     kBoardAdjacency2SizeMax = 6,
@@ -1482,3 +1484,5 @@ const Game kGates = {
     .GetCurrentVariant = NULL,  // No other variants for now.
     .SetVariantOption = NULL,
 };
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

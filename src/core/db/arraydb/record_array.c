@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the fixed-length \c Record array for the Array
  * Database.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.0.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -76,5 +76,5 @@ void *RecordArrayGetData(RecordArray *array) { return (void *)array->records; }
 int64_t RecordArrayGetSize(const RecordArray *array) { return array->size; }
 
 int64_t RecordArrayGetRawSize(const RecordArray *array) {
-    return array->size * sizeof(Record);
+    return array->size * (int64_t)sizeof(Record);
 }
