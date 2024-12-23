@@ -185,7 +185,7 @@ const Game kQuixo = {
     .formal_name = "Quixo",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kQuixoSolverApi,
-    .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,
+    .gameplay_api = &QuixoGameplayApi,
     .uwapi = &kQuixoUwapi,
 
     .Init = &QuixoInit,

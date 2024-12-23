@@ -368,9 +368,10 @@ static bool Step3ScanTier(void) {
                 continue;
             }  // Execute the following lines if tier_position is not primitive.
             ChildPosCounterType num_children = Step3_0CountChildren(position);
-            if (num_children <= 0)
+            if (num_children <= 0) {
                 // Either OOM or no children.
                 ConcurrentBoolStore(&success, false);
+            }
             SetNumUndecidedChildren(position, num_children);
         }
     }
@@ -631,8 +632,10 @@ static bool Step4PushFrontierUp(void) {
 
     // Then move on to tying positions.
     for (int remoteness = 0; remoteness < kFrontierSize; ++remoteness) {
-        if (!PushFrontierHelper(tie_frontiers, remoteness, &ProcessTiePosition))
+        if (!PushFrontierHelper(tie_frontiers, remoteness,
+                                &ProcessTiePosition)) {
             return false;
+        }
     }
     DestroyFrontiers();
     TierArrayDestroy(&child_tiers);
@@ -721,8 +724,9 @@ static bool CompareDb(void) {
 _bailout:
     DbManagerProbeDestroy(&probe);
     DbManagerRefProbeDestroy(&ref_probe);
-    if (success)
+    if (success) {
         printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
+    }
 
     return success;
 }

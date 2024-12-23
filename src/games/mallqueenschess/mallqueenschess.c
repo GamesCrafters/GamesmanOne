@@ -113,7 +113,7 @@ const Game kMallqueenschess = {
     .formal_name = "All Queens Chess",
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = &kGameplayApi,
 
     .Init = &MallqueenschessInit,
     .Finalize = &MallqueenschessFinalize,

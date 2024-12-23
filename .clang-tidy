@@ -10,7 +10,10 @@ Checks: >
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-init-variables,
   -cppcoreguidelines-interfaces-global-init,
-  misc-*
+  google-*,
+  -google-readability-todo,
+  misc-*,
+  -misc-include-cleaner,
   mpi-*,
   performance-*,
   portability-*

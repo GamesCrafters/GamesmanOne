@@ -782,7 +782,7 @@ const Game kMkaooa = {
     .formal_name = "Kaooa",
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = &kGameplayApi,
     .uwapi = &kKaooaUwapi,
 
     .Init = &MkaooaInit,

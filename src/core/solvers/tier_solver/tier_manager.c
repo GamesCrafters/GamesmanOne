@@ -407,14 +407,14 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
     if (type == kTierSolving) {
         if (!TierGraphSetNumTiers(parent, num_canonical_tier_children)) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphOutOfMemory;
+            return kTierGraphOutOfMemory;
         }
     } else {  // type == kTierAnalyzing
         for (int64_t i = 0; i < children.size; ++i) {
             Tier child = children.array[i];
             if (!IncrementNumParentTiers(child)) {
                 TierArrayDestroy(&children);
-                return (int)kTierGraphOutOfMemory;
+                return kTierGraphOutOfMemory;
             }
         }
     }
@@ -423,12 +423,12 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
         Tier child = children.array[i];
         if (ReverseTierGraphAdd(&reverse_tier_graph, child, parent) != 0) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphOutOfMemory;
+            return kTierGraphOutOfMemory;
         }
         if (!TierHashMapContains(&tier_graph, child)) {
             if (!TierGraphSetInitial(child)) {
                 TierArrayDestroy(&children);
-                return (int)kTierGraphOutOfMemory;
+                return kTierGraphOutOfMemory;
             }
         }
         int status = GetStatus(child);
@@ -436,12 +436,12 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphLoopDetected;
+            return kTierGraphLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
     TierArrayDestroy(&children);
-    return (int)kTierGraphNoError;
+    return kTierGraphNoError;
 }
 
 static void BuildTierGraphUpdateAnalysis(Tier parent) {

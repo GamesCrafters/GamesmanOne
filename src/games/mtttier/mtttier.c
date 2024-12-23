@@ -153,7 +153,7 @@ const Game kMtttier = {
     .formal_name = "Tic-Tac-Tier",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kMtttierGameplayApi,
+    .gameplay_api = &kMtttierGameplayApi,
     .uwapi = &kMtttierUwapi,
 
     .Init = &MtttierInit,

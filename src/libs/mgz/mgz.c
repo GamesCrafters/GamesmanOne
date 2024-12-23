@@ -174,7 +174,7 @@ static int64_t GetCorrectBlockSize(int64_t block_size) {
     if (block_size == 0) return kDefaultBlockSize;
     if (block_size < kMgzMinBlockSize) {
         printf("GetCorrectBlockSize: resetting block size %" PRId64
-               " to the minimum required block size %d",
+               " to the minimum required block size %" PRId64 "\n",
                block_size, kMgzMinBlockSize);
         return kMgzMinBlockSize;
     }

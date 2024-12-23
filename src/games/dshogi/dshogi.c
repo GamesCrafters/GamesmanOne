@@ -41,6 +41,11 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
+// clang-tidy gives many warnings about narrowing conversion from 'int' to
+// 'char' that are known to be correct. The following line turns them all
+// off. Consider re-enabling them before implementing new features.
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
+
 // Global Constants
 
 enum {
@@ -174,10 +179,10 @@ static void InitPieceTypeToIndex(void) {
     for (int i = 0; i < kNumChars; ++i) {
         kPieceTypeToIndex[i] = 3;
     }
-    kPieceTypeToIndex[(int)'G'] = kPieceTypeToIndex[(int)'g'] = 0;
-    kPieceTypeToIndex[(int)'E'] = kPieceTypeToIndex[(int)'e'] = 1;
-    kPieceTypeToIndex[(int)'H'] = kPieceTypeToIndex[(int)'h'] = 2;
-    kPieceTypeToIndex[(int)'C'] = kPieceTypeToIndex[(int)'c'] = 2;
+    kPieceTypeToIndex['G'] = kPieceTypeToIndex['g'] = 0;
+    kPieceTypeToIndex['E'] = kPieceTypeToIndex['e'] = 1;
+    kPieceTypeToIndex['H'] = kPieceTypeToIndex['h'] = 2;
+    kPieceTypeToIndex['C'] = kPieceTypeToIndex['c'] = 2;
 }
 
 static void InitPieceToIndex(void) {
@@ -185,17 +190,17 @@ static void InitPieceToIndex(void) {
         kPieceToIndex[i] = -1;
     }
 
-    kPieceToIndex[(int)'L'] = 0;
-    kPieceToIndex[(int)'l'] = 1;
-    kPieceToIndex[(int)'G'] = 2;
-    kPieceToIndex[(int)'g'] = 3;
-    kPieceToIndex[(int)'E'] = 4;
-    kPieceToIndex[(int)'e'] = 5;
-    kPieceToIndex[(int)'H'] = 6;
-    kPieceToIndex[(int)'h'] = 7;
-    kPieceToIndex[(int)'C'] = 8;
-    kPieceToIndex[(int)'c'] = 9;
-    kPieceToIndex[(int)'-'] = 10;
+    kPieceToIndex['L'] = 0;
+    kPieceToIndex['l'] = 1;
+    kPieceToIndex['G'] = 2;
+    kPieceToIndex['g'] = 3;
+    kPieceToIndex['E'] = 4;
+    kPieceToIndex['e'] = 5;
+    kPieceToIndex['H'] = 6;
+    kPieceToIndex['h'] = 7;
+    kPieceToIndex['C'] = 8;
+    kPieceToIndex['c'] = 9;
+    kPieceToIndex['-'] = 10;
 }
 
 static bool OnBoard(int i, int j) {
@@ -222,8 +227,7 @@ static void InitMoveMatrix(void) {
 
                     int dest = slot + i_off * 3 + j_off;
                     kMoveMatrix[piece][slot]
-                               [kMoveMatrixNumMoves[piece][slot]++] =
-                                   (int8_t)dest;
+                               [kMoveMatrixNumMoves[piece][slot]++] = dest;
                 }
             }
         }
@@ -233,10 +237,10 @@ static void InitMoveMatrix(void) {
 static void InitPromoteMatrix(void) {
     // Assumes kPieceToIndex has already been initialized.
     for (int i = 0; i < 3; ++i) {
-        kPromoteMatrix[kPieceToIndex[(int)'C']][i] = true;
+        kPromoteMatrix[kPieceToIndex['C']][i] = true;
     }
     for (int i = 9; i < 12; ++i) {
-        kPromoteMatrix[kPieceToIndex[(int)'c']][i] = true;
+        kPromoteMatrix[kPieceToIndex['c']][i] = true;
     }
 }
 
@@ -289,8 +293,8 @@ static bool CanCapture(char src, char dest) {
 static Move ConstructMove(int src, int dest) { return src * kBoardSize + dest; }
 
 static void ExpandMove(Move move, int *src, int *dest) {
-    *dest = (int)(move % kBoardSize);
-    *src = (int)(move / kBoardSize);
+    *dest = move % kBoardSize;
+    *src = move / kBoardSize;
 }
 
 static void ConvertCapturedToSky(char board[static kBoardStrSize]) {
@@ -299,7 +303,7 @@ static void ConvertCapturedToSky(char board[static kBoardStrSize]) {
         --count[kPieceTypeToIndex[(int)board[i]]];
     }
     for (int i = 0; i < 3; ++i) {
-        board[kBoardSize + i] = (char)(count[i] - board[kBoardSize + i]);
+        board[kBoardSize + i] = count[i] - board[kBoardSize + i];
     }
 }
 
@@ -435,19 +439,18 @@ static Position DoMoveInternal(const char board[static kBoardStrSize], int turn,
     if (src < kBoardSize) {  // Moving a piece on the board.
         int src_piece_idx = kPieceToIndex[(int)board_copy[src]];
         int chick_promote = ('H' - 'C') * kPromoteMatrix[src_piece_idx][dest];
-        board_copy[dest] = (char)(board_copy[src] + chick_promote);
+        board_copy[dest] = board_copy[src] + chick_promote;
         board_copy[src] = '-';
     } else {  // Moving a piece from the captured pile.
         // kIndexToPieceType maps to capital letters. If it is the sky player's
         // (player 2's) turn, convert to lower case by adding 32 ('a' - 'A') to
         // the character.
-        board_copy[dest] = (char)(kIndexToPieceType[src - kBoardSize] +
-                                  ('a' - 'A') * (turn == 2));
+        board_copy[dest] =
+            kIndexToPieceType[src - kBoardSize] + ('a' - 'A') * (turn == 2);
 
         // If it is currently the forest player's (player 1's) turn and we are
         // removing a piece from the captured pile, decrement the corresponding
         // counter.
-        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         board_copy[src] -= (turn == 1);
     }
 
@@ -759,7 +762,7 @@ static bool DobutsuShogiIsLegalFormalPosition(ReadOnlyString formal_position) {
     // The first char must be either 1 or 2.
     if (formal_position[0] != '1' && formal_position[0] != '2') return false;
 
-    char config[14] = {0};
+    int config[14] = {0};
     char board[kBoardStrSize];
     for (int i = 0; i < kBoardSize; ++i) {
         board[i] = formal_position[i + 2];
@@ -768,7 +771,7 @@ static bool DobutsuShogiIsLegalFormalPosition(ReadOnlyString formal_position) {
         ++config[kPieceToIndex[(int)board[i]]];
     }
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        board[i] = config[i - 1] = (char)(formal_position[i + 3] - '0');
+        board[i] = config[i - 1] = formal_position[i + 3] - '0';
     }
 
     // The piece configuration must be valid.
@@ -791,7 +794,7 @@ static Position DobutsuShogiFormalPositionToPosition(
     char board[kBoardStrSize];
     memcpy(board, formal_position + 2, kBoardSize);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        board[i] = (char)(formal_position[i + 3] - '0');
+        board[i] = formal_position[i + 3] - '0';
     }
 
     return GenericHashHash(board, formal_position[0] - '0');
@@ -805,14 +808,14 @@ static CString DobutsuShogiPositionToFormalPosition(Position position) {
     (void)success;
     int turn = GenericHashGetTurn(position);
     char formal_position[] = "1_------------_000_000";  // Placeholder.
-    formal_position[0] = (char)('0' + turn);
+    formal_position[0] = '0' + turn;
     memcpy(formal_position + 2, board, kBoardSize);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        formal_position[i + 3] = (char)(board[i] + '0');
+        formal_position[i + 3] = board[i] + '0';
     }
     ConvertCapturedToSky(board);
     for (int i = kBoardSize; i < kBoardStrSize; ++i) {
-        formal_position[i + 7] = (char)(board[i] + '0');
+        formal_position[i + 7] = board[i] + '0';
     }
 
     CString ret;
@@ -839,7 +842,7 @@ static CString DobutsuShogiPositionToAutoGuiPosition(Position position) {
     (void)success;
     int turn = GenericHashGetTurn(position);
     char autogui_position[] = "1_------------GECgec";  // Placeholder.
-    autogui_position[0] = (char)('0' + turn);
+    autogui_position[0] = '0' + turn;
     memcpy(autogui_position + 2, board, kBoardSize);
     for (int i = 0; i < 3; ++i) {
         autogui_position[2 + kBoardSize + i] =
@@ -986,3 +989,5 @@ const Game kDobutsuShogi = {
     .GetCurrentVariant = NULL,  // No other variants
     .SetVariantOption = NULL,   // No other variants
 };
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

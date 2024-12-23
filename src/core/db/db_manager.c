@@ -220,7 +220,7 @@ static bool BasicDbApiImplemented(const Database *db) {
 
 static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
-    for (int i = 0; i < (int)kDbFormalNameLengthMax + 1; ++i) {
+    for (int i = 0; i < kDbFormalNameLengthMax + 1; ++i) {
         if (name[i] == '\0') {
             terminates = true;
             break;
