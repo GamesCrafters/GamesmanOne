@@ -14,10 +14,11 @@ Checks: >
   -google-readability-todo,
   misc-*,
   -misc-include-cleaner,
+  modernize-*,
   mpi-*,
   performance-*,
   portability-*
 
-HeaderFilterRegex: '.*'  # Analyze all files including headers
 FormatStyle: "Google"    # Use Google code formatting style
+HeaderFilterRegex: ''  # Analyze all files including headers
 UseColor: true

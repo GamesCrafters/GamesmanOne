@@ -21,7 +21,7 @@ static const SavioPartition *partition;
 static const Game *game;
 static int variant_id;
 
-#define NUM_ITEMS 8
+enum { NUM_ITEMS = 8 };
 // Note that the size of each string here must be longer than the maximum
 // length that an item can grow into.
 static char items[NUM_ITEMS][256];

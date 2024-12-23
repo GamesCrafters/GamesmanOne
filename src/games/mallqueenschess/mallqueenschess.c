@@ -41,12 +41,15 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 25
-#define sideLength 5
+enum {
+    boardSize = 25,
+    sideLength = 5,
+    W = 'W',
+    B = 'B',
+    BLANK = '-',
+};
+
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
-#define W 'W'
-#define B 'B'
-#define BLANK '-'
 
 static int MallqueenschessInit(void *aux);
 static int MallqueenschessFinalize(void);

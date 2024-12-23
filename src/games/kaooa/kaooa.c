@@ -43,19 +43,19 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 10
+// NOTE: Player 1 is always (C)row, Plaer 2 is always (V)ulture
+// Player 1 Crow goes first!
+enum {
+    boardSize = 10,
+    C = 'C',
+    V = 'V',
+    BLANK = '-',
+    MAX_CROW_COUNT = 6,
+    MAX_VULTURE_COUNT = 1,
+};
 
 // MB TODO: Can we just use All Quenes Chess's unhash move and hash move?
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
-
-// NOTE: Player 1 is always (C)row, Plaer 2 is always (V)ulture
-// Player 1 Crow goes first!
-#define C 'C'
-#define V 'V'
-#define BLANK '-'
-
-#define MAX_CROW_COUNT 6
-#define MAX_VULTURE_COUNT 1
 
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
