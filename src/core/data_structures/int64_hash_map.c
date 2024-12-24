@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
- * @version 1.0.1
- * @date 2024-09-02
+ * @version 1.0.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,7 +36,7 @@
 #include "core/misc.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
-    return ((uint64_t)key) % capacity;
+    return (int64_t)(((uint64_t)key) % capacity);
 }
 
 static int64_t NextIndex(int64_t index, int64_t capacity) {
@@ -59,7 +59,8 @@ void Int64HashMapDestroy(Int64HashMap *map) {
     map->size = 0;
 }
 
-static Int64HashMapIterator NewIterator(const Int64HashMap *map, int64_t index) {
+static Int64HashMapIterator NewIterator(const Int64HashMap *map,
+                                        int64_t index) {
     Int64HashMapIterator iterator;
     iterator.map = map;
     iterator.index = index;
@@ -102,13 +103,10 @@ static bool Expand(Int64HashMap *map) {
 
 bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value) {
     // Check if resizing is needed.
-    double load_factor;
-    if (map->capacity == 0) {
-        load_factor = INFINITY;
-    } else {
-        load_factor = (double)(map->size + 1) / (double)map->capacity;
-    }
-    if (load_factor > map->max_load_factor) {
+    double load_factor = (map->capacity == 0)
+                             ? INFINITY
+                             : (double)(map->size + 1) / (double)map->capacity;
+    if (map->capacity == 0 || load_factor > map->max_load_factor) {
         if (!Expand(map)) return false;
     }
 

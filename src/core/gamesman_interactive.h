@@ -29,7 +29,7 @@
 
 /**
  * @brief Entry point of GAMESMAN interactive mode.
- * 
+ *
  * @return 0 on success, non-zero error code otherwise.
  */
 int GamesmanInteractiveMain(void);

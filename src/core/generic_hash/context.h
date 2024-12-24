@@ -6,8 +6,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Generic Hash Context module used by the Generic Hash system.
- * @version 1.2.1
- * @date 2024-12-10
+ * @version 1.2.3
+ * @date 2024-12-22
  *
  * @note This module is for Generic Hash system internal use only. The user of
  * the Generic Hash system should use the accessor functions provided in

@@ -21,7 +21,7 @@
  *       7. Move on to implementation in the .c file.
  *       8. Delete all TODO labels before releasing your game. HINT: search for
  * "todo" in your editor to check if all tasks are complete.
- * 
+ *
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

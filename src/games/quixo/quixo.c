@@ -33,12 +33,17 @@
 #include <stddef.h>   // NULL
 #include <stdio.h>    // fprintf, stderr, sprintf
 #include <stdlib.h>   // atoi
-#include <string.h>   // memset
+#include <string.h>   // memset, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
+
+// clang-tidy gives many warnings about narrowing conversion from 'int' to
+// 'int8_t' that are known to be correct. The following line turns them all
+// off. Consider re-enabling them before implementing new features.
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
 
 static int QuixoInit(void *aux);
 static int InitGenericHash(void);
@@ -64,7 +69,8 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
 static PositionArray QuixoGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier);
 static TierArray QuixoGetChildTiers(Tier tier);
-static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]);
+static int QuixoGetTierName(Tier tier,
+                            char name[static kDbFileNameLengthMax + 1]);
 
 // Gameplay
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer);
@@ -179,7 +185,7 @@ const Game kQuixo = {
     .formal_name = "Quixo",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kQuixoSolverApi,
-    .gameplay_api = (const GameplayApi *)&QuixoGameplayApi,
+    .gameplay_api = &QuixoGameplayApi,
     .uwapi = &kQuixoUwapi,
 
     .Init = &QuixoInit,
@@ -740,7 +746,8 @@ static TierArray QuixoGetChildTiers(Tier tier) {
     return children;
 }
 
-static int QuixoGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
+static int QuixoGetTierName(Tier tier,
+                            char name[static kDbFileNameLengthMax + 1]) {
     int num_blanks, num_x, num_o;
     UnhashTier(tier, &num_blanks, &num_x, &num_o);
     if (num_blanks < 0 || num_x < 0 || num_o < 0) return kIllegalGameTierError;
@@ -824,15 +831,16 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
     if (move_string == NULL) return false;
     if (strlen(move_string) < 3 || strlen(move_string) > 5) return false;
 
-    // Make a copy of move_string bc strtok mutates the original move_string
+    // Make a copy of move_string bc strtok_r mutates the original move_string
     char copy_string[6];
     strcpy(copy_string, move_string);
 
-    char *token = strtok(copy_string, " ");
+    char *saveptr;
+    char *token = strtok_r(copy_string, " ", &saveptr);
     if (token == NULL) return false;
     int src = atoi(token);
 
-    token = strtok(NULL, " ");
+    token = strtok_r(NULL, " ", &saveptr);
     if (token == NULL) return false;
     int dest = atoi(token);
 
@@ -848,9 +856,10 @@ static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
 static Move QuixoStringToMove(ReadOnlyString move_string) {
     // Strings of format "source destination". Ex: "6 10"
     char copy_string[6];
+    char *saveptr;
     strcpy(copy_string, move_string);
-    int src = atoi(strtok(copy_string, " "));
-    int dest = atoi(strtok(NULL, " "));
+    int src = atoi(strtok_r(copy_string, " ", &saveptr));
+    int dest = atoi(strtok_r(NULL, " ", &saveptr));
 
     return ConstructMove(src - 1, dest - 1);
 }
@@ -1166,3 +1175,5 @@ static bool CheckDirection(const char *board, char piece, int i, int j,
 
     return false;
 }
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

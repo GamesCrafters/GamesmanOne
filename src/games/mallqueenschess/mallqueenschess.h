@@ -2,7 +2,8 @@
  * @file mallqueenschess.h
  * @author Andrew Esteban: wrote the original version (mallqueenschess.c in
  * GamesmanClassic.)
- * @author Cameron Cheung (cameroncheung@berkeley.edu): adapted to the new system.
+ * @author Cameron Cheung (cameroncheung@berkeley.edu): adapted to the new
+ * system.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief All Queens Chess

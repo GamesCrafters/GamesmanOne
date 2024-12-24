@@ -1,0 +1,24 @@
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-to-enum,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-interfaces-global-init,
+  google-*,
+  -google-readability-todo,
+  misc-*,
+  -misc-include-cleaner,
+  modernize-*,
+  mpi-*,
+  performance-*,
+  portability-*
+
+FormatStyle: "Google"    # Use Google code formatting style
+HeaderFilterRegex: ''  # Analyze all files including headers
+UseColor: true

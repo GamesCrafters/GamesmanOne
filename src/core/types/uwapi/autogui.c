@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Utilities for AutoGUI implementation.
- * @version 1.0.0
- * @date 2024-11-14
+ * @version 1.0.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,7 +40,7 @@ CString AutoGuiMakePosition(int turn, ReadOnlyString entities) {
     CString ret;
     CStringInitEmpty(&ret);
     char prefix[] = "1_";  // Placeholder
-    prefix[0] = turn + '0';
+    prefix[0] = (char)(turn + '0');
     CStringAppend(&ret, prefix);
     CStringAppend(&ret, entities);
 

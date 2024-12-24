@@ -135,8 +135,8 @@ const Game kMttt = {
     .formal_name = "Tic-Tac-Toe",
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kMtttSolverApi,
-    .gameplay_api = (const GameplayApi *)&kMtttGameplayApi,
-    .uwapi = (const Uwapi *)&kMtttUwapi,
+    .gameplay_api = &kMtttGameplayApi,
+    .uwapi = &kMtttUwapi,
 
     .Init = &MtttInit,
     .Finalize = &MtttFinalize,
@@ -311,8 +311,9 @@ static PositionArray MtttGetCanonicalParentPositions(Position position) {
             Position parent = position - (int)prev_turn * three_to_the[i];
             parent = MtttGetCanonicalPosition(parent);
             if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
-            if (PositionHashSetContains(&deduplication_set, parent))
+            if (PositionHashSetContains(&deduplication_set, parent)) {
                 continue;  // Already included.
+            }
             PositionHashSetAdd(&deduplication_set, parent);
             PositionArrayAppend(&parents, parent);
         }
@@ -445,7 +446,7 @@ static CString MtttMoveToFormalMove(Position position, Move move) {
     (void)position;  // Unused.
     CString ret;
     if (!CStringInitCopyCharArray(&ret, "0")) return ret;
-    ret.str[0] = '0' + move;
+    ret.str[0] = (char)('0' + move);
     return ret;
 }
 
@@ -457,7 +458,7 @@ static CString MtttMoveToAutoGuiMove(Position position, Move move) {
 
     BlankOX turn = WhoseTurn(board);
     ret.str[2] = turn == kX ? 'x' : 'o';
-    ret.str[4] = '0' + move;
+    ret.str[4] = (char)('0' + move);
     return ret;
 }
 

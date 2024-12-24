@@ -193,7 +193,7 @@ static int TestChildPositions(Tier tier, Position position,
     // Skip this test if the position is primitive, in which case
     // GetCanonicalChildPositions is undefined.
     if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
-    
+
     TierPosition parent = {.tier = tier, .position = position};
     TierPositionArray children =
         api_internal->GetCanonicalChildPositions(parent);
@@ -238,7 +238,7 @@ static int TestChildToParentMatching(Tier tier, Position position) {
     // Skip this test if the position is primitive, in which case
     // GetCanonicalChildPositions is undefined.
     if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
-    
+
     // The GetCanonicalParentPositions function does not need to work on parent
     // tiers that does not use the backward induction loopy algorithm.
     if (!UsesLoopyAlgorithm(tier)) return kTierSolverTestNoError;

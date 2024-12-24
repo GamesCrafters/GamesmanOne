@@ -153,7 +153,7 @@ const Game kMtttier = {
     .formal_name = "Tic-Tac-Tier",
     .solver = &kTierSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kMtttierGameplayApi,
+    .gameplay_api = &kMtttierGameplayApi,
     .uwapi = &kMtttierUwapi,
 
     .Init = &MtttierInit,
@@ -483,7 +483,7 @@ static CString MtttierMoveToFormalMove(TierPosition tier_position, Move move) {
     if (!CStringInitCopyCharArray(&ret, "0")) return ret;
 
     assert(move >= 0 && move < 9);
-    ret.str[0] = '0' + move;
+    ret.str[0] = (char)('0' + move);
 
     return ret;
 }
@@ -499,7 +499,7 @@ static CString MtttierMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     char turn = WhoseTurn(board);
     ret.str[2] = turn == 'X' ? 'x' : 'o';
     assert(move >= 0 && move < 9);
-    ret.str[4] = '0' + move;
+    ret.str[4] = (char)('0' + move);
 
     return ret;
 }
@@ -513,9 +513,9 @@ static bool InitGenericHash(void) {
     int pieces_init_array[10] = {'-', 9, 9, 'O', 0, 0, 'X', 0, 0, -1};
     for (Tier tier = 0; tier <= 9; ++tier) {
         // Adjust piece_init_array
-        pieces_init_array[1] = pieces_init_array[2] = 9 - tier;
-        pieces_init_array[4] = pieces_init_array[5] = tier / 2;
-        pieces_init_array[7] = pieces_init_array[8] = (tier + 1) / 2;
+        pieces_init_array[1] = pieces_init_array[2] = 9 - (int)tier;
+        pieces_init_array[4] = pieces_init_array[5] = (int)tier / 2;
+        pieces_init_array[7] = pieces_init_array[8] = ((int)tier + 1) / 2;
         bool success = GenericHashAddContext(player, board_size,
                                              pieces_init_array, NULL, tier);
         if (!success) {

@@ -68,7 +68,7 @@ int64_t Int64QueueSize(const Int64Queue *queue);
 
 /**
  * @brief Pushes ELEMENT into the QUEUE.
- * 
+ *
  * @return true on success,
  * @return false otherwise.
  */

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the game of Fair Shares and Varied Pairs.
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -267,7 +267,7 @@ static Position FsvpDoMove(Position position, Move move) {
     Board board = Unhash(position);
     bool splitting = move & 1;
     move >>= 1;
-    int x = move / variant_size, y = move % variant_size;
+    int x = (int)move / variant_size, y = (int)move % variant_size;
     if (splitting) {
         assert(board.counts[x] >= 1 && x % y == 0 && x != y);
         --board.counts[x];
@@ -298,7 +298,7 @@ static int FsvpPositionToString(Position position, char *buffer) {
             size += sprintf(buffer + size, "%d, ", i);
         }
     }
-    size += sprintf(buffer + size, "}");
+    sprintf(buffer + size, "}");
 
     return kNoError;
 }
@@ -313,7 +313,7 @@ static int FsvpMoveToString(Move move, char *buffer) {
     }
     move >>= 1;
     size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
-    size += sprintf(buffer + size, "%" PRId64, move % variant_size);      // y
+    sprintf(buffer + size, "%" PRId64, move % variant_size);              // y
 
     return kNoError;
 }
@@ -382,7 +382,7 @@ static Position Hash(const Board *board) {
 
 static Board Unhash(Position hashed) {
     Board ret = {0};
-    int diff = FsvpGetNumPositions() - hashed - 1;
+    int64_t diff = FsvpGetNumPositions() - hashed - 1;
     int sum = variant_size, i;
     while (diff > 0) {
         for (i = 1; i <= variant_size; ++i) {

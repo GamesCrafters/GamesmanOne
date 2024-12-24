@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Fixed-size bit stream implementation.
- * @version 1.1.0
- * @date 2024-09-05
+ * @version 1.1.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,17 +52,17 @@ void BitStreamDestroy(BitStream *stream) {
     memset(stream, 0, sizeof(*stream));
 }
 
-static int GetByteOffset(int64_t i) { return i / 8; }
+static int64_t GetByteOffset(int64_t i) { return i / 8; }
 
-static int GetLocalBitOffset(int64_t i) { return i % 8; }
+static int64_t GetLocalBitOffset(int64_t i) { return i % 8; }
 
 static int SetTo(BitStream *stream, int64_t i, uint8_t value) {
     if (i >= stream->size) return -1;
 
-    int byte_offset = GetByteOffset(i);
+    int64_t byte_offset = GetByteOffset(i);
     uint8_t *byte_address = stream->stream + byte_offset;
 
-    int local_bit_offset = GetLocalBitOffset(i);
+    int64_t local_bit_offset = GetLocalBitOffset(i);
     uint8_t mask = 1 << local_bit_offset;
 
     stream->count += value - (bool)((*byte_address) & mask);
@@ -78,15 +78,13 @@ int BitStreamClear(BitStream *stream, int64_t i) { return SetTo(stream, i, 0); }
 bool BitStreamGet(const BitStream *stream, int64_t i) {
     if (i >= stream->size) return -1;
 
-    int byte_offset = GetByteOffset(i);
+    int64_t byte_offset = GetByteOffset(i);
     const uint8_t *byte_address = stream->stream + byte_offset;
 
-    int local_bit_offset = GetLocalBitOffset(i);
+    int64_t local_bit_offset = GetLocalBitOffset(i);
     uint8_t mask = 1 << local_bit_offset;
 
     return (*byte_address) & mask;
 }
 
-int64_t BitStreamCount(const BitStream *stream) {
-    return stream->count;
-}
+int64_t BitStreamCount(const BitStream *stream) { return stream->count; }

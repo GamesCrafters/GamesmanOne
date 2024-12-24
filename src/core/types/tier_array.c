@@ -45,13 +45,9 @@ bool TierArrayRemove(TierArray *array, Tier tier) {
     return Int64ArrayRemove(array, tier);
 }
 
-void TierArrayPopBack(TierArray *array) {
-    Int64ArrayPopBack(array);
-}
+void TierArrayPopBack(TierArray *array) { Int64ArrayPopBack(array); }
 
-Tier TierArrayBack(const TierArray *array) {
-    return Int64ArrayBack(array);
-}
+Tier TierArrayBack(const TierArray *array) { return Int64ArrayBack(array); }
 
 bool TierArrayEmpty(const TierArray *array) { return Int64ArrayEmpty(array); }
 

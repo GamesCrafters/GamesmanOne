@@ -46,13 +46,13 @@
  */
 typedef struct GameplayApi {
     /** Common API collection. */
-    const GameplayApiCommon *common;   
+    const GameplayApiCommon *common;
 
     /** API functions for regular (non-tier) games. */
     const GameplayApiRegular *regular;
 
     /** API functions for tier games. */
-    const GameplayApiTier *tier;       
+    const GameplayApiTier *tier;
 } GameplayApi;
 
 #endif  // GAMESMANONE_CORE_TYPES_GAMEPLAY_API_H_

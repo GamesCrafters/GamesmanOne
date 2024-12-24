@@ -5,7 +5,7 @@
 #include <stddef.h>  // NULL
 #include <stdio.h>   // sprintf
 #include <stdlib.h>  // atoi
-#include <string.h>  // memcpy
+#include <string.h>  // memcpy, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
@@ -13,6 +13,8 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 #include "games/gates/gates_tier.h"
+
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
 
 enum {
     kBoardAdjacency1SizeMax = 5,
@@ -543,7 +545,7 @@ static Value GatesPrimitive(TierPosition tier_position) {
     GatesTier t;
     GatesTierUnhash(tier_position.tier, &t);
 
-    static_assert(kGate1Moving < kGate2Moving);
+    static_assert(kGate1Moving < kGate2Moving, "");
     if (t.phase >= kGate1Moving) {
         // The game ends with the previous player winning by scoring their last
         // spike. Therefore, all primitive positions are losing.
@@ -625,16 +627,16 @@ static void PerformPieceMove(GatesTier *t, char board[static kBoardSize],
     switch (board[m.unpacked.move_dest]) {
         // Scoring a piece
         case 'G':
-        case 'g':
+        case 'g': {
             // Figure out which gate it is and change the tier phase to GM1 or
             // GM2 accordingly
-            static_assert(kGate1Moving + 1 == kGate2Moving);
+            static_assert(kGate1Moving + 1 == kGate2Moving, "");
             t->phase = kGate1Moving + GateIndex(board, m.unpacked.move_dest);
             --t->n[kPieceToTypeIndex[(int8_t)board[m.unpacked.move_src]]];
             board[m.unpacked.move_src] = '-';
             assert(m.unpacked.teleport_dest < 0);
             break;
-
+        }
         // Moving and perhaps teleporting.
         default: {
             t->phase = kMovement;
@@ -1166,11 +1168,9 @@ static int GatesMoveToString(Move move, char *buffer) {
         count += sprintf(buffer + count, "%sm %" PRId8 " %" PRId8,
                          first_chunk ? "" : " ", m.unpacked.move_src + 1,
                          m.unpacked.move_dest + 1);
-        first_chunk = false;
     }
     if (teleport) {
-        count +=
-            sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
+        sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
     }
 
     return kNoError;
@@ -1185,10 +1185,11 @@ static bool GatesIsValidMoveString(ReadOnlyString move_string) {
 static Move GatesStringToMove(ReadOnlyString move_string) {
     static ConstantReadOnlyString delim = " ";
     char move_string_copy[20];
+    char *saveptr;
     strcpy(move_string_copy, move_string);
-    char *tokens[10] = {strtok(move_string_copy, delim)};
+    char *tokens[10] = {strtok_r(move_string_copy, delim, &saveptr)};
     for (int i = 1; i < 8; ++i) {
-        tokens[i] = strtok(NULL, delim);
+        tokens[i] = strtok_r(NULL, delim, &saveptr);
     }
 
     GatesMove m = kGatesMoveInit;
@@ -1265,7 +1266,7 @@ static bool InitChildDedupTiers(void) {
     GatesTier t;
     t.phase = kPlacement;
     t.n[G] = t.n[g] = t.n[A] = t.n[a] = t.n[Z] = t.n[z] = 2;
-    static_assert(A + 1 == a && a + 1 == Z && Z + 1 == z);
+    static_assert(A + 1 == a && a + 1 == Z && Z + 1 == z, "");
     for (int p = A; p <= z; ++p) {
         t.n[p] = 1;
         for (t.G1 = 0; t.G1 < kBoardSize; ++t.G1) {
@@ -1483,3 +1484,5 @@ const Game kGates = {
     .GetCurrentVariant = NULL,  // No other variants for now.
     .SetVariantOption = NULL,
 };
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

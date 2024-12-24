@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.1.0
- * @date 2024-11-11
+ * @version 1.1.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -404,7 +404,7 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
                             status};
     const size_t input_sizes[] = {RecordArrayGetRawSize(&loaded_records[0]),
                                   status_size};
-    int compressed_size = Lz4UtilsCompressStreams(
+    int64_t compressed_size = Lz4UtilsCompressStreams(
         inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path);
     switch (compressed_size) {
         case -1:
@@ -620,7 +620,7 @@ static int ProbeLoadNewTier(DbProbe *probe, Tier tier) {
 }
 
 static Record ProbeGetRecord(const DbProbe *probe, Position position) {
-    int64_t offset = position * sizeof(Record);
+    int64_t offset = position * (int64_t)sizeof(Record);
     Record rec;
     AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
     XzraFileSeek(probe_internal->file, offset, XZRA_SEEK_SET);

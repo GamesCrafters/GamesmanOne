@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the probe for the Bit-Perfect Database.
- * @version 1.1.2
- * @date 2024-12-10
+ * @version 1.1.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -58,7 +58,7 @@ static int ProbeRecordStep0ReloadHeader(ConstantReadOnlyString sandbox_path,
                                         GetTierNameFunc GetTierName);
 const BpdbFileHeader *ProbeGetHeader(const DbProbe *probe);
 const int32_t *ProbeGetDecompDict(const DbProbe *probe);
-int ProbeGetBlockSize(const DbProbe *probe);
+int64_t ProbeGetBlockSize(const DbProbe *probe);
 int ProbeGetBitsPerEntry(const DbProbe *probe);
 int32_t ProbeGetDecompDictSize(const DbProbe *probe);
 int32_t ProbeGetLookupTableSize(const DbProbe *probe);
@@ -72,7 +72,7 @@ static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
 static int64_t GetBitOffset(Position position, int bits_per_entry);
 static int64_t GetByteOffset(Position position, int bits_per_entry);
 static int64_t GetBlockOffset(Position position, int bits_per_entry,
-                              int block_size);
+                              int64_t block_size);
 static void *ProbeGetBitStream(const DbProbe *probe);
 static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
                                                       Position position,
@@ -132,9 +132,9 @@ static int GetBufferSize(int32_t decomp_dict_size, int bits_per_entry) {
     // Header format:
     // [header][decomp_dict][bit_stream_block_0][bit_stream_block_1][...]
     // plus 8 bytes of additional space for safe uint64_t masking.
-    int block_size = BpdbFileGetBlockSize(bits_per_entry);
-    return kHeaderSize + decomp_dict_size + kBlocksPerBuffer * block_size +
-           sizeof(uint64_t);
+    int64_t block_size = BpdbFileGetBlockSize(bits_per_entry);
+    return (int)(kHeaderSize + decomp_dict_size +
+                 kBlocksPerBuffer * block_size + sizeof(uint64_t));
 }
 
 // Reloads tier bpdb file header and decomp dict into probe's cache.
@@ -184,7 +184,7 @@ const int32_t *ProbeGetDecompDict(const DbProbe *probe) {
     return (const int32_t *)GenericPointerAdd(probe->buffer, kHeaderSize);
 }
 
-int ProbeGetBlockSize(const DbProbe *probe) {
+int64_t ProbeGetBlockSize(const DbProbe *probe) {
     const BpdbFileHeader *header = ProbeGetHeader(probe);
     return header->lookup_meta.block_size;
 }
@@ -196,7 +196,7 @@ int32_t ProbeGetDecompDictSize(const DbProbe *probe) {
 
 int32_t ProbeGetLookupTableSize(const DbProbe *probe) {
     const BpdbFileHeader *header = ProbeGetHeader(probe);
-    return header->lookup_meta.size;
+    return (int32_t)header->lookup_meta.size;
 }
 
 int ProbeGetBitsPerEntry(const DbProbe *probe) {
@@ -206,7 +206,7 @@ int ProbeGetBitsPerEntry(const DbProbe *probe) {
 
 static bool ExpandProbeBuffer(DbProbe *probe, int target_size) {
     if (probe->size >= target_size) return true;
-    int new_size = probe->size;
+    int64_t new_size = probe->size;
     while (new_size < target_size) {
         new_size *= 2;
     }
@@ -224,7 +224,7 @@ static bool ProbeRecordStep1CacheMiss(const DbProbe *probe, Position position) {
 
     // Read header from probe
     int bits_per_entry = ProbeGetBitsPerEntry(probe);
-    int block_size = ProbeGetBlockSize(probe);
+    int64_t block_size = ProbeGetBlockSize(probe);
 
     int64_t entry_bit_begin = position * bits_per_entry;
     int64_t entry_bit_end = entry_bit_begin + bits_per_entry;
@@ -255,7 +255,7 @@ static int ProbeRecordStep2LoadBlocks(ConstantReadOnlyString sandbox_path,
     if (ret != kNoError) goto _bailout;
 
     // Set PROBE->begin
-    int block_size = ProbeGetBlockSize(probe);
+    int64_t block_size = ProbeGetBlockSize(probe);
     int bits_per_entry = ProbeGetBitsPerEntry(probe);
     int64_t block_offset = GetBlockOffset(position, bits_per_entry, block_size);
     probe->begin = block_offset * block_size;
@@ -278,7 +278,7 @@ static int64_t GetByteOffset(Position position, int bits_per_entry) {
 }
 
 static int64_t GetBlockOffset(Position position, int bits_per_entry,
-                              int block_size) {
+                              int64_t block_size) {
     int64_t byte_offset = GetByteOffset(position, bits_per_entry);
     return byte_offset / block_size;
 }
@@ -295,19 +295,20 @@ static int64_t ProbeRecordStep2_0ReadCompressedOffset(const DbProbe *probe,
     if (db_file == NULL) return kFileSystemError;
 
     int bits_per_entry = ProbeGetBitsPerEntry(probe);
-    int block_size = ProbeGetBlockSize(probe);
+    int64_t block_size = ProbeGetBlockSize(probe);
     int64_t block_offset = GetBlockOffset(position, bits_per_entry, block_size);
 
     // Seek to the entry in lookup that corresponds to block_offset.
     int32_t decomp_dict_size = ProbeGetDecompDictSize(probe);
-    int64_t seek_length =
-        kHeaderSize + decomp_dict_size + block_offset * sizeof(int64_t);
+    int64_t seek_length = kHeaderSize + decomp_dict_size +
+                          block_offset * (int64_t)sizeof(int64_t);
     int error = GuardedFseek(db_file, seek_length, SEEK_SET);
     if (error) return BailOutFclose(db_file, -1);
 
     // Read offset into the compressed bit stream.
     int64_t compressed_offset;
-    error = GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file, false);
+    error =
+        GuardedFread(&compressed_offset, sizeof(int64_t), 1, db_file, false);
     if (error) return BailOutFclose(db_file, -1);
 
     // Finalize.
@@ -336,10 +337,10 @@ static int ProbeRecordStep2_1HandleFile(const DbProbe *probe,
 
     // Since the cursor is already at the beginning of the first block,
     // we can start reading from there.
-    int block_size = ProbeGetBlockSize(probe);
+    int64_t block_size = ProbeGetBlockSize(probe);
     void *buffer_blocks = ProbeGetBitStream(probe);
     error = GuardedGzread(compressed_stream, buffer_blocks,
-                          kBlocksPerBuffer * block_size, true);
+                          (unsigned int)(kBlocksPerBuffer * block_size), true);
     if (error != 0) return BailOutGzclose(compressed_stream, error);
 
     // This will also close db_fd.
@@ -356,7 +357,7 @@ static uint64_t ProbeRecordStep3LoadRecord(const DbProbe *probe,
 
     int64_t bit_offset = GetBitOffset(position, bits_per_entry);
     int64_t byte_offset = bit_offset / kBitsPerByte - probe->begin;
-    int local_bit_offset = bit_offset % kBitsPerByte;
+    int64_t local_bit_offset = bit_offset % kBitsPerByte;
     uint64_t mask = (((uint64_t)1 << bits_per_entry) - 1) << local_bit_offset;
 
     // Get encoded entry from bit stream.

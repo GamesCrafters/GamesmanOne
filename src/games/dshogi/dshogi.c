@@ -6,8 +6,8 @@
  * @brief Implementation of Dōbutsu shōgi, also known as "animal shogi," or
  * "Let's Catch the Lion!" Japanese: 「どうぶつしょうぎ」.
  * @details https://en.wikipedia.org/wiki/D%C5%8Dbutsu_sh%C5%8Dgi
- * @version 1.0.1
- * @date 2024-12-10
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,13 +33,18 @@
 #include <stdbool.h>  // bool, false
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // atoi, strtok
-#include <string.h>   // strcpy, strlen
+#include <stdlib.h>   // atoi
+#include <string.h>   // strcpy, strlen, strtok_r
 
 #include "core/constants.h"
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
+
+// clang-tidy gives many warnings about narrowing conversion from 'int' to
+// 'char' that are known to be correct. The following line turns them all
+// off. Consider re-enabling them before implementing new features.
+// NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
 
 // Global Constants
 
@@ -174,10 +179,10 @@ static void InitPieceTypeToIndex(void) {
     for (int i = 0; i < kNumChars; ++i) {
         kPieceTypeToIndex[i] = 3;
     }
-    kPieceTypeToIndex[(int)'G'] = kPieceTypeToIndex[(int)'g'] = 0;
-    kPieceTypeToIndex[(int)'E'] = kPieceTypeToIndex[(int)'e'] = 1;
-    kPieceTypeToIndex[(int)'H'] = kPieceTypeToIndex[(int)'h'] = 2;
-    kPieceTypeToIndex[(int)'C'] = kPieceTypeToIndex[(int)'c'] = 2;
+    kPieceTypeToIndex['G'] = kPieceTypeToIndex['g'] = 0;
+    kPieceTypeToIndex['E'] = kPieceTypeToIndex['e'] = 1;
+    kPieceTypeToIndex['H'] = kPieceTypeToIndex['h'] = 2;
+    kPieceTypeToIndex['C'] = kPieceTypeToIndex['c'] = 2;
 }
 
 static void InitPieceToIndex(void) {
@@ -185,17 +190,17 @@ static void InitPieceToIndex(void) {
         kPieceToIndex[i] = -1;
     }
 
-    kPieceToIndex[(int)'L'] = 0;
-    kPieceToIndex[(int)'l'] = 1;
-    kPieceToIndex[(int)'G'] = 2;
-    kPieceToIndex[(int)'g'] = 3;
-    kPieceToIndex[(int)'E'] = 4;
-    kPieceToIndex[(int)'e'] = 5;
-    kPieceToIndex[(int)'H'] = 6;
-    kPieceToIndex[(int)'h'] = 7;
-    kPieceToIndex[(int)'C'] = 8;
-    kPieceToIndex[(int)'c'] = 9;
-    kPieceToIndex[(int)'-'] = 10;
+    kPieceToIndex['L'] = 0;
+    kPieceToIndex['l'] = 1;
+    kPieceToIndex['G'] = 2;
+    kPieceToIndex['g'] = 3;
+    kPieceToIndex['E'] = 4;
+    kPieceToIndex['e'] = 5;
+    kPieceToIndex['H'] = 6;
+    kPieceToIndex['h'] = 7;
+    kPieceToIndex['C'] = 8;
+    kPieceToIndex['c'] = 9;
+    kPieceToIndex['-'] = 10;
 }
 
 static bool OnBoard(int i, int j) {
@@ -232,10 +237,10 @@ static void InitMoveMatrix(void) {
 static void InitPromoteMatrix(void) {
     // Assumes kPieceToIndex has already been initialized.
     for (int i = 0; i < 3; ++i) {
-        kPromoteMatrix[kPieceToIndex[(int)'C']][i] = true;
+        kPromoteMatrix[kPieceToIndex['C']][i] = true;
     }
     for (int i = 9; i < 12; ++i) {
-        kPromoteMatrix[kPieceToIndex[(int)'c']][i] = true;
+        kPromoteMatrix[kPieceToIndex['c']][i] = true;
     }
 }
 
@@ -678,17 +683,21 @@ static bool DobutsuShogiIsValidMoveString(ReadOnlyString move_string) {
     if (isalpha(move_string[0]) && move_string[1] != ' ') return false;
 
     char buffer[6];
+    char *token, *saveptr;
     strcpy(buffer, move_string);
     if (isalpha(move_string[0])) {
         // If begins with one of 'g', 'e', 'c', validate only the dest index.
-        strtok(buffer, " ");  // Get rid of the first chunk
+        strtok_r(buffer, " ", &saveptr);  // Get rid of the first chunk
     } else {
         // Otherwise, we also need to validate src.
-        int src = atoi(strtok(buffer, " "));
+        token = strtok_r(buffer, " ", &saveptr);
+        if (token == NULL) return false;
+        int src = atoi(token);
         if (src < 1 || src > kBoardSize) return false;
     }
 
-    int dest = atoi(strtok(NULL, " "));
+    token = strtok_r(NULL, " ", &saveptr);
+    int dest = atoi(token);
     if (dest < 1 || dest > kBoardSize) return false;
 
     return true;
@@ -701,9 +710,10 @@ static Move DobutsuShogiStringToMove(ReadOnlyString move_string) {
         dest = atoi(move_string + 2) - 1;  // 1-indexed.
     } else {
         char buffer[6];
+        char *saveptr;
         strcpy(buffer, move_string);
-        src = atoi(strtok(buffer, " ")) - 1;  // 1-indexed.
-        dest = atoi(strtok(NULL, " ")) - 1;   // 1-indexed.
+        src = atoi(strtok_r(buffer, " ", &saveptr)) - 1;  // 1-indexed.
+        dest = atoi(strtok_r(NULL, " ", &saveptr)) - 1;   // 1-indexed.
     }
 
     return ConstructMove(src, dest);
@@ -979,3 +989,5 @@ const Game kDobutsuShogi = {
     .GetCurrentVariant = NULL,  // No other variants
     .SetVariantOption = NULL,   // No other variants
 };
+
+// NOLINTEND(cppcoreguidelines-narrowing-conversions)

@@ -68,6 +68,7 @@ void SwapG(GatesTier *t) {
 // =========================== GatesTierGetNumPieces ===========================
 
 GatesTierField GatesTierGetNumPieces(const GatesTier *t) {
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     return t->n[G] + t->n[g] + t->n[A] + t->n[a] + t->n[Z] + t->n[z];
 }
 
@@ -286,8 +287,8 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
     GatesTier ct = *t;  // Child GatesTier.
 
     // Scoring must occur if there is a tier transition from the movement phase.
-    static_assert(kGate1Moving + 1 == kGate2Moving);
-    static_assert(g == 1 && A == 2);
+    static_assert(kGate1Moving + 1 == kGate2Moving, "");
+    static_assert(g == 1 && A == 2, "");
     for (ct.phase = kGate1Moving; ct.phase <= kGate2Moving; ++ct.phase) {
         for (int p = A; p < kNumPieceTypes; ++p) {
             if (t->n[p] > 0) {
@@ -310,7 +311,7 @@ static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
     ct->phase = kMovement;
     TierArrayAppend(ret, GatesTierHash(ct));
 
-    static_assert(kGate1Moving + 1 == kGate2Moving);
+    static_assert(kGate1Moving + 1 == kGate2Moving, "");
     for (ct->phase = kGate1Moving; ct->phase <= kGate2Moving; ++ct->phase) {
         if (white_turn) {
             // Case B: white immediately scores.
@@ -544,7 +545,7 @@ int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
                      "%" PRIField "%" PRIField "%" PRIField "%" PRIField,
                      t.n[A], t.n[a], t.n[Z], t.n[z]);
     if (t.n[G] > 0) count += sprintf(name + count, "_%" PRIField, t.G1);
-    if (t.n[G] > 1) count += sprintf(name + count, "_%" PRIField, t.G2);
+    if (t.n[G] > 1) sprintf(name + count, "_%" PRIField, t.G2);
 
     return kNoError;
 }

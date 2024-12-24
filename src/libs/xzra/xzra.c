@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief XZ utilities with random access.
- * @version 1.0.0
- * @date 2024-07-11
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -153,8 +153,9 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
             if (ferror(infile)) {
-                fprintf(stderr, "XzraCompressFile: Read error: %s\n",
-                        strerror(errno));
+                strm->next_in = strm->next_out = NULL;
+                strerror_r(errno, outbuf, sizeof(outbuf));
+                fprintf(stderr, "XzraCompressFile: Read error: %s\n", outbuf);
                 return false;
             }
             if (feof(infile)) action = LZMA_FINISH;
@@ -163,15 +164,18 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
         if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
             size_t write_size = sizeof(outbuf) - strm->avail_out;
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
-                fprintf(stderr, "XzraCompressFile: Write error: %s\n",
-                        strerror(errno));
+                strm->next_in = strm->next_out = NULL;
+                strerror_r(errno, outbuf, sizeof(outbuf));
+                fprintf(stderr, "XzraCompressFile: Write error: %s\n", outbuf);
                 return false;
             }
             strm->next_out = outbuf;
             strm->avail_out = sizeof(outbuf);
         }
         if (ret != LZMA_OK) {
+            strm->next_in = strm->next_out = NULL;
             if (ret == LZMA_STREAM_END) return true;
+
             const char *msg = LzmaCompressRetDesc(ret);
             fprintf(stderr,
                     "XzraCompressFile: Encoder error: %s (error code %u)\n",
@@ -198,17 +202,15 @@ int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
     }
 
     lzma_stream strm = LZMA_STREAM_INIT;
-    bool success = InitEncoder(&strm, block_size, level, extreme, num_threads);
-    int64_t ret = -3;
-    if (success) {
-        success = CompressFileHelper(&strm, infile, outfile);
-        ret = strm.total_out;
-    }
-
+    bool success =
+        InitEncoder(&strm, block_size, level, extreme, num_threads) &&
+        CompressFileHelper(&strm, infile, outfile);
+    int64_t ret = success ? (int64_t)strm.total_out : -3;
     lzma_end(&strm);
     if (fclose(outfile)) {
-        fprintf(stderr, "XzraCompressFile: write error: %s\n", strerror(errno));
-        success = false;
+        char buf[BUFSIZ];
+        strerror_r(errno, buf, sizeof(buf));
+        fprintf(stderr, "XzraCompressFile: write error: %s\n", buf);
         ret = -3;
     }
     fclose(infile);
@@ -230,14 +232,17 @@ static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
         if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
             size_t write_size = sizeof(outbuf) - strm->avail_out;
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
+                strm->next_out = NULL;
+                strerror_r(errno, outbuf, sizeof(outbuf));
                 fprintf(stderr, "XzraCompressStream: Write error: %s\n",
-                        strerror(errno));
+                        outbuf);
                 return false;
             }
             strm->next_out = outbuf;
             strm->avail_out = sizeof(outbuf);
         }
         if (ret != LZMA_OK) {
+            strm->next_out = NULL;
             if (ret == LZMA_STREAM_END) return true;
             const char *msg = LzmaCompressRetDesc(ret);
             fprintf(stderr,
@@ -260,18 +265,15 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
     }
 
     lzma_stream strm = LZMA_STREAM_INIT;
-    bool success = InitEncoder(&strm, block_size, level, extreme, num_threads);
-    int64_t ret = -3;
-    if (success) {
-        success = CompressStreamHelper(&strm, in, in_size, outfile);
-        ret = strm.total_out;
-    }
-
+    bool success =
+        InitEncoder(&strm, block_size, level, extreme, num_threads) &&
+        CompressStreamHelper(&strm, in, in_size, outfile);
+    int64_t ret = success ? (int64_t)strm.total_out : -3;
     lzma_end(&strm);
     if (fclose(outfile)) {
-        fprintf(stderr, "XzraCompressStream: write error: %s\n",
-                strerror(errno));
-        success = false;
+        char buf[BUFSIZ];
+        strerror_r(errno, buf, sizeof(buf));
+        fprintf(stderr, "XzraCompressStream: write error: %s\n", buf);
         ret = -3;
     }
 
@@ -359,14 +361,20 @@ static bool DecompressFileHelper(lzma_stream *strm, FILE *infile, uint8_t *dest,
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
             if (ferror(infile)) {
-                fprintf(stderr, "Read error: %s\n", strerror(errno));
+                strm->next_in = NULL;
+                strerror_r(errno, inbuf, sizeof(inbuf));
+                fprintf(stderr, "Read error: %s\n", inbuf);
                 return false;
             }
             if (feof(infile)) action = LZMA_FINISH;
         }
         lzma_ret ret = lzma_code(strm, action);
-        if (ret == LZMA_STREAM_END || strm->avail_out == 0) return true;
+        if (ret == LZMA_STREAM_END || strm->avail_out == 0) {
+            strm->next_in = NULL;
+            return true;
+        }
         if (ret != LZMA_OK) {
+            strm->next_in = NULL;
             fprintf(stderr, "Decoder error: %s (error code %u)\n",
                     DecompressHelperLzmaCodeRetDesc(ret), ret);
             return false;
@@ -380,8 +388,10 @@ int64_t XzraDecompressFile(uint8_t *dest, size_t size, int num_threads,
     if (!InitDecoder(&strm, num_threads, memlimit)) return -1;
     FILE *infile = fopen(filename, "rb");
     if (infile == NULL) {
+        char buf[BUFSIZ];
+        strerror_r(errno, buf, sizeof(buf));
         fprintf(stderr, "XzraDecompressFile: error opening %s: %s\n", filename,
-                strerror(errno));
+                buf);
         return -2;
     }
     bool success = DecompressFileHelper(&strm, infile, dest, size);
@@ -484,7 +494,7 @@ static int XzraGetIndex(lzma_index **index, FILE *f) {
     lzma_vli backward_size = GetBackwardSize(f);
     if (backward_size == LZMA_VLI_UNKNOWN) return 1;
 
-    fseek(f, -LZMA_STREAM_HEADER_SIZE - backward_size, SEEK_END);
+    fseek(f, -LZMA_STREAM_HEADER_SIZE - (int64_t)backward_size, SEEK_END);
     uint8_t *buf = (uint8_t *)malloc(backward_size * sizeof(uint8_t));
     if (buf == NULL) return 2;
 
@@ -662,7 +672,8 @@ static bool DecodeBlock(uint8_t *out, lzma_block *block,
 }
 
 static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
-    fseek(f, iter->block.compressed_file_offset, SEEK_SET);  // Seek to block.
+    // Seek to block.
+    fseek(f, (int64_t)iter->block.compressed_file_offset, SEEK_SET);
 
     // Allocate space for compressed block.
     uint8_t *block_buf = (uint8_t *)malloc(iter->block.total_size);
@@ -686,7 +697,8 @@ static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
         return 4;
     }
 
-    bool success = DecodeBlock(out, &b, iter->block.total_size, block_buf);
+    bool success =
+        DecodeBlock(out, &b, (int64_t)iter->block.total_size, block_buf);
     free(block_buf);
 
     return success ? 0 : 5;

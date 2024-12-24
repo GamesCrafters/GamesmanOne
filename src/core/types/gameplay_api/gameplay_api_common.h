@@ -37,7 +37,7 @@
 
 /**
  * @brief Collection of Gameplay API functions common to all types of games.
- * 
+ *
  * @note The implementation of all functions are REQUIRED unless otherwise
  * specified.
  */

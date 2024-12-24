@@ -33,10 +33,11 @@
 #include <unistd.h>  // usleep
 
 #include "config.h"
-#include "core/types/gamesman_types.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
+// clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =
     "\n"
     "  ____               http://gamescrafters.berkeley.edu  : A finite,  two-person\n"
@@ -58,22 +59,25 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "This program will determine the value of your game,       (M)anipulation    \n"
     "perform analysis, & provide an interface to play it.      (A)nd             \n"
     "                                                          (N)avigation      \n";
+// clang-format on
 
 static const int kOpeningCreditsMessageSize = 24;
 #ifndef USE_MPI
-static ConstantReadOnlyString kOpeningCreditsNoMessage = "........................";
-#else  // USE_MPI defined.
-static ConstantReadOnlyString kOpeningCreditsMpiMessage = "      MPI Enabled       ";
+static ConstantReadOnlyString kOpeningCreditsNoMessage =
+    "........................";
+#else   // USE_MPI defined.
+static ConstantReadOnlyString kOpeningCreditsMpiMessage =
+    "      MPI Enabled       ";
 #endif  // USE_MPI
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(GAMESMAN_DATE) + 
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(GAMESMAN_DATE) +
                     kOpeningCreditsMessageSize;
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
 #ifndef USE_MPI
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
             GAMESMAN_DATE);
-#else  // USE_MPI defined.
+#else   // USE_MPI defined.
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
             GAMESMAN_DATE);
 #endif  // USE_MPI
@@ -93,6 +97,6 @@ int GamesmanInteractiveMain(void) {
     printf("--- press <return> to continue ---");
     getchar();
     InteractiveMainMenu(NULL);
-    
+
     return kNoError;
 }

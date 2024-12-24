@@ -35,6 +35,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stdint.h>   // int64_t, intptr_t
 
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
 #include "core/solvers/tier_solver/tier_worker/it.h"
@@ -60,6 +61,24 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
     mem = memlimit;
+}
+
+// =========================== GetMethodForTierType ===========================
+
+int GetMethodForTierType(TierType type) {
+    switch (type) {
+        case kTierTypeImmediateTransition:
+            return kTierWorkerSolveMethodImmediateTransition;
+
+        case kTierTypeLoopFree:  // TODO: implement a more efficient method.
+            return kTierWorkerSolveMethodBackwardInduction;
+
+        case kTierTypeLoopy:
+            return kTierWorkerSolveMethodBackwardInduction;
+    }
+
+    NotReached("GetMethodForTierType: unknown tier type");
+    return -1;  // Never reached.
 }
 
 // ============================== TierWorkerSolve ==============================
@@ -100,15 +119,19 @@ int TierWorkerMpiServe(void) {
 
         if (msg.command == kTierMpiCommandSleep) {
             // No work to do. Wait for one second and check again.
-            sleep(1);
+            sleep(1);  // NOLINT(concurrency-mt-unsafe)
             TierMpiWorkerSendCheck();
         } else if (msg.command == kTierMpiCommandTerminate) {
             break;
         } else {
-            bool force = (msg.command == kTierMpiCommandForceSolve);
+            TierWorkerSolveOptions options = {
+                .compare = false,
+                .force = (msg.command == kTierMpiCommandForceSolve),
+                .verbose = false,
+            };
             bool solved;
-            int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
-                                        msg.tier, force, false, &solved);
+            TierType type = api_internal->GetTierType(msg.tier);
+            int error = TierWorkerSolve(type, msg.tier, &options, &solved);
             if (error != kNoError) {
                 TierMpiWorkerSendReportError(error);
             } else if (solved) {

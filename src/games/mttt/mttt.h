@@ -2,7 +2,7 @@
  * @file mttt.h
  * @author Dan Garcia: designed and developed of the original version (mttt.c in
  * GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and 
+ * @author Robert Shi (robertyishi@berkeley.edu): simplified hashing scheme and
  * adapted to the new system.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>

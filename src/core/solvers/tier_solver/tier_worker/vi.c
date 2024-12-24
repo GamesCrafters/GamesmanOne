@@ -538,8 +538,9 @@ static bool CompareDb(void) {
 _bailout:
     DbManagerProbeDestroy(&probe);
     DbManagerRefProbeDestroy(&ref_probe);
-    if (success)
+    if (success) {
         printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
+    }
 
     return success;
 }

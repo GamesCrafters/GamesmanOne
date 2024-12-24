@@ -35,6 +35,7 @@
 #include "games/dshogi/dshogi.h"
 #include "games/fsvp/fsvp.h"
 #include "games/gates/gates.h"
+#include "games/gobblet/gobblet_gobblers.h"
 #include "games/kaooa/kaooa.h"
 #include "games/mallqueenschess/mallqueenschess.h"
 #include "games/mttt/mttt.h"
@@ -47,6 +48,7 @@
 // NULL-terminated.
 
 const Game *const kAllGames[] = {
-    &kNeutron, &kGates,   &kTeeko, &kDobutsuShogi,    &kQuixo,
-    &kFsvp,    &kMtttier, &kMttt,  &kMallqueenschess, &kMkaooa, NULL,
+    &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko, &kDobutsuShogi,
+    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,  &kMallqueenschess,
+    &kMkaooa,          NULL,
 };

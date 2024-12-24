@@ -7,8 +7,8 @@
  * @details This hash map implementation allows removal of map entries at the
  * cost of being considerably slower than the regular open addressing hash map
  * provided by int64_hash_map.h.
- * @version 1.0.1
- * @date 2024-09-09
+ * @version 1.0.3
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -61,7 +61,7 @@ void Int64HashMapSCDestroy(Int64HashMapSC *map) {
 }
 
 static int64_t Hash(int64_t key, int64_t num_buckets) {
-    return ((uint64_t)key) % num_buckets;
+    return (int64_t)(((uint64_t)key) % num_buckets);
 }
 
 bool Int64HashMapSCContains(const Int64HashMapSC *map, int64_t key) {
@@ -77,8 +77,7 @@ bool Int64HashMapSCContains(const Int64HashMapSC *map, int64_t key) {
     return false;
 }
 
-bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key,
-                        int64_t *value) {
+bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key, int64_t *value) {
     if (map->num_buckets == 0) return false;
 
     int64_t index = Hash(key, map->num_buckets);
@@ -120,13 +119,11 @@ static bool Expand(Int64HashMapSC *map) {
 
 bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
     // Check if resizing is needed.
-    double load_factor;
-    if (map->num_buckets == 0) {
-        load_factor = INFINITY;
-    } else {
-        load_factor = (double)(map->num_entries + 1) / (double)map->num_buckets;
-    }
-    if (load_factor > map->max_load_factor) {
+    double load_factor =
+        (map->num_buckets == 0)
+            ? INFINITY
+            : (double)(map->num_entries + 1) / (double)map->num_buckets;
+    if ((map->num_buckets == 0) || load_factor > map->max_load_factor) {
         if (!Expand(map)) return false;
     }
 
@@ -156,7 +153,7 @@ bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
 
 void Int64HashMapSCRemove(Int64HashMapSC *map, int64_t key) {
     if (map->num_buckets == 0) return;
-    
+
     int64_t index = Hash(key, map->num_buckets);
     Int64HashMapSCEntry *entry = map->buckets[index];
     Int64HashMapSCEntry **prev_next = &map->buckets[index];

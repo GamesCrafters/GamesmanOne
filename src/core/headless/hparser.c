@@ -143,7 +143,10 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
     while (1) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        key = getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
+        // NOLINTBEGIN(concurrency-mt-unsafe)
+        key =
+            getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
+        // NOLINTEND(concurrency-mt-unsafe)
         /* Detect the end of the options. */
         if (key == -1) break;
         ParseOption(key, option_index);
@@ -179,7 +182,7 @@ static void ParseOption(int key, int option_index) {
         case 'd':
             arguments.data_path = optarg;
             break;
-        
+
         case 'M':
             arguments.memlimit = optarg;
             break;
@@ -190,7 +193,7 @@ static void ParseOption(int key, int option_index) {
 
         case 'h':
             PrintUsage();
-            exit(0);
+            exit(0);  // NOLINT(concurrency-mt-unsafe)
 
         case 'o':
             arguments.output = optarg;
@@ -206,11 +209,11 @@ static void ParseOption(int key, int option_index) {
 
         case 'V':
             PrintVersion(stdout);
-            exit(0);
+            exit(0);  // NOLINT(concurrency-mt-unsafe)
 
         default:
             PrintUsage();
-            exit(kHeadlessError);
+            exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
     }
 }
 
@@ -230,7 +233,7 @@ static void ParseArgument(char *arg, int arg_num) {
             break;
         default:
             fprintf(stderr, "too many arguments\n");
-            exit(kHeadlessError);
+            exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
     }
 }
 
@@ -291,6 +294,6 @@ static void ParserError(const char *format, ...) {
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 
-    va_end(args);  // Clean up the argument list
-    exit(kHeadlessError);
+    va_end(args);          // Clean up the argument list
+    exit(kHeadlessError);  // NOLINT(concurrency-mt-unsafe)
 }

@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.4.1
- * @date 2024-09-13
+ * @version 1.4.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -407,14 +407,14 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
     if (type == kTierSolving) {
         if (!TierGraphSetNumTiers(parent, num_canonical_tier_children)) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphOutOfMemory;
+            return kTierGraphOutOfMemory;
         }
     } else {  // type == kTierAnalyzing
         for (int64_t i = 0; i < children.size; ++i) {
             Tier child = children.array[i];
             if (!IncrementNumParentTiers(child)) {
                 TierArrayDestroy(&children);
-                return (int)kTierGraphOutOfMemory;
+                return kTierGraphOutOfMemory;
             }
         }
     }
@@ -423,12 +423,12 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
         Tier child = children.array[i];
         if (ReverseTierGraphAdd(&reverse_tier_graph, child, parent) != 0) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphOutOfMemory;
+            return kTierGraphOutOfMemory;
         }
         if (!TierHashMapContains(&tier_graph, child)) {
             if (!TierGraphSetInitial(child)) {
                 TierArrayDestroy(&children);
-                return (int)kTierGraphOutOfMemory;
+                return kTierGraphOutOfMemory;
             }
         }
         int status = GetStatus(child);
@@ -436,12 +436,12 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
             TierArrayDestroy(&children);
-            return (int)kTierGraphLoopDetected;
+            return kTierGraphLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
     TierArrayDestroy(&children);
-    return (int)kTierGraphNoError;
+    return kTierGraphNoError;
 }
 
 static void BuildTierGraphUpdateAnalysis(Tier parent) {
@@ -519,23 +519,8 @@ static void CreateTierGraphPrintError(int error) {
     }
 }
 
-static int GetMethodForTierType(TierType type) {
-    switch (type) {
-        case kTierTypeImmediateTransition:
-            return kTierWorkerSolveMethodImmediateTransition;
-
-        case kTierTypeLoopFree:  // TODO: implement more efficient method.
-            return kTierWorkerSolveMethodBackwardInduction;
-
-        case kTierTypeLoopy:
-            return kTierWorkerSolveMethodValueIteration;
-    }
-
-    NotReached("GetMethodForTierType: unknown tier type");
-    return -1;  // Never reached.
-}
-
 #ifndef USE_MPI
+
 static int SolveTierGraph(bool force, int verbose) {
     TierWorkerSolveOptions options = {
         .compare = false,
@@ -763,8 +748,9 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
 
         ReadOnlyString time_string;
         if (processed_size > 0) {
-            double time_remaining =
-                time_elapsed_seconds / processed_size * remaining_size;
+            double time_remaining = time_elapsed_seconds /
+                                    (double)processed_size *
+                                    (double)remaining_size;
             time_string = SecondsToFormattedTimeString(time_remaining);
         } else {
             time_string = "unknown";
@@ -790,9 +776,9 @@ static int64_t NumTiersAndStatusToValue(int num_tiers, int status) {
     return num_tiers * kNumStatus + status;
 }
 
-static int ValueToStatus(int64_t value) { return value % kNumStatus; }
+static int ValueToStatus(int64_t value) { return (int)(value % kNumStatus); }
 
-static int ValueToNumTiers(int64_t value) { return value / kNumStatus; }
+static int ValueToNumTiers(int64_t value) { return (int)(value / kNumStatus); }
 
 static int64_t GetValue(Tier tier) {
     TierHashMapIterator it = TierHashMapGet(&tier_graph, tier);

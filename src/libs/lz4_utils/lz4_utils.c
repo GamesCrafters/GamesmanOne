@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief LZ4 utilities implementation
- * @version 0.2.0
- * @date 2024-11-11
+ * @version 0.2.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -297,7 +297,7 @@ static int64_t DecompressFileInternal(FILE *f_in, void **out,
                                             src_begin, &src_buffer_size, NULL);
                 if (Lz4fIsErrorExplained(lz4f_code)) return -4;
                 out_offset += dest_buffer_size;
-                total_size += dest_buffer_size;
+                total_size += (int64_t)dest_buffer_size;
                 src_begin = GenericPointerShift(src_begin, src_buffer_size);
 
                 // Break early if input is fully consumed for this round

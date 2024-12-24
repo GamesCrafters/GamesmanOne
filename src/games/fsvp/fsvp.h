@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The game of Fair Shares and Varied Pairs. Also called Fair Shares and
  * Uneven Pairs.
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

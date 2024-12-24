@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Identify all staged .c and .h files
+files=$(git diff --cached --name-only --diff-filter=AM | grep -E '\.(c|h)$')
+
+# Early exit if no files
+[ -z "$files" ] && exit 0
+
+needs_formatting=""
+
+# Check each file individually
+for f in $files; do
+    # Check if clang-format would make changes
+    output=$(clang-format -style=file -output-replacements-xml "$f")
+    if echo "$output" | grep -q "<replacement "; then
+        # Append the file to the needs_formatting list
+        needs_formatting="$needs_formatting $f"
+    fi
+done
+
+# If any file needs formatting, print them and fail.
+if [ -n "$needs_formatting" ]; then
+    echo "Commit aborted: the following files are not formatted correctly:"
+    for f in $needs_formatting; do
+        echo "  $f"
+    done
+    echo "Please run 'clang-format -i' on these files and try committing again."
+    exit 1
+fi
+
+exit 0

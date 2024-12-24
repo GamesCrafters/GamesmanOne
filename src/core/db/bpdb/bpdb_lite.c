@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Bit-Perfect Database Lite.
- * @version 1.2.1
- * @date 2024-12-10
+ * @version 1.2.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -278,5 +278,5 @@ static uint64_t BuildRecord(Value value, int remoteness) {
 static Value GetValueFromRecord(uint64_t record) { return record % kNumValues; }
 
 static int GetRemotenessFromRecord(uint64_t record) {
-    return record / kNumValues;
+    return (int)(record / kNumValues);
 }

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 2.0.0
- * @date 2024-11-11
+ * @version 2.0.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -205,7 +205,7 @@ static bool BasicDbApiImplemented(const Database *db) {
         fprintf(stderr,
                 "BasicDbApiImplemented: (BUG) A Database does not have its "
                 "name properly initialized. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     if (db->Init == NULL) return false;
     if (db->FlushSolvingTier == NULL) return false;
@@ -220,7 +220,7 @@ static bool BasicDbApiImplemented(const Database *db) {
 
 static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
-    for (int i = 0; i < (int)kDbFormalNameLengthMax + 1; ++i) {
+    for (int i = 0; i < kDbFormalNameLengthMax + 1; ++i) {
         if (name[i] == '\0') {
             terminates = true;
             break;
@@ -238,10 +238,10 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
     if (data_path == NULL) data_path = "data";
     char *path = NULL;
 
-    int path_length = strlen(data_path) + 1;  // +1 for '/'.
-    path_length += strlen(game_name) + 1;
+    int path_length = (int)strlen(data_path) + 1;  // +1 for '/'.
+    path_length += (int)strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
-    path_length += strlen(db->name) + 1;
+    path_length += (int)strlen(db->name) + 1;
     path = (char *)calloc((path_length + 1), sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "SetupDbPath: failed to calloc path.\n");

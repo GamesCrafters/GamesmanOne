@@ -146,8 +146,9 @@ static int ExpandCompDict(BpDict *dict, int32_t key) {
 }
 
 static int ExpandDecompDict(BpDict *dict) {
-    if (dict->decomp_dict_capacity >= kDecompDictCapacityMax)
+    if (dict->decomp_dict_capacity >= kDecompDictCapacityMax) {
         return kMemoryOverflowError;
+    }
 
     int32_t new_capacity = dict->decomp_dict_capacity * 2;
     if (dict->decomp_dict_capacity == 0) new_capacity = 1;

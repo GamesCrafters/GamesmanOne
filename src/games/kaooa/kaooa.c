@@ -43,19 +43,19 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 10
+// NOTE: Player 1 is always (C)row, Plaer 2 is always (V)ulture
+// Player 1 Crow goes first!
+enum {
+    boardSize = 10,
+    C = 'C',
+    V = 'V',
+    BLANK = '-',
+    MAX_CROW_COUNT = 6,
+    MAX_VULTURE_COUNT = 1,
+};
 
 // MB TODO: Can we just use All Quenes Chess's unhash move and hash move?
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
-
-// NOTE: Player 1 is always (C)row, Plaer 2 is always (V)ulture
-// Player 1 Crow goes first!
-#define C 'C'
-#define V 'V'
-#define BLANK '-'
-
-#define MAX_CROW_COUNT 6
-#define MAX_VULTURE_COUNT 1
 
 static int MkaooaInit(void *aux);
 static int MkaooaFinalize(void);
@@ -443,7 +443,7 @@ static Position MkaooaDoMove(Position position, Move move) {
             // condition to check if TO is blank not needed --> checked in
             // GenMoves
             board[to] = C;
-            board[10] = board[10] + 1;
+            board[10] = (char)(board[10] + 1);
             return GenericHashHash(board, oppTurn == C ? 2 : 1);
         } else {  // moving crow
             board[to] = C;
@@ -641,8 +641,8 @@ static Move MkaooaStringToMove(ReadOnlyString move_string) {
 // MB TODO: Can we just use All Queens Chess's unhash move and hash move?
 // If not, consult Robert/Quixo
 static void UnhashMove(Move move, int *from, int *to) {
-    *from = move >> 5;
-    *to = move & 0x1F;
+    *from = (int)(move >> 5);
+    *to = (int)(move & 0x1F);
 }
 
 /////////////////////////UWAPI Set-up//////////////////////////
@@ -697,7 +697,7 @@ static Position KaooaFormalPositionToPosition(ReadOnlyString formal_position) {
     char board[11];
     memcpy(board, formal_position + 2, boardSize);
 
-    board[10] = formal_position[12] - '0';
+    board[10] = (char)(formal_position[12] - '0');
 
     return GenericHashHash(board, formal_position[0] - '0');
 }
@@ -714,7 +714,7 @@ static CString KaooaPositionToAutoGuiPosition(Position position) {
     GenericHashUnhash(position, board);
     CString ret;
     char autogui_position[] = "1_----------";
-    autogui_position[0] = '0' + GenericHashGetTurn(position);
+    autogui_position[0] = (char)('0' + GenericHashGetTurn(position));
     for (int i = 0; i <= 9; ++i) {
         if (board[i] == V) {
             autogui_position[i + 2] = 'V';
@@ -724,7 +724,7 @@ static CString KaooaPositionToAutoGuiPosition(Position position) {
     }
     CStringInitCopyCharArray(&ret, autogui_position);
     char n[2];
-    n[0] = board[10] + '0';
+    n[0] = (char)(board[10] + '0');
     n[1] = '\0';
     CStringAppend(&ret, n);
     return ret;
@@ -743,15 +743,15 @@ static CString KaooaMoveToFormalMove(Position position, Move move) {
     char formal_move[7];
 
     if (from == to) {  // dropping
-        formal_move[0] = '0' + from;
+        formal_move[0] = (char)('0' + from);
         formal_move[1] = '\0';
     } else {  // moving
-        formal_move[0] = '0' + from;
+        formal_move[0] = (char)('0' + from);
         formal_move[1] = ' ';
         formal_move[2] = '-';
         formal_move[3] = '>';
         formal_move[4] = ' ';
-        formal_move[5] = '0' + to;
+        formal_move[5] = (char)('0' + to);
         formal_move[6] = '\0';
     }
 
@@ -766,12 +766,12 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     char autogui_move[] = "A_-_3";
     CString ret;
     if (from == to) {
-        autogui_move[4] = '0' + from;
+        autogui_move[4] = (char)('0' + from);
     } else {
         // sprintf(autogui_move, "M_%d_%d", from, to);
         autogui_move[0] = 'M';
-        autogui_move[2] = '0' + from;
-        autogui_move[4] = '0' + to;
+        autogui_move[2] = (char)('0' + from);
+        autogui_move[4] = (char)('0' + to);
     }
     CStringInitCopyCharArray(&ret, autogui_move);
     return ret;
@@ -782,7 +782,7 @@ const Game kMkaooa = {
     .formal_name = "Kaooa",
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = &kGameplayApi,
     .uwapi = &kKaooaUwapi,
 
     .Init = &MkaooaInit,

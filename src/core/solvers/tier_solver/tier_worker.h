@@ -109,6 +109,15 @@ enum TierWorkerSolveMethod {
     kTierWorkerSolveMethodValueIteration,
 };
 
+/**
+ * @brief Returns the \c TierWorkerSolveMethod applicable to the given tier
+ * \p type .
+ *
+ * @param type Type of tier.
+ * @return One of values from enum \link TierWorkerSolveMethod.
+ */
+int GetMethodForTierType(TierType type);
+
 typedef struct TierWorkerSolveOptions {
     int verbose;
     bool force;

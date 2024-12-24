@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of In-Memory Gzip.
- * @version 1.0.0
- * @date 2023-09-26
+ * @version 1.0.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,8 +52,8 @@
 
 const uInt kChunkSize = 1 << 14;  // 16 KiB
 const uInt kIllegalChunkSize = kChunkSize + 1;
-const int kDefaultOutCapacity = kChunkSize << 1;
-const int kMgzMinBlockSize = kChunkSize;
+const int64_t kDefaultOutCapacity = (int64_t)kChunkSize << 1;
+const int64_t kMgzMinBlockSize = kChunkSize;
 const int64_t kDefaultBlockSize = 1 << 20;
 const int64_t kIllegalBlockSize = -1;
 
@@ -142,7 +142,8 @@ int64_t MgzDeflate(void **out, const void *in, int64_t in_size, int level) {
                 fprintf(stderr,
                         "MgzDeflate: (FATAL) deflate returned "
                         "Z_STREAM_ERROR.\n");
-                exit(1);
+                fflush(stderr);
+                _exit(1);
             }
             uInt have = kChunkSize - strm.avail_out;
             uInt copied =
@@ -173,7 +174,7 @@ static int64_t GetCorrectBlockSize(int64_t block_size) {
     if (block_size == 0) return kDefaultBlockSize;
     if (block_size < kMgzMinBlockSize) {
         printf("GetCorrectBlockSize: resetting block size %" PRId64
-               " to the minimum required block size %d",
+               " to the minimum required block size %" PRId64 "\n",
                block_size, kMgzMinBlockSize);
         return kMgzMinBlockSize;
     }
@@ -224,6 +225,7 @@ mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
 
     /* Concatenate blocks to form the final output. */
     int64_t out_size = ConvertOutBlockSizesToLookup(space, num_blocks);
+    if (out_size == 0) goto _bailout;
     out = malloc(out_size);
     if (!out) goto _bailout;
 
@@ -243,7 +245,7 @@ mgz_res_t MgzParallelDeflate(const void *in, int64_t in_size, int level,
     if (lookup) {
         ret.lookup = space;
         space = NULL;  // Prevent freeing.
-    }                  // else ret.lookup is already set to NULL.
+    }  // else ret.lookup is already set to NULL.
     ret.num_blocks = num_blocks;
 
 _bailout:
@@ -267,7 +269,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
         fprintf(stderr,
                 "MgzParallelCreate: (FATAL) failed to write to "
                 "outfile.\n");
-        exit(1);
+        fflush(stderr);
+        _exit(1);
     }
     if (lookup) {
         /* Write block size. */
@@ -275,7 +278,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
             fprintf(stderr,
                     "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
-            exit(1);
+            fflush(stderr);
+            _exit(1);
         }
 
         /* Write lookup table. */
@@ -284,7 +288,8 @@ int64_t MgzParallelCreate(const void *in, int64_t size, int level,
             fprintf(stderr,
                     "MgzParallelCreate: (FATAL) failed to write to "
                     "lookup.\n");
-            exit(1);
+            fflush(stderr);
+            _exit(1);
         }
     }
     free(res.out);
@@ -311,7 +316,7 @@ int64_t MgzRead(void *buf, int64_t size, int64_t offset, int fd, FILE *lookup) {
     /* Seek to the correct location. */
     int64_t block = offset / block_size;
     off_t into = offset % block_size;
-    if (fseek(lookup, block * sizeof(int64_t), SEEK_CUR) < 0) {
+    if (fseek(lookup, (long)(block * sizeof(int64_t)), SEEK_CUR) < 0) {
         fprintf(stderr,
                 "MgzRead: failed to seek to the given block in lookup "
                 "file.\n");

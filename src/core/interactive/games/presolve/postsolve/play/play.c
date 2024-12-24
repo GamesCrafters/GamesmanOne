@@ -75,7 +75,7 @@ static void PrintCurrentPosition(const Game *game) {
                 "PlayTierGame: %s's PositionToString function returned error "
                 "code %d. Aborting...\n",
                 game->formal_name, error);
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     printf("%s\t", position_string);
     free(position_string);
@@ -124,9 +124,9 @@ int MoveCompare(const void *move1, const void *move2) {
     it = Int64HashMapGet(&move_values, m2);
     Value value2 = Int64HashMapIteratorValue(&it);
     it = Int64HashMapGet(&move_remotenesses, m1);
-    int remoteness1 = Int64HashMapIteratorValue(&it);
+    int remoteness1 = (int)Int64HashMapIteratorValue(&it);
     it = Int64HashMapGet(&move_remotenesses, m2);
-    int remoteness2 = Int64HashMapIteratorValue(&it);
+    int remoteness2 = (int)Int64HashMapIteratorValue(&it);
 
     return GetMoveRank(value1, remoteness1) - GetMoveRank(value2, remoteness2);
 }
@@ -284,7 +284,7 @@ static bool IsBestChild(Value parent_value, int parent_remoteness,
 }
 
 // This function should not be called if the current game has not been solved.
-static void MakeComputerMove(void) {
+static Move MakeComputerMove(void) {
     TierPosition current = InteractiveMatchGetCurrentPosition();
     MoveArray moves = InteractiveMatchGenerateMoves();
     Value current_value = SolverManagerGetValue(current);
@@ -296,10 +296,25 @@ static void MakeComputerMove(void) {
         int remoteness = SolverManagerGetRemoteness(child);
         if (IsBestChild(current_value, current_remoteness, value, remoteness)) {
             InteractiveMatchCommitMove(moves.array[i]);
-            break;
+            return moves.array[i];
         }
     }
     MoveArrayDestroy(&moves);
+
+    return -1;
+}
+
+static void PrintMoveBuffer(const Game *game, Move move, char *buffer) {
+    game->gameplay_api->common->MoveToString(move, buffer);
+    printf("[%s]", buffer);
+}
+
+static void PrintMove(const Game *game, Move move) {
+    int move_string_size =
+        game->gameplay_api->common->move_string_length_max + 2;
+    char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
+    PrintMoveBuffer(game, move, move_string);
+    free(move_string);
 }
 
 static int PromptForAndProcessUserMove(const Game *game) {
@@ -316,15 +331,15 @@ static int PromptForAndProcessUserMove(const Game *game) {
     // Print all valid move strings.
     printf("Player %d's move [", InteractiveMatchGetTurn() + 1);
     for (int64_t i = 0; i < moves.size; ++i) {
-        game->gameplay_api->common->MoveToString(moves.array[i], move_string);
-        printf("/[%s]", move_string);
+        if (i > 0) printf("/");
+        PrintMoveBuffer(game, moves.array[i], move_string);
     }
     printf("]: ");
 
     // Prompt for input.
     if (fgets(move_string, move_string_size, stdin) == NULL) {
         fprintf(stderr, "PlayTierGame: unexpected fgets error. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
@@ -335,10 +350,12 @@ static int PromptForAndProcessUserMove(const Game *game) {
             printf("Game is not solved, so move values cannot be shown.\n");
         }
         return 0;
-    }
-    if (strcmp(move_string, "q") == 0) GamesmanExit();  // Exit GAMESMAN.
-    if (strcmp(move_string, "a") == 0) return 2;        // Abort game.
-    if (strcmp(move_string, "u") == 0) {                // Undo.
+    } else if (strcmp(move_string, "q") == 0) {  // Quit.
+        GamesmanExit();
+    } else if (strcmp(move_string, "a") == 0) {  // Abort game.
+        free(move_string);
+        return 2;
+    } else if (strcmp(move_string, "u") == 0) {  // Undo.
         return InteractiveMatchUndo();
     }
     if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
@@ -384,7 +401,7 @@ static void PrintGameResult(ReadOnlyString game_formal_name) {
                 "PlayGame: (BUG) game ended at a position of unknown value %d. "
                 "Check the implementation of %s. Aborting...\n",
                 (int)value, game_formal_name);
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
             break;
     }
 }
@@ -398,7 +415,7 @@ int InteractivePlay(ReadOnlyString key) {
         fprintf(stderr,
                 "InteractivePlay: (BUG) attempting to launch game when the "
                 "game is uninitialized. Aborting...\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
 
     const Game *game = InteractiveMatchGetCurrentGame();
@@ -411,13 +428,17 @@ int InteractivePlay(ReadOnlyString key) {
         int turn = InteractiveMatchGetTurn();
         if (InteractiveMatchPlayerIsComputer(turn)) {
             // Generate computer move
-            MakeComputerMove();
+            Move move = MakeComputerMove();
+            printf("\nThe computer decided to go ");
+            PrintMove(game, move);
+            printf("\n\n");
+        } else {
+            int code = PromptForAndProcessUserMove(game);
+            if (code == 1) continue;  // Unknown command, restart the loop.
+            if (code == 2) break;     // Aborting
         }
-        int code = PromptForAndProcessUserMove(game);
-        if (code == 1) continue;  // Unknown command, restart the loop.
-        if (code == 2) break;     // Aborting
 
-        // Else, move has been successfully processed. Print the new position.
+        // Move has been successfully processed. Print the new position.
         PrintCurrentPosition(game);
         primitive_value = InteractiveMatchPrimitive();
         game_over = (primitive_value != kUndecided);

@@ -47,7 +47,7 @@ int64_t TierQueueSize(const TierQueue *queue);
 
 /**
  * @brief Pushes TIER into the QUEUE.
- * 
+ *
  * @return true on success,
  * @return false otherwise.
  */

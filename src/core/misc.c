@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.4.0
- * @date 2024-11-09
+ * @version 1.4.2
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,7 +41,7 @@
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
-#include <unistd.h>     // close
+#include <unistd.h>     // close, _exit
 #include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
 #ifdef USE_MPI
 #include <mpi.h>
@@ -52,7 +52,7 @@
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
-    exit(kNoError);
+    exit(kNoError);  // NOLINT(concurrency-mt-unsafe)
 }
 
 void NotReached(ReadOnlyString message) {
@@ -60,7 +60,8 @@ void NotReached(ReadOnlyString message) {
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
-    exit(kNotReachedError);
+    fflush(stderr);
+    _exit(kNotReachedError);
 }
 
 intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
@@ -72,7 +73,8 @@ void *SafeMalloc(size_t size) {
                 "SafeMalloc: failed to allocate %zd bytes. This ususally "
                 "indicates a bug.\n",
                 size);
-        exit(kMallocFailureError);
+        fflush(stderr);
+        _exit(kMallocFailureError);
     }
     return ret;
 }
@@ -85,7 +87,8 @@ void *SafeCalloc(size_t n, size_t size) {
                 "bytes. This ususally "
                 "indicates a bug.\n",
                 n, size);
-        exit(kMallocFailureError);
+        fflush(stderr);
+        _exit(kMallocFailureError);
     }
     return ret;
 }
@@ -132,8 +135,10 @@ double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
 
 char *GetTimeStampString(void) {
     time_t rawtime = time(NULL);
-    char *time_str = ctime(&rawtime);
+    static char time_str[26];  // 26 bytes as requested by ctime_r.
+    ctime_r(&rawtime, time_str);
     time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+
     return time_str;
 }
 
@@ -152,18 +157,18 @@ char *SecondsToFormattedTimeString(double _seconds) {
     }
 
     int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds;
-    int64_t remainder = _seconds;
-    seconds = remainder % 60;
+    int64_t remainder = (int64_t)_seconds;
+    seconds = (int)(remainder % 60);
     remainder /= 60;
-    minutes = remainder % 60;
+    minutes = (int)(remainder % 60);
     remainder /= 60;
-    hours = remainder % 24;
+    hours = (int)(remainder % 24);
     remainder /= 24;
-    days = remainder % 30;
+    days = (int)(remainder % 30);
     remainder /= 30;
-    months = remainder %= 12;
+    months = (int)(remainder %= 12);
     remainder /= 12;
-    years = remainder > 9999 ? -1 : remainder;
+    years = (int)(remainder > 9999 ? -1 : remainder);
     if (years < 0) {
         sprintf(buf, "INFINITE");
     } else {
@@ -547,6 +552,17 @@ int64_t NChooseR(int n, int r) {
 int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
 
 #ifdef USE_MPI
+
+#ifdef _OPENMP
+void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
+    int error = MPI_Init_thread(argc, argv, required, provided);
+    if (error != MPI_SUCCESS) {
+        fprintf(stderr, "SafeMpiInitThread: failed with code %d\n", error);
+        fflush(stderr);
+        _exit(kMpiError);
+    }
+}
+#else   // _OPENMP not defined
 void SafeMpiInit(int *argc, char ***argv) {
     int error = MPI_Init(argc, argv);
     if (error != MPI_SUCCESS) {
@@ -554,20 +570,14 @@ void SafeMpiInit(int *argc, char ***argv) {
         exit(kMpiError);
     }
 }
-
-void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
-    int error = MPI_Init_thread(argc, argv, required, provided);
-    if (error != MPI_SUCCESS) {
-        fprintf(stderr, "SafeMpiInitThread: failed with code %d\n", error);
-        exit(kMpiError);
-    }
-}
+#endif  // _OPENMP
 
 void SafeMpiFinalize(void) {
     int error = MPI_Finalize();
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiFinalize: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 
@@ -576,7 +586,8 @@ int SafeMpiCommSize(MPI_Comm comm) {
     int error = MPI_Comm_size(comm, &ret);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiCommSize: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 
     return ret;
@@ -587,7 +598,8 @@ int SafeMpiCommRank(MPI_Comm comm) {
     int error = MPI_Comm_rank(comm, &ret);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiCommRank: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 
     return ret;
@@ -598,7 +610,8 @@ void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
     int error = MPI_Send(buf, count, datatype, dest, tag, comm);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiSend: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 
@@ -607,7 +620,8 @@ void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
     int error = MPI_Recv(buf, count, datatype, source, tag, comm, status);
     if (error != MPI_SUCCESS) {
         fprintf(stderr, "SafeMpiRecv: failed with code %d\n", error);
-        exit(kMpiError);
+        fflush(stderr);
+        _exit(kMpiError);
     }
 }
 #endif  // USE_MPI

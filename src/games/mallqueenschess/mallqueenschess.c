@@ -28,12 +28,12 @@
 
 #include "games/mallqueenschess/mallqueenschess.h"
 
-#include <assert.h>    // assert
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // atoi
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // NULL
+#include <stdint.h>   // int64_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // atoi
 
 #include "core/generic_hash/generic_hash.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -41,12 +41,15 @@
 
 // Game, Solver, and Gameplay API Functions
 
-#define boardSize 25
-#define sideLength 5
+enum {
+    boardSize = 25,
+    sideLength = 5,
+    W = 'W',
+    B = 'B',
+    BLANK = '-',
+};
+
 #define MOVE_ENCODE(from, to) ((from << 5) | to)
-#define W 'W'
-#define B 'B'
-#define BLANK '-'
 
 static int MallqueenschessInit(void *aux);
 static int MallqueenschessFinalize(void);
@@ -113,7 +116,7 @@ const Game kMallqueenschess = {
     .formal_name = "All Queens Chess",
     .solver = &kRegularSolver,
     .solver_api = (const void *)&kSolverApi,
-    .gameplay_api = (const GameplayApi *)&kGameplayApi,
+    .gameplay_api = &kGameplayApi,
 
     .Init = &MallqueenschessInit,
     .Finalize = &MallqueenschessFinalize,
@@ -438,7 +441,8 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     leads to the smallest-ternary-number board in the input board's orbit
     (where the transformations are just rotation/reflection. */
     int bestSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+         symmetryNum++) {
         for (i = boardSize - 1; i >= 0; i--) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
@@ -451,7 +455,7 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
         }
     }
     char canonBoard[boardSize];
-    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+    for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
         canonBoard[i] = board[symmetries[bestSymmetryNum][i]];
     }
 
@@ -468,7 +472,8 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     leads to the smallest-ternary-number board in the input board's orbit
     (where the transformations are just rotation/reflection. */
     bestSymmetryNum = 0;
-    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries; symmetryNum++) {
+    for (symmetryNum = 1; symmetryNum < totalNumBoardSymmetries;
+         symmetryNum++) {
         for (i = boardSize - 1; i >= 0; i--) {
             pieceInSymmetry = board[symmetries[symmetryNum][i]];
             pieceInCurrentCanonical = board[symmetries[bestSymmetryNum][i]];
@@ -481,7 +486,7 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
         }
     }
     char canonSwappedBoard[boardSize] = {0};
-    for (i = 0; i < boardSize; i++) { // Transform the rest of the board.
+    for (i = 0; i < boardSize; i++) {  // Transform the rest of the board.
         canonSwappedBoard[i] = board[symmetries[bestSymmetryNum][i]];
     }
 
@@ -620,6 +625,6 @@ static Move MallqueenschessStringToMove(ReadOnlyString move_string) {
 }
 
 static void UnhashMove(Move move, int *from, int *to) {
-    *from = move >> 5;
-    *to = move & 0x1F;
+    *from = (int)(move >> 5);
+    *to = (int)(move & 0x1F);
 }

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Fixed-length \c Record array for the Array Database.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.0.1
+ * @date 2024-12-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -122,7 +122,7 @@ void *RecordArrayGetData(RecordArray *array);
 
 /**
  * @brief Returns the size of \p array in number of \c Records.
- * 
+ *
  * @param array Target array.
  * @return Size of \p array in number of \c Records.
  */
@@ -130,7 +130,7 @@ int64_t RecordArrayGetSize(const RecordArray *array);
 
 /**
  * @brief Returns the size of \p array in bytes.
- * 
+ *
  * @param array Target array.
  * @return Size of \p array in bytes.
  */

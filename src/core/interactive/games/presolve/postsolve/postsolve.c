@@ -38,6 +38,6 @@ int InteractivePostSolve(ReadOnlyString key) {
         &InteractiveGameHelp,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
-    
+
     return AutoMenu(title, num_items, items, keys, hooks, &UpdateVariantId);
 }

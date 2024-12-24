@@ -104,7 +104,7 @@ TierPosition InteractiveMatchGetCurrentPosition(void) {
 
 int InteractiveMatchGetTurn(void) {
     // This should be modified to support go-again games.
-    return match.move_history.size % 2;
+    return (int)(match.move_history.size % 2);
 }
 
 MoveArray InteractiveMatchGenerateMoves(void) {
@@ -153,16 +153,17 @@ Value InteractiveMatchPrimitive(void) {
     return match.game->gameplay_api->regular->Primitive(current.position);
 }
 
-static int PreviousNonComputerMoveIndex(void) {
-    int i = match.move_history.size - 1;
+static int64_t PreviousNonComputerMoveIndex(void) {
+    int64_t i = match.move_history.size - 1;
     while (i >= 0 && match.is_computer[match.turn_history.array[i]]) {
         --i;
     }
+
     return i;
 }
 
 bool InteractiveMatchUndo(void) {
-    int new_move_history_size = PreviousNonComputerMoveIndex();
+    int64_t new_move_history_size = PreviousNonComputerMoveIndex();
     if (new_move_history_size < 0) return false;
 
     // Equivalent to popping off all moves including and after the last human
