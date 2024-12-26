@@ -461,7 +461,6 @@ static int WinkersInit(void *aux) {
     (void)aux;  // Unused.
     GenericHashReinitialize();
     WinkersTier t = kWinkersTierInit;
-    int64_t total = 0, max = 0;
     int pieces[] = {'X', 0, 0, 'O', 0, 0, 'C', 0, 0, '-', 0, 0, -1};
     for (t.placed.winks[0] = 0; t.placed.winks[0] <= 10; ++t.placed.winks[0]) {
         for (t.placed.winks[1] = 0; t.placed.winks[1] <= 10;
@@ -484,15 +483,10 @@ static int WinkersInit(void *aux) {
                                                          pieces, NULL, t.hash);
                     assert(success);
                     (void)success;
-                    total += GenericHashNumPositionsLabel(t.hash);
-                    if (max < GenericHashNumPositionsLabel(t.hash)) {
-                        max = GenericHashNumPositionsLabel(t.hash);
-                    }
                 }
             }
         }
     }
-    printf("total: %ld\nmax: %ld\n", total, max);
 
     return kNoError;
 }
