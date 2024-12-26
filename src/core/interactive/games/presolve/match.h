@@ -22,7 +22,7 @@ MoveArray InteractiveMatchGenerateMoves(void);
 TierPosition InteractiveMatchDoMove(TierPosition tier_position, Move move);
 bool InteractiveMatchCommitMove(Move move);
 Value InteractiveMatchPrimitive(void);
-bool InteractiveMatchUndo(void);
+int InteractiveMatchUndo(void);
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer);
 
 void InteractiveMatchSetSolved(bool solved);
