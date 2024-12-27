@@ -451,9 +451,190 @@ static const GameplayApi kWinkersGameplayApi = {
     .tier = &WinkersGameplayApiTier,
 };
 
-// ========================= WinkersGetCurrentVariant =========================
+// ============================ kWinkersGameplayApi ============================
 
-// ========================== WinkersSetVariantOption ==========================
+// Format: "<board>_<1p_neutrals_remaining>_<2p_neutrals_remaining>"
+static bool WinkersIsLegalFormalPosition(ReadOnlyString formal_position) {
+    if (formal_position == NULL) return false;
+
+    // Find the first underscore
+    const char *first_underscore = strchr(formal_position, '_');
+    if (first_underscore == NULL) return false;
+
+    // Find the second underscore
+    const char *second_underscore = strchr(first_underscore + 1, '_');
+    if (second_underscore == NULL) return false;
+
+    // Validate the 1p_neutrals_remaining part
+    WinkersTier t = kWinkersTierInit;
+    char *endptr;
+    long neutrals_1p = strtol(first_underscore + 1, &endptr, 10);
+    if (endptr != second_underscore || neutrals_1p < 0 || neutrals_1p > 10) {
+        return false;
+    }
+    t.placed.neutrals[0] = 10 - neutrals_1p;
+
+    // Validate the 2p_neutrals_remaining part
+    long neutrals_2p = strtol(second_underscore + 1, &endptr, 10);
+    if (*endptr != '\0' || neutrals_2p < 0 || neutrals_2p > 10) {
+        return false;
+    }
+    t.placed.neutrals[1] = 10 - neutrals_2p;
+
+    // Validate the board
+    int num_c = 0, num_blank = 0;
+    for (const char *p = formal_position; p < first_underscore; ++p) {
+        switch (toupper(*p)) {
+            case 'X':
+                ++t.placed.winks[0];
+                break;
+            case 'O':
+                ++t.placed.winks[1];
+                break;
+            case 'C':
+                ++num_c;
+                break;
+            case '-':
+                ++num_blank;
+                break;
+            default:
+                return false;
+        }
+    }
+
+    // Validate the length of the board string
+    int num_nonblank = num_c + t.placed.winks[0] + t.placed.winks[1];
+    if (num_nonblank + num_blank != kBoardSize) return false;
+
+    // Validate that the number of neutral pieces match
+    if (num_nonblank != t.placed.neutrals[0] + t.placed.neutrals[1]) {
+        return false;
+    }
+
+    // Validate tier configuration
+    if (!WinkersIsValidTier(t.hash)) return false;
+
+    // Validate position
+    TierPosition tp = {
+        .tier = t.hash,
+        .position = GenericHashHashLabel(t.hash, formal_position,
+                                         WinkersGetTurnFromTier(t)),
+    };
+    if (!WinkersIsLegalPosition(tp)) return false;
+
+    return true;
+}
+
+static TierPosition WinkersFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    // Find the two underscores
+    const char *first_underscore = strchr(formal_position, '_');
+    const char *second_underscore = strchr(first_underscore + 1, '_');
+
+    // Get the number of placed neutrals by both players
+    WinkersTier t = kWinkersTierInit;
+    t.placed.neutrals[0] = 10 - (int8_t)strtol(first_underscore + 1, NULL, 10);
+    t.placed.neutrals[1] = 10 - (int8_t)strtol(second_underscore + 1, NULL, 10);
+
+    // Count the number of X's and O's
+    for (int i = 0; i < kBoardSize; ++i) {
+        t.placed.winks[0] += (toupper(formal_position[i]) == 'X');
+        t.placed.winks[1] += (toupper(formal_position[i]) == 'O');
+    }
+
+    // Hash Position
+    int turn = WinkersGetTurnFromTier(t);
+    TierPosition ret;
+    ret.tier = t.hash;
+    ret.position = GenericHashHashLabel(t.hash, formal_position, turn);
+
+    return ret;
+}
+
+static CString WinkersTierPositionToFormalPosition(TierPosition tier_position) {
+    CString ret;
+    CStringInitCopyCharArray(&ret, "-------------------_10_10");  // placeholder
+
+    // Unhash
+    WinkersTier t = {.hash = tier_position.tier};
+    bool success =
+        GenericHashUnhashLabel(t.hash, tier_position.position, ret.str);
+    assert(success);
+    (void)success;
+    sprintf(ret.str + kBoardSize, "_%d_%d", 10 - t.placed.neutrals[0],
+            10 - t.placed.neutrals[1]);
+
+    return ret;
+}
+
+// Format: "<turn>_<board><remaining_Xs><remaining_Os>"
+//         "<remaining_X_neutrals><remaining_O_neutrals>"
+static CString WinkersTierPositionToAutoGuiPosition(
+    TierPosition tier_position) {
+    char entities[kBoardSize + 41];
+    entities[kBoardSize + 40] = '\0';
+
+    // Unhash
+    WinkersTier t = {.hash = tier_position.tier};
+    Position pos = tier_position.position;
+    bool success = GenericHashUnhashLabel(t.hash, pos, entities);
+    assert(success);
+    (void)success;
+    int turn = GenericHashGetTurnLabel(t.hash, pos);
+
+    // Print remaining winks
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 10; ++j) {
+            entities[kBoardSize + i * 10 + j] =
+                (t.placed.winks[i]++ < 10) ? kTurnToWink[i + 1] : '-';
+        }
+    }
+
+    // Print remaining neutrals
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 10; ++j) {
+            entities[kBoardSize + 20 + i * 10 + j] =
+                (t.placed.neutrals[i]++ < 10) ? 'C' : '-';
+        }
+    }
+
+    return AutoGuiMakePosition(turn, entities);
+}
+
+static CString WinkersMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused.
+    char buf[kInt64Base10StringLengthMax + 1];
+    sprintf(buf, "%" PRIMove, move);
+    CString ret;
+    CStringInitCopyCharArray(&ret, buf);
+
+    return ret;
+}
+
+static CString WinkersMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused.
+
+    return AutoGuiMakeMoveA('-', move, 'x');
+}
+
+static const UwapiTier kWinkersUwapiTier = {
+    .GetInitialTier = WinkersGetInitialTier,
+    .GetInitialPosition = WinkersGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+
+    .GenerateMoves = WinkersGenerateMoves,
+    .DoMove = WinkersDoMove,
+    .Primitive = WinkersPrimitive,
+
+    .IsLegalFormalPosition = WinkersIsLegalFormalPosition,
+    .FormalPositionToTierPosition = WinkersFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = WinkersTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = WinkersTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = WinkersMoveToFormalMove,
+    .MoveToAutoGuiMove = WinkersMoveToAutoGuiMove,
+};
+
+static const Uwapi kWinkersUwapi = {.tier = &kWinkersUwapiTier};
 
 // ================================ WinkersInit ================================
 
@@ -505,7 +686,7 @@ const Game kWinkers = {
     .solver = &kTierSolver,
     .solver_api = &kWinkersSolverApi,
     .gameplay_api = &kWinkersGameplayApi,
-    .uwapi = NULL,
+    .uwapi = &kWinkersUwapi,
 
     .Init = WinkersInit,
     .Finalize = WinkersFinalize,
