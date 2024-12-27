@@ -10,6 +10,7 @@ add_subdirectory(mtttier)
 add_subdirectory(neutron)
 add_subdirectory(quixo)
 add_subdirectory(teeko)
+add_subdirectory(winkers)
 
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/game_list.h)

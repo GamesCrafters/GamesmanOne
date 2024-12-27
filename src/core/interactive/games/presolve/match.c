@@ -162,15 +162,15 @@ static int64_t PreviousNonComputerMoveIndex(void) {
     return i;
 }
 
-bool InteractiveMatchUndo(void) {
+int InteractiveMatchUndo(void) {
     int64_t new_move_history_size = PreviousNonComputerMoveIndex();
-    if (new_move_history_size < 0) return false;
+    if (new_move_history_size < 0) return 1;
 
     // Equivalent to popping off all moves including and after the last human
     // move.
     match.move_history.size = match.turn_history.size = new_move_history_size;
     match.position_history.size = match.turn_history.size + 1;
-    return true;
+    return 0;
 }
 
 int InteractiveMatchPositionToString(TierPosition tier_position, char *buffer) {

@@ -1,11 +1,12 @@
 /**
- * @file game_list.c
+ * @file winkers.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Definition for the list of all games.
+ * @brief Winkers the game published by Great American Trading Company.
+ * @details https://boardgamegeek.com/boardgame/22057/winkers-the-game
  * @version 1.0.0
- * @date 2024-01-24
+ * @date 2024-12-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,32 +25,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/game_list.h"
-
-#include <stddef.h>  // NULL
+#ifndef GAMESMANONE_GAMES_WINKERS_WINKERS_H_
+#define GAMESMANONE_GAMES_WINKERS_WINKERS_H_
 
 #include "core/types/gamesman_types.h"
 
-// 1. To add a new game, include the game header here.
+/** @brief Winkers. */
+extern const Game kWinkers;
 
-#include "games/dshogi/dshogi.h"
-#include "games/fsvp/fsvp.h"
-#include "games/gates/gates.h"
-#include "games/gobblet/gobblet_gobblers.h"
-#include "games/kaooa/kaooa.h"
-#include "games/mallqueenschess/mallqueenschess.h"
-#include "games/mttt/mttt.h"
-#include "games/mtttier/mtttier.h"
-#include "games/neutron/neutron.h"
-#include "games/quixo/quixo.h"
-#include "games/teeko/teeko.h"
-#include "games/winkers/winkers.h"
-
-// 2. Then add the new game object to the list. Note that the list must be
-// NULL-terminated.
-
-const Game *const kAllGames[] = {
-    &kWinkers,         &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko,
-    &kDobutsuShogi,    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,
-    &kMallqueenschess, &kMkaooa,          NULL,
-};
+#endif  // GAMESMANONE_GAMES_WINKERS_WINKERS_H_
