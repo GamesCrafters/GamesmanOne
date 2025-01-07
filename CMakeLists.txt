@@ -18,3 +18,8 @@ include_directories("${PROJECT_SOURCE_DIR}/res/include")
 
 # Add source.
 add_subdirectory(src)
+
+enable_testing()
+add_executable(test_int64_array tests/data_structures/test_int64_array.c)
+target_link_libraries(test_int64_array PRIVATE data_structures)
+add_test(NAME TestInt64Array COMMAND test_int64_array)

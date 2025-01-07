@@ -16,4 +16,5 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+add_library(data_structures STATIC ${HEADERS} ${SOURCES})
+target_link_libraries(gamesman PRIVATE data_structures)
