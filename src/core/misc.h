@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.4.2
- * @date 2024-12-22
+ * @version 1.5.0
+ * @date 2025-01-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,7 +29,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, uint64_t
+#include <stdint.h>   // int64_t, uint32_t, uint64_t
 #include <stdio.h>    // FILE
 #include <time.h>     // clock_t
 #include <zlib.h>     // gzFile
@@ -51,9 +51,10 @@ void GamesmanExit(void);
 void NotReached(ReadOnlyString message);
 
 /**
- * @brief Returns the amount of physical memory available on the system.
+ * @brief Returns the amount of physical memory available on the system in
+ * bytes.
  *
- * @return Amount of physical memory or
+ * @return Amount of physical memory in bytes or
  * @return 0 if the detection fails.
  */
 intptr_t GetPhysicalMemory(void);
@@ -396,6 +397,16 @@ int64_t NChooseR(int n, int r);
  * @warning D must not be 0.
  */
 int64_t RoundUpDivide(int64_t n, int64_t d);
+
+/**
+ * @brief Returns the number of bits set in the 32-bit integer X.
+ */
+int Popcount32(uint32_t x);
+
+/**
+ * @brief Returns the number of bits set in the 64-bit integer X.
+ */
+int Popcount64(uint64_t x);
 
 #ifdef USE_MPI
 

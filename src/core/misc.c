@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.4.2
- * @date 2024-12-22
+ * @version 1.5.0
+ * @date 2025-01-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,7 +34,7 @@
 #include <stdarg.h>     // va_list, va_start, va_end
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, uint64_t, INT64_MAX, uint8_t
+#include <stdint.h>     // int64_t, uint32_t, uint64_t, INT64_MAX, uint8_t
 #include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
 #include <stdlib.h>     // exit, malloc, calloc, free
 #include <string.h>     // strcspn, strlen, strncpy
@@ -550,6 +550,50 @@ int64_t NChooseR(int n, int r) {
 #undef CACHE_COLS
 
 int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
+
+#if !defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
+static int FallbackPopcount32(uint32_t x) {
+    int c = 0;
+    while (x) {
+        x &= (x - 1);
+        c++;
+    }
+    return c;
+}
+
+static int FallbackPopcount64(uint64_t x) {
+    int c = 0;
+    while (x) {
+        x &= (x - 1);
+        c++;
+    }
+    return c;
+}
+#endif
+
+int Popcount32(uint32_t x) {
+    static_assert(sizeof(unsigned int) == sizeof(uint32_t),
+                  "unsigned int is not 32 bits");
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcount(x);
+#elif defined(_MSC_VER)
+    return __popcnt(x);
+#else
+    return FallbackPopcount32(x);
+#endif
+}
+
+int Popcount64(uint64_t x) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcountll(x);
+#elif defined(_MSC_VER) && defined(_M_X64)
+    return __popcnt64(x);
+#elif defined(_MSC_VER)  // 32-bit fallback for MSVC
+    return __popcnt((uint32_t)x) + __popcnt((uint32_t)(x >> 32));
+#else
+    return FallbackPopcount64(x);
+#endif
+}
 
 #ifdef USE_MPI
 
