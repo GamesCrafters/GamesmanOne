@@ -72,7 +72,7 @@ static bool InitEncoder(lzma_stream *strm, uint64_t block_size, uint32_t level,
         .filters = filters,
     };
 
-    mt.threads = num_threads == 0 ? lzma_cputhreads() : num_threads;
+    mt.threads = num_threads == 0 ? lzma_cputhreads() : (uint32_t)num_threads;
     if (mt.threads == 0) {
         fprintf(stderr,
                 "Warining: failed to get number of CPU threads, using a single "
@@ -127,7 +127,7 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
         .filters = filters,
     };
 
-    mt.threads = num_threads == 0 ? lzma_cputhreads() : num_threads;
+    mt.threads = num_threads == 0 ? lzma_cputhreads() : (uint32_t)num_threads;
     if (mt.threads == 0) {
         fprintf(stderr,
                 "Warining: failed to get number of CPU threads, using a single "
@@ -154,7 +154,7 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
             if (ferror(infile)) {
                 strm->next_in = strm->next_out = NULL;
-                strerror_r(errno, outbuf, sizeof(outbuf));
+                strerror_r(errno, (char *)outbuf, sizeof(outbuf));
                 fprintf(stderr, "XzraCompressFile: Read error: %s\n", outbuf);
                 return false;
             }
@@ -165,7 +165,7 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
             size_t write_size = sizeof(outbuf) - strm->avail_out;
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
                 strm->next_in = strm->next_out = NULL;
-                strerror_r(errno, outbuf, sizeof(outbuf));
+                strerror_r(errno, (char *)outbuf, sizeof(outbuf));
                 fprintf(stderr, "XzraCompressFile: Write error: %s\n", outbuf);
                 return false;
             }
@@ -233,7 +233,7 @@ static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
             size_t write_size = sizeof(outbuf) - strm->avail_out;
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
                 strm->next_out = NULL;
-                strerror_r(errno, outbuf, sizeof(outbuf));
+                strerror_r(errno, (char *)outbuf, sizeof(outbuf));
                 fprintf(stderr, "XzraCompressStream: Write error: %s\n",
                         outbuf);
                 return false;
@@ -362,7 +362,7 @@ static bool DecompressFileHelper(lzma_stream *strm, FILE *infile, uint8_t *dest,
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
             if (ferror(infile)) {
                 strm->next_in = NULL;
-                strerror_r(errno, inbuf, sizeof(inbuf));
+                strerror_r(errno, (char *)inbuf, sizeof(inbuf));
                 fprintf(stderr, "Read error: %s\n", inbuf);
                 return false;
             }
