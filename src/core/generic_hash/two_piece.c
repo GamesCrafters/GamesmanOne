@@ -90,6 +90,11 @@ void TwoPieceHashFinalize(void) {
     curr_board_size = 0;
 }
 
+int64_t TwoPieceHashGetNumPositions(int num_x, int num_o) {
+    return NChooseR(curr_board_size - num_x, num_o) *
+           NChooseR(curr_board_size, num_x) * 2;
+}
+
 Position TwoPieceHashHash(uint64_t board, int turn) {
     uint32_t s_x = (uint32_t)(board >> 32);
 #ifdef GAMESMAN_HAS_BMI2
@@ -111,7 +116,7 @@ Position TwoPieceHashHash(uint64_t board, int turn) {
     int64_t offset = NChooseR(curr_board_size - pop_x, pop_o);
     Position ret = offset * pattern_to_order[s_x] + pattern_to_order[s_o];
 
-    return (ret << 1) | (turn - 1);
+    return (ret << 1) | turn;
 }
 
 uint64_t TwoPieceHashUnhash(Position hash, int num_x, int num_o) {
@@ -138,4 +143,4 @@ uint64_t TwoPieceHashUnhash(Position hash, int num_x, int num_o) {
     return ret;
 }
 
-int TwoPieceHashGetTurn(Position hash) { return (hash & 1) + 1; }
+int TwoPieceHashGetTurn(Position hash) { return hash & 1; }

@@ -1,5 +1,6 @@
 add_library(misc STATIC ${CMAKE_CURRENT_SOURCE_DIR}/misc.h ${CMAKE_CURRENT_SOURCE_DIR}/misc.c)
 target_link_libraries(misc PRIVATE common_flags)
+target_link_libraries(misc PRIVATE mgz)
 find_package(ZLIB REQUIRED)
 target_link_libraries(misc PUBLIC ZLIB::ZLIB)
 find_package(liblzma 5.4.0 REQUIRED CONFIG)

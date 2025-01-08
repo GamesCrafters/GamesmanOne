@@ -9,6 +9,7 @@ intptr_t TwoPieceHashGetMemoryRequired(int board_size);
 int TwoPieceHashInit(int board_size);
 void TwoPieceHashFinalize(void);
 
+int64_t TwoPieceHashGetNumPositions(int num_x, int num_o);
 Position TwoPieceHashHash(uint64_t board, int turn);
 uint64_t TwoPieceHashUnhash(Position hash, int num_x, int num_o);
 int TwoPieceHashGetTurn(Position hash);

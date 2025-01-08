@@ -27,7 +27,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     check_c_compiler_flag(-fanalyzer HAS_C_ANALYZER_FLAG)
     # Add the -fanalyzer flag if supported
     if(HAS_C_ANALYZER_FLAG)
-      target_compile_options(common_flags PRIVATE $<$<COMPILE_LANGUAGE:C>:-fanalyzer>)
+      target_compile_options(common_flags INTERFACE $<$<COMPILE_LANGUAGE:C>:-fanalyzer>)
     endif()
   endif()
 
@@ -38,7 +38,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     check_c_compiler_flag(-fsyntax-only HAS_C_ANALYZER_FLAG)
     # Add the flags if supported
     if(HAS_C_ANALYZER_FLAG)
-      target_compile_options(common_flags PRIVATE $<$<COMPILE_LANGUAGE:C>:-fsyntax-only -Wunused -Wuninitialized>)
+      target_compile_options(common_flags INTERFACE $<$<COMPILE_LANGUAGE:C>:-fsyntax-only -Wunused -Wuninitialized>)
     endif()
   endif()
 
@@ -47,7 +47,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     # For MSVC, enable code analysis with /analyze flag
     check_c_compiler_flag("/analyze" HAS_C_ANALYZER_FLAG)
     if(HAS_C_ANALYZER_FLAG)
-      target_compile_options(common_flags PRIVATE $<$<COMPILE_LANGUAGE:C>:/analyze>)
+      target_compile_options(common_flags INTERFACE $<$<COMPILE_LANGUAGE:C>:/analyze>)
     endif()
   endif()
 
