@@ -17,4 +17,5 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.c)
 
 add_library(data_structures STATIC ${HEADERS} ${SOURCES})
+target_link_libraries(data_structures PRIVATE common_flags)
 target_link_libraries(gamesman PRIVATE data_structures)

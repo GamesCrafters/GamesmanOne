@@ -1,0 +1,4 @@
+add_executable(test_int64_array test_int64_array.c)
+target_link_libraries(test_int64_array PRIVATE common_flags)
+target_link_libraries(test_int64_array PRIVATE data_structures)
+add_test(NAME TestInt64Array COMMAND test_int64_array)

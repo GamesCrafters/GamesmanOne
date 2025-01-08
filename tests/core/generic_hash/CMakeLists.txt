@@ -1,0 +1,5 @@
+add_executable(test_two_piece test_two_piece.c)
+target_link_libraries(test_two_piece PRIVATE common_flags)
+target_link_libraries(test_two_piece PRIVATE generic_hash)
+target_link_libraries(test_two_piece PRIVATE misc)
+add_test(NAME TestTwoPieceHash COMMAND test_two_piece)
