@@ -300,7 +300,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
     uint64_t B, C;
     bool same_tier = (child_t.hash == parent_t.hash);
     PositionHashSet dedup;
-    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetInitSize(&dedup, 0.5, 127);
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
         uint64_t dest_mask =

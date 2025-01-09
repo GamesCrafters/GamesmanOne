@@ -33,6 +33,11 @@ void PositionHashSetInit(PositionHashSet *set, double max_load_factor) {
     Int64HashSetInit(set, max_load_factor);
 }
 
+bool PositionHashSetInitSize(Int64HashSet *set, double max_load_factor,
+                             int64_t size) {
+    return Int64HashSetInitSize(set, max_load_factor, size);
+}
+
 void PositionHashSetDestroy(PositionHashSet *set) { Int64HashSetDestroy(set); }
 
 bool PositionHashSetContains(PositionHashSet *set, Position position) {

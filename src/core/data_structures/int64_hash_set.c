@@ -52,6 +52,20 @@ void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     set->max_load_factor = max_load_factor;
 }
 
+bool Int64HashSetInitSize(Int64HashSet *set, double max_load_factor,
+                          int64_t size) {
+    if (max_load_factor > 0.75) max_load_factor = 0.75;
+    if (max_load_factor < 0.25) max_load_factor = 0.25;
+    set->max_load_factor = max_load_factor;
+    set->capacity = NextPrime((int64_t)((double)size / set->max_load_factor));
+    set->entries =
+        (Int64HashSetEntry *)calloc(set->capacity, sizeof(Int64HashSetEntry));
+    if (set->entries == NULL) return false;
+    set->size = 0;
+
+    return true;
+}
+
 void Int64HashSetDestroy(Int64HashSet *set) {
     free(set->entries);
     set->entries = NULL;
