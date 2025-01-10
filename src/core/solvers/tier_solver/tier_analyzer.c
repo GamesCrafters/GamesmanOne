@@ -150,7 +150,10 @@ static bool Step0Initialize(Analysis *dest) {
 
     fringe = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
     discovered = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
-    if (fringe == NULL || discovered == NULL) return false;
+    if (fringe == NULL || discovered == NULL) {
+        TierArrayDestroy(&child_tiers);
+        return false;
+    }
 
     InitFringe(fringe);
     InitFringe(discovered);
@@ -159,8 +162,12 @@ static bool Step0Initialize(Analysis *dest) {
     for (int64_t i = 0; i < child_tiers.size; ++i) {
         bool success =
             TierHashMapSet(&child_tier_to_index, child_tiers.array[i], i);
-        if (!success) return false;
+        if (!success) {
+            TierArrayDestroy(&child_tiers);
+            return false;
+        }
     }
+    TierArrayDestroy(&child_tiers);
 
     memset(&this_tier_map, 0, sizeof(this_tier_map));
     child_tier_maps = NULL;
@@ -170,6 +177,7 @@ static bool Step0Initialize(Analysis *dest) {
 
     AnalysisInit(dest);
     AnalysisSetHashSize(dest, this_tier_size);
+
     return true;
 }
 
