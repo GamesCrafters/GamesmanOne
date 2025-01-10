@@ -44,13 +44,6 @@ void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
     set->max_load_factor = max_load_factor;
 }
 
-void TierPositionHashSetDestroy(TierPositionHashSet *set) {
-    free(set->entries);
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-}
-
 static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
     int64_t a = (int64_t)key.tier;
     int64_t b = (int64_t)key.position;
@@ -58,23 +51,8 @@ static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
     return (int64_t)(cantor_pairing % capacity);
 }
 
-bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {
-    int64_t capacity = set->capacity;
-    // Edge case: return false if set is empty.
-    if (set->capacity == 0) return false;
-    int64_t index = TierPositionHashSetHash(key, capacity);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
-        }
-        index = (index + 1) % capacity;
-    }
-    return false;
-}
-
-static bool TierPositionHashSetExpand(TierPositionHashSet *set) {
-    int64_t new_capacity = NextPrime(set->capacity * 2);
+static bool TierPositionHashSetExpand(TierPositionHashSet *set,
+                                      int64_t new_capacity) {
     TierPositionHashSetEntry *new_entries = (TierPositionHashSetEntry *)calloc(
         new_capacity, sizeof(TierPositionHashSetEntry));
     if (new_entries == NULL) return false;
@@ -94,13 +72,44 @@ static bool TierPositionHashSetExpand(TierPositionHashSet *set) {
     return true;
 }
 
+bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size) {
+    int64_t target_capacity =
+        NextPrime((int64_t)((double)size / set->max_load_factor));
+    if (target_capacity <= set->capacity) return true;
+
+    return TierPositionHashSetExpand(set, target_capacity);
+}
+
+void TierPositionHashSetDestroy(TierPositionHashSet *set) {
+    free(set->entries);
+    set->entries = NULL;
+    set->capacity = 0;
+    set->size = 0;
+}
+
+bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {
+    int64_t capacity = set->capacity;
+    // Edge case: return false if set is empty.
+    if (set->capacity == 0) return false;
+    int64_t index = TierPositionHashSetHash(key, capacity);
+    while (set->entries[index].used) {
+        TierPosition this_key = set->entries[index].key;
+        if (this_key.tier == key.tier && this_key.position == key.position) {
+            return true;
+        }
+        index = (index + 1) % capacity;
+    }
+    return false;
+}
+
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     // Check if resizing is needed.
     double load_factor = (set->capacity == 0)
                              ? INFINITY
                              : (double)(set->size + 1) / (double)set->capacity;
     if (set->capacity == 0 || load_factor > set->max_load_factor) {
-        if (!TierPositionHashSetExpand(set)) return false;
+        int64_t new_capacity = NextPrime(set->capacity * 2);
+        if (!TierPositionHashSetExpand(set, new_capacity)) return false;
     }
 
     // Set value at key.

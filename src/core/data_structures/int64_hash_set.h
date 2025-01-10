@@ -80,25 +80,7 @@ typedef struct Int64HashSet {
  */
 void Int64HashSetInit(Int64HashSet *set, double max_load_factor);
 
-/**
- * @brief Initializes the given \p set to an empty set with maximum load factor
- * \p max_load_factor and a pre-allocated capacity for \p size elements.
- *
- * @param set Set to initialize.
- * @param max_load_factor Set maximum load factor of \p set to this value. The
- * hash set will automatically expand its capacity if (double)size/capacity is
- * greater than \p max_load_factor. A small value trades memory for speed
- * whereas a large value trades speed for memory. This value is restricted to be
- * in the range [0.25, 0.75] to provide optimal performance. The actual max load
- * factor is capped at 0.25 and 0.75 respectively if the user passes a value
- * that is smaller than 0.25 or greater than 0.75.
- * @param size Pre-allocated capacity for \p set.
- *
- * @return true on success,
- * @return false otherwise.
- */
-bool Int64HashSetInitSize(Int64HashSet *set, double max_load_factor,
-                          int64_t size);
+bool Int64HashSetReserve(Int64HashSet *set, int64_t size);
 
 /** @brief Deallocates the given \p set. */
 void Int64HashSetDestroy(Int64HashSet *set);

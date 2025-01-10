@@ -62,6 +62,8 @@ typedef struct TierPositionHashSet {
  */
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 
+bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size);
+
 /** @brief Destroys the TierPosition hash set SET. */
 void TierPositionHashSetDestroy(TierPositionHashSet *set);
 

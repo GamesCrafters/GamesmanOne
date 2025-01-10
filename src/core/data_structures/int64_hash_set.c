@@ -52,29 +52,7 @@ void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     set->max_load_factor = max_load_factor;
 }
 
-bool Int64HashSetInitSize(Int64HashSet *set, double max_load_factor,
-                          int64_t size) {
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    set->max_load_factor = max_load_factor;
-    set->capacity = NextPrime((int64_t)((double)size / set->max_load_factor));
-    set->entries =
-        (Int64HashSetEntry *)calloc(set->capacity, sizeof(Int64HashSetEntry));
-    if (set->entries == NULL) return false;
-    set->size = 0;
-
-    return true;
-}
-
-void Int64HashSetDestroy(Int64HashSet *set) {
-    free(set->entries);
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-}
-
-static bool Expand(Int64HashSet *set) {
-    int64_t new_capacity = NextPrime(set->capacity * 2);
+static bool Expand(Int64HashSet *set, int64_t new_capacity) {
     Int64HashSetEntry *new_entries =
         (Int64HashSetEntry *)calloc(new_capacity, sizeof(Int64HashSetEntry));
     if (new_entries == NULL) return false;
@@ -94,13 +72,29 @@ static bool Expand(Int64HashSet *set) {
     return true;
 }
 
+bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
+    int64_t target_capacity =
+        NextPrime((int64_t)((double)size / set->max_load_factor));
+    if (target_capacity <= set->capacity) return true;
+
+    return Expand(set, target_capacity);
+}
+
+void Int64HashSetDestroy(Int64HashSet *set) {
+    free(set->entries);
+    set->entries = NULL;
+    set->capacity = 0;
+    set->size = 0;
+}
+
 bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     // Check if resizing is needed.
     double load_factor = (set->capacity == 0)
                              ? INFINITY
                              : (double)(set->size + 1) / (double)set->capacity;
     if (set->capacity == 0 || load_factor > set->max_load_factor) {
-        if (!Expand(set)) return false;
+        int64_t new_capacity = NextPrime(set->capacity * 2);
+        if (!Expand(set, new_capacity)) return false;
     }
 
     // Set value at key.

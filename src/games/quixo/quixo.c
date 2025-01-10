@@ -250,6 +250,33 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return board & kEdges[curr_variant_idx][!turn];
 }
 
+static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
+    // Unhash
+    QuixoTier t = {.hash = tier_position.tier};
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
+
+    // Generate all moves
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GenerateMovesInternal(board, turn, moves);
+
+    // Collect all unique child positions
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    TierPositionHashSetReserve(&dedup, 64);
+    for (int i = 0; i < num_moves; ++i) {
+        QuixoMove m = {.hash = moves[i]};
+        TierPosition child = DoMoveInternal(t, board, turn, m);
+        if (TierPositionHashSetContains(&dedup, child)) continue;
+        TierPositionHashSetAdd(&dedup, child);
+    }
+    int ret = (int)dedup.size;
+    TierPositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
 static int QuixoGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
@@ -266,6 +293,7 @@ static int QuixoGetCanonicalChildPositions(
     // Collect all unique child positions
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
+    TierPositionHashSetReserve(&dedup, 64);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
@@ -306,7 +334,8 @@ static int QuixoGetCanonicalParentPositions(
     uint64_t B, C;
     bool same_tier = (child_t.hash == parent_t.hash);
     PositionHashSet dedup;
-    PositionHashSetInitSize(&dedup, 0.5, 127);
+    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetReserve(&dedup, 128);
     int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
@@ -408,6 +437,8 @@ static const TierSolverApi kQuixoSolverApi = {
     .DoMove = QuixoDoMove,
     .IsLegalPosition = QuixoIsLegalPosition,
     .GetCanonicalPosition = NULL,
+    .GetNumberOfCanonicalChildPositions =
+        QuixoGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = QuixoGetCanonicalChildPositions,
     .GetCanonicalParentPositions = QuixoGetCanonicalParentPositions,
 
