@@ -52,13 +52,17 @@ static int MtttSetVariantOption(int option, int selection);
 static int64_t MtttGetNumPositions(void);
 static Position MtttGetInitialPosition(void);
 
-static MoveArray MtttGenerateMoves(Position position);
+static int MtttGenerateMoves(Position position,
+                             Move moves[static kRegularSolverNumMovesMax]);
 static Value MtttPrimitive(Position position);
 static Position MtttDoMove(Position position, Move move);
 static bool MtttIsLegalPosition(Position position);
 static Position MtttGetCanonicalPosition(Position position);
-static PositionArray MtttGetCanonicalParentPositions(Position position);
+static int MtttGetCanonicalParentPositions(
+    Position position,
+    Position parents[static kRegularSolverNumParentPositionsMax]);
 
+static MoveArray MtttGenerateMovesGameplay(Position position);
 static int MtttPositionToString(Position position, char *buffer);
 static int MtttMoveToString(Move move, char *buffer);
 static bool MtttIsValidMoveString(ReadOnlyString move_string);
@@ -101,7 +105,7 @@ static const GameplayApiCommon kMtttGameplayApiCommon = {
 static const GameplayApiRegular kMtttGameplayApiRegular = {
     .PositionToString = &MtttPositionToString,
 
-    .GenerateMoves = &MtttGenerateMoves,
+    .GenerateMoves = &MtttGenerateMovesGameplay,
     .DoMove = &MtttDoMove,
     .Primitive = &MtttPrimitive,
 };
@@ -114,7 +118,7 @@ static const GameplayApi kMtttGameplayApi = {
 // UWAPI Setup
 
 static const UwapiRegular kMtttUwapiRegular = {
-    .GenerateMoves = &MtttGenerateMoves,
+    .GenerateMoves = &MtttGenerateMovesGameplay,
     .DoMove = &MtttDoMove,
     .IsLegalFormalPosition = &MtttIsLegalFormalPosition,
     .FormalPositionToPosition = &MtttFormalPositionToPosition,
@@ -222,19 +226,18 @@ static int64_t MtttGetNumPositions(void) {
 
 static Position MtttGetInitialPosition(void) { return 0; }
 
-static MoveArray MtttGenerateMoves(Position position) {
-    MoveArray moves;
-    MoveArrayInit(&moves);
-    if (MtttPrimitive(position) != kUndecided) return moves;
-
+static int MtttGenerateMoves(Position position,
+                             Move moves[static kRegularSolverNumMovesMax]) {
+    int ret = 0;
     BlankOX board[9] = {0};
     Unhash(position, board);
     for (Move i = 0; i < 9; ++i) {
         if (board[i] == kBlank) {
-            MoveArrayAppend(&moves, i);
+            moves[ret++] = i;
         }
     }
-    return moves;
+
+    return ret;
 }
 
 static Value MtttPrimitive(Position position) {
@@ -295,32 +298,43 @@ static Position MtttGetCanonicalPosition(Position position) {
     return canonical_position;
 }
 
-static PositionArray MtttGetCanonicalParentPositions(Position position) {
-    PositionHashSet deduplication_set;
-    PositionHashSetInit(&deduplication_set, 0.5);
-
-    PositionArray parents;
-    PositionArrayInit(&parents);
-
+static int MtttGetCanonicalParentPositions(
+    Position position,
+    Position parents[static kRegularSolverNumParentPositionsMax]) {
+    //
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
     BlankOX board[9] = {0};
     Unhash(position, board);
-
     BlankOX prev_turn = WhoseTurn(board) == kX ? kO : kX;
+    int ret = 0;
     for (int i = 0; i < 9; ++i) {
         if (board[i] == prev_turn) {
             Position parent = position - (int)prev_turn * three_to_the[i];
             parent = MtttGetCanonicalPosition(parent);
             if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
-            if (PositionHashSetContains(&deduplication_set, parent)) {
+            if (PositionHashSetContains(&dedup, parent)) {
                 continue;  // Already included.
             }
-            PositionHashSetAdd(&deduplication_set, parent);
-            PositionArrayAppend(&parents, parent);
+            PositionHashSetAdd(&dedup, parent);
+            parents[ret++] = parent;
         }
     }
-    PositionHashSetDestroy(&deduplication_set);
+    PositionHashSetDestroy(&dedup);
 
-    return parents;
+    return ret;
+}
+
+static MoveArray MtttGenerateMovesGameplay(Position position) {
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = MtttGenerateMoves(position, moves);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
 }
 
 static int MtttPositionToString(Position position, char *buffer) {
@@ -340,10 +354,9 @@ static int MtttPositionToString(Position position, char *buffer) {
         kPieceMap[board[6]], kPieceMap[board[7]], kPieceMap[board[8]]);
     if (actual_length >=
         kMtttGameplayApiCommon.position_string_length_max + 1) {
-        fprintf(
-            stderr,
-            "MtttTierPositionToString: (BUG) not enough space was allocated "
-            "to buffer. Please increase position_string_length_max.\n");
+        fprintf(stderr,
+                "MtttPositionToString: (BUG) not enough space was allocated "
+                "to buffer. Please increase position_string_length_max.\n");
         return kMemoryOverflowError;
     }
 

@@ -91,13 +91,15 @@ typedef struct ReverseGraph {
  *
  * @param graph Reverse graph to initialize.
  * @param child_tiers Array of child tiers of the current solving tier.
+ * @param num_child_tiers Number of child tiers in CHILD_TIERS.
  * @param this_tier Current solving tier.
  * @param GetTierSize Method to get the size of a tier in number of positions.
  * @return true on success,
  * @return false otherwise.
  */
-bool ReverseGraphInit(ReverseGraph *graph, const TierArray *child_tiers,
-                      Tier this_tier, int64_t (*GetTierSize)(Tier tier));
+bool ReverseGraphInit(ReverseGraph *graph, const Tier *child_tiers,
+                      int num_child_tiers, Tier this_tier,
+                      int64_t (*GetTierSize)(Tier tier));
 
 /** @brief Destroys the reverse GRAPH, freeing all allocated memory. */
 void ReverseGraphDestroy(ReverseGraph *graph);

@@ -106,46 +106,47 @@ static int64_t QuixoGetTierSize(Tier tier) {
     return TwoPieceHashGetNumPositions(t.unpacked[0], t.unpacked[1]);
 }
 
-static MoveArray GenerateMovesInternal(uint64_t board, int turn) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
+static int GenerateMovesInternal(uint64_t board, int turn,
+                                 Move moves[static kTierSolverNumMovesMax]) {
     QuixoMove m = kQuixoMoveInit;
     int opp_turn = !turn;
+    int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         m.unpacked.idx = i;
         uint64_t src_mask = kMoveLeft[curr_variant_idx][i][opp_turn];
         if (!(board & src_mask)) {
             m.unpacked.dir = kLeft;
-            MoveArrayAppend(&ret, m.hash);
+            moves[ret++] = m.hash;
         }
         src_mask = kMoveRight[curr_variant_idx][i][opp_turn];
         if (!(board & src_mask)) {
             m.unpacked.dir = kRight;
-            MoveArrayAppend(&ret, m.hash);
+            moves[ret++] = m.hash;
         }
         src_mask = kMoveUp[curr_variant_idx][i][opp_turn];
         if (!(board & src_mask)) {
             m.unpacked.dir = kUp;
-            MoveArrayAppend(&ret, m.hash);
+            moves[ret++] = m.hash;
         }
         src_mask = kMoveDown[curr_variant_idx][i][opp_turn];
         if (!(board & src_mask)) {
             m.unpacked.dir = kDown;
-            MoveArrayAppend(&ret, m.hash);
+            moves[ret++] = m.hash;
         }
     }
 
     return ret;
 }
 
-static MoveArray QuixoGenerateMoves(TierPosition tier_position) {
+static int QuixoGenerateMoves(TierPosition tier_position,
+                              Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
     uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
                                         t.unpacked[1]);
     int turn = TwoPieceHashGetTurn(tier_position.position);
 
-    return GenerateMovesInternal(board, turn);
+    return GenerateMovesInternal(board, turn, moves);
 }
 
 static Value QuixoPrimitive(TierPosition tier_position) {
@@ -249,8 +250,9 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return board & kEdges[curr_variant_idx][!turn];
 }
 
-static TierPositionArray QuixoGetCanonicalChildPositions(
-    TierPosition tier_position) {
+static int QuixoGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
     uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
@@ -258,42 +260,46 @@ static TierPositionArray QuixoGetCanonicalChildPositions(
     int turn = TwoPieceHashGetTurn(tier_position.position);
 
     // Generate all moves
-    MoveArray moves = GenerateMovesInternal(board, turn);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
-    TierPositionArray ret;
-    TierPositionArrayInit(&ret);
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        QuixoMove m = {.hash = moves.array[i]};
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
-        TierPositionArrayAppend(&ret, child);
+        children[ret++] = child;
     }
-
-    MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
 
+/**
+ * @brief This function tests if a position in the \p child tier whose turn is
+ * \p child_turn can be reached from a position in the \p parent tier. The tile
+ * flipped, which is reflected by the change in tier, must be consistent with
+ * the turn of the child position.
+ */
 static bool IsCorrectFlipping(QuixoTier child, QuixoTier parent,
                               int child_turn) {
     return (child.hash == parent.hash) ||
            !((child.unpacked[0] == parent.unpacked[0] + 1) ^ child_turn);
 }
 
-static PositionArray QuixoGetCanonicalParentPositions(
-    TierPosition tier_position, Tier parent_tier) {
+static int QuixoGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
     // Unhash
     QuixoTier child_t = {.hash = tier_position.tier};
     QuixoTier parent_t = {.hash = parent_tier};
-    PositionArray parents;
-    PositionArrayInit(&parents);
     int turn = TwoPieceHashGetTurn(tier_position.position);
-    if (!IsCorrectFlipping(child_t, parent_t, turn)) return parents;
+    if (!IsCorrectFlipping(child_t, parent_t, turn)) return 0;
+
     uint64_t board = TwoPieceHashUnhash(
         tier_position.position, child_t.unpacked[0], child_t.unpacked[1]);
     int opp_turn = !turn;
@@ -301,6 +307,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
     bool same_tier = (child_t.hash == parent_t.hash);
     PositionHashSet dedup;
     PositionHashSetInitSize(&dedup, 0.5, 127);
+    int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
         uint64_t dest_mask =
@@ -312,7 +319,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
-                PositionArrayAppend(&parents, new_pos);
+                parents[ret++] = new_pos;
             }
         }
 
@@ -325,7 +332,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
-                PositionArrayAppend(&parents, new_pos);
+                parents[ret++] = new_pos;
             }
         }
 
@@ -339,7 +346,7 @@ static PositionArray QuixoGetCanonicalParentPositions(
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
-                PositionArrayAppend(&parents, new_pos);
+                parents[ret++] = new_pos;
             }
         }
 
@@ -353,29 +360,30 @@ static PositionArray QuixoGetCanonicalParentPositions(
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
-                PositionArrayAppend(&parents, new_pos);
+                parents[ret++] = new_pos;
             }
         }
     }
     PositionHashSetDestroy(&dedup);
 
-    return parents;
+    return ret;
 }
 
 static int8_t GetNumBlanks(QuixoTier t) {
     return board_size - t.unpacked[0] - t.unpacked[1];
 }
 
-static TierArray QuixoGetChildTiers(Tier tier) {
+static int QuixoGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     QuixoTier t = {.hash = tier};
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
     if (GetNumBlanks(t) > 0) {
         ++t.unpacked[0];
-        TierArrayAppend(&ret, t.hash);
+        children[ret++] = t.hash;
         --t.unpacked[0];
         ++t.unpacked[1];
-        TierArrayAppend(&ret, t.hash);
+        children[ret++] = t.hash;
     }  // else: no children for tiers with no blanks
 
     return ret;
@@ -408,6 +416,18 @@ static const TierSolverApi kQuixoSolverApi = {
 };
 
 // ============================= kQuixoGameplayApi =============================
+
+MoveArray QuixoGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = QuixoGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static void BoardToStr(uint64_t board, char *buffer) {
     for (int i = 0; i < board_size; ++i) {
@@ -540,7 +560,7 @@ static const GameplayApiTier QuixoGameplayApiTier = {
 
     .TierPositionToString = QuixoTierPositionToString,
 
-    .GenerateMoves = QuixoGenerateMoves,
+    .GenerateMoves = QuixoGenerateMovesGameplay,
     .DoMove = QuixoDoMove,
     .Primitive = QuixoPrimitive,
 };

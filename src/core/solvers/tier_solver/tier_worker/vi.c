@@ -76,7 +76,8 @@ static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
 
 // Child tiers of the tier being solved.
-static TierArray child_tiers;
+static Tier child_tiers[kTierSolverNumChildTiersMax];
+static int num_child_tiers;  // Number of child tiers.
 
 // The maximum remoteness discovered at any winning/losing positions in the
 // child tiers of this tier.
@@ -96,23 +97,21 @@ static double checkpoint_save_cost;
 // ------------------------------ Step0Initialize ------------------------------
 
 static bool Step0_0SetupChildTiers(void) {
-    TierArray raw = api_internal->GetChildTiers(this_tier);
-    if (raw.size == kIllegalSize) return false;
-
+    Tier raw[kTierSolverNumChildTiersMax];
+    int num_raw = api_internal->GetChildTiers(this_tier, raw);
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
-    TierArrayInit(&child_tiers);
-    for (int64_t i = 0; i < raw.size; ++i) {
-        Tier canonical = api_internal->GetCanonicalTier(raw.array[i]);
+    num_child_tiers = 0;
+    for (int i = 0; i < num_raw; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(raw[i]);
 
         // Another child tier is symmetric to this one and was already added.
         if (TierHashSetContains(&dedup, canonical)) continue;
 
         TierHashSetAdd(&dedup, canonical);
-        TierArrayAppend(&child_tiers, canonical);
+        child_tiers[num_child_tiers++] = canonical;
     }
     TierHashSetDestroy(&dedup);
-    TierArrayDestroy(&raw);
 
     return true;
 }
@@ -145,8 +144,8 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier,
 // ----------------------------- Step1LoadChildren -----------------------------
 
 static bool Step1LoadChildren(void) {
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        Tier child_tier = child_tiers.array[i];
+    for (int i = 0; i < num_child_tiers; ++i) {
+        Tier child_tier = child_tiers[i];
         int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
         if (error != kNoError) return false;
@@ -241,12 +240,11 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     bool all_children_winning = true;
     int largest_win = -1;
     TierPosition tier_position = {.tier = this_tier, .position = pos};
-    TierPositionArray child_positions =
-        api_internal->GetCanonicalChildPositions(tier_position);
-    if (child_positions.size == kIllegalSize) return false;
-
-    for (int64_t i = 0; i < child_positions.size; ++i) {
-        TierPosition child_tier_position = child_positions.array[i];
+    TierPosition child_positions[kTierSolverNumChildPositionsMax];
+    int num_child_positions = api_internal->GetCanonicalChildPositions(
+        tier_position, child_positions);
+    for (int i = 0; i < num_child_positions; ++i) {
+        TierPosition child_tier_position = child_positions[i];
         Value child_value;
         int child_remoteness;
         if (child_tier_position.tier == this_tier) {
@@ -271,7 +269,6 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
                     DbManagerSetValue(pos, kWin);
                     DbManagerSetRemoteness(pos, iteration);
                     *updated = true;
-                    TierPositionArrayDestroy(&child_positions);
                     return true;
                 }
                 break;
@@ -294,7 +291,6 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
         *updated = true;
     }
 
-    TierPositionArrayDestroy(&child_positions);
     return true;
 }
 
@@ -360,12 +356,11 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
                                       bool *updated) {
     *updated = false;
     TierPosition tier_position = {.tier = this_tier, .position = pos};
-    TierPositionArray child_positions =
-        api_internal->GetCanonicalChildPositions(tier_position);
-    if (child_positions.size == kIllegalSize) return false;
-
-    for (int64_t i = 0; i < child_positions.size; ++i) {
-        TierPosition child_tier_position = child_positions.array[i];
+    TierPosition child_positions[kTierSolverNumChildPositionsMax];
+    int num_child_positions = api_internal->GetCanonicalChildPositions(
+        tier_position, child_positions);
+    for (int64_t i = 0; i < num_child_positions; ++i) {
+        TierPosition child_tier_position = child_positions[i];
         Value child_value;
         int child_remoteness;
         if (child_tier_position.tier == this_tier) {
@@ -386,7 +381,6 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
         }
     }
 
-    TierPositionArrayDestroy(&child_positions);
     return true;
 }
 
@@ -445,8 +439,8 @@ static bool Step4Iterate(int step, int remoteness) {
     }
 
     // The child tiers are no longer needed.
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        DbManagerUnloadTier(child_tiers.array[i]);
+    for (int i = 0; i < num_child_tiers; ++i) {
+        DbManagerUnloadTier(child_tiers[i]);
     }
 
     return true;
@@ -554,11 +548,11 @@ static bool Step7Cleanup(void) {
     }
     this_tier = kIllegalTier;
     this_tier_size = kIllegalSize;
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        Tier child_tier = child_tiers.array[i];
+    for (int64_t i = 0; i < num_child_tiers; ++i) {
+        Tier child_tier = child_tiers[i];
         if (DbManagerIsTierLoaded(child_tier)) DbManagerUnloadTier(child_tier);
     }
-    TierArrayDestroy(&child_tiers);
+    num_child_tiers = 0;
     DbManagerFreeSolvingTier();
 
     return error == kNoError;

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Regular Solver API.
- * @version 1.5.0
- * @date 2024-09-07
+ * @version 2.0.0
+ * @date 2025-01-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,6 +52,12 @@ typedef enum {
     kSingleTierGameTypeLoopy,
 } SingleTierGameType;
 
+typedef enum {
+    kRegularSolverNumMovesMax = 512,
+    kRegularSolverNumChildPositionsMax = kRegularSolverNumMovesMax,
+    kRegularSolverNumParentPositionsMax = kRegularSolverNumMovesMax,
+} RegularSolverConstants;
+
 /**
  * @brief Regular Solver API.
  *
@@ -68,8 +74,8 @@ typedef struct RegularSolverApi {
      * value smaller than the actual size, the database system will, at
      * some point, complain about an out-of-bounds array access and the solver
      * will fail. If this function returns a value larger than the actual size,
-     * there will be no error but more memory will be used and the size of the
-     * database may increase.
+     * there will be no error but memory usage and the size of the database may
+     * increase.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -85,21 +91,29 @@ typedef struct RegularSolverApi {
     Position (*GetInitialPosition)(void);
 
     /**
-     * @brief Returns an array of available moves at POSITION.
+     * @brief Stores the array of moves available at \p position to
+     * \p moves and returns the size of the array.
      *
-     * @details Assumes POSITION is legal. Results in undefined behavior
+     * @details Assumes \p position is legal. Results in undefined behavior
      * otherwise.
+     *
+     * @note To game developers: the current version of Regular Solver does not
+     * support more than \c kRegularSolverNumMovesMax moves to be generated. If
+     * you think your game may exceed this limit, please contact the author of
+     * this API.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
      */
-    MoveArray (*GenerateMoves)(Position position);
+    int (*GenerateMoves)(Position position,
+                         Move moves[static kRegularSolverNumMovesMax]);
 
     /**
-     * @brief Returns the value of POSITION if POSITION is primitive. Returns
-     * kUndecided otherwise.
+     * @brief Returns the value of \p position if \p position is primitive.
+     * Returns kUndecided otherwise.
      *
-     * @note Assumes POSITION is valid. Results in undefined behavior otherwise.
+     * @note Assumes \p position is valid. Results in undefined behavior
+     * otherwise.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -107,11 +121,12 @@ typedef struct RegularSolverApi {
     Value (*Primitive)(Position position);
 
     /**
-     * @brief Returns the resulting position after performing MOVE at POSITION.
+     * @brief Returns the resulting position after performing MOVE at \p
+     * position.
      *
-     * @note Assumes POSITION is valid and MOVE is a valid move at POSITION.
-     * Passing an illegal POSITION or an illegal move at POSITION results in
-     * undefined behavior.
+     * @note Assumes \p position is valid and MOVE is a valid move at \p
+     * position. Passing an illegal \p position or an illegal move at \p
+     * position results in undefined behavior.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -119,20 +134,20 @@ typedef struct RegularSolverApi {
     Position (*DoMove)(Position position, Move move);
 
     /**
-     * @brief Returns false if POSITION is definitely illegal. Returns true
-     * if POSITION is legal or if its legality cannot be easily determined
+     * @brief Returns false if \p position is definitely illegal. Returns true
+     * if \p position is legal or if its legality cannot be easily determined
      * by simple observation.
      *
      * @details A position is legal if and only if it is reachable from the
      * initial position. Note that this function is for speed optimization
      * only. It is not intended for statistical purposes. Even if this function
-     * reports that POSITION is legal, that position might in fact be
+     * reports that \p position is legal, that position might in fact be
      * unreachable from the initial position. However, if this function reports
-     * that POSITION is illegal, then it is definitely not reachable from the
+     * that \p position is illegal, then it is definitely not reachable from the
      * inital position.
      *
-     * @note Assumes POSITION is between 0 and GetNumPositions(). Passing an
-     * out-of-bounds POSITION results in undefined behavior.
+     * @note Assumes \p position is between 0 and GetNumPositions(). Passing an
+     * out-of-bounds \p position results in undefined behavior.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -140,14 +155,15 @@ typedef struct RegularSolverApi {
     bool (*IsLegalPosition)(Position position);
 
     /**
-     * @brief Returns the canonical position that is symmetric to POSITION.
+     * @brief Returns the canonical position that is symmetric to \p position.
      *
      * @details By convention, a canonical position is one with the smallest
      * hash value in a set of symmetrical positions. For each position[i] within
      * the set (including the canonical position itself), calling
      * GetCanonicalPosition() on position[i] returns the canonical position.
      *
-     * @note Assumes POSITION is legal. Results in undefined behavior otherwise.
+     * @note Assumes \p position is legal. Results in undefined behavior
+     * otherwise.
      *
      * @note This function is OPTIONAL, but is required for the Position
      * Symmetry Removal Optimization. If not implemented, the Optimization will
@@ -157,14 +173,15 @@ typedef struct RegularSolverApi {
 
     /**
      * @brief Returns the number of unique canonical child positions of
-     * POSITION. For games that do not support the Position Symmetry
+     * \p position. For games that do not support the Position Symmetry
      * Removal Optimization, all unique child positions are included.
      *
      * @details The word unique is emphasized here because it is possible, in
      * some games, that making different moves results in the same canonical
      * child position.
      *
-     * @note Assumes POSITION is legal. Results in undefined behavior otherwise.
+     * @note Assumes \p position is legal. Results in undefined behavior
+     * otherwise.
      *
      * @note This function is OPTIONAL, but can be implemented as an
      * optimization to first generating moves and then doing moves. If not
@@ -174,40 +191,58 @@ typedef struct RegularSolverApi {
     int (*GetNumberOfCanonicalChildPositions)(Position position);
 
     /**
-     * @brief Returns an array of unique canonical child positions of
-     * POSITION. For games that do not support the Position Symmetry
-     * Removal Optimization, all unique child positions are included.
+     * @brief Stores an array of unique canonical child positions of
+     * \p position into \p children and returns the size of the array. For
+     * games that do not support the Position Symmetry Removal Optimization, all
+     * unique child positions are included.
      *
      * @details The word unique is emphasized here because it is possible, in
      * some games, that making different moves results in the same canonical
      * child position.
      *
-     * @note Assumes POSITION is legal. Results in undefined behavior otherwise.
+     * @note To game developers: the current version of Regular Solver does not
+     * support more than \c kRegularSolverNumChildPositionsMax child positions
+     * to be generated. If you think your game may exceed this limit, please
+     * contact the author of this API.
+     *
+     * @note Assumes \p position is legal. Results in undefined behavior
+     * otherwise.
      *
      * @note This function is OPTIONAL, but can be implemented as an
      * optimization to first generating moves and then doing moves. If not
      * implemented, the system will replace calls to this function with calls to
      * GenerateMoves(), DoMove(), and GetCanonicalPosition().
      */
-    PositionArray (*GetCanonicalChildPositions)(Position position);
+    int (*GetCanonicalChildPositions)(
+        Position position,
+        Position children[static kRegularSolverNumChildPositionsMax]);
 
     /**
-     * @brief Returns an array of unique canonical parent positions of POSITION.
-     * For games that do not support the Position Symmetry Removal
-     * Optimization, all unique parent positions are included.
+     * @brief Stores an array of unique canonical parent positions of
+     * \p position in \p parents and returns the size of the array. For games
+     * that do not support the Position Symmetry Removal Optimization, all
+     * unique parent positions are included.
      *
      * @details The word unique is emphasized here because it is possible in
      * some games that a child position has two parent positions that are
      * symmetric to each other.
      *
-     * @note Assumes POSITION is legal. Results in undefined behavior otherwise.
+     * @note To game developers: the current version of Regular Solver does not
+     * support more than \c kRegularSolverNumParentPositionsMax parent positions
+     * to be generated. If you think your game may exceed this limit, please
+     * contact the author of this API.
+     *
+     * @note Assumes \p position is legal. Results in undefined behavior
+     * otherwise.
      *
      * @note This function is OPTIONAL, but is required for Retrograde Analysis.
      * If not implemented, Retrograde Analysis will be disabled and a reverse
      * graph for the current game variant will be built and stored in memory by
      * calling DoMove() on all legal positions.
      */
-    PositionArray (*GetCanonicalParentPositions)(Position position);
+    int (*GetCanonicalParentPositions)(
+        Position position,
+        Position parents[static kRegularSolverNumParentPositionsMax]);
 } RegularSolverApi;
 
 /** @brief Solver options of the Regular Solver. */

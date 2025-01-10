@@ -49,7 +49,10 @@ static const TierSolverApi *api_internal;
 
 static Tier this_tier;          // The tier being analyzed.
 static int64_t this_tier_size;  // Size of the tier being analyzed.
-static TierArray child_tiers;   // Array of canonical child tiers.
+
+// Array of canonical child tiers.
+static Tier child_tiers[kTierSolverNumChildTiersMax];
+static int num_child_tiers;  // Size of child_tiers.
 
 // Child tier to its index in the child_tiers array.
 static TierHashMap child_tier_to_index;
@@ -67,7 +70,8 @@ static PositionArray *discovered;  // Newly discovered positions.
 static int AnalysisStatus(Tier tier);
 
 static bool Step0Initialize(Analysis *dest);
-static TierArray GetCanonicalChildTiers(Tier tier);
+static int GetCanonicalChildTiers(
+    Tier tier, Tier canonical_children[kTierSolverNumChildTiersMax]);
 
 static bool Step1LoadDiscoveryMaps(void);
 static BitStream LoadDiscoveryMap(Tier tier);
@@ -145,29 +149,20 @@ static bool Step0Initialize(Analysis *dest) {
     num_threads = 1;
 #endif  // _OPENMP
     this_tier_size = api_internal->GetTierSize(this_tier);
-    child_tiers = GetCanonicalChildTiers(this_tier);
-    if (child_tiers.size < 0) return false;
+    num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
 
     fringe = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
     discovered = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
-    if (fringe == NULL || discovered == NULL) {
-        TierArrayDestroy(&child_tiers);
-        return false;
-    }
+    if (fringe == NULL || discovered == NULL) return false;
 
     InitFringe(fringe);
     InitFringe(discovered);
 
     TierHashMapInit(&child_tier_to_index, 0.5);
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        bool success =
-            TierHashMapSet(&child_tier_to_index, child_tiers.array[i], i);
-        if (!success) {
-            TierArrayDestroy(&child_tiers);
-            return false;
-        }
+    for (int i = 0; i < num_child_tiers; ++i) {
+        bool success = TierHashMapSet(&child_tier_to_index, child_tiers[i], i);
+        if (!success) return false;
     }
-    TierArrayDestroy(&child_tiers);
 
     memset(&this_tier_map, 0, sizeof(this_tier_map));
     child_tier_maps = NULL;
@@ -181,38 +176,37 @@ static bool Step0Initialize(Analysis *dest) {
     return true;
 }
 
-static TierArray GetCanonicalChildTiers(Tier tier) {
-    static const TierArray kInvalidTierArray;
-    TierArray children = api_internal->GetChildTiers(tier);
-    TierArray canonical_children;
-    TierHashSet deduplication;
-
-    if (children.array == NULL) return kInvalidTierArray;
-    TierArrayInit(&canonical_children);
-    TierHashSetInit(&deduplication, 0.5);
+static int GetCanonicalChildTiers(
+    Tier tier, Tier canonical_children[kTierSolverNumChildTiersMax]) {
+    //
+    Tier children[kTierSolverNumChildTiersMax];
+    int num_children = api_internal->GetChildTiers(tier, children);
 
     // Convert child tiers to canonical and deduplicate.
-    for (int64_t i = 0; i < children.size; ++i) {
-        Tier canonical = api_internal->GetCanonicalTier(children.array[i]);
-        if (TierHashSetContains(&deduplication, canonical)) continue;
-        TierHashSetAdd(&deduplication, canonical);
-        TierArrayAppend(&canonical_children, canonical);
+    TierHashSet dedup;
+    TierHashSetInit(&dedup, 0.5);
+    int ret = 0;
+    for (int i = 0; i < num_children; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(children[i]);
+        if (!TierHashSetContains(&dedup, canonical)) {
+            TierHashSetAdd(&dedup, canonical);
+            canonical_children[ret++] = canonical;
+        }
     }
+    TierHashSetDestroy(&dedup);
 
-    TierArrayDestroy(&children);
-    TierHashSetDestroy(&deduplication);
-    return canonical_children;
+    return ret;
 }
 
 static bool Step1LoadDiscoveryMaps(void) {
-    child_tier_maps = (BitStream *)calloc(child_tiers.size, sizeof(BitStream));
+    child_tier_maps = (BitStream *)calloc(num_child_tiers, sizeof(BitStream));
     if (child_tier_maps == NULL) return false;
 
 #ifdef _OPENMP
     child_tier_map_locks =
-        (omp_lock_t *)malloc(child_tiers.size * sizeof(omp_lock_t));
+        (omp_lock_t *)malloc(num_child_tiers * sizeof(omp_lock_t));
     if (child_tier_map_locks == NULL) return false;
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
+    for (int i = 0; i < num_child_tiers; ++i) {
         omp_init_lock(&child_tier_map_locks[i]);
     }
 #endif  // _OPENMP
@@ -220,8 +214,8 @@ static bool Step1LoadDiscoveryMaps(void) {
     this_tier_map = LoadDiscoveryMap(this_tier);
     if (this_tier_map.size == 0) return false;
 
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        child_tier_maps[i] = LoadDiscoveryMap(child_tiers.array[i]);
+    for (int i = 0; i < num_child_tiers; ++i) {
+        child_tier_maps[i] = LoadDiscoveryMap(child_tiers[i]);
         if (child_tier_maps[i].size == 0) return false;
     }
 
@@ -394,15 +388,14 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
 static TierPositionArray GetChildPositions(TierPosition tier_position,
                                            Analysis *dest) {
     TierPositionArray ret = {.array = NULL, .capacity = -1, .size = -1};
-    MoveArray moves = api_internal->GenerateMoves(tier_position);
-    if (moves.size < 0) return ret;
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = api_internal->GenerateMoves(tier_position, moves);
 
     TierPositionArrayInit(&ret);
     TierPositionHashSet deduplication_set;
     TierPositionHashSetInit(&deduplication_set, 0.5);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child =
-            api_internal->DoMove(tier_position, moves.array[i]);
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = api_internal->DoMove(tier_position, moves[i]);
         TierPositionArrayAppend(&ret, child);
         child.position = api_internal->GetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
@@ -421,10 +414,9 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     TierPositionHashSetDestroy(&deduplication_set);
 
     PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
-        AnalysisDiscoverMoves(dest, tier_position, (int)moves.size,
+        AnalysisDiscoverMoves(dest, tier_position, num_moves,
                               num_canonical_moves);
     }
-    MoveArrayDestroy(&moves);
 
     return ret;
 }
@@ -435,9 +427,9 @@ static bool IsCanonicalPosition(TierPosition tier_position) {
 }
 
 static bool Step4SaveChildMaps(void) {
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        int error = StatManagerSaveDiscoveryMap(&child_tier_maps[i],
-                                                child_tiers.array[i]);
+    for (int64_t i = 0; i < num_child_tiers; ++i) {
+        int error =
+            StatManagerSaveDiscoveryMap(&child_tier_maps[i], child_tiers[i]);
         if (error != 0) return false;
         BitStreamDestroy(&child_tier_maps[i]);
 #ifdef _OPENMP
@@ -513,10 +505,10 @@ static bool Step6SaveAnalysis(const Analysis *dest) {
 }
 
 static void Step7CleanUp(void) {
-    TierArrayDestroy(&child_tiers);
+    num_child_tiers = 0;
     TierHashMapDestroy(&child_tier_to_index);
     BitStreamDestroy(&this_tier_map);
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
+    for (int i = 0; i < num_child_tiers; ++i) {
         BitStreamDestroy(&child_tier_maps[i]);
 #ifdef _OPENMP
         omp_destroy_lock(&child_tier_map_locks[i]);

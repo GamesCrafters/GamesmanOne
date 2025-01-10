@@ -58,7 +58,7 @@ typedef struct TierPosition {
  * @brief Possible values of a game position.
  *
  * @details The following conventions must be observed as other components of
- * GAMESMAN relies on them:
+ * GAMESMAN rely on them:
  *   1. kUndecided is 0
  *   2. kLose < kDraw < kTie < kWin
  *   3. kNumValues is greater than all other possible values.
@@ -72,6 +72,32 @@ typedef enum Value {
     kWin,             /**< Current player is winning in a perfect play. */
     kNumValues,       /**< Number of possible legal values. */
 } Value;
+
+/**
+ * @brief Type of a tier.
+ */
+typedef enum TierType {
+    /**
+     * @brief A tier T is of this type if, for all positions P in T, the child
+     * positions of P is not in T. This also implies that T is loop-free.
+     */
+    kTierTypeImmediateTransition,
+
+    /**
+     * @brief A tier T is of this type if it is loop-free. That is, there are no
+     * cycles in the position graph of T.
+     */
+    kTierTypeLoopFree,
+
+    /**
+     * @brief A tier T is of this type if it is loopy, or if its loopiness is
+     * unclear.
+     *
+     * @note The loopy algorithm also works on loop-free tiers. Hence, this
+     * should be the default type of a tier if its type is not specified.
+     */
+    kTierTypeLoopy,
+} TierType;
 
 /**
  * @brief Pointer to a read-only string cannot be used to modify the contents of
