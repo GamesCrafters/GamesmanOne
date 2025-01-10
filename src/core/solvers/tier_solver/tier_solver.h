@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic tier solver capable of handling loopy and loop-free tiers.
- * @version 1.6.1
- * @date 2024-09-13
+ * @version 1.6.2
+ * @date 2025-01-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,29 +37,6 @@
 
 /** @brief The Tier Solver. */
 extern const Solver kTierSolver;
-
-typedef enum {
-    /**
-     * @brief A tier T is of this type if, for all positions P in T, the child
-     * positions of P is not in T. This also implies that T is loop-free.
-     */
-    kTierTypeImmediateTransition,
-
-    /**
-     * @brief A tier T is of this type if it is loop-free. That is, there are no
-     * cycles in the position graph of T.
-     */
-    kTierTypeLoopFree,
-
-    /**
-     * @brief A tier T is of this type if it is loopy, or if its loopiness is
-     * unclear.
-     *
-     * @note The loopy algorithm also works on loop-free tiers. Hence, this is
-     * the default type of a tier if its type is not specified.
-     */
-    kTierTypeLoopy,
-} TierType;
 
 /**
  * @brief Tier Solver API.
