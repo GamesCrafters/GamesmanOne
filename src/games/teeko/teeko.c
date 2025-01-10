@@ -149,7 +149,8 @@ static bool OnBoard(int row, int col) {
 }
 
 static void GenerateMovesFrom(const char board[static kBoardSize], int src,
-                              MoveArray *moves) {
+                              Move moves[static kTierSolverNumMovesMax],
+                              int *num_moves) {
     int src_row = src / kBoardCols, src_col = src % kBoardCols;
     for (int i = -1; i <= 1; ++i) {
         for (int j = -1; j <= 1; ++j) {
@@ -160,13 +161,14 @@ static void GenerateMovesFrom(const char board[static kBoardSize], int src,
             int dest = dest_row * kBoardCols + dest_col;
             if (board[dest] == '-') {
                 Move move = ConstructMove(src, dest);
-                MoveArrayAppend(moves, move);
+                moves[(*num_moves)++] = move;
             }
         }
     }
 }
 
-static MoveArray TeekoGenerateMoves(TierPosition tier_position) {
+static int TeekoGenerateMoves(TierPosition tier_position,
+                              Move moves[static kTierSolverNumMovesMax]) {
     Tier tier = tier_position.tier;
     Position pos = tier_position.position;
 
@@ -177,21 +179,19 @@ static MoveArray TeekoGenerateMoves(TierPosition tier_position) {
     (void)success;
     int turn = GenericHashGetTurnLabel(tier, pos);
     char piece_to_move = kPlayerPiece[turn];
-    MoveArray ret;
-    MoveArrayInit(&ret);
-
+    int ret = 0;
     if (tier < 8) {
         // If in dropping phase, the current player may drop a piece in any
         // empty space.
         for (int i = 0; i < kBoardSize; ++i) {
-            if (board[i] == '-') MoveArrayAppend(&ret, i);
+            if (board[i] == '-') moves[ret++] = i;
         }
     } else {
         // If in moving phase, the current player may move one of their pieces
         // to an adjacent empty space.
         for (int i = 0; i < kBoardSize; ++i) {
             if (board[i] == piece_to_move) {
-                GenerateMovesFrom(board, i, &ret);
+                GenerateMovesFrom(board, i, moves, &ret);
             }
         }
     }
@@ -307,11 +307,11 @@ static Position TeekoGetCanonicalPosition(TierPosition tier_position) {
     return ret;
 }
 
-static TierArray TeekoGetChildTiers(Tier tier) {
-    TierArray ret;
-    TierArrayInit(&ret);
+static int TeekoGetChildTiers(Tier tier,
+                              Tier children[kTierSolverNumChildTiersMax]) {
     assert(tier >= 0 && tier <= 8);
-    if (tier < 8) TierArrayAppend(&ret, tier + 1);
+    int ret = 0;
+    if (tier < 8) children[ret++] = tier + 1;
 
     return ret;
 }
@@ -345,6 +345,18 @@ static const TierSolverApi kTeekoSolverApi = {
 };
 
 // ============================= kTeekoGameplayApi =============================
+
+static MoveArray TeekoGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = TeekoGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 // Simple automatic board string formatting from Teeko.
 static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
@@ -443,7 +455,7 @@ static const GameplayApiTier TeekoGameplayApiTier = {
 
     .TierPositionToString = TeekoTierPositionToString,
 
-    .GenerateMoves = TeekoGenerateMoves,
+    .GenerateMoves = TeekoGenerateMovesGameplay,
     .DoMove = TeekoDoMove,
     .Primitive = TeekoPrimitive,
 };
@@ -640,7 +652,7 @@ static const UwapiTier kTeekoUwapiTier = {
     .GetInitialPosition = TeekoGetInitialPosition,
     .GetRandomLegalTierPosition = NULL,
 
-    .GenerateMoves = TeekoGenerateMoves,
+    .GenerateMoves = TeekoGenerateMovesGameplay,
     .DoMove = TeekoDoMove,
     .Primitive = TeekoPrimitive,
 
