@@ -1,5 +1,7 @@
 /**
  * @file quixo.c
+ * @author François Bonnet: original published version,
+ *         arXiv:2007.15895v1
  * @author Robert Shi (robertyishi@berkeley.edu),
  * @author Maria Rufova,
  * @author Benji Xu,
@@ -38,7 +40,6 @@
 #include "core/generic_hash/two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
-#include "games/quixo/quixo_constants.h"
 
 // =================================== Types ===================================
 
@@ -64,9 +65,361 @@ typedef union {
 
 // ================================= Constants =================================
 
+enum {
+    kNumPlayers = 2,
+    kNumVariants = 3,
+    kSideLengthMax = 5,
+    kBoardSizeMax = kSideLengthMax * kSideLengthMax,
+    kNumLinesMax = kSideLengthMax * 2 + 2,
+    kNumMovesPerDirMax = kSideLengthMax * 3 - 4,
+};
+
 static const QuixoMove kQuixoMoveInit = {.hash = 0};
 
 static const char kDirToChar[] = {'R', 'L', 'D', 'U'};
+
+static const int kNumLines[kNumVariants] = {
+    5 * 2 + 2,
+    4 * 2 + 2,
+    3 * 2 + 2,
+};
+
+static const int kNumMovesPerDir[kNumVariants] = {
+    5 * 3 - 4,
+    4 * 3 - 4,
+    3 * 3 - 4,
+};
+
+static const uint64_t kLines[kNumVariants][kNumPlayers][kNumLinesMax] = {
+    // =========
+    // == 5x5 ==
+    // =========
+    {
+        // 5x5 X
+        {0x1f0000000000000, 0xf800000000000, 0x7c0000000000, 0x3e000000000,
+         0x1f00000000, 0x108421000000000, 0x84210800000000, 0x42108400000000,
+         0x21084200000000, 0x10842100000000, 0x104104100000000,
+         0x11111000000000},
+        // 5x5 O
+        {0x1f00000, 0xf8000, 0x7c00, 0x3e0, 0x1f, 0x1084210, 0x842108, 0x421084,
+         0x210842, 0x108421, 0x1041041, 0x111110},
+    },
+    // =========
+    // == 4x4 ==
+    // =========
+    {
+        // 4x4 X
+        {0xf00000000000, 0xf0000000000, 0xf000000000, 0xf00000000,
+         0x888800000000, 0x444400000000, 0x222200000000, 0x111100000000,
+         0x842100000000, 0x124800000000},
+        // 4x4 O
+        {0xf000, 0xf00, 0xf0, 0xf, 0x8888, 0x4444, 0x2222, 0x1111, 0x8421,
+         0x1248},
+    },
+    // =========
+    // == 3x3 ==
+    // =========
+    {
+        // 3x3 X
+        {0x1c000000000, 0x3800000000, 0x700000000, 0x12400000000, 0x9200000000,
+         0x4900000000, 0x11100000000, 0x5400000000},
+        // 3x3 O
+        {0x1c0, 0x38, 0x7, 0x124, 0x92, 0x49, 0x111, 0x54},
+    },
+};
+
+static const uint64_t kEdges[kNumVariants][kNumPlayers] = {
+    // 5x5
+    {0x1f8c63f00000000, 0x1f8c63f},
+    // 4x4
+    {0xf99f00000000, 0xf99f},
+    // 3x3
+    {0x1ef00000000, 0x1ef},
+};
+
+static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][4] = {
+    // =========
+    // == 5x5 ==
+    // =========
+    {
+        {0x100000000000000, 0x1000000, 0x10000000000000, 0x1f0000001f00000},
+        {0x80000000000000, 0x800000, 0x10000000000000, 0xf0000000f00000},
+        {0x40000000000000, 0x400000, 0x10000000000000, 0x70000000700000},
+        {0x20000000000000, 0x200000, 0x10000000000000, 0x30000000300000},
+        {0x8000000000000, 0x80000, 0x800000000000, 0xf8000000f8000},
+        {0x400000000000, 0x4000, 0x40000000000, 0x7c0000007c00},
+        {0x20000000000, 0x200, 0x2000000000, 0x3e0000003e0},
+        {0x1000000000, 0x10, 0x100000000, 0x1f0000001f},
+        {0x800000000, 0x8, 0x100000000, 0xf0000000f},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
+    // =========
+    // == 4x4 ==
+    // =========
+    {
+        {0x800000000000, 0x8000, 0x100000000000, 0xf0000000f000},
+        {0x400000000000, 0x4000, 0x100000000000, 0x700000007000},
+        {0x200000000000, 0x2000, 0x100000000000, 0x300000003000},
+        {0x80000000000, 0x800, 0x10000000000, 0xf0000000f00},
+        {0x8000000000, 0x80, 0x1000000000, 0xf0000000f0},
+        {0x800000000, 0x8, 0x100000000, 0xf0000000f},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
+    // =========
+    // == 3x3 ==
+    // =========
+    {
+        {0x10000000000, 0x100, 0x4000000000, 0x1c0000001c0},
+        {0x8000000000, 0x80, 0x4000000000, 0xc0000000c0},
+        {0x2000000000, 0x20, 0x800000000, 0x3800000038},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
+};
+
+static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][4] = {
+    // =========
+    // == 5x5 ==
+    // =========
+    {
+        {0x80000000000000, 0x800000, 0x100000000000000, 0x180000001800000},
+        {0x40000000000000, 0x400000, 0x100000000000000, 0x1c0000001c00000},
+        {0x20000000000000, 0x200000, 0x100000000000000, 0x1e0000001e00000},
+        {0x10000000000000, 0x100000, 0x100000000000000, 0x1f0000001f00000},
+        {0x800000000000, 0x8000, 0x8000000000000, 0xf8000000f8000},
+        {0x40000000000, 0x400, 0x400000000000, 0x7c0000007c00},
+        {0x2000000000, 0x20, 0x20000000000, 0x3e0000003e0},
+        {0x800000000, 0x8, 0x1000000000, 0x1800000018},
+        {0x400000000, 0x4, 0x1000000000, 0x1c0000001c},
+        {0x200000000, 0x2, 0x1000000000, 0x1e0000001e},
+        {0x100000000, 0x1, 0x1000000000, 0x1f0000001f},
+    },
+    // =========
+    // == 4x4 ==
+    // =========
+    {
+        {0x400000000000, 0x4000, 0x800000000000, 0xc0000000c000},
+        {0x200000000000, 0x2000, 0x800000000000, 0xe0000000e000},
+        {0x100000000000, 0x1000, 0x800000000000, 0xf0000000f000},
+        {0x10000000000, 0x100, 0x80000000000, 0xf0000000f00},
+        {0x1000000000, 0x10, 0x8000000000, 0xf0000000f0},
+        {0x400000000, 0x4, 0x800000000, 0xc0000000c},
+        {0x200000000, 0x2, 0x800000000, 0xe0000000e},
+        {0x100000000, 0x1, 0x800000000, 0xf0000000f},
+    },
+    // =========
+    // == 3x3 ==
+    // =========
+    {
+        {0x8000000000, 0x80, 0x10000000000, 0x18000000180},
+        {0x4000000000, 0x40, 0x10000000000, 0x1c0000001c0},
+        {0x800000000, 0x8, 0x2000000000, 0x3800000038},
+        {0x200000000, 0x2, 0x400000000, 0x600000006},
+        {0x100000000, 0x1, 0x400000000, 0x700000007},
+    },
+};
+
+static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][4] = {
+    // =========
+    // == 5x5 ==
+    // =========
+    {
+        {0x100000000000000, 0x1000000, 0x1000000000, 0x108421001084210},
+        {0x80000000000000, 0x800000, 0x800000000, 0x84210800842108},
+        {0x40000000000000, 0x400000, 0x400000000, 0x42108400421084},
+        {0x20000000000000, 0x200000, 0x200000000, 0x21084200210842},
+        {0x10000000000000, 0x100000, 0x100000000, 0x10842100108421},
+        {0x8000000000000, 0x80000, 0x1000000000, 0x8421000084210},
+        {0x800000000000, 0x8000, 0x100000000, 0x842100008421},
+        {0x400000000000, 0x4000, 0x1000000000, 0x421000004210},
+        {0x40000000000, 0x400, 0x100000000, 0x42100000421},
+        {0x20000000000, 0x200, 0x1000000000, 0x21000000210},
+        {0x2000000000, 0x20, 0x100000000, 0x2100000021},
+    },
+    // =========
+    // == 4x4 ==
+    // =========
+    {
+        {0x800000000000, 0x8000, 0x800000000, 0x888800008888},
+        {0x400000000000, 0x4000, 0x400000000, 0x444400004444},
+        {0x200000000000, 0x2000, 0x200000000, 0x222200002222},
+        {0x100000000000, 0x1000, 0x100000000, 0x111100001111},
+        {0x80000000000, 0x800, 0x800000000, 0x88800000888},
+        {0x10000000000, 0x100, 0x100000000, 0x11100000111},
+        {0x8000000000, 0x80, 0x800000000, 0x8800000088},
+        {0x1000000000, 0x10, 0x100000000, 0x1100000011},
+    },
+    // =========
+    // == 3x3 ==
+    // =========
+    {
+        {0x10000000000, 0x100, 0x400000000, 0x12400000124},
+        {0x8000000000, 0x80, 0x200000000, 0x9200000092},
+        {0x4000000000, 0x40, 0x100000000, 0x4900000049},
+        {0x2000000000, 0x20, 0x400000000, 0x2400000024},
+        {0x800000000, 0x8, 0x100000000, 0x900000009},
+    },
+};
+
+static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][4] = {
+    // =========
+    // == 5x5 ==
+    // =========
+    {
+        {0x8000000000000, 0x80000, 0x100000000000000, 0x108000001080000},
+        {0x800000000000, 0x8000, 0x10000000000000, 0x10800000108000},
+        {0x400000000000, 0x4000, 0x100000000000000, 0x108400001084000},
+        {0x40000000000, 0x400, 0x10000000000000, 0x10840000108400},
+        {0x20000000000, 0x200, 0x100000000000000, 0x108420001084200},
+        {0x2000000000, 0x20, 0x10000000000000, 0x10842000108420},
+        {0x1000000000, 0x10, 0x100000000000000, 0x108421001084210},
+        {0x800000000, 0x8, 0x80000000000000, 0x84210800842108},
+        {0x400000000, 0x4, 0x40000000000000, 0x42108400421084},
+        {0x200000000, 0x2, 0x20000000000000, 0x21084200210842},
+        {0x100000000, 0x1, 0x10000000000000, 0x10842100108421},
+    },
+    // =========
+    // == 4x4 ==
+    // =========
+    {
+        {0x80000000000, 0x800, 0x800000000000, 0x880000008800},
+        {0x10000000000, 0x100, 0x100000000000, 0x110000001100},
+        {0x8000000000, 0x80, 0x800000000000, 0x888000008880},
+        {0x1000000000, 0x10, 0x100000000000, 0x111000001110},
+        {0x800000000, 0x8, 0x800000000000, 0x888800008888},
+        {0x400000000, 0x4, 0x400000000000, 0x444400004444},
+        {0x200000000, 0x2, 0x200000000000, 0x222200002222},
+        {0x100000000, 0x1, 0x100000000000, 0x111100001111},
+    },
+    // =========
+    // == 3x3 ==
+    // =========
+    {
+        {0x2000000000, 0x20, 0x10000000000, 0x12000000120},
+        {0x800000000, 0x8, 0x4000000000, 0x4800000048},
+        {0x400000000, 0x4, 0x10000000000, 0x12400000124},
+        {0x200000000, 0x2, 0x8000000000, 0x9200000092},
+        {0x100000000, 0x1, 0x4000000000, 0x4900000049},
+    },
+};
+
+static const int kDirIndexToSrc[kNumVariants][4][kNumMovesPerDirMax] = {
+    // 5x5
+    {
+        // 5x5 Left
+        {0, 1, 2, 3, 5, 10, 15, 20, 21, 22, 23},
+        // 5x5 Right
+        {1, 2, 3, 4, 9, 14, 19, 21, 22, 23, 24},
+        // 5x5 Up
+        {0, 1, 2, 3, 4, 5, 9, 10, 14, 15, 19},
+        // 5x5 Down
+        {5, 9, 10, 14, 15, 19, 20, 21, 22, 23, 24},
+    },
+    // 4x4
+    {
+        // 4x4 Left
+        {0, 1, 2, 4, 8, 12, 13, 14},
+        // 4x4 Right
+        {1, 2, 3, 7, 11, 13, 14, 15},
+        // 4x4 Up
+        {0, 1, 2, 3, 4, 7, 8, 11},
+        // 4x4 Down
+        {4, 7, 8, 11, 12, 13, 14, 15},
+    },
+    // 3x3
+    {
+        // 3x3 Left
+        {0, 1, 3, 6, 7},
+        // 3x3 Right
+        {1, 2, 5, 7, 8},
+        // 3x3 Up
+        {0, 1, 2, 3, 5},
+        // 3x3 Down
+        {3, 5, 6, 7, 8},
+    },
+};
+
+static const int kDirSrcToIndex[kNumVariants][4][kBoardSizeMax] = {
+    // 5x5
+    {
+        // 5x5 Left
+        {0, 1, 2, 3, 0, 4, 0, 0, 0, 0, 5,  0, 0,
+         0, 0, 6, 0, 0, 0, 0, 7, 8, 9, 10, 0},
+        // 5x5 Right
+        {0, 0, 1, 2, 3, 0, 0, 0, 0, 4, 0, 0, 0,
+         0, 5, 0, 0, 0, 0, 6, 0, 7, 8, 9, 10},
+        // 5x5 Up
+        {0, 1, 2, 3, 4, 5, 0,  0, 0, 6, 7, 0, 0,
+         0, 8, 9, 0, 0, 0, 10, 0, 0, 0, 0, 0},
+        // 5x5 Down
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0,
+         0, 3, 4, 0, 0, 0, 5, 6, 7, 8, 9, 10},
+    },
+    // 4x4
+    {
+        // 4x4 Left
+        {0, 1, 2, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 6, 7, 0},
+        // 4x4 Right
+        {0, 0, 1, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 5, 6, 7},
+        // 4x4 Up
+        {0, 1, 2, 3, 4, 0, 0, 5, 6, 0, 0, 6, 0, 0, 0, 0},
+        // 4x4 Down
+        {0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 3, 4, 5, 6, 7},
+    },
+    // 3x3
+    {
+        // 3x3 Left
+        {0, 1, 0, 2, 0, 0, 3, 4, 0},
+        // 3x3 Right
+        {0, 0, 1, 0, 0, 2, 0, 3, 4},
+        // 3x3 Up
+        {0, 1, 2, 3, 0, 4, 0, 0, 0},
+        // 3x3 Down
+        {0, 0, 0, 0, 0, 1, 2, 3, 4},
+    },
+};
+
+static const int kSymmetryMatrix[kNumVariants][7][kBoardSizeMax] = {
+    // 5x5
+    {
+        {20, 15, 10, 5,  0,  21, 16, 11, 6,  1,  22, 17, 12,
+         7,  2,  23, 18, 13, 8,  3,  24, 19, 14, 9,  4},
+        {24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12,
+         11, 10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0},
+        {4,  9,  14, 19, 24, 3,  8,  13, 18, 23, 2,  7, 12,
+         17, 22, 1,  6,  11, 16, 21, 0,  5,  10, 15, 20},
+        {4,  3,  2,  1,  0,  9,  8,  7,  6,  5,  14, 13, 12,
+         11, 10, 19, 18, 17, 16, 15, 24, 23, 22, 21, 20},
+        {24, 19, 14, 9,  4,  23, 18, 13, 8,  3,  22, 17, 12,
+         7,  2,  21, 16, 11, 6,  1,  20, 15, 10, 5,  0},
+        {20, 21, 22, 23, 24, 15, 16, 17, 18, 19, 10, 11, 12,
+         13, 14, 5,  6,  7,  8,  9,  0,  1,  2,  3,  4},
+        {0,  5,  10, 15, 20, 1,  6,  11, 16, 21, 2,  7, 12,
+         17, 22, 3,  8,  13, 18, 23, 4,  9,  14, 19, 24},
+    },
+    // 4x4
+    {
+        {12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3},
+        {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
+        {3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12},
+        {3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12},
+        {15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0},
+        {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3},
+        {0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15},
+    },
+    // 3x3
+    {
+        {6, 3, 0, 7, 4, 1, 8, 5, 2},
+        {8, 7, 6, 5, 4, 3, 2, 1, 0},
+        {2, 5, 8, 1, 4, 7, 0, 3, 6},
+        {2, 1, 0, 5, 4, 3, 8, 7, 6},
+        {8, 5, 2, 7, 4, 1, 6, 3, 0},
+        {6, 7, 8, 3, 4, 5, 0, 1, 2},
+        {0, 3, 6, 1, 4, 7, 2, 5, 8},
+    },
+};
 
 // ============================= Variant Settings =============================
 
@@ -250,6 +603,38 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return board & kEdges[curr_variant_idx][!turn];
 }
 
+static uint64_t ApplySymmetry(uint64_t board, int symm_idx) {
+    uint64_t new_board = 0;
+    for (int i = 0; i < board_size; ++i) {
+        int new_pos = kSymmetryMatrix[curr_variant_idx][symm_idx][i];
+        new_board |= (((board >> i) & 1ULL) << new_pos) |
+                     (((board >> (i + 32)) & 1ULL) << (new_pos + 32));
+    }
+
+    return new_board;
+}
+
+static uint64_t GetCanonicalBoard(uint64_t board) {
+    // Apply symmetry and pick the smallest hash
+    uint64_t ret = board;
+    for (int i = 0; i < 7; ++i) {
+        uint64_t new_board = ApplySymmetry(board, i);
+        if (new_board < ret) ret = new_board;
+    }
+
+    return ret;
+}
+
+static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
+    // Unhash
+    QuixoTier t = {.hash = tier_position.tier};
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
+
+    return TwoPieceHashHash(GetCanonicalBoard(board), turn);
+}
+
 static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
@@ -268,6 +653,7 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
+        child.position = QuixoGetCanonicalPosition(child);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
     }
@@ -298,6 +684,7 @@ static int QuixoGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
+        child.position = QuixoGetCanonicalPosition(child);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
         children[ret++] = child;
@@ -345,6 +732,7 @@ static int QuixoGetCanonicalParentPositions(
             B = kMoveLeft[curr_variant_idx][i][3];
             C = kMoveLeft[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board = (((board & B) >> 1) & B) | (board & ~B) | C;
+            new_board = GetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -358,6 +746,7 @@ static int QuixoGetCanonicalParentPositions(
             B = kMoveRight[curr_variant_idx][i][3];
             C = kMoveRight[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board = (((board & B) << 1) & B) | (board & ~B) | C;
+            new_board = GetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -372,6 +761,7 @@ static int QuixoGetCanonicalParentPositions(
             C = kMoveUp[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board =
                 (((board & B) >> side_length) & B) | (board & ~B) | C;
+            new_board = GetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -386,6 +776,7 @@ static int QuixoGetCanonicalParentPositions(
             C = kMoveDown[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board =
                 (((board & B) << side_length) & B) | (board & ~B) | C;
+            new_board = GetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -436,7 +827,7 @@ static const TierSolverApi kQuixoSolverApi = {
     .Primitive = QuixoPrimitive,
     .DoMove = QuixoDoMove,
     .IsLegalPosition = QuixoIsLegalPosition,
-    .GetCanonicalPosition = NULL,
+    .GetCanonicalPosition = QuixoGetCanonicalPosition,
     .GetNumberOfCanonicalChildPositions =
         QuixoGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = QuixoGetCanonicalChildPositions,
