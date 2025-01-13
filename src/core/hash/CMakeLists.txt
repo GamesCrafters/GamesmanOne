@@ -1,9 +1,9 @@
-set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/context.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/generic_hash.h
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/generic.h
             ${CMAKE_CURRENT_SOURCE_DIR}/two_piece.h)
 
-set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/context.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/generic_hash.c
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/generic.c
             ${CMAKE_CURRENT_SOURCE_DIR}/two_piece.c)
 
 add_library(generic_hash STATIC ${HEADERS} ${SOURCES})

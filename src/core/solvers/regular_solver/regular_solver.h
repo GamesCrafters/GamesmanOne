@@ -53,7 +53,7 @@ typedef enum {
 } SingleTierGameType;
 
 typedef enum {
-    kRegularSolverNumMovesMax = 512,
+    kRegularSolverNumMovesMax = 1024,
     kRegularSolverNumChildPositionsMax = kRegularSolverNumMovesMax,
     kRegularSolverNumParentPositionsMax = kRegularSolverNumMovesMax,
 } RegularSolverConstants;

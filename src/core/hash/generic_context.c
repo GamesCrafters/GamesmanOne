@@ -1,5 +1,5 @@
 /**
- * @file context.c
+ * @file generic_context.c
  * @author Scott Lindeneau: designer of the original version.
  * @author Robert Shi (robertyishi@berkeley.edu): Adaptation to GamesmanOne,
  *         optimizations, and additional features.
@@ -30,7 +30,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/generic_hash/context.h"
+#include "core/hash/generic_context.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool

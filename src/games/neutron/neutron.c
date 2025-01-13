@@ -34,7 +34,7 @@
 #include <stdlib.h>  // atoi
 #include <string.h>  // strlen, strtok_r
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"

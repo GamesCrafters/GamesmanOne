@@ -39,7 +39,7 @@
 #include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // atoi
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 

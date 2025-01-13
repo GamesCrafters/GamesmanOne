@@ -37,7 +37,7 @@
 #include <stdlib.h>  // atoi
 #include <string.h>  // strtok_r, strlen, strcpy
 
-#include "core/generic_hash/two_piece.h"
+#include "core/hash/two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -381,9 +381,11 @@ static const int kDirSrcToIndex[kNumVariants][4][kBoardSizeMax] = {
     },
 };
 
-static const int kSymmetryMatrix[kNumVariants][7][kBoardSizeMax] = {
+static const int kSymmetryMatrix[kNumVariants][8][kBoardSizeMax] = {
     // 5x5
     {
+        {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+         13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24},
         {20, 15, 10, 5,  0,  21, 16, 11, 6,  1,  22, 17, 12,
          7,  2,  23, 18, 13, 8,  3,  24, 19, 14, 9,  4},
         {24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12,
@@ -401,6 +403,7 @@ static const int kSymmetryMatrix[kNumVariants][7][kBoardSizeMax] = {
     },
     // 4x4
     {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
         {12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3},
         {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
         {3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12},
@@ -411,6 +414,7 @@ static const int kSymmetryMatrix[kNumVariants][7][kBoardSizeMax] = {
     },
     // 3x3
     {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8},
         {6, 3, 0, 7, 4, 1, 8, 5, 2},
         {8, 7, 6, 5, 4, 3, 2, 1, 0},
         {2, 5, 8, 1, 4, 7, 0, 3, 6},
@@ -603,28 +607,6 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
     return board & kEdges[curr_variant_idx][!turn];
 }
 
-static uint64_t ApplySymmetry(uint64_t board, int symm_idx) {
-    uint64_t new_board = 0;
-    for (int i = 0; i < board_size; ++i) {
-        int new_pos = kSymmetryMatrix[curr_variant_idx][symm_idx][i];
-        new_board |= (((board >> i) & 1ULL) << new_pos) |
-                     (((board >> (i + 32)) & 1ULL) << (new_pos + 32));
-    }
-
-    return new_board;
-}
-
-static uint64_t GetCanonicalBoard(uint64_t board) {
-    // Apply symmetry and pick the smallest hash
-    uint64_t ret = board;
-    for (int i = 0; i < 7; ++i) {
-        uint64_t new_board = ApplySymmetry(board, i);
-        if (new_board < ret) ret = new_board;
-    }
-
-    return ret;
-}
-
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
@@ -632,7 +614,7 @@ static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
                                         t.unpacked[1]);
     int turn = TwoPieceHashGetTurn(tier_position.position);
 
-    return TwoPieceHashHash(GetCanonicalBoard(board), turn);
+    return TwoPieceHashHash(TwoPieceHashGetCanonicalBoard(board), turn);
 }
 
 static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
@@ -732,7 +714,7 @@ static int QuixoGetCanonicalParentPositions(
             B = kMoveLeft[curr_variant_idx][i][3];
             C = kMoveLeft[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board = (((board & B) >> 1) & B) | (board & ~B) | C;
-            new_board = GetCanonicalBoard(new_board);
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -746,7 +728,7 @@ static int QuixoGetCanonicalParentPositions(
             B = kMoveRight[curr_variant_idx][i][3];
             C = kMoveRight[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board = (((board & B) << 1) & B) | (board & ~B) | C;
-            new_board = GetCanonicalBoard(new_board);
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -761,7 +743,7 @@ static int QuixoGetCanonicalParentPositions(
             C = kMoveUp[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board =
                 (((board & B) >> side_length) & B) | (board & ~B) | C;
-            new_board = GetCanonicalBoard(new_board);
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -776,7 +758,7 @@ static int QuixoGetCanonicalParentPositions(
             C = kMoveDown[curr_variant_idx][i][opp_turn] * same_tier;
             uint64_t new_board =
                 (((board & B) << side_length) & B) | (board & ~B) | C;
-            new_board = GetCanonicalBoard(new_board);
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
             Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
@@ -1003,7 +985,11 @@ static const GameVariant *QuixoGetCurrentVariant(void) {
 static int QuixoInitVariant(int selection) {
     side_length = 5 - selection;
     board_size = side_length * side_length;
-    int ret = TwoPieceHashInit(board_size);
+    const int *symmetry_matrix[8];
+    for (int i = 0; i < 8; ++i) {
+        symmetry_matrix[i] = kSymmetryMatrix[curr_variant_idx][i];
+    }
+    int ret = TwoPieceHashInit(side_length, side_length, symmetry_matrix, 8);
     if (ret != kNoError) return ret;
 
     return kNoError;

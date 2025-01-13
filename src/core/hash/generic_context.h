@@ -1,5 +1,5 @@
 /**
- * @file context.h
+ * @file generic_context.h
  * @author Scott Lindeneau: designer of the original version.
  * @author Robert Shi (robertyishi@berkeley.edu): Adaptation to GamesmanOne,
  *         optimizations, and additional features.
@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
-#define GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
+#ifndef GAMESMANONE_CORE_HASH_GENERIC_CONTEXT_H_
+#define GAMESMANONE_CORE_HASH_GENERIC_CONTEXT_H_
 
 #include "core/types/gamesman_types.h"
 
@@ -309,4 +309,4 @@ bool GenericHashContextUnhash(GenericHashContext *context, Position hash,
  */
 int GenericHashContextGetTurn(GenericHashContext *context, Position hash);
 
-#endif  // GAMESMANONE_CORE_GENERIC_HASH_CONTEXT_H_
+#endif  // GAMESMANONE_CORE_HASH_GENERIC_CONTEXT_H_

@@ -1,4 +1,4 @@
-#include "core/generic_hash/two_piece.h"
+#include "core/hash/two_piece.h"
 
 #ifdef GAMESMAN_HAS_BMI2
 #include <immintrin.h>  // _pdep_u32, _pext_u32
@@ -16,11 +16,19 @@ static int curr_board_size;
 static int32_t *pattern_to_order;
 static uint32_t **pop_order_to_pattern;
 
-intptr_t TwoPieceHashGetMemoryRequired(int board_size) {
+static int curr_num_symmetries;
+static uint32_t **pattern_symmetries;  // [symm][pattern]
+
+intptr_t TwoPieceHashGetMemoryRequired(int rows, int cols, int num_symmetries) {
+    int board_size = rows * cols;
     intptr_t ret = (1 << board_size) * sizeof(int32_t);
     ret += (board_size + 1) * sizeof(uint32_t *);
     for (int i = 0; i <= board_size; ++i) {
-        ret += NChooseR(curr_board_size, i) * sizeof(uint32_t);
+        ret += NChooseR(board_size, i) * sizeof(uint32_t);
+    }
+
+    if (num_symmetries > 1) {
+        ret += num_symmetries * (1 << board_size) * sizeof(uint32_t);
     }
 
     return ret;
@@ -32,24 +40,12 @@ static int InitTables(void) {
         (int32_t *)malloc((1 << curr_board_size) * sizeof(int32_t));
     pop_order_to_pattern =
         (uint32_t **)malloc((curr_board_size + 1) * sizeof(uint32_t *));
-    if (!pattern_to_order || !pop_order_to_pattern) {
-        fprintf(stderr, "TwoPieceHashInit: failed to allocate memory\n");
-        free(pattern_to_order);
-        free(pop_order_to_pattern);
-        return kMallocFailureError;
-    }
+    if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
+
     for (int i = 0; i <= curr_board_size; ++i) {
         pop_order_to_pattern[i] =
             (uint32_t *)malloc(NChooseR(curr_board_size, i) * sizeof(uint32_t));
-        if (!pop_order_to_pattern[i]) {
-            fprintf(stderr, "TwoPieceHashInit: failed to allocate memory\n");
-            free(pattern_to_order);
-            for (int j = 0; j < i; ++j) {
-                free(pop_order_to_pattern[j]);
-            }
-            free(pop_order_to_pattern);
-            return kMallocFailureError;
-        }
+        if (!pop_order_to_pattern[i]) return kMallocFailureError;
     }
 
     // Initialize tables
@@ -64,8 +60,34 @@ static int InitTables(void) {
     return kNoError;
 }
 
-int TwoPieceHashInit(int board_size) {
+static int InitSymmetries(const int *const *symmetry_matrix) {
+    // Allocate space
+    pattern_symmetries =
+        (uint32_t **)malloc(curr_num_symmetries * sizeof(uint32_t *));
+    if (!pattern_symmetries) return kMallocFailureError;
+    for (int i = 0; i < curr_num_symmetries; ++i) {
+        pattern_symmetries[i] =
+            (uint32_t *)malloc((1 << curr_board_size) * sizeof(uint32_t));
+        if (!pattern_symmetries[i]) return kMallocFailureError;
+    }
+
+    for (uint32_t pattern = 0; pattern < (1U << curr_board_size); ++pattern) {
+        for (int i = 0; i < curr_num_symmetries; ++i) {
+            uint32_t sym = 0;
+            for (int j = 0; j < curr_board_size; ++j) {
+                sym |= ((pattern >> j) & 1U) << symmetry_matrix[i][j];
+            }
+            pattern_symmetries[i][pattern] = sym;
+        }
+    }
+
+    return kNoError;
+}
+
+int TwoPieceHashInit(int rows, int cols, const int *const *symmetry_matrix,
+                     int num_symmetries) {
     // Validate board size
+    int board_size = rows * cols;
     if (board_size <= 0 || board_size > kBoardSizeMax) {
         fprintf(stderr,
                 "TwoPieceHashInit: invalid board size (%d) provided. "
@@ -76,18 +98,58 @@ int TwoPieceHashInit(int board_size) {
     curr_board_size = board_size;
 
     // Initialize the tables
-    return InitTables();
+    int error = InitTables();
+    if (error != kNoError) {
+        TwoPieceHashFinalize();
+        return error;
+    }
+
+    // Initialize the symmetry lookup table if requested
+    if (symmetry_matrix && num_symmetries > 1) {
+        if (num_symmetries > INT8_MAX) {
+            fprintf(stderr,
+                    "TwoPieceHashInit: too many symmetries (%d) provided. At "
+                    "most %d are supported\n",
+                    num_symmetries, INT8_MAX);
+            TwoPieceHashFinalize();
+            return kIllegalArgumentError;
+        }
+
+        curr_num_symmetries = num_symmetries;
+        int error = InitSymmetries(symmetry_matrix);
+        if (error != kNoError) {
+            TwoPieceHashFinalize();
+            return error;
+        }
+    }
+
+    return kNoError;
 }
 
 void TwoPieceHashFinalize(void) {
+    // pattern_to_order
     free(pattern_to_order);
     pattern_to_order = NULL;
+
+    // pop_order_to_pattern
     for (int i = 0; i <= curr_board_size; ++i) {
         free(pop_order_to_pattern[i]);
     }
     free(pop_order_to_pattern);
     pop_order_to_pattern = NULL;
+
+    // pattern_symmetries
+    for (int i = 0; i < curr_num_symmetries; ++i) {
+        free(pattern_symmetries[i]);
+    }
+    free(pattern_symmetries);
+    pattern_symmetries = NULL;
+
+    // Reset the board size
     curr_board_size = 0;
+
+    // Reset number of symmetries.
+    curr_num_symmetries = 0;
 }
 
 int64_t TwoPieceHashGetNumPositions(int num_x, int num_o) {
@@ -144,3 +206,17 @@ uint64_t TwoPieceHashUnhash(Position hash, int num_x, int num_o) {
 }
 
 int TwoPieceHashGetTurn(Position hash) { return hash & 1; }
+
+uint64_t TwoPieceHashGetCanonicalBoard(uint64_t board) {
+    uint64_t min_board = board;
+    for (int i = 1; i < curr_num_symmetries; ++i) {
+        uint32_t s_x = (uint32_t)(board >> 32);
+        uint32_t s_o = (uint32_t)board;
+        uint32_t c_x = pattern_symmetries[i][s_x];
+        uint32_t c_o = pattern_symmetries[i][s_o];
+        uint64_t new_board = (((uint64_t)c_x) << 32) | (uint64_t)c_o;
+        if (new_board < min_board) min_board = new_board;
+    }
+
+    return min_board;
+}

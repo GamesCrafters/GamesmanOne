@@ -1,5 +1,5 @@
 /**
- * @file generic_hash.h
+ * @file generic.h
  * @author Dan Garcia: Designer of the original (3-variable only) version.
  * @author Attila Gyulassy: Developer of the original (3-variable only) version.
  * @author Michel D'Sa: Designer and developer of user-specified variables
@@ -32,8 +32,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_
-#define GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_
+#ifndef GAMESMANONE_CORE_HASH_GENERIC_H_
+#define GAMESMANONE_CORE_HASH_GENERIC_H_
 
 #include <stdint.h>  // int64_t
 
@@ -253,4 +253,4 @@ bool GenericHashUnhashLabel(int64_t context_label, Position hash, char *board);
  */
 int GenericHashGetTurnLabel(int64_t context_label, Position hash);
 
-#endif  // GAMESMANONE_CORE_GENERIC_HASH_GENERIC_HASH_H_
+#endif  // GAMESMANONE_CORE_HASH_GENERIC_H_

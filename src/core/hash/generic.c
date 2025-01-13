@@ -1,5 +1,5 @@
 /**
- * @file generic_hash.h
+ * @file generic.h
  * @author Dan Garcia: Designer of the original (3-variable only) version.
  * @author Attila Gyulassy: Developer of the original (3-variable only) version.
  * @author Michel D'Sa: Designer and developer of user-specified variables
@@ -33,7 +33,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
@@ -43,7 +43,7 @@
 #include <string.h>   // memset
 
 #include "core/data_structures/int64_hash_map.h"
-#include "core/generic_hash/context.h"
+#include "core/hash/generic_context.h"
 #include "core/types/gamesman_types.h"
 
 typedef struct ContextManager {

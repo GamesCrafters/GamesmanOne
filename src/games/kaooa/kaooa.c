@@ -37,7 +37,7 @@
 #include <stdlib.h>   // atoi
 #include <string.h>   // strcpy, strlen
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 

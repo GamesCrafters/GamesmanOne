@@ -8,7 +8,7 @@
 #include <string.h>  // memcpy, strtok_r
 
 #include "core/constants.h"
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -321,7 +321,9 @@ static void UnhashTierAndPosition(TierPosition tier_position, GatesTier *t,
 }
 
 static void GenerateMovesTriangle(const char board[static kBoardSize],
-                                  int8_t src, GatesMove move, MoveArray *ret) {
+                                  int8_t src, GatesMove move,
+                                  Move moves[static kTierSolverNumMovesMax],
+                                  int *num_moves) {
     assert(board[src] == 'A' || board[src] == 'a');
     const char gate = 'G' + board[src] - 'A';
     move.unpacked.move_src = src;
@@ -332,7 +334,7 @@ static void GenerateMovesTriangle(const char board[static kBoardSize],
         int8_t dest = kBoardAdjacency1[src][i];
         if (board[dest] == '-' || board[dest] == gate) {
             move.unpacked.move_dest = dest;
-            MoveArrayAppend(ret, move.hashed);
+            moves[(*num_moves)++] = move.hashed;
         }
     }
 
@@ -347,13 +349,15 @@ static void GenerateMovesTriangle(const char board[static kBoardSize],
             board[kBoardAdjacency2BlockingPoints[src][i][1]] == '-';
         if (unoccupied && reachable) {
             move.unpacked.move_dest = dest;
-            MoveArrayAppend(ret, move.hashed);
+            moves[(*num_moves)++] = move.hashed;
         }
     }
 }
 
 static void GenerateMovesTrapezoid(const char board[static kBoardSize],
-                                   int8_t src, GatesMove move, MoveArray *ret) {
+                                   int8_t src, GatesMove move,
+                                   Move moves[static kTierSolverNumMovesMax],
+                                   int *num_moves) {
     assert(board[src] == 'Z' || board[src] == 'z');
     const char offset =
         (board[src] - 'Z');  // 0 if white's turn, 32 if black's turn.
@@ -370,20 +374,20 @@ static void GenerateMovesTrapezoid(const char board[static kBoardSize],
         if (board[dest] == '-' || board[dest] == friendly_gate) {
             // Move only, no teleporting.
             move.unpacked.teleport_dest = -1;
-            MoveArrayAppend(ret, move.hashed);
+            moves[(*num_moves)++] = move.hashed;
         } else if (board[dest] == opponent_triangle ||
                    board[dest] == opponent_trapezoid) {
             // Teleporting  to any existing blank spaces:
             for (int8_t j = 0; j < kBoardSize; ++j) {
                 if (board[j] == '-') {
                     move.unpacked.teleport_dest = j;
-                    MoveArrayAppend(ret, move.hashed);
+                    moves[(*num_moves)++] = move.hashed;
                 }
             }
 
             // Teleport to where the trapezoid came from:
             move.unpacked.teleport_dest = src;
-            MoveArrayAppend(ret, move.hashed);
+            moves[(*num_moves)++] = move.hashed;
         }
     }
 }
@@ -397,25 +401,27 @@ static void GenerateMovesTrapezoid(const char board[static kBoardSize],
  * These fields are not modified by this function.
  */
 static void GenerateMovesOfPlayer(const char board[static kBoardSize], int turn,
-                                  GatesMove move, MoveArray *ret) {
+                                  GatesMove move,
+                                  Move moves[static kTierSolverNumMovesMax],
+                                  int *num_moves) {
     char triangle = TriangleOfPlayer(turn);
     char trapezoid = TrapezoidOfPlayer(turn);
     for (int8_t i = 0; i < kBoardSize; ++i) {
         if (board[i] == triangle) {
-            GenerateMovesTriangle(board, i, move, ret);
+            GenerateMovesTriangle(board, i, move, moves, num_moves);
         } else if (board[i] == trapezoid) {
-            GenerateMovesTrapezoid(board, i, move, ret);
+            GenerateMovesTrapezoid(board, i, move, moves, num_moves);
         }
     }
 }
 
-static MoveArray GenerateMovesPlacement(const GatesTier *pt,
-                                        char board[static kBoardSize]) {
+static int GenerateMovesPlacement(const GatesTier *pt,
+                                  char board[static kBoardSize],
+                                  Move moves[static kTierSolverNumMovesMax]) {
     assert(pt->phase == kPlacement);
-    MoveArray ret;
-    MoveArrayInit(&ret);
     GatesTierField num_pieces = GatesTierGetNumPieces(pt);
     GatesMove m = kGatesMoveInit;
+    int ret = 0;
 
     if (num_pieces < 11) {  // Placement only.
         for (int8_t i = 0; i < kBoardSize; ++i) {
@@ -424,7 +430,7 @@ static MoveArray GenerateMovesPlacement(const GatesTier *pt,
                 for (int8_t p = 0; p < kNumPieceTypes; ++p) {
                     if (pt->n[p] < 2) {  // Find remaining pieces.
                         m.unpacked.placement_type = p;
-                        MoveArrayAppend(&ret, m.hashed);
+                        moves[ret++] = m.hashed;
                     }
                 }
             }
@@ -441,7 +447,7 @@ static MoveArray GenerateMovesPlacement(const GatesTier *pt,
             if (board[i] == '-') {
                 board[i] = kPieces[p];  // Temporarily add piece to the board.
                 m.unpacked.placement_dest = i;
-                GenerateMovesOfPlayer(board, 2, m, &ret);
+                GenerateMovesOfPlayer(board, 2, m, moves, &ret);
                 board[i] = '-';  // Revert the change to the board.
             }
         }
@@ -450,12 +456,11 @@ static MoveArray GenerateMovesPlacement(const GatesTier *pt,
     return ret;
 }
 
-static MoveArray GenerateMovesMovement(char board[static kBoardSize],
-                                       int turn) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
+static int GenerateMovesMovement(char board[static kBoardSize], int turn,
+                                 Move moves[static kTierSolverNumMovesMax]) {
+    int ret = 0;
     GatesMove move = kGatesMoveInit;
-    GenerateMovesOfPlayer(board, turn, move, &ret);
+    GenerateMovesOfPlayer(board, turn, move, moves, &ret);
 
     return ret;
 }
@@ -480,14 +485,13 @@ static void SwapPieces(char *a, char *b) {
     *b = tmp;
 }
 
-static MoveArray GenerateMovesGateMoving(const GatesTier *pt,
-                                         char board[static kBoardSize],
-                                         int turn) {
+static int GenerateMovesGateMoving(const GatesTier *pt,
+                                   char board[static kBoardSize], int turn,
+                                   Move moves[static kTierSolverNumMovesMax]) {
     char gate = kPieces[!(turn - 1)];
     GatesMove move = kGatesMoveInit;
     move.unpacked.gate_src = FindGate(board, gate, pt->phase == kGate2Moving);
-    MoveArray ret;
-    MoveArrayInit(&ret);
+    int ret = 0;
 
     // Find all empty slots where the gate can go, INCLUDING THE ORIGINAL SLOT.
     for (int8_t dest = 0; dest < kBoardSize; ++dest) {
@@ -498,7 +502,7 @@ static MoveArray GenerateMovesGateMoving(const GatesTier *pt,
             SwapPieces(&board[move.unpacked.gate_src], &board[dest]);
 
             // Generate all subsequent moves on top of the gate move.
-            GenerateMovesOfPlayer(board, turn, move, &ret);
+            GenerateMovesOfPlayer(board, turn, move, moves, &ret);
 
             // Revert the gate move.
             SwapPieces(&board[move.unpacked.gate_src], &board[dest]);
@@ -508,37 +512,34 @@ static MoveArray GenerateMovesGateMoving(const GatesTier *pt,
     return ret;
 }
 
-static MoveArray GatesGenerateMoves(TierPosition tier_position) {
+static int GatesGenerateMoves(TierPosition tier_position,
+                              Move moves[static kTierSolverNumMovesMax]) {
     GatesTier t;
     char board[kBoardSize];
     UnhashTierAndPosition(tier_position, &t, board);
 
     switch (t.phase) {
         case kPlacement:
-            return GenerateMovesPlacement(&t, board);
+            return GenerateMovesPlacement(&t, board, moves);
 
         case kMovement: {
             int turn = GenericHashGetTurnLabel(tier_position.tier,
                                                tier_position.position);
-            return GenerateMovesMovement(board, turn);
+            return GenerateMovesMovement(board, turn, moves);
         }
 
         case kGate1Moving:
         case kGate2Moving: {
             int turn = GenericHashGetTurnLabel(tier_position.tier,
                                                tier_position.position);
-            return GenerateMovesGateMoving(&t, board, turn);
+            return GenerateMovesGateMoving(&t, board, turn, moves);
         }
 
         default:
             NotReached("GatesGenerateMoves: unknown phase encountered");
     }
 
-    // Never reached.
-    MoveArray error;
-    MoveArrayInit(&error);
-
-    return error;
+    return -1;
 }
 
 static Value GatesPrimitive(TierPosition tier_position) {
@@ -554,9 +555,8 @@ static Value GatesPrimitive(TierPosition tier_position) {
     }
 
     // The game can also end with the current player losing by having no moves.
-    MoveArray moves = GatesGenerateMoves(tier_position);
-    int64_t num_moves = moves.size;
-    MoveArrayDestroy(&moves);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GatesGenerateMoves(tier_position, moves);
     if (num_moves == 0) return kLose;
 
     return kUndecided;
@@ -766,58 +766,57 @@ static bool GatesIsLegalPosition(TierPosition tier_position) {
 }
 
 static int GetChildPositionsInternalDedup(TierPosition tp,
-                                          TierPositionArray *array) {
-    MoveArray moves = GatesGenerateMoves(tp);
+                                          TierPosition *array) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GatesGenerateMoves(tp, moves);
     GatesTier t, t_copy;
     char board[kBoardSize], board_copy[kBoardSize];
     UnhashTierAndPosition(tp, &t, board);
     int turn = GenericHashGetTurnLabel(tp.tier, tp.position);
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < moves.size; ++i) {
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
         memcpy(board_copy, board, kBoardSize);
         t_copy = t;
         TierPosition child =
-            DoMoveInternal(&t_copy, board_copy, turn, moves.array[i]);
+            DoMoveInternal(&t_copy, board_copy, turn, moves[i]);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
-        if (array) TierPositionArrayAppend(array, child);
+        if (array) array[ret] = child;
+        ++ret;
     }
-    MoveArrayDestroy(&moves);
-    int ret = (int)dedup.size;
     TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
 
 static int GetChildPositionsInternalNoDedup(TierPosition tp,
-                                            TierPositionArray *array) {
-    MoveArray moves = GatesGenerateMoves(tp);
-    int ret = (int)moves.size;
+                                            TierPosition *array) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GatesGenerateMoves(tp, moves);
     if (array != NULL) {
         GatesTier t, t_copy;
         char board[kBoardSize], board_copy[kBoardSize];
         UnhashTierAndPosition(tp, &t, board);
         int turn = GenericHashGetTurnLabel(tp.tier, tp.position);
-        for (int64_t i = 0; i < moves.size; ++i) {
+        for (int i = 0; i < num_moves; ++i) {
             memcpy(board_copy, board, kBoardSize);
             t_copy = t;
             TierPosition child =
-                DoMoveInternal(&t_copy, board_copy, turn, moves.array[i]);
-            TierPositionArrayAppend(array, child);
+                DoMoveInternal(&t_copy, board_copy, turn, moves[i]);
+            array[i] = child;
         }
     }
-    MoveArrayDestroy(&moves);
 
-    return ret;
+    return num_moves;
 }
 
 /**
  * @brief Inserts all child positions of \p tp in \p array if \p array is
  * non-NULL, and returns the number of child positions found.
  */
-static int GetChildPositionsInternal(TierPosition tp,
-                                     TierPositionArray *array) {
+static int GetChildPositionsInternal(TierPosition tp, TierPosition *array) {
     if (TierHashSetContains(&kChildDedupTiers, tp.tier)) {
         // Need child deduplication
         return GetChildPositionsInternalDedup(tp, array);
@@ -831,18 +830,19 @@ static int GatesGetNumberOfCanonicalChildPositions(TierPosition tp) {
     return GetChildPositionsInternal(tp, NULL);
 }
 
-static TierPositionArray GatesGetCanonicalChildPositions(TierPosition tp) {
-    TierPositionArray ret;
-    TierPositionArrayInit(&ret);
-    GetChildPositionsInternal(tp, &ret);
-
-    return ret;
+static int GatesGetCanonicalChildPositions(
+    TierPosition tp,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
+    //
+    return GetChildPositionsInternal(tp, children);
 }
 
-static void GetCanonicalParentsMovementTriangle(Tier tier, const GatesTier *t,
-                                                char board[static kBoardSize],
-                                                int8_t dest, int opponent_turn,
-                                                PositionArray *ret) {
+static void GetCanonicalParentsMovementTriangle(
+    Tier tier, const GatesTier *t, char board[static kBoardSize], int8_t dest,
+    int opponent_turn,
+    Position parents[static kTierSolverNumParentPositionsMax],
+    int *num_parents) {
+    //
     assert(board[dest] == 'A' || board[dest] == 'a');
 
     // For all first level adjacencies, the space could be a source only if it
@@ -853,7 +853,7 @@ static void GetCanonicalParentsMovementTriangle(Tier tier, const GatesTier *t,
             SwapPieces(&board[src], &board[dest]);
             Position parent = HashWrapper(tier, t, board, opponent_turn);
             SwapPieces(&board[src], &board[dest]);
-            PositionArrayAppend(ret, parent);
+            parents[(*num_parents)++] = parent;
         }
     }
 
@@ -869,15 +869,17 @@ static void GetCanonicalParentsMovementTriangle(Tier tier, const GatesTier *t,
             SwapPieces(&board[src], &board[dest]);
             Position parent = HashWrapper(tier, t, board, opponent_turn);
             SwapPieces(&board[src], &board[dest]);
-            PositionArrayAppend(ret, parent);
+            parents[(*num_parents)++] = parent;
         }
     }
 }
 
-static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
-                                                 char board[static kBoardSize],
-                                                 int8_t dest, int opponent_turn,
-                                                 PositionArray *ret) {
+static void GetCanonicalParentsMovementTrapezoid(
+    Tier tier, const GatesTier *t, char board[static kBoardSize], int8_t dest,
+    int opponent_turn,
+    Position parents[static kTierSolverNumParentPositionsMax],
+    int *num_parents) {
+    //
     assert(board[dest] == 'Z' || board[dest] == 'z');
     // offset == 0 if black is opponent from previous turn, 32 if white.
     const char offset = ('z' - board[dest]);
@@ -902,7 +904,7 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
             // Case A.1: move only.
             SwapPieces(&board[src], &board[dest]);  // Move trapezoid to src.
             Position parent = HashWrapper(tier, t, board, opponent_turn);
-            PositionArrayAppend(ret, parent);
+            parents[(*num_parents)++] = parent;
 
             // Case A.2: move and teleport.
             for (int8_t j = 0; j < num_friendly_spikes; ++j) {
@@ -911,7 +913,7 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
                 parent = HashWrapper(tier, t, board, opponent_turn);
                 // Revert un-teleportation.
                 SwapPieces(&board[dest], &board[friendly_spikes[j]]);
-                PositionArrayAppend(ret, parent);
+                parents[(*num_parents)++] = parent;
             }
             SwapPieces(&board[src], &board[dest]);  // Move trapezoid back.
         } else if (board[src] == friendly_triangle ||
@@ -920,41 +922,41 @@ static void GetCanonicalParentsMovementTrapezoid(Tier tier, const GatesTier *t,
             SwapPieces(&board[src], &board[dest]);
             Position parent = HashWrapper(tier, t, board, opponent_turn);
             SwapPieces(&board[src], &board[dest]);
-            PositionArrayAppend(ret, parent);
+            parents[(*num_parents)++] = parent;
         }
     }
 }
 
-static PositionArray GetCanonicalParentsOfMovement(
-    Tier tier, const GatesTier *ct, char board[static kBoardSize], int turn) {
+static int GetCanonicalParentsOfMovement(
+    Tier tier, const GatesTier *ct, char board[static kBoardSize], int turn,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
     //
     assert(ct->phase == kMovement);
     int opponent_turn = 3 - turn;
     char triangle = TriangleOfPlayer(opponent_turn);
     char trapezoid = TrapezoidOfPlayer(opponent_turn);
-    PositionArray ret;
-    PositionArrayInit(&ret);
+    int ret = 0;
 
     // In the previous turn, the opponent may have moved one of the triangles
     // or trapezoids that are on the board.
     for (int8_t i = 0; i < kBoardSize; ++i) {
         if (board[i] == triangle) {
             GetCanonicalParentsMovementTriangle(tier, ct, board, i,
-                                                opponent_turn, &ret);
+                                                opponent_turn, parents, &ret);
         } else if (board[i] == trapezoid) {
             GetCanonicalParentsMovementTrapezoid(tier, ct, board, i,
-                                                 opponent_turn, &ret);
+                                                 opponent_turn, parents, &ret);
         }
     }
 
     return ret;
 }
 
-static void GetCanonicalParentsGateMovingHelper(Tier parent_tier,
-                                                const GatesTier *pt,
-                                                int8_t dest, char piece,
-                                                char board[static kBoardSize],
-                                                PositionArray *ret) {
+static void GetCanonicalParentsGateMovingHelper(
+    Tier parent_tier, const GatesTier *pt, int8_t dest, char piece,
+    char board[static kBoardSize],
+    Position parents[static kTierSolverNumParentPositionsMax],
+    int *num_parents) {
     //
     assert(board[dest] == 'G' || board[dest] == 'g');
     assert((islower(piece) && islower(board[dest])) ||
@@ -970,7 +972,7 @@ static void GetCanonicalParentsGateMovingHelper(Tier parent_tier,
             Position parent =
                 HashWrapper(parent_tier, pt, board, opponent_turn);
             board[src] = '-';
-            PositionArrayAppend(ret, parent);
+            parents[(*num_parents)++] = parent;
         }
     }
 
@@ -988,15 +990,15 @@ static void GetCanonicalParentsGateMovingHelper(Tier parent_tier,
                 Position parent =
                     HashWrapper(parent_tier, pt, board, opponent_turn);
                 board[src] = '-';
-                PositionArrayAppend(ret, parent);
+                parents[(*num_parents)++] = parent;
             }
         }
     }
 }
 
-static PositionArray GetCanonicalParentsOfGateMoving(
+static int GetCanonicalParentsOfGateMoving(
     Tier parent_tier, const GatesTier *ct, char board[static kBoardSize],
-    int turn) {
+    int turn, Position parents[static kTierSolverNumParentPositionsMax]) {
     //
     GatesTier pt;
     GatesTierUnhash(parent_tier, &pt);
@@ -1012,19 +1014,20 @@ static PositionArray GetCanonicalParentsOfGateMoving(
     int8_t gate_index =
         FindGate(board, opponent_gate, ct->phase == kGate2Moving);
 
-    PositionArray ret;
-    PositionArrayInit(&ret);
+    int ret = 0;
     if (ct->n[opponent_triangle_piece_index] + 1 ==
         pt.n[opponent_triangle_piece_index]) {
         // opponent scored a triangle in the previous turn
         GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
-                                            opponent_triangle, board, &ret);
+                                            opponent_triangle, board, parents,
+                                            &ret);
     }
     if (ct->n[opponent_trapezoid_piece_index] + 1 ==
         pt.n[opponent_trapezoid_piece_index]) {
         // opponent scored a trapezoid in the previous turn
         GetCanonicalParentsGateMovingHelper(parent_tier, &pt, gate_index,
-                                            opponent_trapezoid, board, &ret);
+                                            opponent_trapezoid, board, parents,
+                                            &ret);
     }
 
     return ret;
@@ -1032,8 +1035,10 @@ static PositionArray GetCanonicalParentsOfGateMoving(
 
 // This function only works if the parent tier is in the Movement phase,
 // which is the only type of tiers that uses the loopy solving algorithm.
-static PositionArray GatesGetCanonicalParentPositions(TierPosition child,
-                                                      Tier parent_tier) {
+static int GatesGetCanonicalParentPositions(
+    TierPosition child, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
     GatesTier ct;
     char board[kBoardSize];
     UnhashTierAndPosition(child, &ct, board);
@@ -1042,12 +1047,13 @@ static PositionArray GatesGetCanonicalParentPositions(TierPosition child,
     switch (ct.phase) {
         case kMovement:
             assert(parent_tier == child.tier);
-            return GetCanonicalParentsOfMovement(child.tier, &ct, board, turn);
+            return GetCanonicalParentsOfMovement(child.tier, &ct, board, turn,
+                                                 parents);
 
         case kGate1Moving:
         case kGate2Moving:
             return GetCanonicalParentsOfGateMoving(parent_tier, &ct, board,
-                                                   turn);
+                                                   turn, parents);
 
         default:
             NotReached(
@@ -1056,9 +1062,7 @@ static PositionArray GatesGetCanonicalParentPositions(TierPosition child,
     }
 
     // Never reached.
-    PositionArray error;
-    PositionArrayInit(&error);
-    return error;
+    return -1;
 }
 
 static const TierSolverApi kGatesSolverApi = {
@@ -1084,6 +1088,18 @@ static const TierSolverApi kGatesSolverApi = {
 };
 
 // ============================= kGatesGameplayApi =============================
+
+static MoveArray GatesGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int n = GatesGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < n; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static const char kGatesPositionStringFormat[] =
     "            LEGEND                            TOTAL\n"
@@ -1233,7 +1249,7 @@ static const GameplayApiTier GatesGameplayApiTier = {
 
     .TierPositionToString = GatesTierPositionToString,
 
-    .GenerateMoves = GatesGenerateMoves,
+    .GenerateMoves = GatesGenerateMovesGameplay,
     .DoMove = GatesDoMove,
     .Primitive = GatesPrimitive,
 };
@@ -1428,35 +1444,6 @@ static int GatesInit(void *aux) {
     // Initialize kChildDedupTiers, which contains tiers that contain positions
     // from which different moves can lead to the same child.
     if (!InitChildDedupTiers()) return kMallocFailureError;
-
-    // InitGenericHash();
-    // TierPosition child = {.tier = 8646730, .position = 111};
-    // TierPosition not_found_parent = {.tier = 8638794, .position = 1830};
-    // PositionArray parents = GatesGetCanonicalParentPositions(child, 8638794);
-    // TierPositionArray children_of_not_found_parent =
-    //     DefaultGetCanonicalChildPositions(not_found_parent);
-
-    // char buffer[1000];
-    // GatesTierPositionToString(child, buffer);
-    // printf("child:\n%s\n\n", buffer);
-
-    // GatesTierPositionToString(not_found_parent, buffer);
-    // printf("not found parent:\n%s\n\n", buffer);
-
-    // for (int64_t i = 0; i < children_of_not_found_parent.size; ++i) {
-    //     GatesTierPositionToString(children_of_not_found_parent.array[i],
-    //                               buffer);
-    //     printf("children_of_not_found_parent %" PRId64 ":\n%s\n\n", i,
-    //     buffer);
-    // }
-
-    // for (int64_t i = 0; i < parents.size; ++i) {
-    //     TierPosition parent = {.tier = 8638794, .position =
-    //     parents.array[i]}; GatesTierPositionToString(parent, buffer);
-    //     printf("parent %" PRId64 ":\n%s\n\n", i, buffer);
-    // }
-
-    // return kNoError;
 
     return InitGenericHash();
 }
