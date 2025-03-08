@@ -23,9 +23,7 @@ intptr_t TwoPieceHashGetMemoryRequired(int rows, int cols, int num_symmetries) {
     int board_size = rows * cols;
     intptr_t ret = (1 << board_size) * sizeof(int32_t);
     ret += (board_size + 1) * sizeof(uint32_t *);
-    for (int i = 0; i <= board_size; ++i) {
-        ret += NChooseR(board_size, i) * sizeof(uint32_t);
-    }
+    ret += (1 << board_size) * sizeof(int32_t);  // Binomial theorem
 
     if (num_symmetries > 1) {
         ret += num_symmetries * (1 << board_size) * sizeof(uint32_t);
