@@ -66,7 +66,8 @@ static int MkaooaFinalize(void);
 static int64_t MkaooaGetNumPositions(void);
 static Position MkaooaGetInitialPosition(void);
 
-static MoveArray MkaooaGenerateMoves(Position position);
+static int MkaooaGenerateMoves(Position position,
+                               Move moves[static kRegularSolverNumMovesMax]);
 static Value MkaooaPrimitive(Position position);
 static Position MkaooaDoMove(Position position, Move move);
 static bool MkaooaIsLegalPosition(Position position);
@@ -74,11 +75,12 @@ static bool MkaooaIsLegalPosition(Position position);
 // static PositionArray MkaooaGetCanonicalParentPositions(
 //     Position position);
 
+static MoveArray MkaooaGenerateMovesGameplay(Position position);
 static int MkaooaPositionToString(Position position, char *buffer);
 static int MkaooaMoveToString(Move move, char *buffer);
 static bool MkaooaIsValidMoveString(ReadOnlyString move_string);
 static Move MkaooaStringToMove(ReadOnlyString move_string);
-bool is_in_impossible_trap(int impossible_trap[], int size, int value);
+static bool is_in_impossible_trap(int impossible_trap[], int size, int value);
 
 // Solver API Setup
 static const RegularSolverApi kSolverApi = {
@@ -108,7 +110,7 @@ static const GameplayApiCommon kGamePlayApiCommon = {
 
 static const GameplayApiRegular kGameplayApiRegular = {
     .PositionToString = &MkaooaPositionToString,
-    .GenerateMoves = &MkaooaGenerateMoves,
+    .GenerateMoves = &MkaooaGenerateMovesGameplay,
     .DoMove = &MkaooaDoMove,
     .Primitive = &MkaooaPrimitive,
 };
@@ -210,12 +212,9 @@ int check_lower_bound(int n_1, int bound) { return (n_1 < bound) ? 1 : 0; }
 
 // TODO
 // Check 1027
-static MoveArray MkaooaGenerateMoves(Position position) {
-    MoveArray moves;
-    MoveArrayInit(&moves);
-
+static int MkaooaGenerateMoves(Position position,
+                               Move moves[static kRegularSolverNumMovesMax]) {
     // printf("\nIn generate move");
-
     char board[boardSize + 1];
     GenericHashUnhash(position, board);
     char turn = GenericHashGetTurn(position) == 1 ? C : V;
@@ -227,6 +226,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
     bool can_drop = board[10] < 6;
     int move_count;
     int possible_moves[4];
+    int ret = 0;
 
     for (int i = 0; i < boardSize; i++) {
         // C's turn
@@ -248,20 +248,20 @@ static MoveArray MkaooaGenerateMoves(Position position) {
             }
             for (int j = 0; j < move_count; j++) {
                 if (board[possible_moves[j]] == BLANK) {
-                    MoveArrayAppend(&moves, MOVE_ENCODE(i, possible_moves[j]));
+                    moves[ret++] = MOVE_ENCODE(i, possible_moves[j]);
                 }
             }
         } else if (turn == C && board[i] == BLANK && can_drop) {
             // C's turn and can drop
             // Drop a crow
-            MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
+            moves[ret++] = MOVE_ENCODE(i, i);
         } else if (turn == V && board[i] == BLANK &&
                    count_char_in_board(board, V) == 0) {
             // V's turn
             // 1029
             // printf("\nDEBUG: V's turn and no vultures on the board\n");
             // Drop a vulture
-            MoveArrayAppend(&moves, MOVE_ENCODE(i, i));
+            moves[ret++] = MOVE_ENCODE(i, i);
         } else if (turn == V && board[i] == V) {
             // TODO
             if (i < 5) {
@@ -273,8 +273,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
 
                 for (int k = 0; k < move_count; k++) {
                     if (board[possible_moves[k]] == BLANK) {
-                        MoveArrayAppend(&moves,
-                                        MOVE_ENCODE(i, possible_moves[k]));
+                        moves[ret++] = MOVE_ENCODE(i, possible_moves[k]);
                     }
                 }
 
@@ -288,7 +287,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
                         (adjacent_positions[0] - 1) +
                         check_lower_bound(adjacent_positions[0] - 1, 5) * 5;
                     if (board[jump_position] == BLANK) {
-                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                        moves[ret++] = MOVE_ENCODE(i, jump_position);
                     }
                 }
                 if (board[adjacent_positions[1]] == C) {
@@ -296,7 +295,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
                         (adjacent_positions[1] + 1) +
                         check_upper_bound(adjacent_positions[1] + 1, 9) * 5;
                     if (board[jump_position] == BLANK) {
-                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                        moves[ret++] = MOVE_ENCODE(i, jump_position);
                     }
                 }
             } else {
@@ -310,8 +309,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
 
                 for (int k = 0; k < move_count; k++) {
                     if (board[possible_moves[k]] == BLANK) {
-                        MoveArrayAppend(&moves,
-                                        MOVE_ENCODE(i, possible_moves[k]));
+                        moves[ret++] = MOVE_ENCODE(i, possible_moves[k]);
                     }
                 }
 
@@ -324,7 +322,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
                         (adjacent_positions[0] - 5) +
                         check_lower_bound(adjacent_positions[0] - 5, 0) * 5;
                     if (board[jump_position] == BLANK) {
-                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                        moves[ret++] = MOVE_ENCODE(i, jump_position);
                     }
                 }
                 if (board[adjacent_positions[1]] == C) {
@@ -332,7 +330,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
                         (adjacent_positions[1] - 4) +
                         check_upper_bound(adjacent_positions[1] - 4, 4) * 5;
                     if (board[jump_position] == BLANK) {
-                        MoveArrayAppend(&moves, MOVE_ENCODE(i, jump_position));
+                        moves[ret++] = MOVE_ENCODE(i, jump_position);
                     }
                 }
             }
@@ -341,7 +339,7 @@ static MoveArray MkaooaGenerateMoves(Position position) {
 
     // printf("DEBUG: End of generate moves");
 
-    return moves;
+    return ret;
 }
 
 // TODO: Checks if a given board position is Primitive.
@@ -532,6 +530,18 @@ static bool MkaooaIsLegalPosition(Position position) {
 //     return canonicalParents;
 // }
 
+static MoveArray MkaooaGenerateMovesGameplay(Position position) {
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = MkaooaGenerateMoves(position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
+
 // TODO: Takes in a POSITION, fills its string representation in the BUFFER.
 // This is to display the board/position to the user when using GamesmanOne
 static int MkaooaPositionToString(Position position, char *buffer) {
@@ -656,7 +666,7 @@ static CString KaooaPositionToAutoGuiPosition(Position position);
 static CString KaooaMoveToAutoGuiMove(Position position, Move move);
 
 static const UwapiRegular kKaooaUwapiRegular = {
-    .GenerateMoves = MkaooaGenerateMoves,
+    .GenerateMoves = MkaooaGenerateMovesGameplay,
     .DoMove = MkaooaDoMove,
     .Primitive = MkaooaPrimitive,
 
