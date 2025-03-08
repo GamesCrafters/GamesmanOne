@@ -1,14 +1,9 @@
 /**
- * @file quixo.c
+ * @file quixo_two_piece.c
  * @author François Bonnet: original published version,
  *         arXiv:2007.15895v1
  * @author Robert Shi (robertyishi@berkeley.edu)
- * @author Maria Rufova
- * @author Benji Xu
- * @author Angela He
- * @author GamesCrafters Research Group, UC Berkeley
- *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Quixo implementation.
+ * @brief DEPRECATED module for testing two piece hash.
  * @version 2.0.0
  * @date 2025-01-07
  *
@@ -29,18 +24,16 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "games/quixo/quixo.h"
+#include <assert.h>  // assert
+#include <stddef.h>  // NULL
+#include <stdio.h>   // sprintf
+#include <stdlib.h>  // atoi
+#include <string.h>  // strtok_r, strlen, strcpy
 
-#include <assert.h>     // assert
-#include <stddef.h>     // NULL
-#include <stdio.h>      // sprintf
-#include <stdlib.h>     // atoi
-#include <string.h>     // strtok_r, strlen, strcpy
-#include <x86intrin.h>  // __m128i
-
-#include "core/hash/x86_simd_two_piece.h"
+#include "core/hash/two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
+#include "games/quixo/quixo.h"
 
 // =================================== Types ===================================
 
@@ -91,224 +84,219 @@ static const int kNumMovesPerDir[kNumVariants] = {
     3 * 3 - 4,
 };
 
-static const uint64_t kLines[kNumVariants][kNumLinesMax] = {
+static const uint64_t kLines[kNumVariants][kNumPlayers][kNumLinesMax] = {
     // =========
     // == 5x5 ==
     // =========
-    {0x1f00000000, 0x1f000000, 0x1f0000, 0x1f00, 0x1f, 0x1010101010,
-     0x808080808, 0x404040404, 0x202020202, 0x101010101, 0x1008040201,
-     0x102040810},
+    {
+        // 5x5 X
+        {0x1f0000000000000, 0xf800000000000, 0x7c0000000000, 0x3e000000000,
+         0x1f00000000, 0x108421000000000, 0x84210800000000, 0x42108400000000,
+         0x21084200000000, 0x10842100000000, 0x104104100000000,
+         0x11111000000000},
+        // 5x5 O
+        {0x1f00000, 0xf8000, 0x7c00, 0x3e0, 0x1f, 0x1084210, 0x842108, 0x421084,
+         0x210842, 0x108421, 0x1041041, 0x111110},
+    },
     // =========
     // == 4x4 ==
     // =========
-    {0xf000000, 0xf0000, 0xf00, 0xf, 0x8080808, 0x4040404, 0x2020202, 0x1010101,
-     0x8040201, 0x1020408},
+    {
+        // 4x4 X
+        {0xf00000000000, 0xf0000000000, 0xf000000000, 0xf00000000,
+         0x888800000000, 0x444400000000, 0x222200000000, 0x111100000000,
+         0x842100000000, 0x124800000000},
+        // 4x4 O
+        {0xf000, 0xf00, 0xf0, 0xf, 0x8888, 0x4444, 0x2222, 0x1111, 0x8421,
+         0x1248},
+    },
     // =========
     // == 3x3 ==
     // =========
-    {0x70000, 0x700, 0x7,
-
-     0x40404, 0x20202, 0x10101,
-
-     0x40201, 0x10204},
+    {
+        // 3x3 X
+        {0x1c000000000, 0x3800000000, 0x700000000, 0x12400000000, 0x9200000000,
+         0x4900000000, 0x11100000000, 0x5400000000},
+        // 3x3 O
+        {0x1c0, 0x38, 0x7, 0x124, 0x92, 0x49, 0x111, 0x54},
+    },
 };
 
-static const uint64_t kEdges[kNumVariants] = {
-    0x1f1111111f,
-    0xf09090f,
-    0x70507,
+static const uint64_t kEdges[kNumVariants][kNumPlayers] = {
+    // 5x5
+    {0x1f8c63f00000000, 0x1f8c63f},
+    // 4x4
+    {0xf99f00000000, 0xf99f},
+    // 3x3
+    {0x1ef00000000, 0x1ef},
 };
 
-static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][3] = {
+static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][4] = {
     // =========
     // == 5x5 ==
     // =========
-    {{0x1000000000, 0x100000000, 0x1f00000000},
-     {0x800000000, 0x100000000, 0xf00000000},
-     {0x400000000, 0x100000000, 0x700000000},
-     {0x200000000, 0x100000000, 0x300000000},
-     {0x10000000, 0x1000000, 0x1f000000},
-     {0x100000, 0x10000, 0x1f0000},
-     {0x1000, 0x100, 0x1f00},
-     {0x10, 0x1, 0x1f},
-     {0x8, 0x1, 0xf},
-     {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+    {
+        {0x100000000000000, 0x1000000, 0x10000000000000, 0x1f0000001f00000},
+        {0x80000000000000, 0x800000, 0x10000000000000, 0xf0000000f00000},
+        {0x40000000000000, 0x400000, 0x10000000000000, 0x70000000700000},
+        {0x20000000000000, 0x200000, 0x10000000000000, 0x30000000300000},
+        {0x8000000000000, 0x80000, 0x800000000000, 0xf8000000f8000},
+        {0x400000000000, 0x4000, 0x40000000000, 0x7c0000007c00},
+        {0x20000000000, 0x200, 0x2000000000, 0x3e0000003e0},
+        {0x1000000000, 0x10, 0x100000000, 0x1f0000001f},
+        {0x800000000, 0x8, 0x100000000, 0xf0000000f},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
     // =========
     // == 4x4 ==
     // =========
-    {{0x8000000, 0x1000000, 0xf000000},
-     {0x4000000, 0x1000000, 0x7000000},
-     {0x2000000, 0x1000000, 0x3000000},
-     {0x80000, 0x10000, 0xf0000},
-     {0x800, 0x100, 0xf00},
-     {0x8, 0x1, 0xf},
-     {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+    {
+        {0x800000000000, 0x8000, 0x100000000000, 0xf0000000f000},
+        {0x400000000000, 0x4000, 0x100000000000, 0x700000007000},
+        {0x200000000000, 0x2000, 0x100000000000, 0x300000003000},
+        {0x80000000000, 0x800, 0x10000000000, 0xf0000000f00},
+        {0x8000000000, 0x80, 0x1000000000, 0xf0000000f0},
+        {0x800000000, 0x8, 0x100000000, 0xf0000000f},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
     // =========
     // == 3x3 ==
     // =========
-    {{0x40000, 0x10000, 0x70000},
-     {0x20000, 0x10000, 0x30000},
-     {0x400, 0x100, 0x700},
-     {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+    {
+        {0x10000000000, 0x100, 0x4000000000, 0x1c0000001c0},
+        {0x8000000000, 0x80, 0x4000000000, 0xc0000000c0},
+        {0x2000000000, 0x20, 0x800000000, 0x3800000038},
+        {0x400000000, 0x4, 0x100000000, 0x700000007},
+        {0x200000000, 0x2, 0x100000000, 0x300000003},
+    },
 };
 
-static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][3] = {
+static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][4] = {
     // =========
     // == 5x5 ==
     // =========
-    {{0x800000000, 0x1000000000, 0x1800000000},
-     {0x400000000, 0x1000000000, 0x1c00000000},
-     {0x200000000, 0x1000000000, 0x1e00000000},
-     {0x100000000, 0x1000000000, 0x1f00000000},
-     {0x1000000, 0x10000000, 0x1f000000},
-     {0x10000, 0x100000, 0x1f0000},
-     {0x100, 0x1000, 0x1f00},
-     {0x8, 0x10, 0x18},
-     {0x4, 0x10, 0x1c},
-     {0x2, 0x10, 0x1e},
-     {
-         0x1,
-         0x10,
-         0x1f,
-     }},
+    {
+        {0x80000000000000, 0x800000, 0x100000000000000, 0x180000001800000},
+        {0x40000000000000, 0x400000, 0x100000000000000, 0x1c0000001c00000},
+        {0x20000000000000, 0x200000, 0x100000000000000, 0x1e0000001e00000},
+        {0x10000000000000, 0x100000, 0x100000000000000, 0x1f0000001f00000},
+        {0x800000000000, 0x8000, 0x8000000000000, 0xf8000000f8000},
+        {0x40000000000, 0x400, 0x400000000000, 0x7c0000007c00},
+        {0x2000000000, 0x20, 0x20000000000, 0x3e0000003e0},
+        {0x800000000, 0x8, 0x1000000000, 0x1800000018},
+        {0x400000000, 0x4, 0x1000000000, 0x1c0000001c},
+        {0x200000000, 0x2, 0x1000000000, 0x1e0000001e},
+        {0x100000000, 0x1, 0x1000000000, 0x1f0000001f},
+    },
     // =========
     // == 4x4 ==
     // =========
-    {{0x4000000, 0x8000000, 0xc000000},
-     {0x2000000, 0x8000000, 0xe000000},
-     {0x1000000, 0x8000000, 0xf000000},
-     {0x10000, 0x80000, 0xf0000},
-     {0x100, 0x800, 0xf00},
-     {0x4, 0x8, 0xc},
-     {0x2, 0x8, 0xe},
-     {
-         0x1,
-         0x8,
-         0xf,
-     }},
+    {
+        {0x400000000000, 0x4000, 0x800000000000, 0xc0000000c000},
+        {0x200000000000, 0x2000, 0x800000000000, 0xe0000000e000},
+        {0x100000000000, 0x1000, 0x800000000000, 0xf0000000f000},
+        {0x10000000000, 0x100, 0x80000000000, 0xf0000000f00},
+        {0x1000000000, 0x10, 0x8000000000, 0xf0000000f0},
+        {0x400000000, 0x4, 0x800000000, 0xc0000000c},
+        {0x200000000, 0x2, 0x800000000, 0xe0000000e},
+        {0x100000000, 0x1, 0x800000000, 0xf0000000f},
+    },
     // =========
     // == 3x3 ==
     // =========
-    {{0x20000, 0x40000, 0x60000},
-     {0x10000, 0x40000, 0x70000},
-     {0x100, 0x400, 0x700},
-     {0x2, 0x4, 0x6},
-     {
-         0x1,
-         0x4,
-         0x7,
-     }},
+    {
+        {0x8000000000, 0x80, 0x10000000000, 0x18000000180},
+        {0x4000000000, 0x40, 0x10000000000, 0x1c0000001c0},
+        {0x800000000, 0x8, 0x2000000000, 0x3800000038},
+        {0x200000000, 0x2, 0x400000000, 0x600000006},
+        {0x100000000, 0x1, 0x400000000, 0x700000007},
+    },
 };
 
-static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][3] = {
+static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][4] = {
     // =========
     // == 5x5 ==
     // =========
-    {{0x1000000000, 0x10, 0x1010101010},
-     {0x800000000, 0x8, 0x808080808},
-     {0x400000000, 0x4, 0x404040404},
-     {0x200000000, 0x2, 0x202020202},
-     {0x100000000, 0x1, 0x101010101},
-     {0x10000000, 0x10, 0x10101010},
-     {0x1000000, 0x1, 0x1010101},
-     {0x100000, 0x10, 0x101010},
-     {0x10000, 0x1, 0x10101},
-     {0x1000, 0x10, 0x1010},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+    {
+        {0x100000000000000, 0x1000000, 0x1000000000, 0x108421001084210},
+        {0x80000000000000, 0x800000, 0x800000000, 0x84210800842108},
+        {0x40000000000000, 0x400000, 0x400000000, 0x42108400421084},
+        {0x20000000000000, 0x200000, 0x200000000, 0x21084200210842},
+        {0x10000000000000, 0x100000, 0x100000000, 0x10842100108421},
+        {0x8000000000000, 0x80000, 0x1000000000, 0x8421000084210},
+        {0x800000000000, 0x8000, 0x100000000, 0x842100008421},
+        {0x400000000000, 0x4000, 0x1000000000, 0x421000004210},
+        {0x40000000000, 0x400, 0x100000000, 0x42100000421},
+        {0x20000000000, 0x200, 0x1000000000, 0x21000000210},
+        {0x2000000000, 0x20, 0x100000000, 0x2100000021},
+    },
     // =========
     // == 4x4 ==
     // =========
-    {{0x8000000, 0x8, 0x8080808},
-     {0x4000000, 0x4, 0x4040404},
-     {0x2000000, 0x2, 0x2020202},
-     {0x1000000, 0x1, 0x1010101},
-     {0x80000, 0x8, 0x80808},
-     {0x10000, 0x1, 0x10101},
-     {0x800, 0x8, 0x808},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+    {
+        {0x800000000000, 0x8000, 0x800000000, 0x888800008888},
+        {0x400000000000, 0x4000, 0x400000000, 0x444400004444},
+        {0x200000000000, 0x2000, 0x200000000, 0x222200002222},
+        {0x100000000000, 0x1000, 0x100000000, 0x111100001111},
+        {0x80000000000, 0x800, 0x800000000, 0x88800000888},
+        {0x10000000000, 0x100, 0x100000000, 0x11100000111},
+        {0x8000000000, 0x80, 0x800000000, 0x8800000088},
+        {0x1000000000, 0x10, 0x100000000, 0x1100000011},
+    },
     // =========
     // == 3x3 ==
     // =========
-    {{0x40000, 0x4, 0x40404},
-     {0x20000, 0x2, 0x20202},
-     {0x10000, 0x1, 0x10101},
-     {0x400, 0x4, 0x404},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+    {
+        {0x10000000000, 0x100, 0x400000000, 0x12400000124},
+        {0x8000000000, 0x80, 0x200000000, 0x9200000092},
+        {0x4000000000, 0x40, 0x100000000, 0x4900000049},
+        {0x2000000000, 0x20, 0x400000000, 0x2400000024},
+        {0x800000000, 0x8, 0x100000000, 0x900000009},
+    },
 };
 
-static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][3] = {
+static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][4] = {
     // =========
     // == 5x5 ==
     // =========
-    {{0x10000000, 0x1000000000, 0x1010000000},
-     {0x1000000, 0x100000000, 0x101000000},
-     {0x100000, 0x1000000000, 0x1010100000},
-     {0x10000, 0x100000000, 0x101010000},
-     {0x1000, 0x1000000000, 0x1010101000},
-     {0x100, 0x100000000, 0x101010100},
-     {0x10, 0x1000000000, 0x1010101010},
-     {0x8, 0x800000000, 0x808080808},
-     {0x4, 0x400000000, 0x404040404},
-     {0x2, 0x200000000, 0x202020202},
-     {
-         0x1,
-         0x100000000,
-         0x101010101,
-     }},
+    {
+        {0x8000000000000, 0x80000, 0x100000000000000, 0x108000001080000},
+        {0x800000000000, 0x8000, 0x10000000000000, 0x10800000108000},
+        {0x400000000000, 0x4000, 0x100000000000000, 0x108400001084000},
+        {0x40000000000, 0x400, 0x10000000000000, 0x10840000108400},
+        {0x20000000000, 0x200, 0x100000000000000, 0x108420001084200},
+        {0x2000000000, 0x20, 0x10000000000000, 0x10842000108420},
+        {0x1000000000, 0x10, 0x100000000000000, 0x108421001084210},
+        {0x800000000, 0x8, 0x80000000000000, 0x84210800842108},
+        {0x400000000, 0x4, 0x40000000000000, 0x42108400421084},
+        {0x200000000, 0x2, 0x20000000000000, 0x21084200210842},
+        {0x100000000, 0x1, 0x10000000000000, 0x10842100108421},
+    },
     // =========
     // == 4x4 ==
     // =========
-    {{0x80000, 0x8000000, 0x8080000},
-     {0x10000, 0x1000000, 0x1010000},
-     {0x800, 0x8000000, 0x8080800},
-     {0x100, 0x1000000, 0x1010100},
-     {0x8, 0x8000000, 0x8080808},
-     {0x4, 0x4000000, 0x4040404},
-     {0x2, 0x2000000, 0x2020202},
-     {
-         0x1,
-         0x1000000,
-         0x1010101,
-     }},
+    {
+        {0x80000000000, 0x800, 0x800000000000, 0x880000008800},
+        {0x10000000000, 0x100, 0x100000000000, 0x110000001100},
+        {0x8000000000, 0x80, 0x800000000000, 0x888000008880},
+        {0x1000000000, 0x10, 0x100000000000, 0x111000001110},
+        {0x800000000, 0x8, 0x800000000000, 0x888800008888},
+        {0x400000000, 0x4, 0x400000000000, 0x444400004444},
+        {0x200000000, 0x2, 0x200000000000, 0x222200002222},
+        {0x100000000, 0x1, 0x100000000000, 0x111100001111},
+    },
     // =========
     // == 3x3 ==
     // =========
-    {{0x400, 0x40000, 0x40400},
-     {0x100, 0x10000, 0x10100},
-     {0x4, 0x40000, 0x40404},
-     {0x2, 0x20000, 0x20202},
-     {
-         0x1,
-         0x10000,
-         0x10101,
-     }},
+    {
+        {0x2000000000, 0x20, 0x10000000000, 0x12000000120},
+        {0x800000000, 0x8, 0x4000000000, 0x4800000048},
+        {0x400000000, 0x4, 0x10000000000, 0x12400000124},
+        {0x200000000, 0x2, 0x8000000000, 0x9200000092},
+        {0x100000000, 0x1, 0x4000000000, 0x4900000049},
+    },
 };
 
 static const int kDirIndexToSrc[kNumVariants][4][kNumMovesPerDirMax] = {
@@ -387,6 +375,50 @@ static const int kDirSrcToIndex[kNumVariants][4][kBoardSizeMax] = {
     },
 };
 
+static const int kSymmetryMatrix[kNumVariants][8][kBoardSizeMax] = {
+    // 5x5
+    {
+        {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+         13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24},
+        {20, 15, 10, 5,  0,  21, 16, 11, 6,  1,  22, 17, 12,
+         7,  2,  23, 18, 13, 8,  3,  24, 19, 14, 9,  4},
+        {24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12,
+         11, 10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0},
+        {4,  9,  14, 19, 24, 3,  8,  13, 18, 23, 2,  7, 12,
+         17, 22, 1,  6,  11, 16, 21, 0,  5,  10, 15, 20},
+        {4,  3,  2,  1,  0,  9,  8,  7,  6,  5,  14, 13, 12,
+         11, 10, 19, 18, 17, 16, 15, 24, 23, 22, 21, 20},
+        {24, 19, 14, 9,  4,  23, 18, 13, 8,  3,  22, 17, 12,
+         7,  2,  21, 16, 11, 6,  1,  20, 15, 10, 5,  0},
+        {20, 21, 22, 23, 24, 15, 16, 17, 18, 19, 10, 11, 12,
+         13, 14, 5,  6,  7,  8,  9,  0,  1,  2,  3,  4},
+        {0,  5,  10, 15, 20, 1,  6,  11, 16, 21, 2,  7, 12,
+         17, 22, 3,  8,  13, 18, 23, 4,  9,  14, 19, 24},
+    },
+    // 4x4
+    {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+        {12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3},
+        {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
+        {3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12},
+        {3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12},
+        {15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0},
+        {12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3},
+        {0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15},
+    },
+    // 3x3
+    {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8},
+        {6, 3, 0, 7, 4, 1, 8, 5, 2},
+        {8, 7, 6, 5, 4, 3, 2, 1, 0},
+        {2, 5, 8, 1, 4, 7, 0, 3, 6},
+        {2, 1, 0, 5, 4, 3, 8, 7, 6},
+        {8, 5, 2, 7, 4, 1, 6, 3, 0},
+        {6, 7, 8, 3, 4, 5, 0, 1, 2},
+        {0, 3, 6, 1, 4, 7, 2, 5, 8},
+    },
+};
+
 // ============================= Variant Settings =============================
 
 static ConstantReadOnlyString kQuixoRuleChoices[] = {
@@ -417,42 +449,38 @@ static GameVariant current_variant = {
 
 static Tier QuixoGetInitialTier(void) { return initial_tier.hash; }
 
-static Position QuixoGetInitialPosition(void) {
-    __m128i board = _mm_set1_epi64x(0);
-
-    return X86SimdTwoPieceHashHash(board, 0);
-}
+static Position QuixoGetInitialPosition(void) { return TwoPieceHashHash(0, 0); }
 
 static int64_t QuixoGetTierSize(Tier tier) {
     QuixoTier t = {.hash = tier};
 
-    return X86SimdTwoPieceHashGetNumPositions(t.unpacked[0], t.unpacked[1]);
+    return TwoPieceHashGetNumPositions(t.unpacked[0], t.unpacked[1]);
 }
 
-static int GenerateMovesInternal(uint64_t patterns[2], int turn,
+static int GenerateMovesInternal(uint64_t board, int turn,
                                  Move moves[static kTierSolverNumMovesMax]) {
     QuixoMove m = kQuixoMoveInit;
     int opp_turn = !turn;
     int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         m.unpacked.idx = i;
-        uint64_t src_mask = kMoveLeft[curr_variant_idx][i][0];
-        if (!(patterns[opp_turn] & src_mask)) {
+        uint64_t src_mask = kMoveLeft[curr_variant_idx][i][opp_turn];
+        if (!(board & src_mask)) {
             m.unpacked.dir = kLeft;
             moves[ret++] = m.hash;
         }
-        src_mask = kMoveRight[curr_variant_idx][i][0];
-        if (!(patterns[opp_turn] & src_mask)) {
+        src_mask = kMoveRight[curr_variant_idx][i][opp_turn];
+        if (!(board & src_mask)) {
             m.unpacked.dir = kRight;
             moves[ret++] = m.hash;
         }
-        src_mask = kMoveUp[curr_variant_idx][i][0];
-        if (!(patterns[opp_turn] & src_mask)) {
+        src_mask = kMoveUp[curr_variant_idx][i][opp_turn];
+        if (!(board & src_mask)) {
             m.unpacked.dir = kUp;
             moves[ret++] = m.hash;
         }
-        src_mask = kMoveDown[curr_variant_idx][i][0];
-        if (!(patterns[opp_turn] & src_mask)) {
+        src_mask = kMoveDown[curr_variant_idx][i][opp_turn];
+        if (!(board & src_mask)) {
             m.unpacked.dir = kDown;
             moves[ret++] = m.hash;
         }
@@ -465,137 +493,92 @@ static int QuixoGenerateMoves(TierPosition tier_position,
                               Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    uint64_t patterns[2];
-    X86SimdTwoPieceHashUnhashMem(tier_position.position, t.unpacked[0],
-                                 t.unpacked[1], patterns);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
-    return GenerateMovesInternal(patterns, turn, moves);
+    return GenerateMovesInternal(board, turn, moves);
 }
 
 static Value QuixoPrimitive(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    uint64_t patterns[2];
-    X86SimdTwoPieceHashUnhashMem(tier_position.position, t.unpacked[0],
-                                 t.unpacked[1], patterns);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    int opp_turn = !turn;
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
     for (int i = 0; i < kNumLines[curr_variant_idx]; ++i) {
         // The current player wins if there is a k in a row of the current
         // player's pieces, regardless of whether there is a k in a row of the
         // opponent's pieces.
-        uint64_t line = kLines[curr_variant_idx][i];
-        if ((patterns[turn] & line) == line) return kWin;
+        uint64_t line = kLines[curr_variant_idx][turn][i];
+        if ((board & line) == line) return kWin;
     }
 
     for (int i = 0; i < kNumLines[curr_variant_idx]; ++i) {
         // If the current player is not winning but there's a k in a row of the
         // opponent's pieces, then the current player loses.
-        uint64_t line = kLines[curr_variant_idx][i];
-        if ((patterns[opp_turn] & line) == line) return kLose;
+        uint64_t line = kLines[curr_variant_idx][!turn][i];
+        if ((board & line) == line) return kLose;
     }
 
     // Neither side is winning.
     return kUndecided;
 }
 
-static inline __m128i DoMoveShiftLeft(__m128i board, uint64_t shift,
-                                      uint64_t dest, int turn) {
-    __m128i shift_mask = _mm_set1_epi64x(shift);
-    __m128i dest_mask = _mm_set_epi64x(dest * turn, dest * (!turn));
-    __m128i seg1 = _mm_and_si128(
-        _mm_slli_epi64(_mm_and_si128(board, shift_mask), 1), shift_mask);
-    __m128i seg2 = _mm_andnot_si128(shift_mask, board);
-
-    return _mm_or_si128(_mm_or_si128(seg1, seg2), dest_mask);
-}
-
-static inline __m128i DoMoveShiftRight(__m128i board, uint64_t shift,
-                                       uint64_t dest, int turn) {
-    __m128i shift_mask = _mm_set1_epi64x(shift);
-    __m128i dest_mask = _mm_set_epi64x(dest * turn, dest * (!turn));
-    __m128i seg1 = _mm_and_si128(
-        _mm_srli_epi64(_mm_and_si128(board, shift_mask), 1), shift_mask);
-    __m128i seg2 = _mm_andnot_si128(shift_mask, board);
-
-    return _mm_or_si128(_mm_or_si128(seg1, seg2), dest_mask);
-}
-
-static inline __m128i DoMoveShiftUp(__m128i board, uint64_t shift,
-                                    uint64_t dest, int turn) {
-    __m128i shift_mask = _mm_set1_epi64x(shift);
-    __m128i dest_mask = _mm_set_epi64x(dest * turn, dest * (!turn));
-    __m128i seg1 = _mm_and_si128(
-        _mm_slli_epi64(_mm_and_si128(board, shift_mask), 8), shift_mask);
-    __m128i seg2 = _mm_andnot_si128(shift_mask, board);
-
-    return _mm_or_si128(_mm_or_si128(seg1, seg2), dest_mask);
-}
-
-static inline __m128i DoMoveShiftDown(__m128i board, uint64_t shift,
-                                      uint64_t dest, int turn) {
-    __m128i shift_mask = _mm_set1_epi64x(shift);
-    __m128i dest_mask = _mm_set_epi64x(dest * turn, dest * (!turn));
-    __m128i seg1 = _mm_and_si128(
-        _mm_srli_epi64(_mm_and_si128(board, shift_mask), 8), shift_mask);
-    __m128i seg2 = _mm_andnot_si128(shift_mask, board);
-
-    return _mm_or_si128(_mm_or_si128(seg1, seg2), dest_mask);
-}
-
-static TierPosition DoMoveInternal(QuixoTier t, __m128i board,
-                                   const uint64_t patterns[2], int turn,
+static TierPosition DoMoveInternal(QuixoTier t, uint64_t board, int turn,
                                    QuixoMove m) {
-    uint64_t src = 0, shift, dest;
+    bool flipped = false;
+    uint64_t A, B, C;
     switch (m.unpacked.dir) {
         case kLeft:
-            src = kMoveLeft[curr_variant_idx][m.unpacked.idx][0];
-            dest = kMoveLeft[curr_variant_idx][m.unpacked.idx][1];
-            shift = kMoveLeft[curr_variant_idx][m.unpacked.idx][2];
-            board = DoMoveShiftLeft(board, shift, dest, turn);
+            A = kMoveLeft[curr_variant_idx][m.unpacked.idx][turn];
+            flipped = !(board & A);
+            B = kMoveLeft[curr_variant_idx][m.unpacked.idx][3];
+            C = kMoveLeft[curr_variant_idx][m.unpacked.idx][2] >> (turn * 32);
+            board = (((board & B) << 1) & B) | (board & ~B) | C;
             break;
 
         case kRight:
-            src = kMoveRight[curr_variant_idx][m.unpacked.idx][0];
-            dest = kMoveRight[curr_variant_idx][m.unpacked.idx][1];
-            shift = kMoveRight[curr_variant_idx][m.unpacked.idx][2];
-            board = DoMoveShiftRight(board, shift, dest, turn);
+            A = kMoveRight[curr_variant_idx][m.unpacked.idx][turn];
+            flipped = !(board & A);
+            B = kMoveRight[curr_variant_idx][m.unpacked.idx][3];
+            C = kMoveRight[curr_variant_idx][m.unpacked.idx][2] >> (turn * 32);
+            board = (((board & B) >> 1) & B) | (board & ~B) | C;
             break;
 
         case kUp:
-            src = kMoveUp[curr_variant_idx][m.unpacked.idx][0];
-            dest = kMoveUp[curr_variant_idx][m.unpacked.idx][1];
-            shift = kMoveUp[curr_variant_idx][m.unpacked.idx][2];
-            board = DoMoveShiftUp(board, shift, dest, turn);
+            A = kMoveUp[curr_variant_idx][m.unpacked.idx][turn];
+            flipped = !(board & A);
+            B = kMoveUp[curr_variant_idx][m.unpacked.idx][3];
+            C = kMoveUp[curr_variant_idx][m.unpacked.idx][2] >> (turn * 32);
+            board = (((board & B) << side_length) & B) | (board & ~B) | C;
             break;
 
         case kDown:
-            src = kMoveDown[curr_variant_idx][m.unpacked.idx][0];
-            dest = kMoveDown[curr_variant_idx][m.unpacked.idx][1];
-            shift = kMoveDown[curr_variant_idx][m.unpacked.idx][2];
-            board = DoMoveShiftDown(board, shift, dest, turn);
+            A = kMoveDown[curr_variant_idx][m.unpacked.idx][turn];
+            flipped = !(board & A);
+            B = kMoveDown[curr_variant_idx][m.unpacked.idx][3];
+            C = kMoveDown[curr_variant_idx][m.unpacked.idx][2] >> (turn * 32);
+            board = (((board & B) >> side_length) & B) | (board & ~B) | C;
             break;
     }
 
     // Adjust tier if source tile is flipped
-    t.unpacked[turn] += !(patterns[turn] & src);
+    t.unpacked[turn] += flipped;
 
     return (TierPosition){.tier = t.hash,
-                          .position = X86SimdTwoPieceHashHash(board, !turn)};
+                          .position = TwoPieceHashHash(board, !turn)};
 }
 
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     QuixoTier t = {.hash = tier_position.tier};
-    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
-                                              t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
     QuixoMove m = {.hash = move};
-    __attribute__((aligned(16))) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
 
-    return DoMoveInternal(t, board, patterns, turn, m);
+    return DoMoveInternal(t, board, turn, m);
 }
 
 // Performs a weak test on the position's legality. Will not misidentify legal
@@ -611,58 +594,33 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
 
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    uint64_t patterns[2];
-    X86SimdTwoPieceHashUnhashMem(tier_position.position, t.unpacked[0],
-                                 t.unpacked[1], patterns);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
-    // Non-zero if there is at least one opponent's piece on the edges.
-    return patterns[!turn] & kEdges[curr_variant_idx];
-}
-
-static inline __m128i GetCanonicalBoard(__m128i board) {
-    // 8 symmetries
-    __m128i min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-
-    return min_board;
+    return board & kEdges[curr_variant_idx][!turn];
 }
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
-                                              t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
-    return X86SimdTwoPieceHashHash(GetCanonicalBoard(board), turn);
+    return TwoPieceHashHash(TwoPieceHashGetCanonicalBoard(board), turn);
 }
 
 static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
-                                              t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
     // Generate all moves
     Move moves[kTierSolverNumMovesMax];
-    int num_moves = GenerateMovesInternal(patterns, turn, moves);
+    int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
     TierPositionHashSet dedup;
@@ -670,7 +628,7 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     TierPositionHashSetReserve(&dedup, 64);
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
-        TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
+        TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
@@ -686,15 +644,13 @@ static int QuixoGetCanonicalChildPositions(
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
-                                              t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
 
     // Generate all moves
     Move moves[kTierSolverNumMovesMax];
-    int num_moves = GenerateMovesInternal(patterns, turn, moves);
+    int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
     TierPositionHashSet dedup;
@@ -703,7 +659,7 @@ static int QuixoGetCanonicalChildPositions(
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
-        TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
+        TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
         if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
@@ -732,15 +688,13 @@ static int QuixoGetCanonicalParentPositions(
     // Unhash
     QuixoTier child_t = {.hash = tier_position.tier};
     QuixoTier parent_t = {.hash = parent_tier};
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    int turn = TwoPieceHashGetTurn(tier_position.position);
     if (!IsCorrectFlipping(child_t, parent_t, turn)) return 0;
 
-    __m128i board = X86SimdTwoPieceHashUnhash(
+    uint64_t board = TwoPieceHashUnhash(
         tier_position.position, child_t.unpacked[0], child_t.unpacked[1]);
-    __attribute__((aligned(16))) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
     int opp_turn = !turn;
-    uint64_t shift, src;
+    uint64_t B, C;
     bool same_tier = (child_t.hash == parent_t.hash);
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
@@ -748,13 +702,14 @@ static int QuixoGetCanonicalParentPositions(
     int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
-        uint64_t dest = kMoveLeft[curr_variant_idx][i][1];
-        if (patterns[opp_turn] & dest) {
-            shift = kMoveLeft[curr_variant_idx][i][2];
-            src = kMoveLeft[curr_variant_idx][i][0] * same_tier;
-            __m128i new_board = DoMoveShiftRight(board, shift, src, opp_turn);
-            new_board = GetCanonicalBoard(new_board);
-            Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
+        uint64_t dest_mask =
+            kMoveLeft[curr_variant_idx][i][2] >> (opp_turn * 32);
+        if (board & dest_mask) {
+            B = kMoveLeft[curr_variant_idx][i][3];
+            C = kMoveLeft[curr_variant_idx][i][opp_turn] * same_tier;
+            uint64_t new_board = (((board & B) >> 1) & B) | (board & ~B) | C;
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
+            Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
                 parents[ret++] = new_pos;
@@ -762,13 +717,13 @@ static int QuixoGetCanonicalParentPositions(
         }
 
         // Revert a right shifting move
-        dest = kMoveRight[curr_variant_idx][i][1];
-        if (patterns[opp_turn] & dest) {
-            shift = kMoveRight[curr_variant_idx][i][2];
-            src = kMoveRight[curr_variant_idx][i][0] * same_tier;
-            __m128i new_board = DoMoveShiftLeft(board, shift, src, opp_turn);
-            new_board = GetCanonicalBoard(new_board);
-            Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
+        dest_mask = kMoveRight[curr_variant_idx][i][2] >> (opp_turn * 32);
+        if (board & dest_mask) {
+            B = kMoveRight[curr_variant_idx][i][3];
+            C = kMoveRight[curr_variant_idx][i][opp_turn] * same_tier;
+            uint64_t new_board = (((board & B) << 1) & B) | (board & ~B) | C;
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
+            Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
                 parents[ret++] = new_pos;
@@ -776,13 +731,14 @@ static int QuixoGetCanonicalParentPositions(
         }
 
         // Revert a upward shifting move
-        dest = kMoveUp[curr_variant_idx][i][1];
-        if (patterns[opp_turn] & dest) {
-            shift = kMoveUp[curr_variant_idx][i][2];
-            src = kMoveUp[curr_variant_idx][i][0] * same_tier;
-            __m128i new_board = DoMoveShiftDown(board, shift, src, opp_turn);
-            new_board = GetCanonicalBoard(new_board);
-            Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
+        dest_mask = kMoveUp[curr_variant_idx][i][2] >> (opp_turn * 32);
+        if (board & dest_mask) {
+            B = kMoveUp[curr_variant_idx][i][3];
+            C = kMoveUp[curr_variant_idx][i][opp_turn] * same_tier;
+            uint64_t new_board =
+                (((board & B) >> side_length) & B) | (board & ~B) | C;
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
+            Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
                 parents[ret++] = new_pos;
@@ -790,13 +746,14 @@ static int QuixoGetCanonicalParentPositions(
         }
 
         // Revert a downward shifting move
-        dest = kMoveDown[curr_variant_idx][i][1];
-        if (patterns[opp_turn] & dest) {
-            shift = kMoveDown[curr_variant_idx][i][2];
-            src = kMoveDown[curr_variant_idx][i][0] * same_tier;
-            __m128i new_board = DoMoveShiftUp(board, shift, src, opp_turn);
-            new_board = GetCanonicalBoard(new_board);
-            Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
+        dest_mask = kMoveDown[curr_variant_idx][i][2] >> (opp_turn * 32);
+        if (board & dest_mask) {
+            B = kMoveDown[curr_variant_idx][i][3];
+            C = kMoveDown[curr_variant_idx][i][opp_turn] * same_tier;
+            uint64_t new_board =
+                (((board & B) << side_length) & B) | (board & ~B) | C;
+            new_board = TwoPieceHashGetCanonicalBoard(new_board);
+            Position new_pos = TwoPieceHashHash(new_board, opp_turn);
             if (!PositionHashSetContains(&dedup, new_pos)) {
                 PositionHashSetAdd(&dedup, new_pos);
                 parents[ret++] = new_pos;
@@ -870,17 +827,13 @@ MoveArray QuixoGenerateMovesGameplay(TierPosition tier_position) {
     return ret;
 }
 
-static void BoardToStr(__m128i board, char *buffer) {
-    uint64_t x_pattern = _mm_extract_epi64(board, 0);
-    uint64_t o_pattern = _mm_extract_epi64(board, 1);
-    for (int i = 0; i < side_length; ++i) {
-        for (int j = 0; j < side_length; ++j) {
-            uint64_t mask = (1ULL << (8 * i + j));
-            bool is_x = x_pattern & mask;
-            bool is_o = o_pattern & mask;
-            int buff_index = board_size - (i * side_length + j) - 1;
-            buffer[buff_index] = is_x ? 'X' : is_o ? 'O' : '-';
-        }
+static void BoardToStr(uint64_t board, char *buffer) {
+    for (int i = 0; i < board_size; ++i) {
+        uint64_t x_mask = (1ULL << (32 + board_size - i - 1));
+        uint64_t o_mask = (1ULL << (board_size - i - 1));
+        bool is_x = board & x_mask;
+        bool is_o = board & o_mask;
+        buffer[i] = is_x ? 'X' : is_o ? 'O' : '-';
     }
 
     buffer[board_size] = '\0';
@@ -889,8 +842,8 @@ static void BoardToStr(__m128i board, char *buffer) {
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
-                                              t.unpacked[0], t.unpacked[1]);
+    uint64_t board = TwoPieceHashUnhash(tier_position.position, t.unpacked[0],
+                                        t.unpacked[1]);
     char board_str[kBoardSizeMax + 1];
     BoardToStr(board, board_str);
     int offset = 0;
@@ -1026,8 +979,14 @@ static const GameVariant *QuixoGetCurrentVariant(void) {
 static int QuixoInitVariant(int selection) {
     side_length = 5 - selection;
     board_size = side_length * side_length;
+    const int *symmetry_matrix[8];
+    for (int i = 0; i < 8; ++i) {
+        symmetry_matrix[i] = kSymmetryMatrix[curr_variant_idx][i];
+    }
+    int ret = TwoPieceHashInit(side_length, side_length, symmetry_matrix, 8);
+    if (ret != kNoError) return ret;
 
-    return X86SimdTwoPieceHashInit(side_length, side_length);
+    return kNoError;
 }
 
 static int QuixoSetVariantOption(int option, int selection) {
@@ -1054,7 +1013,7 @@ static int QuixoInit(void *aux) {
 // =============================== QuixoFinalize ===============================
 
 static int QuixoFinalize(void) {
-    X86SimdTwoPieceHashFinalize();
+    TwoPieceHashFinalize();
 
     return kNoError;
 }
