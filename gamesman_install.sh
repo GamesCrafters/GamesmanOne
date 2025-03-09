@@ -49,8 +49,9 @@ install_macos() {
 # Setup Pre-Commit Hook #
 #########################
 
-cp scripts/hooks/pre-commit .git/hooks/pre-commit || error_exit "failed to copy pre-commit hook"
-chmod +x .git/hooks/pre-commit || error_exit "failed to set .git/hooks/pre-commit as executable"
+# Currently have issues with Ubuntu. Disabled for now.
+# cp scripts/hooks/pre-commit .git/hooks/pre-commit || error_exit "failed to copy pre-commit hook"
+# chmod +x .git/hooks/pre-commit || error_exit "failed to set .git/hooks/pre-commit as executable"
 
 ########################
 # Install Dependencies #
