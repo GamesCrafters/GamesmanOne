@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set.
- * @version 1.0.3
- * @date 2024-12-22
+ * @version 1.1.0
+ * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -62,6 +62,17 @@ typedef struct TierPositionHashSet {
  */
 void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
 
+/**
+ * @brief Attempts to reserve space for \p size Tier Positions in \p set. If
+ * \c true is returned, the target hash set \p set is guaranteed to have space
+ * for at least \p size Tier Positions before it expands internally. If \c false
+ * is returned, the hash set remains unchanged.
+ *
+ * @param set Target hash set.
+ * @param size Number of Tier Positions to reserve space for.
+ * @return \c true on success,
+ * @return \c false otherwise.
+ */
 bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size);
 
 /** @brief Destroys the TierPosition hash set SET. */
