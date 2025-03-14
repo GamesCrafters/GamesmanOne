@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t hash set.
- * @version 1.0.2
- * @date 2024-12-22
+ * @version 1.1.0
+ * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -80,6 +80,17 @@ typedef struct Int64HashSet {
  */
 void Int64HashSetInit(Int64HashSet *set, double max_load_factor);
 
+/**
+ * @brief Attempts to reserve space for \p size elements in \p set. If \c true
+ * is returned, the target hash set \p set is guaranteed to have space for at
+ * least \p size elements before it expands internally. If \c false is returned,
+ * the hash set remains unchanged.
+ *
+ * @param set Target hash set.
+ * @param size Number of elements to reserve space for.
+ * @return \c true on success,
+ * @return \c false otherwise.
+ */
 bool Int64HashSetReserve(Int64HashSet *set, int64_t size);
 
 /** @brief Deallocates the given \p set. */
