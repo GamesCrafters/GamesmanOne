@@ -68,7 +68,10 @@ int InteractivePresolve(ReadOnlyString key) {
     };
     int num_items = sizeof(items) / sizeof(items[0]);
 
-    return AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
+    int ret = AutoMenu(title, num_items, items, keys, hooks, &UpdateTitle);
+    GameManagerFinalize();
+
+    return ret;
 }
 
 // -----------------------------------------------------------------------------
