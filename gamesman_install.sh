@@ -29,20 +29,19 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git cmake zlib1g zlib1g-dev clang-format
+    sudo apt update && sudo apt install -y git cmake zlib1g zlib1g-dev
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git cmake zlib zlib-devel clang-tools-extra
-    # Note: clang-tools-extra provides clang-format on RHEL/CentOS
+    sudo dnf update && sudo dnf install -y git cmake zlib zlib-devel
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git cmake zlib clang-format || error_exit "brew install failed"
+    brew install git cmake zlib || error_exit "brew install failed"
 }
 
 #########################
@@ -99,7 +98,7 @@ fi
 
 # Check for required commands
 command_not_found_msg="Try installing dependencies by running this script with --install"
-for cmd in git autoconf automake autoreconf cmake clang-format; do
+for cmd in git autoconf automake autoreconf cmake; do
     command_exists "$cmd" || error_exit "command $cmd not found. $command_not_found_msg"
 done
 
