@@ -69,14 +69,13 @@ static int TierSizeComp(const void *t1, const void *t2) {
 }
 
 static bool Step0_0SetupChildTiers(void) {
-    TierArray child_tiers = api_internal->GetChildTiers(this_tier);
-    if (child_tiers.size == kIllegalSize) return false;
-
+    Tier child_tiers[kTierSolverNumChildTiersMax];
+    int num_child_tiers = api_internal->GetChildTiers(this_tier, child_tiers);
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
     TierArrayInit(&canonical_child_tiers);
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        Tier canonical = api_internal->GetCanonicalTier(child_tiers.array[i]);
+    for (int i = 0; i < num_child_tiers; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(child_tiers[i]);
 
         // Another child tier is symmetric to this one and was already added.
         if (TierHashSetContains(&dedup, canonical)) continue;
@@ -88,7 +87,6 @@ static bool Step0_0SetupChildTiers(void) {
     // Sort the array of canonical child tiers in ascending size order.
     TierArraySortExplicit(&canonical_child_tiers, TierSizeComp);
     TierHashSetDestroy(&dedup);
-    TierArrayDestroy(&child_tiers);
 
     return true;
 }
@@ -195,14 +193,15 @@ static int OutcomeCompare(Value v1, int r1, Value v2, int r2) {
     return (1 - (v1 == kLose) * 2) * (r2 - r1);
 }
 
-static void FindMinOutcome(const TierPositionArray *positions, Value *min_val,
-                           int *min_remoteness) {
+static void FindMinOutcome(
+    TierPosition positions[static kTierSolverNumChildPositionsMax],
+    int num_positions, Value *min_val, int *min_remoteness) {
     // Initialize to best possible outcome: win in 0.
     *min_val = kWin;
     *min_remoteness = 0;
-    for (int64_t i = 0; i < positions->size; ++i) {
-        Tier tier = positions->array[i].tier;
-        Position pos = positions->array[i].position;
+    for (int i = 0; i < num_positions; ++i) {
+        Tier tier = positions[i].tier;
+        Position pos = positions[i].position;
 
         // Skip this position if the tier it belongs to isn't loaded in this
         // iteration.
@@ -257,16 +256,15 @@ static bool Step1_1IterateOnePass(void) {
         }
 
         // tier_position is not primitive, generate child positions and minimax.
-        TierPositionArray child_positions =
-            api_internal->GetCanonicalChildPositions(tier_position);
-        if (child_positions.size <= 0) ConcurrentBoolStore(&success, false);
+        TierPosition child_positions[kTierSolverNumChildPositionsMax];
+        int num_child_positions = api_internal->GetCanonicalChildPositions(
+            tier_position, child_positions);
 
         // Find the min child (with respect to the player at parent position.)
         Value min_child_value;
         int min_child_remoteness;
-        FindMinOutcome(&child_positions, &min_child_value,
+        FindMinOutcome(child_positions, num_child_positions, &min_child_value,
                        &min_child_remoteness);
-        TierPositionArrayDestroy(&child_positions);
 
         // Maximize the value of the parent position using the min child.
         MaximizeParent(pos, min_child_value, min_child_remoteness);

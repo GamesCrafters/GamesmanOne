@@ -323,20 +323,21 @@ _bailout:
  * Uniqueness enforced through deduplication of child tiers that are symmetric
  * to each other.
  */
-static TierArray GetCanonicalChildTiers(Tier parent) {
-    TierArray ret;
-    TierArrayInit(&ret);
+static int GetCanonicalChildTiers(
+    Tier parent, Tier child_tiers[static kTierSolverNumChildTiersMax]) {
+    //
+    int ret = 0;
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
-    TierArray children = api_internal->GetChildTiers(parent);
-    for (int64_t i = 0; i < children.size; ++i) {
-        Tier canonical = api_internal->GetCanonicalTier(children.array[i]);
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        TierArrayAppend(&ret, canonical);
+    Tier raw[kTierSolverNumChildTiersMax];
+    int num_raw = api_internal->GetChildTiers(parent, raw);
+    for (int i = 0; i < num_raw; ++i) {
+        Tier canonical = api_internal->GetCanonicalTier(raw[i]);
+        if (!TierHashSetContains(&dedup, canonical)) {
+            TierHashSetAdd(&dedup, canonical);
+            child_tiers[ret++] = canonical;
+        }
     }
-    TierArrayDestroy(&children);
     TierHashSetDestroy(&dedup);
 
     return ret;
@@ -347,20 +348,23 @@ static TierArray GetCanonicalChildTiers(Tier parent) {
  * in the array of tier \p children, or -1 if there is a duplicate in
  * \p children.
  */
-static int GetNumCanonicalChildTiers(Tier parent, const TierArray *children) {
+static int GetNumCanonicalChildTiers(
+    Tier parent, const Tier children[static kTierSolverNumChildTiersMax],
+    int num_children) {
+    //
     int ret = 0;
     TierHashSet dedup, canonical_dedup;
     TierHashSetInit(&dedup, 0.5);
     TierHashSetInit(&canonical_dedup, 0.5);
-    int64_t i;
-    for (i = 0; i < children->size; ++i) {  // For each child
-        if (TierHashSetContains(&dedup, children->array[i])) {
+    int i;
+    for (i = 0; i < num_children; ++i) {  // For each child
+        if (TierHashSetContains(&dedup, children[i])) {
             ret = -1;
             break;
         }
-        TierHashSetAdd(&dedup, children->array[i]);
+        TierHashSetAdd(&dedup, children[i]);
 
-        Tier canonical = api_internal->GetCanonicalTier(children->array[i]);
+        Tier canonical = api_internal->GetCanonicalTier(children[i]);
         if (!TierHashSetContains(&canonical_dedup, canonical)) {
             TierHashSetAdd(&canonical_dedup, canonical);
             ++ret;
@@ -375,13 +379,13 @@ static int GetNumCanonicalChildTiers(Tier parent, const TierArray *children) {
         printf("ERROR: tier [%s] (#%" PRITier
                ") contains duplicate tier children\n",
                name, parent);
-        api_internal->GetTierName(children->array[i], name);
+        api_internal->GetTierName(children[i], name);
         printf("The duplicated child tier is [%s] (#%" PRITier ")\n", name,
-               children->array[i]);
+               children[i]);
         printf("List of all child tiers:\n");
-        for (int64_t j = 0; j < children->size; ++j) {
-            api_internal->GetTierName(children->array[j], name);
-            printf("[%s] (#%" PRITier ")\n", name, children->array[j]);
+        for (int j = 0; j < num_children; ++j) {
+            api_internal->GetTierName(children[j], name);
+            printf("[%s] (#%" PRITier ")\n", name, children[j]);
         }
         printf("\n");
     }
@@ -398,49 +402,42 @@ static int BuildTierGraphProcessChildren(Tier parent, TierStack *fringe,
         total_size += api_internal->GetTierSize(parent);
     }
 
-    TierArray children = api_internal->GetChildTiers(parent);
+    Tier children[kTierSolverNumChildTiersMax];
+    int num_children = api_internal->GetChildTiers(parent, children);
     BuildTierGraphUpdateAnalysis(parent);
     int num_canonical_tier_children =
-        GetNumCanonicalChildTiers(parent, &children);
+        GetNumCanonicalChildTiers(parent, children, num_children);
     if (num_canonical_tier_children < 0) return kIllegalGameTierGraphError;
 
     if (type == kTierSolving) {
         if (!TierGraphSetNumTiers(parent, num_canonical_tier_children)) {
-            TierArrayDestroy(&children);
             return kTierGraphOutOfMemory;
         }
     } else {  // type == kTierAnalyzing
-        for (int64_t i = 0; i < children.size; ++i) {
-            Tier child = children.array[i];
-            if (!IncrementNumParentTiers(child)) {
-                TierArrayDestroy(&children);
-                return kTierGraphOutOfMemory;
-            }
+        for (int i = 0; i < num_children; ++i) {
+            Tier child = children[i];
+            if (!IncrementNumParentTiers(child)) return kTierGraphOutOfMemory;
         }
     }
 
-    for (int64_t i = 0; i < children.size; ++i) {
-        Tier child = children.array[i];
+    for (int i = 0; i < num_children; ++i) {
+        Tier child = children[i];
         if (ReverseTierGraphAdd(&reverse_tier_graph, child, parent) != 0) {
-            TierArrayDestroy(&children);
             return kTierGraphOutOfMemory;
         }
+
         if (!TierHashMapContains(&tier_graph, child)) {
-            if (!TierGraphSetInitial(child)) {
-                TierArrayDestroy(&children);
-                return kTierGraphOutOfMemory;
-            }
+            if (!TierGraphSetInitial(child)) return kTierGraphOutOfMemory;
         }
+
         int status = GetStatus(child);
         if (status == kStatusNotVisited) {
             TierStackPush(fringe, child);
         } else if (status == kStatusInProgress) {
-            TierArrayDestroy(&children);
             return kTierGraphLoopDetected;
         }  // else, child tier is already closed and we take no action.
     }
 
-    TierArrayDestroy(&children);
     return kTierGraphNoError;
 }
 
@@ -457,24 +454,24 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
     }
 
     // Check if this is the largest group of tiers.
-    TierArray canonical_children = GetCanonicalChildTiers(parent);
+    Tier canonical_children[kTierSolverNumChildTiersMax];
+    int num_canonical_children =
+        GetCanonicalChildTiers(parent, canonical_children);
     if (api_internal->GetTierType(parent) == kTierTypeImmediateTransition) {
         int64_t largest_child_size = 0;
-        for (int64_t i = 0; i < canonical_children.size; ++i) {
+        for (int i = 0; i < num_canonical_children; ++i) {
             int64_t this_child_size =
-                api_internal->GetTierSize(canonical_children.array[i]);
+                api_internal->GetTierSize(canonical_children[i]);
             if (this_child_size > largest_child_size) {
                 largest_child_size = this_child_size;
             }
         }
         total_size += largest_child_size;
     } else {
-        for (int64_t i = 0; i < canonical_children.size; ++i) {
-            total_size +=
-                api_internal->GetTierSize(canonical_children.array[i]);
+        for (int i = 0; i < num_canonical_children; ++i) {
+            total_size += api_internal->GetTierSize(canonical_children[i]);
         }
     }
-    TierArrayDestroy(&canonical_children);
 
     if (total_size > max_tier_group_size) {
         max_tier_group_size = total_size;
@@ -882,9 +879,11 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
 }
 
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier) {
-    TierArray child_tiers = api_internal->GetChildTiers(analyzed_tier);
-    for (int64_t i = 0; i < child_tiers.size; ++i) {
-        Tier child = child_tiers.array[i];
+    Tier child_tiers[kTierSolverNumChildTiersMax];
+    int num_child_tiers =
+        api_internal->GetChildTiers(analyzed_tier, child_tiers);
+    for (int i = 0; i < num_child_tiers; ++i) {
+        Tier child = child_tiers[i];
         int num_undiscovered_parent_tiers = GetNumTiers(child);
         assert(num_undiscovered_parent_tiers > 0);
         if (!TierGraphSetNumTiers(child, num_undiscovered_parent_tiers - 1)) {
@@ -896,7 +895,6 @@ static void AnalyzeUpdateTierGraph(Tier analyzed_tier) {
             TierQueuePush(&pending_tiers, child);
         }
     }
-    TierArrayDestroy(&child_tiers);
 }
 
 static void PrintAnalyzerResult(void) {
@@ -982,14 +980,15 @@ static void PrintTierGraphAnalysis(void) {
     printf(
         "The largest canonical tier group contains the following child "
         "tiers:\n");
-    TierArray children = api_internal->GetChildTiers(largest_tier_group_parent);
+    Tier children[kTierSolverNumChildTiersMax];
+    int num_children =
+        api_internal->GetChildTiers(largest_tier_group_parent, children);
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < children.size; ++i) {
-        api_internal->GetTierName(children.array[i], name);
-        printf("[%s] (#%" PRITier "), ", name, children.array[i]);
-        const Tier canonical =
-            api_internal->GetCanonicalTier(children.array[i]);
+    for (int i = 0; i < num_children; ++i) {
+        api_internal->GetTierName(children[i], name);
+        printf("[%s] (#%" PRITier "), ", name, children[i]);
+        const Tier canonical = api_internal->GetCanonicalTier(children[i]);
         api_internal->GetTierName(canonical, name);
         if (TierHashSetContains(&dedup, canonical)) {
             printf("which is already loaded as [%s] (#%" PRITier ")\n", name,
@@ -997,7 +996,7 @@ static void PrintTierGraphAnalysis(void) {
         } else {
             TierHashSetAdd(&dedup, canonical);
             int64_t size = api_internal->GetTierSize(canonical);
-            if (canonical == children.array[i]) {
+            if (canonical == children[i]) {
                 printf("which is canonical and contains %" PRId64
                        " positions\n",
                        size);
@@ -1009,7 +1008,6 @@ static void PrintTierGraphAnalysis(void) {
         }
     }
     TierHashSetDestroy(&dedup);
-    TierArrayDestroy(&children);
 }
 
 static void PrintTestResult(double time_elapsed) {

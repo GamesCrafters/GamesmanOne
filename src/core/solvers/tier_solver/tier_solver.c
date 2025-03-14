@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the generic tier solver.
- * @version 1.6.1
- * @date 2024-09-13
+ * @version 2.0.0
+ * @date 2025-01-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,13 +41,13 @@
 
 #include "core/analysis/stat_manager.h"
 #include "core/db/arraydb/arraydb.h"
-#include "core/db/bpdb/bpdb_lite.h"
 #include "core/db/db_manager.h"
-#include "core/db/naivedb/naivedb.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
+
+enum { kTierSolverNumOptions = 3 };
 
 // Solver API functions.
 
@@ -127,10 +127,8 @@ static TierSolverApi current_api;
 // Solver settings for external use
 static SolverConfig current_config;
 static int num_options;
-#define NUM_OPTIONS_MAX 4  // At most 3 options and 1 zero-terminator.
-static SolverOption current_options[NUM_OPTIONS_MAX];
-static int current_selections[NUM_OPTIONS_MAX];
-#undef NUM_OPTIONS_MAX
+static SolverOption current_options[kTierSolverNumOptions + 1];
+static int current_selections[kTierSolverNumOptions + 1];
 
 // Whether the current game was solved and stored with an older database
 // version. Solving, including force re-solving, are disabled to prevent
@@ -138,7 +136,7 @@ static int current_selections[NUM_OPTIONS_MAX];
 static bool read_only_db;
 
 // Solver status: 0 if not solved, 1 if solved.
-static int solver_status;
+static TierSolverSolveStatus solver_status;
 
 // Helper Functions
 
@@ -167,8 +165,9 @@ static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
 static Position DefaultGetCanonicalPosition(TierPosition tier_position);
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
-static TierPositionArray DefaultGetCanonicalChildPositions(
-    TierPosition tier_position);
+static int DefaultGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]);
 static int DefaultGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]);
 
@@ -296,7 +295,8 @@ static ConstantReadOnlyString kTierSolverAnalyzeSkipReadOnlyMsg =
     "or use a different data path to resolve the game and try again.";
 
 static ConstantReadOnlyString kTierSolverSolveSkipSolvedMsg =
-    "TierSolverSolve: the current game variant has already been solved. Use -f "
+    "TierSolverSolve: the current game variant has already been solved. Use "
+    "-f "
     "in headless mode to force re-solve the game variant.";
 
 static int TierSolverSolve(void *aux) {
@@ -544,26 +544,17 @@ static bool SetCurrentApi(const TierSolverApi *api) {
 
 static int SetDb(ReadOnlyString game_name, int variant,
                  ReadOnlyString data_path) {
-    // Look for existing bpdb_lite database.
-    int error = DbManagerInitDb(&kBpdbLite, true, game_name, variant, data_path,
+    // Initialize a R/W array database.
+    int error = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
                                 current_api.GetTierName, NULL);
     if (error != kNoError) return error;
-    int bpdb_status = DbManagerGameStatus();
-    if (bpdb_status == kDbGameStatusCheckError) return kRuntimeError;
-    if (bpdb_status == kDbGameStatusSolved) {
-        read_only_db = true;
-        solver_status = kTierSolverSolveStatusSolved;
-        return kNoError;
-    }
-    DbManagerFinalizeDb();
 
-    // Initialize a R/W array database.
-    error = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
-                            current_api.GetTierName, NULL);
-    if (error != kNoError) return error;
     int arraydb_status = DbManagerGameStatus();
     if (arraydb_status == kDbGameStatusCheckError) return kRuntimeError;
-    solver_status = (arraydb_status == kDbGameStatusSolved);
+
+    solver_status = (arraydb_status == kDbGameStatusSolved)
+                        ? kTierSolverSolveStatusSolved
+                        : kTierSolverSolveStatusNotSolved;
 
     return kNoError;
 }
@@ -612,44 +603,41 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     //
     TierPositionHashSet children;
     TierPositionHashSetInit(&children, 0.5);
-
-    MoveArray moves = current_api.GenerateMoves(tier_position);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = current_api.GenerateMoves(tier_position, moves);
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
         if (!TierPositionHashSetContains(&children, child)) {
             TierPositionHashSetAdd(&children, child);
         }
     }
-    MoveArrayDestroy(&moves);
     int num_children = (int)children.size;
     TierPositionHashSetDestroy(&children);
 
     return num_children;
 }
 
-static TierPositionArray DefaultGetCanonicalChildPositions(
-    TierPosition tier_position) {
+static int DefaultGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
     //
-    TierPositionHashSet deduplication_set;
-    TierPositionHashSetInit(&deduplication_set, 0.5);
-
-    TierPositionArray children;
-    TierPositionArrayInit(&children);
-
-    MoveArray moves = current_api.GenerateMoves(tier_position);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = current_api.GenerateMoves(tier_position, moves);
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&deduplication_set, child)) {
-            TierPositionHashSetAdd(&deduplication_set, child);
-            TierPositionArrayAppend(&children, child);
+        if (!TierPositionHashSetContains(&dedup, child)) {
+            TierPositionHashSetAdd(&dedup, child);
+            children[ret++] = child;
         }
     }
-    MoveArrayDestroy(&moves);
-    TierPositionHashSetDestroy(&deduplication_set);
+    TierPositionHashSetDestroy(&dedup);
 
-    return children;
+    return ret;
 }
 
 static int DefaultGetTierName(Tier tier,

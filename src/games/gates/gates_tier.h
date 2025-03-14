@@ -43,7 +43,8 @@ void gtprintdebug(void);
 
 Tier GatesGetInitialTier(void);
 TierType GatesGetTierType(Tier tier);
-TierArray GatesGetChildTiers(Tier tier);
+int GatesGetChildTiers(Tier tier,
+                       Tier children[static kTierSolverNumChildTiersMax]);
 Tier GatesGetCanonicalTier(Tier tier);
 int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 

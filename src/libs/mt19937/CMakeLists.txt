@@ -3,3 +3,4 @@ set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/mt19937-64.h)
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/mt19937-64.c)
 
 add_library(mt19937 STATIC ${HEADERS} ${SOURCES})
+target_link_libraries(mt19937 PRIVATE common_flags)

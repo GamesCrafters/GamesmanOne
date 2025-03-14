@@ -35,7 +35,7 @@
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // atoi
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -60,14 +60,17 @@ static int MallqueenschessSetVariantOption(int option, int selection);
 static int64_t MallqueenschessGetNumPositions(void);
 static Position MallqueenschessGetInitialPosition(void);
 
-static MoveArray MallqueenschessGenerateMoves(Position position);
+static int MallqueenschessGenerateMoves(
+    Position position, Move moves[static kRegularSolverNumMovesMax]);
 static Value MallqueenschessPrimitive(Position position);
 static Position MallqueenschessDoMove(Position position, Move move);
 static bool MallqueenschessIsLegalPosition(Position position);
 static Position MallqueenschessGetCanonicalPosition(Position position);
-static PositionArray MallqueenschessGetCanonicalParentPositions(
-    Position position);
+static int MallqueenschessGetCanonicalParentPositions(
+    Position position,
+    Position parents[static kRegularSolverNumParentPositionsMax]);
 
+static MoveArray MallqueenschessGenerateMovesGameplay(Position position);
 static int MallqueenschessPositionToString(Position position, char *buffer);
 static int MallqueenschessMoveToString(Move move, char *buffer);
 static bool MallqueenschessIsValidMoveString(ReadOnlyString move_string);
@@ -101,7 +104,7 @@ static const GameplayApiCommon kGamePlayApiCommon = {
 
 static const GameplayApiRegular kGameplayApiRegular = {
     .PositionToString = &MallqueenschessPositionToString,
-    .GenerateMoves = &MallqueenschessGenerateMoves,
+    .GenerateMoves = &MallqueenschessGenerateMovesGameplay,
     .DoMove = &MallqueenschessDoMove,
     .Primitive = &MallqueenschessPrimitive,
 };
@@ -188,15 +191,13 @@ static int64_t MallqueenschessGetNumPositions(void) {
     return GenericHashNumPositions();
 }
 
-static MoveArray MallqueenschessGenerateMoves(Position position) {
-    MoveArray moves;
-    MoveArrayInit(&moves);
-
+static int MallqueenschessGenerateMoves(
+    Position position, Move moves[static kRegularSolverNumMovesMax]) {
+    //
     char board[boardSize];
     GenericHashUnhash(position, board);
-
     char turn = GenericHashGetTurn(position) == 1 ? W : B;
-
+    int ret = 0;
     for (int i = 0; i < boardSize; i++) {
         if ((turn == W && board[i] == W) || (turn == B && board[i] == B)) {
             int originRow = i / sideLength;
@@ -208,10 +209,8 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 if (board[originRow * sideLength + col] == BLANK) {
                     int targetRow = originRow;
                     int targetCol = col;
-
                     int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                    moves[ret++] = MOVE_ENCODE(origin, target);
                 } else {
                     break;
                 }
@@ -222,10 +221,8 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 if (board[originRow * sideLength + col] == BLANK) {
                     int targetRow = originRow;
                     int targetCol = col;
-
                     int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                    moves[ret++] = MOVE_ENCODE(origin, target);
                 } else {
                     break;
                 }
@@ -236,10 +233,8 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 if (board[row * sideLength + originCol] == BLANK) {
                     int targetRow = row;
                     int targetCol = originCol;
-
                     int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                    moves[ret++] = MOVE_ENCODE(origin, target);
                 } else {
                     break;
                 }
@@ -250,10 +245,8 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 if (board[row * sideLength + originCol] == BLANK) {
                     int targetRow = row;
                     int targetCol = originCol;
-
                     int target = targetRow * sideLength + targetCol;
-
-                    MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
+                    moves[ret++] = MOVE_ENCODE(origin, target);
                 } else {
                     break;
                 }
@@ -267,8 +260,7 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 while (row >= 0 && col >= 0) {
                     if (board[row * sideLength + col] == BLANK) {
                         int target = row * sideLength + col;
-                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-
+                        moves[ret++] = MOVE_ENCODE(origin, target);
                         row--;
                         col--;
                     } else {
@@ -285,8 +277,7 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 while (row < sideLength && col >= 0) {
                     if (board[row * sideLength + col] == BLANK) {
                         int target = row * sideLength + col;
-                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-
+                        moves[ret++] = MOVE_ENCODE(origin, target);
                         row++;
                         col--;
                     } else {
@@ -303,8 +294,7 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 while (row >= 0 && col < sideLength) {
                     if (board[row * sideLength + col] == BLANK) {
                         int target = row * sideLength + col;
-                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-
+                        moves[ret++] = MOVE_ENCODE(origin, target);
                         row--;
                         col++;
                     } else {
@@ -321,8 +311,7 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
                 while (row < sideLength && col < sideLength) {
                     if (board[row * sideLength + col] == BLANK) {
                         int target = row * sideLength + col;
-                        MoveArrayAppend(&moves, MOVE_ENCODE(origin, target));
-
+                        moves[ret++] = MOVE_ENCODE(origin, target);
                         row++;
                         col++;
                     } else {
@@ -333,7 +322,7 @@ static MoveArray MallqueenschessGenerateMoves(Position position) {
         }
     }
 
-    return moves;
+    return ret;
 }
 
 static Value MallqueenschessPrimitive(Position position) {
@@ -504,8 +493,9 @@ static Position MallqueenschessGetCanonicalPosition(Position position) {
     return GenericHashHash(canonBoard, 1);
 }
 
-static PositionArray MallqueenschessGetCanonicalParentPositions(
-    Position position) {
+static int MallqueenschessGetCanonicalParentPositions(
+    Position position,
+    Position parents[static kRegularSolverNumParentPositionsMax]) {
     /* The parent positions can be found by swapping the turn of
     the position to get position P', getting the children of
     P', canonicalizing them, then swapping the turn of each
@@ -519,14 +509,11 @@ static PositionArray MallqueenschessGetCanonicalParentPositions(
 
     PositionHashSet deduplication_set;
     PositionHashSetInit(&deduplication_set, 0.5);
-
-    PositionArray canonicalParents;
-    PositionArrayInit(&canonicalParents);
-
-    Position child;
-    MoveArray moves = MallqueenschessGenerateMoves(turnSwappedPos);
-    for (int64_t i = 0; i < moves.size; i++) {
-        child = MallqueenschessDoMove(turnSwappedPos, moves.array[i]);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = MallqueenschessGenerateMoves(turnSwappedPos, moves);
+    int ret = 0;
+    for (int i = 0; i < num_moves; i++) {
+        Position child = MallqueenschessDoMove(turnSwappedPos, moves[i]);
         /* Note that at this point, it is current player's turn at `child`.
         We check if it's primitive before we swap the turn because
         primitive doesn't care about turn. */
@@ -536,13 +523,25 @@ static PositionArray MallqueenschessGetCanonicalParentPositions(
             child = MallqueenschessGetCanonicalPosition(child);
             if (!PositionHashSetContains(&deduplication_set, child)) {
                 PositionHashSetAdd(&deduplication_set, child);
-                PositionArrayAppend(&canonicalParents, child);
+                parents[ret++] = child;
             }
         }
     }
     PositionHashSetDestroy(&deduplication_set);
-    MoveArrayDestroy(&moves);
-    return canonicalParents;
+
+    return ret;
+}
+
+static MoveArray MallqueenschessGenerateMovesGameplay(Position position) {
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = MallqueenschessGenerateMoves(position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
 }
 
 static int MallqueenschessPositionToString(Position position, char *buffer) {

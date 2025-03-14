@@ -34,7 +34,7 @@
 #include <stdlib.h>  // atoi
 #include <string.h>  // strlen, strtok_r
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
@@ -213,7 +213,9 @@ static bool PieceMoveAvailable(const char board[static kBoardSize], int turn) {
 }
 
 static void GeneratePieceMoves(const char board[static kBoardSize], int turn,
-                               int8_t n_src, int8_t n_dir, MoveArray *moves) {
+                               int8_t n_src, int8_t n_dir,
+                               Move moves[static kRegularSolverNumMovesMax],
+                               int *num_moves) {
     char piece_to_move = kTurnToPiece[turn];
     NeutronMove m = kNeutronMoveInit;
     m.unpacked.n_src = n_src;
@@ -224,7 +226,7 @@ static void GeneratePieceMoves(const char board[static kBoardSize], int turn,
             if (CanMoveInDirection(board, i, dir)) {
                 m.unpacked.p_src = i;
                 m.unpacked.p_dir = dir;
-                MoveArrayAppend(moves, m.hashed);
+                moves[(*num_moves)++] = m.hashed;
             }
         }
     }
@@ -273,21 +275,18 @@ static bool MoveAvailable(Position pos, char board[static kBoardSize],
 
 /** \p board may be modified during the function call, but will be restored
  *  upon returning. */
-static MoveArray NeutronGenerateMovesInternal(Position pos,
-                                              char board[static kBoardSize],
-                                              int turn) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
-
+static int NeutronGenerateMovesInternal(
+    Position pos, char board[static kBoardSize], int turn,
+    Move moves[static kRegularSolverNumMovesMax]) {
     // If the given position is the initial position, generate piece moves
     // directly.
+    int ret = 0;
     if (pos == kInitialPosition) {
-        GeneratePieceMoves(board, turn, -1, 0, &ret);
+        GeneratePieceMoves(board, turn, -1, 0, moves, &ret);
         return ret;
     }
 
     int8_t n_src = FindNeutron(board);
-
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // Make the current neutron move and generate piece moves.
@@ -299,9 +298,9 @@ static MoveArray NeutronGenerateMovesInternal(Position pos,
             NeutronMove m = kNeutronMoveInit;
             m.unpacked.n_src = n_src;
             m.unpacked.n_dir = n_dir;
-            MoveArrayAppend(&ret, m.hashed);
+            moves[ret++] = m.hashed;
         } else {
-            GeneratePieceMoves(board, turn, n_src, n_dir, &ret);
+            GeneratePieceMoves(board, turn, n_src, n_dir, moves, &ret);
         }
 
         // Revert the neutron move. Safe to assume that n_src != dest.
@@ -312,7 +311,8 @@ static MoveArray NeutronGenerateMovesInternal(Position pos,
     return ret;
 }
 
-static MoveArray NeutronGenerateMoves(Position position) {
+static int NeutronGenerateMoves(Position position,
+                                Move moves[static kRegularSolverNumMovesMax]) {
     // Unhash
     char board[kBoardSize];
     bool success = Unhash(position, board);
@@ -320,7 +320,7 @@ static MoveArray NeutronGenerateMoves(Position position) {
     (void)success;
     int turn = GetTurn(position);
 
-    return NeutronGenerateMovesInternal(position, board, turn);
+    return NeutronGenerateMovesInternal(position, board, turn, moves);
 }
 
 static Value NeutronPrimitive(Position position) {
@@ -413,7 +413,9 @@ static Position NeutronGetCanonicalPosition(Position position) {
     return GetCanonicalPositionInternal(position, board, turn);
 }
 
-static PositionArray NeutronGetCanonicalChildPositions(Position position) {
+static int NeutronGetCanonicalChildPositions(
+    Position position,
+    Position children[static kRegularSolverNumChildPositionsMax]) {
     // Unhash
     char board[kBoardSize];
     bool success = Unhash(position, board);
@@ -422,21 +424,20 @@ static PositionArray NeutronGetCanonicalChildPositions(Position position) {
     int turn = GetTurn(position);
 
     // Generate moves
-    MoveArray moves = NeutronGenerateMovesInternal(position, board, turn);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = NeutronGenerateMovesInternal(position, board, turn, moves);
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
-    PositionArray ret;
-    PositionArrayInit(&ret);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        Position child = NeutronDoMoveInternal(board, turn, moves.array[i]);
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        Position child = NeutronDoMoveInternal(board, turn, moves[i]);
         child = NeutronGetCanonicalPosition(child);
         if (!PositionHashSetContains(&dedup, child)) {
             PositionHashSetAdd(&dedup, child);
-            PositionArrayAppend(&ret, child);
+            children[ret++] = child;
         }
     }
     PositionHashSetDestroy(&dedup);
-    MoveArrayDestroy(&moves);
 
     return ret;
 }
@@ -481,10 +482,11 @@ static int8_t ShiftPiece(char board[static kBoardSize], int8_t src,
     return dest;
 }
 
-static void GenerateParentsByReversingNeutron(char board[static kBoardSize],
-                                              int prev_turn, int8_t i,
-                                              PositionArray *ret,
-                                              PositionHashSet *dedup) {
+static void GenerateParentsByReversingNeutron(
+    char board[static kBoardSize], int prev_turn, int8_t i,
+    Position parents[static kRegularSolverNumParentPositionsMax],
+    int *num_parents, PositionHashSet *dedup) {
+    //
     for (int8_t dir = 0; dir < 8; ++dir) {
         if (!CanComeFromDirection(board, i, dir)) continue;
         int8_t prev_dest = i, dest = ShiftPiece(board, prev_dest, dir);
@@ -493,7 +495,7 @@ static void GenerateParentsByReversingNeutron(char board[static kBoardSize],
             parent = GetCanonicalPositionInternal(parent, board, prev_turn);
             if (!PositionHashSetContains(dedup, parent)) {
                 PositionHashSetAdd(dedup, parent);
-                PositionArrayAppend(ret, parent);
+                parents[(*num_parents)++] = parent;
             }
             prev_dest = dest;
             dest = ShiftPiece(board, prev_dest, dir);
@@ -503,12 +505,11 @@ static void GenerateParentsByReversingNeutron(char board[static kBoardSize],
     }
 }
 
-static PositionArray NeutronGetCanonicalParentPositions(Position position) {
-    PositionArray ret;
-    PositionArrayInit(&ret);
-
+static int NeutronGetCanonicalParentPositions(
+    Position position,
+    Position parents[static kRegularSolverNumParentPositionsMax]) {
     // The initial position has no parents.
-    if (position == kInitialPosition) return ret;
+    if (position == kInitialPosition) return 0;
 
     // Unhash
     char board[kBoardSize];
@@ -520,13 +521,13 @@ static PositionArray NeutronGetCanonicalParentPositions(Position position) {
     int8_t neutron_index = FindNeutron(board);
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
-
+    int ret = 0;
     if (NeutronReachedHomeRows(board)) {
         // If the neutron is on one of the two home rows, then the player in
         // the previous turn didn't make a piece move. Only reverse the move of
         // the neutron...
-        GenerateParentsByReversingNeutron(board, prev_turn, neutron_index, &ret,
-                                          &dedup);
+        GenerateParentsByReversingNeutron(board, prev_turn, neutron_index,
+                                          parents, &ret, &dedup);
     } else {
         // ... otherwise, first reverse the move of any one of the opponent
         // pieces, then reverse the move of the neutron.
@@ -537,7 +538,7 @@ static PositionArray NeutronGetCanonicalParentPositions(Position position) {
                 int8_t prev_dest = i, dest = ShiftPiece(board, prev_dest, dir);
                 while (dest != prev_dest) {
                     GenerateParentsByReversingNeutron(
-                        board, prev_turn, neutron_index, &ret, &dedup);
+                        board, prev_turn, neutron_index, parents, &ret, &dedup);
                     prev_dest = dest;
                     dest = ShiftPiece(board, prev_dest, dir);
                 }
@@ -548,7 +549,7 @@ static PositionArray NeutronGetCanonicalParentPositions(Position position) {
         // If position is reachable from the initial position, also append the
         // initial position to the return array.
         if (PositionHashSetContains(&kChildrenOfInitialPosition, position)) {
-            PositionArrayAppend(&ret, kInitialPosition);
+            parents[ret++] = kInitialPosition;
         }
     }
     PositionHashSetDestroy(&dedup);
@@ -570,6 +571,18 @@ static const RegularSolverApi kNeutronSolverApi = {
 };
 
 // ============================ kNeutronGameplayApi ============================
+
+static MoveArray NeutronGenerateMovesGameplay(Position position) {
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = NeutronGenerateMoves(position, moves);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static const char kPositionStringFormat[] =
     "         (  1  2  3  4  5 )           : %c %c %c %c %c\n"
@@ -711,7 +724,7 @@ static const GameplayApiCommon kNeutronGameplayApiCommon = {
 static const GameplayApiRegular kNeutronGameplayApiRegular = {
     .PositionToString = NeutronPositionToString,
 
-    .GenerateMoves = NeutronGenerateMoves,
+    .GenerateMoves = NeutronGenerateMovesGameplay,
     .DoMove = NeutronDoMove,
     .Primitive = NeutronPrimitive,
 };
@@ -970,7 +983,7 @@ static PartmoveArray NeutronGeneratePartmoves(Position position) {
 }
 
 static const UwapiRegular kNeutronUwapiRegular = {
-    .GenerateMoves = NeutronGenerateMoves,
+    .GenerateMoves = NeutronGenerateMovesGameplay,
     .DoMove = NeutronDoMove,
     .Primitive = NeutronPrimitive,
 
@@ -1001,12 +1014,12 @@ static int NeutronInit(void *aux) {
 
     // Cache the children of the initial position.
     PositionHashSetInit(&kChildrenOfInitialPosition, 0.5);
-    MoveArray moves = NeutronGenerateMoves(kInitialPosition);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        Position child = NeutronDoMove(kInitialPosition, moves.array[i]);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = NeutronGenerateMoves(kInitialPosition, moves);
+    for (int i = 0; i < num_moves; ++i) {
+        Position child = NeutronDoMove(kInitialPosition, moves[i]);
         PositionHashSetAdd(&kChildrenOfInitialPosition, child);
     }
-    MoveArrayDestroy(&moves);
 
     return kNoError;
 }

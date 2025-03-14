@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Definition for the list of all games.
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 2.0.0
+ * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,6 +27,8 @@
 #include "games/game_list.h"
 
 #include <stddef.h>  // NULL
+#include <stdlib.h>  // qsort
+#include <string.h>  // strcmp
 
 #include "core/types/gamesman_types.h"
 
@@ -48,8 +50,38 @@
 // 2. Then add the new game object to the list. Note that the list must be
 // NULL-terminated.
 
-const Game *const kAllGames[] = {
+const Game *kAllGames[] = {
     &kWinkers,         &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko,
     &kDobutsuShogi,    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,
     &kMallqueenschess, &kMkaooa,          NULL,
 };
+
+// ============================================================================
+// Game developers should not need to modify anything below.
+// ============================================================================
+
+static int GameCmp(const void *a, const void *b) {
+    const Game *arg1 = *(const Game *const *)a;
+    const Game *arg2 = *(const Game *const *)b;
+
+    return strcmp(arg1->formal_name, arg2->formal_name);
+}
+
+static void SortGames(void) {
+    qsort(kAllGames, sizeof(kAllGames) / sizeof(kAllGames[0]) - 1,
+          sizeof(const Game *), GameCmp);
+}
+
+const Game *const *GameListGetAllGames(void) {
+    static bool sorted = false;
+    if (!sorted) {
+        SortGames();
+        sorted = true;
+    }
+
+    return kAllGames;
+}
+
+int GameListGetNumGames(void) {
+    return sizeof(kAllGames) / sizeof(kAllGames[0]) - 1;
+}

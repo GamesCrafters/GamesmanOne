@@ -37,7 +37,7 @@
 #include <string.h>   // memset, strlen, strtok_r
 
 #include "core/constants.h"
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -190,9 +190,10 @@ static void GetFaces(char faces[static 9], const GobbletGobblersPosition *p) {
 
 static const char kTurnToPiece[] = {'-', 'X', 'O'};
 
-static void GenerateMovesAddPiece(MoveArray *moves, int turn,
-                                  GobbletGobblersTier t,
-                                  const int8_t heights[static 9]) {
+static void GenerateMovesAddPiece(int turn, GobbletGobblersTier t,
+                                  const int8_t heights[static 9],
+                                  Move moves[static kTierSolverNumMovesMax],
+                                  int *num_moves) {
     GobbletGobblersMove m = kGobbletGobblersMoveInit;
     for (int8_t size = 0; size <= 2; ++size) {
         if (t.configs[size].count[turn - 1] == 0) continue;
@@ -200,47 +201,49 @@ static void GenerateMovesAddPiece(MoveArray *moves, int turn,
         for (m.unpacked.dest = 0; m.unpacked.dest < 9; ++m.unpacked.dest) {
             if (heights[m.unpacked.dest] >= size) continue;
             m.unpacked.add_size = size;
-            MoveArrayAppend(moves, m.hash);
+            moves[(*num_moves)++] = m.hash;
         }
     }
 }
 
-static void GenerateMovesMovePiece(MoveArray *moves, int turn,
-                                   const int8_t heights[static 9],
-                                   const char faces[static 9]) {
+static void GenerateMovesMovePiece(int turn, const int8_t heights[static 9],
+                                   const char faces[static 9],
+                                   Move moves[static kTierSolverNumMovesMax],
+                                   int *num_moves) {
     char piece = kTurnToPiece[turn];
     GobbletGobblersMove m = kGobbletGobblersMoveInit;
     for (m.unpacked.src = 0; m.unpacked.src < 9; ++m.unpacked.src) {
         if (faces[m.unpacked.src] != piece) continue;
         for (m.unpacked.dest = 0; m.unpacked.dest < 9; ++m.unpacked.dest) {
             if (heights[m.unpacked.dest] >= heights[m.unpacked.src]) continue;
-            MoveArrayAppend(moves, m.hash);
+            moves[(*num_moves)++] = m.hash;
         }
     }
 }
 
-static MoveArray GenerateMovesInternal(GobbletGobblersTier t,
-                                       const GobbletGobblersPosition *p) {
+static int GenerateMovesInternal(GobbletGobblersTier t,
+                                 const GobbletGobblersPosition *p,
+                                 Move moves[static kTierSolverNumMovesMax]) {
     int8_t heights[9];
     char faces[9];
     GetHeights(heights, p);
     GetFaces(faces, p);
 
-    MoveArray ret;
-    MoveArrayInit(&ret);
-    GenerateMovesAddPiece(&ret, p->turn, t, heights);
-    GenerateMovesMovePiece(&ret, p->turn, heights, faces);
+    int ret = 0;
+    GenerateMovesAddPiece(p->turn, t, heights, moves, &ret);
+    GenerateMovesMovePiece(p->turn, heights, faces, moves, &ret);
 
     return ret;
 }
 
-static MoveArray GobbletGobblersGenerateMoves(TierPosition tier_position) {
+static int GobbletGobblersGenerateMoves(
+    TierPosition tier_position, Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     GobbletGobblersTier t;
     GobbletGobblersPosition p;
     Unhash(tier_position, &t, &p);
 
-    return GenerateMovesInternal(t, &p);
+    return GenerateMovesInternal(t, &p, moves);
 }
 
 static bool HasThreeInARow(const char faces[static 9], char piece) {
@@ -388,46 +391,47 @@ static Position GobbletGobblersGetCanonicalPosition(
     return ret;
 }
 
-static TierPositionArray GobbletGobblersGetCanonicalChildPositions(
-    TierPosition tier_position) {
+static int GobbletGobblersGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
     GobbletGobblersTier t;
     GobbletGobblersPosition p;
     Unhash(tier_position, &t, &p);
 
     // Generate moves
-    MoveArray moves = GenerateMovesInternal(t, &p);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GenerateMovesInternal(t, &p, moves);
 
     // Do moves
-    TierPositionArray ret;
-    TierPositionArrayInit(&ret);
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        GobbletGobblersMove m = {.hash = moves.array[i]};
+    int ret = 0;
+    for (int64_t i = 0; i < num_moves; ++i) {
+        GobbletGobblersMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, p, m);
         child.position = GobbletGobblersGetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&dedup, child)) {
             TierPositionHashSetAdd(&dedup, child);
-            TierPositionArrayAppend(&ret, child);
+            children[ret++] = child;
         }
     }
     TierPositionHashSetDestroy(&dedup);
-    MoveArrayDestroy(&moves);
 
     return ret;
 }
 
-static TierArray GobbletGobblersGetChildTiers(Tier tier) {
-    TierArray ret;
-    TierArrayInit(&ret);
+static int GobbletGobblersGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     GobbletGobblersTier t = {.hash = tier};
+    int ret = 0;
     for (int size = 0; size <= 2; ++size) {
         for (int player = 0; player <= 1; ++player) {
             if (t.configs[size].count[player]) {
                 assert(t.configs[size].count[player] > 0);
                 --t.configs[size].count[player];
-                TierArrayAppend(&ret, t.hash);
+                children[ret++] = t.hash;
                 ++t.configs[size].count[player];
             }
         }
@@ -462,6 +466,19 @@ static const TierSolverApi kGobbletGobblersSolverApi = {
 };
 
 // ======================== kGobbletGobblersGameplayApi ========================
+
+static MoveArray GobbletGobblersGenerateMovesGameplay(
+    TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GobbletGobblersGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static const char kPositionFormat[] =
     "        LEGEND         |          TOTAL\n"
@@ -564,7 +581,7 @@ static const GameplayApiTier GobbletGobblersGameplayApiTier = {
 
     .TierPositionToString = GobbletGobblersTierPositionToString,
 
-    .GenerateMoves = GobbletGobblersGenerateMoves,
+    .GenerateMoves = GobbletGobblersGenerateMovesGameplay,
     .DoMove = GobbletGobblersDoMove,
     .Primitive = GobbletGobblersPrimitive,
 };
@@ -573,10 +590,6 @@ static const GameplayApi kGobbletGobblersGameplayApi = {
     .common = &GobbletGobblersGameplayApiCommon,
     .tier = &GobbletGobblersGameplayApiTier,
 };
-
-// ===================== GobbletGobblersGetCurrentVariant =====================
-
-// ====================== GobbletGobblersSetVariantOption ======================
 
 // ============================ GobbletGobblersInit ============================
 
@@ -773,7 +786,7 @@ static const UwapiTier kGobbletGobblersUwapiTier = {
     .GetInitialPosition = GobbletGobblersGetInitialPosition,
     .GetRandomLegalTierPosition = NULL,
 
-    .GenerateMoves = GobbletGobblersGenerateMoves,
+    .GenerateMoves = GobbletGobblersGenerateMovesGameplay,
     .DoMove = GobbletGobblersDoMove,
     .Primitive = GobbletGobblersPrimitive,
 

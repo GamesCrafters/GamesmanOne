@@ -47,11 +47,13 @@ static int FsvpSetVariantOption(int option, int selection);
 static int64_t FsvpGetNumPositions(void);
 static Position FsvpGetInitialPosition(void);
 
-static MoveArray FsvpGenerateMoves(Position position);
+static int FsvpGenerateMoves(Position position,
+                             Move moves[static kRegularSolverNumMovesMax]);
 static Value FsvpPrimitive(Position position);
 static Position FsvpDoMove(Position position, Move move);
 static bool FsvpIsLegalPosition(Position position);
 
+static MoveArray FsvpGenerateMovesGameplay(Position position);
 static int FsvpPositionToString(Position position, char *buffer);
 static int FsvpMoveToString(Move move, char *buffer);
 static bool FsvpIsValidMoveString(ReadOnlyString move_string);
@@ -105,7 +107,7 @@ static const GameplayApiCommon kFsvpGameplayApiCommon = {
 static const GameplayApiRegular kFsvpGameplayApiRegular = {
     .PositionToString = FsvpPositionToString,
 
-    .GenerateMoves = FsvpGenerateMoves,
+    .GenerateMoves = FsvpGenerateMovesGameplay,
     .DoMove = FsvpDoMove,
     .Primitive = FsvpPrimitive,
 };
@@ -220,10 +222,10 @@ static Move ConstructMove(bool splitting, int x, int y) {
     return (Move)(((x * variant_size + y) << 1) | splitting);
 }
 
-static MoveArray FsvpGenerateMoves(Position position) {
+static int FsvpGenerateMoves(Position position,
+                             Move moves[static kRegularSolverNumMovesMax]) {
     Board board = Unhash(position);
-    MoveArray moves;
-    MoveArrayInit(&moves);
+    int ret = 0;
 
     // Splitting moves
     for (int i = 1; i <= variant_size; ++i) {
@@ -231,7 +233,7 @@ static MoveArray FsvpGenerateMoves(Position position) {
         int j = 0;
         while (proper_factors[i][j] != 0) {
             Move move = ConstructMove(true, i, proper_factors[i][j]);
-            MoveArrayAppend(&moves, move);
+            moves[ret++] = move;
             ++j;
         }
     }
@@ -248,11 +250,11 @@ static MoveArray FsvpGenerateMoves(Position position) {
         // two numbers must not equal to each other.
         for (int j = i + 1; j < size; ++j) {
             Move move = ConstructMove(false, available[i], available[j]);
-            MoveArrayAppend(&moves, move);
+            moves[ret++] = move;
         }
     }
 
-    return moves;
+    return ret;
 }
 #undef VARIANT_SIZE_MAX
 
@@ -286,6 +288,18 @@ static bool FsvpIsLegalPosition(Position position) {
     // The hash is 100% efficient.
     (void)position;  // Unused.
     return true;
+}
+
+static MoveArray FsvpGenerateMovesGameplay(Position position) {
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = FsvpGenerateMoves(position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
 }
 
 static int FsvpPositionToString(Position position, char *buffer) {

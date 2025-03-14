@@ -125,7 +125,8 @@ Tier GatesGetCanonicalTier(Tier tier) {
 // ============================ GatesGetChildTiers ============================
 
 static void GetChildTiersPlacementFewerThan11ByAddingNonWhiteGate(
-    const GatesTier *t, TierArray *ret) {
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax],
+    int *num_children) {
     // Child GatesTier.
     GatesTier ct = *t;
 
@@ -134,14 +135,15 @@ static void GetChildTiersPlacementFewerThan11ByAddingNonWhiteGate(
     for (int p = 1; p < kNumPieceTypes; ++p) {
         if (t->n[p] < 2) {
             ++ct.n[p];
-            TierArrayAppend(ret, GatesTierHash(&ct));
+            children[(*num_children)++] = GatesTierHash(&ct);
             --ct.n[p];
         }
     }
 }
 
 static void GetChildTiersPlacementFewerThan11ByAddingWhiteGate(
-    const GatesTier *t, TierArray *ret) {
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax],
+    int *num_children) {
     // Child GatesTier.
     GatesTier ct = *t;
 
@@ -149,7 +151,7 @@ static void GetChildTiersPlacementFewerThan11ByAddingWhiteGate(
         case 0:  // No white gates have been placed.
             ++ct.n[G];
             for (ct.G1 = 0; ct.G1 < kBoardSize; ++ct.G1) {
-                TierArrayAppend(ret, GatesTierHash(&ct));
+                children[(*num_children)++] = GatesTierHash(&ct);
             }
             break;
 
@@ -159,7 +161,7 @@ static void GetChildTiersPlacementFewerThan11ByAddingWhiteGate(
                 if (ct.G1 == ct.G2) continue;  // Cannot overlap with the first.
                 bool swap = ct.G1 > ct.G2;
                 if (swap) SwapG(&ct);  // Enforce G1 < G2.
-                TierArrayAppend(ret, GatesTierHash(&ct));
+                children[(*num_children)++] = GatesTierHash(&ct);
                 if (swap) SwapG(&ct);  // Revert swap.
             }
             break;
@@ -173,22 +175,24 @@ static void GetChildTiersPlacementFewerThan11ByAddingWhiteGate(
     }
 }
 
-static TierArray GetChildTiersPlacementFewerThan11(const GatesTier *t) {
+static int GetChildTiersPlacementFewerThan11(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
     assert(GatesTierGetNumPieces(t) < 11);
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
 
     // Append all child tiers by adding a non-white-gate piece.
-    GetChildTiersPlacementFewerThan11ByAddingNonWhiteGate(t, &ret);
+    GetChildTiersPlacementFewerThan11ByAddingNonWhiteGate(t, children, &ret);
 
     // Append all child tiers by adding a white gate.
-    GetChildTiersPlacementFewerThan11ByAddingWhiteGate(t, &ret);
+    GetChildTiersPlacementFewerThan11ByAddingWhiteGate(t, children, &ret);
 
     return ret;
 }
 
-static void GetChildTiersPlacement11AddImmediateScoring(GatesTier *ct,
-                                                        TierArray *ret) {
+static void GetChildTiersPlacement11AddImmediateScoring(
+    GatesTier *ct, Tier children[static kTierSolverNumChildTiersMax],
+    int *num_children) {
+    //
     assert(ct->n[G] == 2 && ct->n[g] == 2);
     assert(ct->n[A] == 2 && ct->n[a] == 2);
     assert(ct->n[Z] == 2 && ct->n[z] == 2);
@@ -196,26 +200,25 @@ static void GetChildTiersPlacement11AddImmediateScoring(GatesTier *ct,
     // Since it's black's turn, only black spikes may be scored.
     ct->n[a] = 1;              // Case A: scoring black triangle.
     ct->phase = kGate1Moving;  // Case A.1: into the first gate
-    TierArrayAppend(ret, GatesTierHash(ct));
+    children[(*num_children)++] = GatesTierHash(ct);
     ct->phase = kGate2Moving;  // Case A.2: into the second gate
-    TierArrayAppend(ret, GatesTierHash(ct));
+    children[(*num_children)++] = GatesTierHash(ct);
     ct->n[a] = 2;  // Revert changes.
 
     ct->n[z] = 1;              // Case B: scoring black trapezoid.
     ct->phase = kGate1Moving;  // Case B.1: into the first gate
-    TierArrayAppend(ret, GatesTierHash(ct));
+    children[(*num_children)++] = GatesTierHash(ct);
     ct->phase = kGate2Moving;  // Case B.2: into the second gate
-    TierArrayAppend(ret, GatesTierHash(ct));
+    children[(*num_children)++] = GatesTierHash(ct);
     ct->n[z] = 2;  // Revert changes.
 }
 
-static TierArray GetChildTiersPlacement11ByAddingNonWhiteGate(
-    const GatesTier *t) {
+static int GetChildTiersPlacement11ByAddingNonWhiteGate(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
     // Child GatesTier.
     GatesTier ct = *t;
     assert(t->n[G] == 2);
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
 
     // Add the last piece.
     for (int p = 1; p < kNumPieceTypes; ++p) {
@@ -224,21 +227,21 @@ static TierArray GetChildTiersPlacement11ByAddingNonWhiteGate(
 
     // Case A: do not score and enter movement phase.
     ct.phase = kMovement;
-    TierArrayAppend(&ret, GatesTierHash(&ct));
+    children[ret++] = GatesTierHash(&ct);
 
     // Case B: score immediately after placing the last piece and enter
     // gate-moving phase.
-    GetChildTiersPlacement11AddImmediateScoring(&ct, &ret);
+    GetChildTiersPlacement11AddImmediateScoring(&ct, children, &ret);
 
     return ret;
 }
 
-static TierArray GetChildTiersPlacement11ByAddingWhiteGate(const GatesTier *t) {
+static int GetChildTiersPlacement11ByAddingWhiteGate(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
     // Child GatesTier.
     GatesTier ct = *t;
     assert(t->n[G] == 1);
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
 
     // Add the second white gate.
     ct.n[G] = 2;
@@ -249,42 +252,47 @@ static TierArray GetChildTiersPlacement11ByAddingWhiteGate(const GatesTier *t) {
 
         // Case A: do not score and enter movement phase.
         ct.phase = kMovement;
-        TierArrayAppend(&ret, GatesTierHash(&ct));
+        children[ret++] = GatesTierHash(&ct);
 
         // Case B: score immediately after placing the second white gate and
         // enter gate-moving phase.
-        GetChildTiersPlacement11AddImmediateScoring(&ct, &ret);
+        GetChildTiersPlacement11AddImmediateScoring(&ct, children, &ret);
         if (swap) SwapG(&ct);  // Revert swap.
     }
 
     return ret;
 }
 
-static TierArray GetChildTiersPlacement11(const GatesTier *t) {
+static int GetChildTiersPlacement11(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     if (t->n[G] == 2) {  // The last piece to add is not a white gate.
-        return GetChildTiersPlacement11ByAddingNonWhiteGate(t);
+        return GetChildTiersPlacement11ByAddingNonWhiteGate(t, children);
     }
 
     // The last piece to add is a white gate.
-    return GetChildTiersPlacement11ByAddingWhiteGate(t);
+    return GetChildTiersPlacement11ByAddingWhiteGate(t, children);
 }
 
-static TierArray GetChildTiersPlacement(const GatesTier *t) {
+static int GetChildTiersPlacement(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     assert(t->phase == kPlacement);
     GatesTierField num_pieces = GatesTierGetNumPieces(t);
     if (num_pieces < 11) {
-        return GetChildTiersPlacementFewerThan11(t);
+        return GetChildTiersPlacementFewerThan11(t, children);
     }
     assert(num_pieces == 11);
 
-    return GetChildTiersPlacement11(t);
+    return GetChildTiersPlacement11(t, children);
 }
 
-static TierArray GetChildTiersMovement(const GatesTier *t) {
+static int GetChildTiersMovement(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     assert(t->phase == kMovement);
-    TierArray ret;
-    TierArrayInit(&ret);
     GatesTier ct = *t;  // Child GatesTier.
+    int ret = 0;
 
     // Scoring must occur if there is a tier transition from the movement phase.
     static_assert(kGate1Moving + 1 == kGate2Moving, "");
@@ -293,7 +301,7 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
         for (int p = A; p < kNumPieceTypes; ++p) {
             if (t->n[p] > 0) {
                 --ct.n[p];  // Score the piece.
-                TierArrayAppend(&ret, GatesTierHash(&ct));
+                children[ret++] = GatesTierHash(&ct);
                 ++ct.n[p];  // Revert the change.
             }
         }
@@ -302,14 +310,16 @@ static TierArray GetChildTiersMovement(const GatesTier *t) {
     return ret;
 }
 
-static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
-                                           bool white_turn) {
+static void GetChildTiersAfterGateMovement(
+    GatesTier *ct, Tier children[static kTierSolverNumChildTiersMax],
+    int *num_children, bool white_turn) {
+    //
     assert(ct->n[A] + ct->n[Z] > 0 && ct->n[a] + ct->n[z] > 0);
     assert(ct->G1 < ct->G2);
 
     // Case A: no immediate scoring.
     ct->phase = kMovement;
-    TierArrayAppend(ret, GatesTierHash(ct));
+    children[(*num_children)++] = GatesTierHash(ct);
 
     static_assert(kGate1Moving + 1 == kGate2Moving, "");
     for (ct->phase = kGate1Moving; ct->phase <= kGate2Moving; ++ct->phase) {
@@ -317,48 +327,50 @@ static void GetChildTiersAfterGateMovement(GatesTier *ct, TierArray *ret,
             // Case B: white immediately scores.
             if (ct->n[A] > 0) {
                 --ct->n[A];  // Case B.1: white immediately scores a triangle.
-                TierArrayAppend(ret, GatesTierHash(ct));
+                children[(*num_children)++] = GatesTierHash(ct);
                 ++ct->n[A];  // Revert changes by Case B.1.
             }
             if (ct->n[Z] > 0) {
                 --ct->n[Z];  // Case B.2: white immediately scores a trapezoid.
-                TierArrayAppend(ret, GatesTierHash(ct));
+                children[(*num_children)++] = GatesTierHash(ct);
                 ++ct->n[Z];  // Revert changes by Case B.2.
             }
         } else {
             // Case C: black immediately scores.
             if (ct->n[a] > 0) {
                 --ct->n[a];  // Case C.1: black immediately scores a triangle.
-                TierArrayAppend(ret, GatesTierHash(ct));
+                children[(*num_children)++] = GatesTierHash(ct);
                 ++ct->n[a];  // Revert changes by Case C.1.
             }
 
             if (ct->n[z] > 0) {
                 --ct->n[z];  // Case C.2: black immediately scores a trapezoid.
-                TierArrayAppend(ret, GatesTierHash(ct));
+                children[(*num_children)++] = GatesTierHash(ct);
                 ++ct->n[z];  // Revert changes by Case C.2.
             }
         }
     }
 }
 
-static TierArray GetChildTiersGateMovingWhiteTurn(const GatesTier *t) {
+static int GetChildTiersGateMovingWhiteTurn(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     assert(t->n[A] == 2 && t->n[Z] == 2);
     assert(t->n[a] + t->n[z] < 4 && t->n[a] + t->n[z] > 0);
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
 
     // Child GatesTier. Since white cannot move its own gates,
     // G1 and G2 remain constant throughout.
     GatesTier ct = *t;
-    GetChildTiersAfterGateMovement(&ct, &ret, true);
+    GetChildTiersAfterGateMovement(&ct, children, &ret, true);
 
     return ret;
 }
 
-static void GetChildTiersGateMovingBlackTurnHelper(const GatesTier *pt,
-                                                   GatesTier *ct,
-                                                   TierArray *ret) {
+static void GetChildTiersGateMovingBlackTurnHelper(
+    const GatesTier *pt, GatesTier *ct,
+    Tier children[static kTierSolverNumChildTiersMax], int *num_children) {
+    //
     if (pt->phase == kGate1Moving) {
         // All possible G1 movements.
         for (ct->G1 = 0; ct->G1 < kBoardSize; ++ct->G1) {
@@ -366,7 +378,7 @@ static void GetChildTiersGateMovingBlackTurnHelper(const GatesTier *pt,
             if (ct->G1 == ct->G2) continue;
             bool swap = ct->G1 > ct->G2;
             if (swap) SwapG(ct);
-            GetChildTiersAfterGateMovement(ct, ret, false);
+            GetChildTiersAfterGateMovement(ct, children, num_children, false);
             if (swap) SwapG(ct);
         }
     } else {
@@ -376,77 +388,77 @@ static void GetChildTiersGateMovingBlackTurnHelper(const GatesTier *pt,
             if (ct->G1 == ct->G2) continue;
             bool swap = ct->G1 > ct->G2;
             if (swap) SwapG(ct);
-            GetChildTiersAfterGateMovement(ct, ret, false);
+            GetChildTiersAfterGateMovement(ct, children, num_children, false);
             if (swap) SwapG(ct);
         }
     }
     *ct = *pt;  // Revert all changes.
 }
 
-static TierArray GetChildTiersGateMovingBlackTurn(const GatesTier *t) {
+static int GetChildTiersGateMovingBlackTurn(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     assert(t->n[a] == 2 && t->n[z] == 2);
     assert(t->n[A] + t->n[Z] < 4 && t->n[A] + t->n[Z] > 0);
-    TierArray ret;
-    TierArrayInit(&ret);
+
     GatesTier ct = *t;  // Child GatesTier.
-    GetChildTiersGateMovingBlackTurnHelper(t, &ct, &ret);
+    int ret = 0;
+    GetChildTiersGateMovingBlackTurnHelper(t, &ct, children, &ret);
 
     return ret;
 }
 
-static void DeduplicateTierArray(TierArray *dest, const TierArray *src) {
+static int DeduplicateTierArray(Tier *dest, const Tier *src, int size) {
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < src->size; ++i) {
-        if (TierHashSetContains(&dedup, src->array[i])) continue;
-        TierHashSetAdd(&dedup, src->array[i]);
-        TierArrayAppend(dest, src->array[i]);
+    int ret = 0;
+    for (int i = 0; i < size; ++i) {
+        if (TierHashSetContains(&dedup, src[i])) continue;
+        TierHashSetAdd(&dedup, src[i]);
+        dest[ret++] = src[i];
     }
     TierHashSetDestroy(&dedup);
+
+    return ret;
 }
 
-static TierArray GetChildTiersGateMovingEitherTurn(const GatesTier *t) {
+static int GetChildTiersGateMovingEitherTurn(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
     assert(t->n[A] + t->n[Z] < 4 && t->n[A] + t->n[Z] > 0);
     assert(t->n[a] + t->n[z] < 4 && t->n[a] + t->n[z] > 0);
-    TierArray raw, deduplicated;
-    TierArrayInit(&raw);
-    TierArrayInit(&deduplicated);
+    Tier raw[kTierSolverNumChildTiersMax];
+    int num_raw = 0;
     GatesTier ct = *t;  // Child GatesTier.
 
     // Case A: white's turn, no white gate movement.
-    GetChildTiersAfterGateMovement(&ct, &raw, true);
+    GetChildTiersAfterGateMovement(&ct, raw, &num_raw, true);
 
     // Case B: black's turn, possible white gate movement.
-    GetChildTiersGateMovingBlackTurnHelper(t, &ct, &raw);
+    GetChildTiersGateMovingBlackTurnHelper(t, &ct, raw, &num_raw);
 
-    DeduplicateTierArray(&deduplicated, &raw);
-    TierArrayDestroy(&raw);
-
-    return deduplicated;
+    return DeduplicateTierArray(children, raw, num_raw);
 }
 
-static TierArray GetChildTiersGateMoving(const GatesTier *t) {
+static int GetChildTiersGateMoving(
+    const GatesTier *t, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     assert(t->phase == kGate1Moving || t->phase == kGate2Moving);
     assert(t->n[A] + t->n[Z] != 0 || t->n[a] + t->n[z] != 0);
 
     // Check if the game is over.
-    if (t->n[A] + t->n[Z] == 0 || t->n[a] + t->n[z] == 0) {
-        TierArray empty;
-        TierArrayInit(&empty);
-        return empty;
-    }
+    if (t->n[A] + t->n[Z] == 0 || t->n[a] + t->n[z] == 0) return 0;
 
     // Check if the tier contains only positions of one of the players' turns.
     if (t->n[A] + t->n[Z] == 4) {
         // White could not have scored, so it is white's turn.
-        return GetChildTiersGateMovingWhiteTurn(t);
+        return GetChildTiersGateMovingWhiteTurn(t, children);
     } else if (t->n[a] + t->n[z] == 4) {
         // Black could not have scored, so it is black's turn.
-        return GetChildTiersGateMovingBlackTurn(t);
+        return GetChildTiersGateMovingBlackTurn(t, children);
     }
 
     // Either player's turn.
-    return GetChildTiersGateMovingEitherTurn(t);
+    return GetChildTiersGateMovingEitherTurn(t, children);
 }
 
 TierType GatesGetTierType(Tier tier) {
@@ -462,53 +474,25 @@ TierType GatesGetTierType(Tier tier) {
     return kTierTypeLoopy;
 }
 
-// TODO: remove these once finished debugging.
-int flag = 0;
-static TierHashSet placement_set, movement_set, gate_moving_set;
-TierArray GatesGetChildTiers(Tier tier) {
-    if (!flag) {
-        TierHashSetInit(&placement_set, 0.5);
-        TierHashSetInit(&movement_set, 0.5);
-        TierHashSetInit(&gate_moving_set, 0.5);
-        flag = 1;
-    }
-
+int GatesGetChildTiers(Tier tier,
+                       Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     GatesTier t;
     GatesTierUnhash(tier, &t);
     switch (t.phase) {
         case kPlacement:
-            TierHashSetAdd(&placement_set, tier);
-            return GetChildTiersPlacement(&t);
+            return GetChildTiersPlacement(&t, children);
 
         case kMovement:
-            TierHashSetAdd(&movement_set, tier);
-            return GetChildTiersMovement(&t);
+            return GetChildTiersMovement(&t, children);
 
         case kGate1Moving:
         case kGate2Moving:
-            TierHashSetAdd(&gate_moving_set, tier);
-            return GetChildTiersGateMoving(&t);
+            return GetChildTiersGateMoving(&t, children);
     }
 
-    TierArray error_ret;
-    TierArrayInit(&error_ret);
     NotReached("GatesGetChildTiers: unknown phase value");
-
-    return error_ret;  // Never reached.
-}
-
-void gtprintdebug(void) {
-    printf("placement: %" PRId64 "\n", placement_set.size);
-    printf("movement: %" PRId64 "\n", movement_set.size);
-    printf("gate moving: %" PRId64 "\n", gate_moving_set.size);
-    // TierArray c = GatesGetChildTiers(8415578);
-    // printf("child tiers of #8415578: \n");
-    // for (int i = 0; i < c.size;++i) {
-    //     char name[64];
-    //     GatesGetTierName(c.array[i], name);
-    //     printf("[%s]\n", name);
-    // }
-    // TierArrayDestroy(&c);
+    return -1;  // Never reached.
 }
 
 // ============================= GatesGetTierName =============================

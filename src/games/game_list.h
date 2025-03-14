@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief List of all games.
- * @version 1.0.0
- * @date 2024-01-24
+ * @version 2.0.0
+ * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,9 +30,18 @@
 #include "core/types/gamesman_types.h"
 
 /**
- * @brief A NULL-terminated array of pointers to all games implemented for
- * GAMESMAN.
+ * @brief Get a NULL-ternimated array of all games.
+ *
+ * @return A NULL-terminated array of pointers to all implemented games
+ * sorted by formal names in ascending order.
  */
-extern const Game *const kAllGames[];
+const Game *const *GameListGetAllGames(void);
+
+/**
+ * @brief Returns the number of games in total.
+ *
+ * @return Number of games in total.
+ */
+int GameListGetNumGames(void);
 
 #endif  // GAMESMANONE_GAMES_GAME_LIST_H_

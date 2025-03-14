@@ -2,8 +2,6 @@
 add_subdirectory(regular_solver)
 add_subdirectory(tier_solver)
 
-set(LIBS core_solvers_regular_solver core_solvers_tier_solver)
-
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/solver_manager.h)
 
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/solver_manager.c)

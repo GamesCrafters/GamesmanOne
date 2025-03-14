@@ -39,7 +39,7 @@
 #include <stdio.h>     // fprintf, stderr, sprintf
 #include <stdlib.h>    // atoi
 
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -55,18 +55,22 @@ static Tier MtttierGetInitialTier(void);
 static Position MtttierGetInitialPosition(void);
 
 static int64_t MtttierGetTierSize(Tier tier);
-static MoveArray MtttierGenerateMoves(TierPosition tier_position);
+static int MtttierGenerateMoves(TierPosition tier_position,
+                                Move moves[static kTierSolverNumMovesMax]);
 static Value MtttierPrimitive(TierPosition tier_position);
 static TierPosition MtttierDoMove(TierPosition tier_position, Move move);
 static bool MtttierIsLegalPosition(TierPosition tier_position);
 static Position MtttierGetCanonicalPosition(TierPosition tier_position);
-static PositionArray MtttierGetCanonicalParentPositions(
-    TierPosition tier_position, Tier parent_tier);
-static TierArray MtttierGetChildTiers(Tier tier);
+static int MtttierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]);
+static int MtttierGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]);
 static TierType MtttierGetTierType(Tier tier);
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]);
 
+static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position);
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer);
 static int MtttierMoveToString(Move move, char *buffer);
 static bool MtttierIsValidMoveString(ReadOnlyString move_string);
@@ -119,7 +123,7 @@ static const GameplayApiTier kMtttierGameplayApiTier = {
 
     .TierPositionToString = &MtttTierPositionToString,
 
-    .GenerateMoves = &MtttierGenerateMoves,
+    .GenerateMoves = &MtttierGenerateMovesGameplay,
     .DoMove = &MtttierDoMove,
     .Primitive = &MtttierPrimitive,
 };
@@ -132,7 +136,7 @@ static const GameplayApi kMtttierGameplayApi = {
 // UWAPI Setup
 
 static const UwapiTier kMtttierUwapiTier = {
-    .GenerateMoves = &MtttierGenerateMoves,
+    .GenerateMoves = &MtttierGenerateMovesGameplay,
     .DoMove = &MtttierDoMove,
     .Primitive = &MtttierPrimitive,
     .IsLegalFormalPosition = &MtttierIsLegalFormalPosition,
@@ -220,17 +224,18 @@ static int64_t MtttierGetTierSize(Tier tier) {
     return GenericHashNumPositionsLabel(tier);
 }
 
-static MoveArray MtttierGenerateMoves(TierPosition tier_position) {
-    MoveArray moves;
-    MoveArrayInit(&moves);
+static int MtttierGenerateMoves(TierPosition tier_position,
+                                Move moves[static kTierSolverNumMovesMax]) {
+    int ret = 0;
     char board[9] = {0};
     GenericHashUnhashLabel(tier_position.tier, tier_position.position, board);
     for (Move i = 0; i < 9; ++i) {
         if (board[i] == '-') {
-            MoveArrayAppend(&moves, i);
+            moves[ret++] = i;
         }
     }
-    return moves;
+
+    return ret;
 }
 
 static Value MtttierPrimitive(TierPosition tier_position) {
@@ -296,14 +301,13 @@ static Position MtttierGetCanonicalPosition(TierPosition tier_position) {
     return canonical_position;
 }
 
-static PositionArray MtttierGetCanonicalParentPositions(
-    TierPosition tier_position, Tier parent_tier) {
+static int MtttierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
     //
     Tier tier = tier_position.tier;
     Position position = tier_position.position;
-    PositionArray parents;
-    PositionArrayInit(&parents);
-    if (parent_tier != tier - 1) return parents;
+    if (parent_tier != tier - 1) return 0;
 
     PositionHashSet deduplication_set;
     PositionHashSetInit(&deduplication_set, 0.5);
@@ -312,6 +316,7 @@ static PositionArray MtttierGetCanonicalParentPositions(
     GenericHashUnhashLabel(tier, position, board);
 
     char prev_turn = WhoseTurn(board) == 'X' ? 'O' : 'X';
+    int ret = 0;
     for (int i = 0; i < 9; ++i) {
         if (board[i] == prev_turn) {
             // Take piece off the board.
@@ -330,19 +335,22 @@ static PositionArray MtttierGetCanonicalParentPositions(
                 continue;  // Already included.
             }
             PositionHashSetAdd(&deduplication_set, parent.position);
-            PositionArrayAppend(&parents, parent.position);
+            parents[ret++] = parent.position;
         }
     }
     PositionHashSetDestroy(&deduplication_set);
 
-    return parents;
+    return ret;
 }
 
-static TierArray MtttierGetChildTiers(Tier tier) {
-    TierArray children;
-    TierArrayInit(&children);
-    if (tier < 9) TierArrayAppend(&children, tier + 1);
-    return children;
+static int MtttierGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
+    if (tier < 9) {
+        children[0] = tier + 1;
+        return 1;
+    }
+
+    return 0;
 }
 
 static TierType MtttierGetTierType(Tier tier) {
@@ -353,6 +361,18 @@ static TierType MtttierGetTierType(Tier tier) {
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
     return sprintf(name, "%" PRITier "p", tier);
+}
+
+static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int n = MtttierGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < n; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
 }
 
 static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {

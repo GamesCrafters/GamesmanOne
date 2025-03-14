@@ -37,7 +37,7 @@
 #include <string.h>   // strlen
 
 #include "core/constants.h"
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -111,24 +111,26 @@ static int64_t WinkersGetTierSize(Tier tier) {
     return GenericHashNumPositionsLabel(tier);
 }
 
-static MoveArray WinkersGenerateMovesInternal(WinkersTier t,
-                                              char board[static kBoardSize],
-                                              int turn) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
-    Move move;
-    for (move = 0; move < kBoardSize; ++move) {
+static int WinkersGenerateMovesInternal(
+    WinkersTier t, char board[static kBoardSize], int turn,
+    Move moves[static kTierSolverNumMovesMax]) {
+    //
+    int ret = 0;
+    for (Move move = 0; move < kBoardSize; ++move) {
         bool can_add_neutral =
             (board[move] == '-' && t.placed.neutrals[turn - 1] < 10);
         bool can_add_wink =
             (board[move] == 'C' && t.placed.winks[turn - 1] < 10);
-        if (can_add_neutral || can_add_wink) MoveArrayAppend(&ret, move);
+        if (can_add_neutral || can_add_wink) {
+            moves[ret++] = move;
+        }
     }
 
     return ret;
 }
 
-static MoveArray WinkersGenerateMoves(TierPosition tier_position) {
+static int WinkersGenerateMoves(TierPosition tier_position,
+                                Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     char board[kBoardSize];
     WinkersTier t = {.hash = tier_position.tier};
@@ -138,7 +140,7 @@ static MoveArray WinkersGenerateMoves(TierPosition tier_position) {
     (void)success;
     int turn = GenericHashGetTurnLabel(t.hash, pos);
 
-    return WinkersGenerateMovesInternal(t, board, turn);
+    return WinkersGenerateMovesInternal(t, board, turn, moves);
 }
 
 static bool HasThreeInARow(char board[static kBoardSize], char face) {
@@ -176,9 +178,9 @@ static Value WinkersPrimitive(TierPosition tier_position) {
         if (board[i] != 'X' && board[i] != 'O') {
             // Check for the edge case where the current player has no moves.
             // This is defined as a winning position for the current player.
-            MoveArray moves = WinkersGenerateMoves(tier_position);
-            Value ret = moves.size == 0 ? kWin : kUndecided;
-            MoveArrayDestroy(&moves);
+            Move moves[kTierSolverNumMovesMax];
+            int num_moves = WinkersGenerateMoves(tier_position, moves);
+            Value ret = num_moves == 0 ? kWin : kUndecided;
             return ret;
         }
     }
@@ -268,8 +270,9 @@ static Position WinkersGetCanonicalPosition(TierPosition tier_position) {
     return GenericHashHashLabel(tier, min_board, turn);
 }
 
-TierPositionArray WinkersGetCanonicalChildPositions(
-    TierPosition tier_position) {
+int WinkersGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
     char board[kBoardSize];
     WinkersTier t = {.hash = tier_position.tier};
@@ -279,22 +282,20 @@ TierPositionArray WinkersGetCanonicalChildPositions(
     (void)success;
     int turn = GenericHashGetTurnLabel(t.hash, pos);
 
-    MoveArray moves = WinkersGenerateMovesInternal(t, board, turn);
-    TierPositionArray ret;
-    TierPositionArrayInit(&ret);
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = WinkersGenerateMovesInternal(t, board, turn, moves);
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child =
-            WinkersDoMoveInternal(t, board, turn, moves.array[i]);
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = WinkersDoMoveInternal(t, board, turn, moves[i]);
         child.position = WinkersGetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&dedup, child)) {
             TierPositionHashSetAdd(&dedup, child);
-            TierPositionArrayAppend(&ret, child);
+            children[ret++] = child;
         }
     }
     TierPositionHashSetDestroy(&dedup);
-    MoveArrayDestroy(&moves);
 
     return ret;
 }
@@ -321,20 +322,25 @@ static int WinkersGetTurnFromTier(WinkersTier t) {
                 1);
 }
 
-static TierArray WinkersGetChildTiers(Tier tier) {
+static int WinkersGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
+    //
     WinkersTier t = {.hash = tier};
     int turn = WinkersGetTurnFromTier(t);
-    TierArray ret;
-    TierArrayInit(&ret);
+    int ret = 0;
 
     // Places a wink
     ++t.placed.winks[turn - 1];
-    if (WinkersIsValidTier(t.hash)) TierArrayAppend(&ret, t.hash);
+    if (WinkersIsValidTier(t.hash)) {
+        children[ret++] = t.hash;
+    }
     --t.placed.winks[turn - 1];
 
     // Places a neutral checker
     ++t.placed.neutrals[turn - 1];
-    if (WinkersIsValidTier(t.hash)) TierArrayAppend(&ret, t.hash);
+    if (WinkersIsValidTier(t.hash)) {
+        children[ret++] = t.hash;
+    }
 
     return ret;
 }
@@ -371,6 +377,18 @@ static const TierSolverApi kWinkersSolverApi = {
 };
 
 // ============================ kWinkersGameplayApi ============================
+
+static MoveArray WinkersGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = WinkersGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static const char kWinkersPositionStringFormat[] =
     "            LEGEND                            TOTAL\n"
@@ -441,7 +459,7 @@ static const GameplayApiTier WinkersGameplayApiTier = {
 
     .TierPositionToString = WinkersTierPositionToString,
 
-    .GenerateMoves = WinkersGenerateMoves,
+    .GenerateMoves = WinkersGenerateMovesGameplay,
     .DoMove = WinkersDoMove,
     .Primitive = WinkersPrimitive,
 };
@@ -622,7 +640,7 @@ static const UwapiTier kWinkersUwapiTier = {
     .GetInitialPosition = WinkersGetInitialPosition,
     .GetRandomLegalTierPosition = NULL,
 
-    .GenerateMoves = WinkersGenerateMoves,
+    .GenerateMoves = WinkersGenerateMovesGameplay,
     .DoMove = WinkersDoMove,
     .Primitive = WinkersPrimitive,
 

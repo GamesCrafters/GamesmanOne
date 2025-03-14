@@ -37,7 +37,7 @@
 #include <string.h>   // strcpy, strlen, strtok_r
 
 #include "core/constants.h"
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -307,10 +307,8 @@ static void ConvertCapturedToSky(char board[static kBoardStrSize]) {
     }
 }
 
-static MoveArray DobutsuShogiGenerateMoves(Position position) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
-
+static int DobutsuShogiGenerateMoves(
+    Position position, Move moves[static kRegularSolverNumMovesMax]) {
     // Unhash
     char board[kBoardStrSize];
     bool success = GenericHashUnhash(position, board);
@@ -319,6 +317,7 @@ static MoveArray DobutsuShogiGenerateMoves(Position position) {
     bool p2_turn = GenericHashGetTurn(position) == 2;
 
     // Generate moves for board pieces
+    int ret = 0;
     for (int i = 0; i < kBoardSize; ++i) {
         if (isalpha(board[i]) && (p2_turn ^ (bool)isupper(board[i]))) {
             int piece_index = kPieceToIndex[(int)board[i]];
@@ -326,7 +325,7 @@ static MoveArray DobutsuShogiGenerateMoves(Position position) {
                 int dest = kMoveMatrix[piece_index][i][j];
                 if (CanCapture(board[i], board[dest])) {
                     Move move = ConstructMove(i, dest);
-                    MoveArrayAppend(&ret, move);
+                    moves[ret++] = move;
                 }
             }
         }
@@ -339,7 +338,7 @@ static MoveArray DobutsuShogiGenerateMoves(Position position) {
             for (int j = 0; j < kBoardSize; ++j) {
                 if (board[j] == '-') {  // If destination is empty
                     Move move = ConstructMove(i, j);
-                    MoveArrayAppend(&ret, move);
+                    moves[ret++] = move;
                 }
             }
         }
@@ -350,16 +349,16 @@ static MoveArray DobutsuShogiGenerateMoves(Position position) {
 
 static bool ImmediateCapture(Position position, int target) {
     bool ret = false;
-    MoveArray moves = DobutsuShogiGenerateMoves(position);
-    for (int64_t i = 0; i < moves.size; ++i) {
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = DobutsuShogiGenerateMoves(position, moves);
+    for (int i = 0; i < num_moves; ++i) {
         int src = 0, dest = 0;
-        ExpandMove(moves.array[i], &src, &dest);
+        ExpandMove(moves[i], &src, &dest);
         if (dest == target) {
             ret = true;
             break;
         }
     }
-    MoveArrayDestroy(&moves);
 
     return ret;
 }
@@ -524,16 +523,20 @@ static Position DobutsuShogiGetCanonicalPosition(Position position) {
     return ret;
 }
 
-static void AddIfNotDuplicate(PositionArray *array, PositionHashSet *dedup_set,
-                              Position pos) {
+static void AddIfNotDuplicate(
+    Position array[static kRegularSolverNumChildPositionsMax],
+    int *num_positions, PositionHashSet *dedup_set, Position pos) {
+    //
     pos = DobutsuShogiGetCanonicalPosition(pos);
     if (!PositionHashSetContains(dedup_set, pos)) {
         PositionHashSetAdd(dedup_set, pos);
-        PositionArrayAppend(array, pos);
+        array[(*num_positions)++] = pos;
     }
 }
 
-static PositionArray DobutsuShogiGetCanonicalChildPositions(Position position) {
+static int DobutsuShogiGetCanonicalChildPositions(
+    Position position,
+    Position children[static kRegularSolverNumChildPositionsMax]) {
     // Unhash
     char board[kBoardStrSize];
     bool success = GenericHashUnhash(position, board);
@@ -541,10 +544,9 @@ static PositionArray DobutsuShogiGetCanonicalChildPositions(Position position) {
     (void)success;
     int turn = GenericHashGetTurn(position);
     bool p2_turn = (turn == 2);
-    PositionArray ret;
-    PositionArrayInit(&ret);
     PositionHashSet dedup_set;
     PositionHashSetInit(&dedup_set, 0.5);
+    int ret = 0;
 
     // Generate children by moving board pieces
     for (int i = 0; i < kBoardSize; ++i) {
@@ -554,7 +556,7 @@ static PositionArray DobutsuShogiGetCanonicalChildPositions(Position position) {
                 int dest = kMoveMatrix[piece_index][i][j];
                 if (CanCapture(board[i], board[dest])) {
                     Position child = DoMoveInternal(board, turn, i, dest);
-                    AddIfNotDuplicate(&ret, &dedup_set, child);
+                    AddIfNotDuplicate(children, &ret, &dedup_set, child);
                 }
             }
         }
@@ -569,7 +571,7 @@ static PositionArray DobutsuShogiGetCanonicalChildPositions(Position position) {
             for (int j = 0; j < kBoardSize; ++j) {
                 if (board_copy[j] == '-') {  // If destination is empty
                     Position child = DoMoveInternal(board, turn, i, j);
-                    AddIfNotDuplicate(&ret, &dedup_set, child);
+                    AddIfNotDuplicate(children, &ret, &dedup_set, child);
                 }
             }
         }
@@ -592,6 +594,18 @@ static const RegularSolverApi kDobutsuShogiSolverApi = {
 };
 
 // ========================= kDobutsuShogiGameplayApi =========================
+
+static MoveArray DobutsuShogiGenerateMovesGameplay(Position position) {
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = DobutsuShogiGenerateMoves(position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static const char kPositionStringFormat[] =
     "\n"
@@ -733,7 +747,7 @@ static const GameplayApiCommon kDobutsuShogiGameplayApiCommon = {
 static const GameplayApiRegular kDobutsuShogiGameplayApiRegular = {
     .PositionToString = DobutsuShogiPositionToString,
 
-    .GenerateMoves = DobutsuShogiGenerateMoves,
+    .GenerateMoves = DobutsuShogiGenerateMovesGameplay,
     .DoMove = DobutsuShogiDoMove,
     .Primitive = DobutsuShogiPrimitive,
 };
@@ -904,7 +918,7 @@ static CString DobutsuShogiMoveToAutoGuiMove(Position position, Move move) {
 }
 
 static const UwapiRegular kDobutsuShogiUwapiRegular = {
-    .GenerateMoves = DobutsuShogiGenerateMoves,
+    .GenerateMoves = DobutsuShogiGenerateMovesGameplay,
     .DoMove = DobutsuShogiDoMove,
     .Primitive = DobutsuShogiPrimitive,
 

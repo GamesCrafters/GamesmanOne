@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 1.5.0
- * @date 2024-09-07
+ * @version 2.0.0
+ * @date 2025-01-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -151,17 +151,21 @@ static Tier GetInitialTier(void);
 static Position TierGetInitialPosition(void);
 
 static int64_t GetTierSize(Tier tier);
-static MoveArray TierGenerateMoves(TierPosition tier_position);
+static int TierGenerateMoves(TierPosition tier_position,
+                             Move moves[static kTierSolverNumMovesMax]);
 static Value TierPrimitive(TierPosition tier_position);
 static TierPosition TierDoMove(TierPosition tier_position, Move move);
 static bool TierIsLegalPosition(TierPosition tier_position);
 static Position TierGetCanonicalPosition(TierPosition tier_position);
 static int TierGetNumberOfCanonicalChildPositions(TierPosition tier_position);
-static TierPositionArray TierGetCanonicalChildPositions(
-    TierPosition tier_position);
-static PositionArray TierGetCanonicalParentPositions(TierPosition tier_position,
-                                                     Tier parent_tier);
-static TierArray GetChildTiers(Tier tier);
+static int TierGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]);
+static int TierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]);
+static int GetChildTiers(Tier tier,
+                         Tier children[static kTierSolverNumChildTiersMax]);
 static Tier GetCanonicalTier(Tier tier);
 
 // Default API Functions.
@@ -169,8 +173,9 @@ static Tier GetCanonicalTier(Tier tier);
 static Position DefaultGetCanonicalPosition(TierPosition tier_position);
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
-static TierPositionArray DefaultGetCanonicalChildPositions(
-    TierPosition tier_position);
+static int DefaultGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kRegularSolverNumChildPositionsMax]);
 
 static TierType DefaultGetTierType(Tier tier);
 static Position DefaultGetPositionInSymmetricTier(TierPosition tier_position,
@@ -529,8 +534,9 @@ static int64_t GetTierSize(Tier tier) {
     return original_api.GetNumPositions();
 }
 
-static MoveArray TierGenerateMoves(TierPosition tier_position) {
-    return original_api.GenerateMoves(tier_position.position);
+static int TierGenerateMoves(TierPosition tier_position,
+                             Move moves[static kTierSolverNumMovesMax]) {
+    return original_api.GenerateMoves(tier_position.position, moves);
 }
 
 static Value TierPrimitive(TierPosition tier_position) {
@@ -556,36 +562,39 @@ static int TierGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         tier_position.position);
 }
 
-static TierPositionArray TierGetCanonicalChildPositions(
-    TierPosition tier_position) {
+static int TierGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
     //
-    PositionArray children =
-        original_api.GetCanonicalChildPositions(tier_position.position);
+    Position raw[kRegularSolverNumMovesMax];
+    int num_raw =
+        original_api.GetCanonicalChildPositions(tier_position.position, raw);
     TierPositionArray ret;
     TierPositionArrayInit(&ret);
-
-    for (int64_t i = 0; i < children.size; ++i) {
-        TierPosition this_child = {
-            .tier = kDefaultTier,
-            .position = children.array[i],
-        };
-        TierPositionArrayAppend(&ret, this_child);
+    for (int i = 0; i < num_raw; ++i) {
+        children[i].tier = kDefaultTier;
+        ;
+        children[i].position = raw[i];
     }
-    PositionArrayDestroy(&children);
-    return ret;
+
+    return num_raw;
 }
 
-static PositionArray TierGetCanonicalParentPositions(TierPosition tier_position,
-                                                     Tier parent_tier) {
+static int TierGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
     (void)parent_tier;  // Unused;
-    return original_api.GetCanonicalParentPositions(tier_position.position);
+    return original_api.GetCanonicalParentPositions(tier_position.position,
+                                                    parents);
 }
 
-static TierArray GetChildTiers(Tier tier) {
-    (void)tier;  // Unused;
-    TierArray ret;
-    Int64ArrayInit(&ret);
-    return ret;
+static int GetChildTiers(Tier tier,
+                         Tier children[static kTierSolverNumChildTiersMax]) {
+    (void)tier;      // Unused;
+    (void)children;  // Unmodified.
+
+    return 0;
 }
 
 static Tier GetCanonicalTier(Tier tier) { return tier; }
@@ -602,42 +611,41 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     TierPositionHashSet children;
     TierPositionHashSetInit(&children, 0.5);
 
-    MoveArray moves = current_api.GenerateMoves(tier_position);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = current_api.GenerateMoves(tier_position, moves);
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&children, child)) {
             TierPositionHashSetAdd(&children, child);
         }
     }
-    MoveArrayDestroy(&moves);
     int num_children = (int)children.size;
     TierPositionHashSetDestroy(&children);
+
     return num_children;
 }
 
-static TierPositionArray DefaultGetCanonicalChildPositions(
-    TierPosition tier_position) {
+static int DefaultGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kRegularSolverNumChildPositionsMax]) {
     //
     TierPositionHashSet deduplication_set;
     TierPositionHashSetInit(&deduplication_set, 0.5);
-
-    TierPositionArray children;
-    TierPositionArrayInit(&children);
-
-    MoveArray moves = current_api.GenerateMoves(tier_position);
-    for (int64_t i = 0; i < moves.size; ++i) {
-        TierPosition child = current_api.DoMove(tier_position, moves.array[i]);
+    Move moves[kRegularSolverNumMovesMax];
+    int num_moves = current_api.GenerateMoves(tier_position, moves);
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&deduplication_set, child)) {
             TierPositionHashSetAdd(&deduplication_set, child);
-            TierPositionArrayAppend(&children, child);
+            children[ret++] = child;
         }
     }
-
-    MoveArrayDestroy(&moves);
     TierPositionHashSetDestroy(&deduplication_set);
-    return children;
+
+    return ret;
 }
 
 static TierType DefaultGetTierType(Tier tier) {

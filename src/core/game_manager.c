@@ -40,38 +40,36 @@ static const Game *current_game;
 
 // -----------------------------------------------------------------------------
 
-const Game *const *GameManagerGetAllGames(void) { return kAllGames; }
-
-int GameManagerNumGames(void) {
-    int i = 0;
-    while (kAllGames[i] != NULL) {
-        ++i;
-    }
-    return i;
+const Game *const *GameManagerGetAllGames(void) {
+    return GameListGetAllGames();
 }
 
+int GameManagerNumGames(void) { return GameListGetNumGames(); }
+
 const Game *GameManagerInitGame(ReadOnlyString game_name, void *aux) {
-    int num_games = GameManagerNumGames();
-    for (int i = 0; i < num_games; ++i) {
-        if (strcmp(game_name, kAllGames[i]->name) == 0) {
+    const Game *const *all_games = GameListGetAllGames();
+    for (int i = 0; all_games[i] != NULL; ++i) {
+        if (strcmp(game_name, all_games[i]->name) == 0) {
             return GameManagerInitGameIndex(i, aux);
         }
     }
+
     return NULL;
 }
 
 const Game *GameManagerInitGameIndex(int index, void *aux) {
     assert(index >= 0 && index < GameManagerNumGames());
-    int error = kAllGames[index]->Init(aux);
+    const Game *const *all_games = GameListGetAllGames();
+    int error = all_games[index]->Init(aux);
     if (error != kNoError) {
         fprintf(stderr,
                 "GameManagerInitGameIndex: failed to initialize game [%s], "
                 "code %d.\n",
-                kAllGames[index]->name, error);
+                all_games[index]->name, error);
         return NULL;
     }
 
-    return current_game = kAllGames[index];
+    return current_game = all_games[index];
 }
 
 const Game *GameManagerGetCurrentGame(void) { return current_game; }

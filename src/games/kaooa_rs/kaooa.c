@@ -33,7 +33,7 @@
 #include <string.h>   // strlen
 
 #include "core/constants.h"
-#include "core/generic_hash/generic_hash.h"
+#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -109,16 +109,16 @@ static int64_t KaooaGetTierSize(Tier tier) {
     return GenericHashNumPositionsLabel(tier);
 }
 
-static MoveArray KaooaGenerateCrowMoves(Tier tier,
-                                        const char board[static kBoardSize]) {
-    MoveArray ret;
-    MoveArrayInit(&ret);
+static int KaooaGenerateCrowMoves(Tier tier,
+                                  const char board[static kBoardSize],
+                                  Move moves[static kTierSolverNumMovesMax]) {
     KaooaMove m = kKaooaMoveInit;
+    int ret = 0;
     if (tier < 7) {  // Placement phase
         for (int8_t i = 0; i < kBoardSize; ++i) {
             if (board[i] == '-') {
                 m.unpacked.dest = i;
-                MoveArrayAppend(&ret, m.hashed);
+                moves[ret++] = m.hashed;
             }
         }
     } else {  // Movement phase.
@@ -130,7 +130,7 @@ static MoveArray KaooaGenerateCrowMoves(Tier tier,
                 int8_t neighbor = kNeighbors[i][j];
                 if (board[neighbor] == '-') {
                     m.unpacked.dest = neighbor;
-                    MoveArrayAppend(&ret, m.hashed);
+                    moves[ret++] = m.hashed;
                 }
             }
         }
@@ -147,18 +147,18 @@ static int8_t FindVulture(const char board[static kBoardSize]) {
     return -1;
 }
 
-static MoveArray KaooaGenerateVultureMoves(
-    const char board[static kBoardSize]) {
+static int KaooaGenerateVultureMoves(
+    const char board[static kBoardSize],
+    Move moves[static kTierSolverNumMovesMax]) {
     //
-    MoveArray ret;
-    MoveArrayInit(&ret);
     KaooaMove m = kKaooaMoveInit;
     int8_t vulture = FindVulture(board);
+    int ret = 0;
     if (vulture < 0) {  // Placement
         for (int8_t i = 0; i < kBoardSize; ++i) {
             if (board[i] == '-') {
                 m.unpacked.dest = i;
-                MoveArrayAppend(&ret, m.hashed);
+                moves[ret++] = m.hashed;
             }
         }
     } else {  // Movement
@@ -170,19 +170,19 @@ static MoveArray KaooaGenerateVultureMoves(
             if (board[mid] == 'C' && board[dest] == '-') {
                 m.unpacked.capture = mid;
                 m.unpacked.dest = dest;
-                MoveArrayAppend(&ret, m.hashed);
+                moves[ret++] = m.hashed;
             }
         }
 
         // Moving to a neighboring slot; available only if capturing is not
         // possible or if madatory captures are disabled.
-        if (!mandatory_capture || ret.size == 0) {
+        if (!mandatory_capture || ret == 0) {
             m.unpacked.capture = -1;
             for (int8_t i = 0; i < kNumNeighbors[vulture]; ++i) {
                 int8_t neighbor = kNeighbors[vulture][i];
                 if (board[neighbor] == '-') {
                     m.unpacked.dest = neighbor;
-                    MoveArrayAppend(&ret, m.hashed);
+                    moves[ret++] = m.hashed;
                 }
             }
         }
@@ -191,7 +191,8 @@ static MoveArray KaooaGenerateVultureMoves(
     return ret;
 }
 
-static MoveArray KaooaGenerateMoves(TierPosition tier_position) {
+static int KaooaGenerateMoves(TierPosition tier_position,
+                              Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     char board[kBoardSize];
     Tier tier = tier_position.tier;
@@ -200,9 +201,9 @@ static MoveArray KaooaGenerateMoves(TierPosition tier_position) {
     assert(success);
     (void)success;
     int turn = GenericHashGetTurnLabel(tier, pos);
-    if (turn == 1) return KaooaGenerateCrowMoves(tier, board);
+    if (turn == 1) return KaooaGenerateCrowMoves(tier, board, moves);
 
-    return KaooaGenerateVultureMoves(board);
+    return KaooaGenerateVultureMoves(board, moves);
 }
 
 static int CrowsCount(const char board[static kBoardSize]) {
@@ -230,10 +231,9 @@ static Value KaooaPrimitive(TierPosition tier_position) {
     int num_crows = CrowsCount(board);
     if (turn == 1 && tier - num_crows == 4) return kLose;
     if (turn == 2) {
-        MoveArray moves = KaooaGenerateMoves(tier_position);
-        bool no_moves = (moves.size == 0);
-        MoveArrayDestroy(&moves);
-        if (no_moves) return kLose;
+        Move moves[kTierSolverNumMovesMax];
+        int num_moves = KaooaGenerateMoves(tier_position, moves);
+        if (num_moves == 0) return kLose;
     }
 
     return kUndecided;
@@ -313,13 +313,15 @@ static bool KaooaIsLegalPosition(TierPosition tier_position) {
     return false;
 }
 
-static TierArray KaooaGetChildTiers(Tier tier) {
-    TierArray ret;
-    TierArrayInit(&ret);
+static int KaooaGetChildTiers(
+    Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
     assert(tier >= 0 && tier <= 7);
-    if (tier < 7) TierArrayAppend(&ret, tier + 1);
+    if (tier < 7) {
+        children[0] = tier + 1;
+        return 1;
+    }
 
-    return ret;
+    return 0;
 }
 
 static int KaooaGetTierName(Tier tier,
@@ -349,6 +351,18 @@ static const TierSolverApi kKaooaSolverApi = {
 };
 
 // ============================= kKaooaGameplayApi =============================
+
+static MoveArray KaooaGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = KaooaGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
 
 static ConstantReadOnlyString kKaooaPositionStringFormat =
     "                 [1]                  |                  [%c]\n"
@@ -445,7 +459,7 @@ static const GameplayApiTier KaooaGameplayApiTier = {
 
     .TierPositionToString = KaooaTierPositionToString,
 
-    .GenerateMoves = KaooaGenerateMoves,
+    .GenerateMoves = KaooaGenerateMovesGameplay,
     .DoMove = KaooaDoMove,
     .Primitive = KaooaPrimitive,
 };
