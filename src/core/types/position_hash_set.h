@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Position hash set.
- * @version 1.0.1
- * @date 2024-11-28
+ * @version 1.1.0
+ * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -51,6 +51,17 @@ typedef Int64HashSet PositionHashSet;
  */
 void PositionHashSetInit(PositionHashSet *set, double max_load_factor);
 
+/**
+ * @brief Attempts to reserve space for \p size Position in \p set. If \c true
+ * is returned, the target hash set \p set is guaranteed to have space for at
+ * least \p size Positions before it expands internally. If \c false is
+ * returned, the hash set remains unchanged.
+ *
+ * @param set Target hash set.
+ * @param size Number of Positions to reserve space for.
+ * @return \c true on success,
+ * @return \c false otherwise.
+ */
 bool PositionHashSetReserve(PositionHashSet *set, int64_t size);
 
 /** @brief Deallocates the given \p set. */
