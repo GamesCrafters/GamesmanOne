@@ -410,7 +410,6 @@ int Popcount64(uint64_t x);
 
 #ifdef USE_MPI
 
-#ifdef _OPENMP
 /**
  * @brief Bail-on-error \c MPI_Init_thread.
  *
@@ -420,7 +419,7 @@ int Popcount64(uint64_t x);
  * @param provided (Output parameter) level of provided thread support.
  */
 void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided);
-#else   // _OPENMP not defined
+
 /**
  * @brief Bail-on-error \c MPI_Init.
  *
@@ -428,7 +427,6 @@ void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided);
  * @param argv Pointer to the argument vector.
  */
 void SafeMpiInit(int *argc, char ***argv);
-#endif  // _OPENMP
 
 /**
  * @brief Bail-on-error \c MPI_Finalize.
