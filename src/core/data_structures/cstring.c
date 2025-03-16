@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array) implementation.
- * @version 3.0.1
- * @date 2024-12-20
+ * @version 3.0.2
+ * @date 2025-03-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -125,6 +125,7 @@ bool CStringAppend(CString *dest, const char *src) {
     }
 
     strcat(dest->str, src);
+    dest->length += append_length;
 
     return true;
 }
