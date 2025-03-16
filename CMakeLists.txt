@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(GamesmanOne VERSION 1.1.2 DESCRIPTION 2024.12.27)
+project(GamesmanOne VERSION 1.2.2 DESCRIPTION 2025.03.15)
 
 ##########################
 # Common Flags Interface #

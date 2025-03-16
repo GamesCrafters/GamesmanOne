@@ -597,7 +597,6 @@ int Popcount64(uint64_t x) {
 
 #ifdef USE_MPI
 
-#ifdef _OPENMP
 void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
     int error = MPI_Init_thread(argc, argv, required, provided);
     if (error != MPI_SUCCESS) {
@@ -606,7 +605,7 @@ void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
         _exit(kMpiError);
     }
 }
-#else   // _OPENMP not defined
+
 void SafeMpiInit(int *argc, char ***argv) {
     int error = MPI_Init(argc, argv);
     if (error != MPI_SUCCESS) {
@@ -614,7 +613,6 @@ void SafeMpiInit(int *argc, char ***argv) {
         exit(kMpiError);
     }
 }
-#endif  // _OPENMP
 
 void SafeMpiFinalize(void) {
     int error = MPI_Finalize();

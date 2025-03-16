@@ -313,8 +313,8 @@ static int PromptForTimeLimit(ReadOnlyString key) {
         "its "
         "status.\n"
         "It is okay to always set this to the 3-day maximum. However, jobs "
-        "that have a shorter time limit may preempt other jobs that has longer "
-        "time limits in the wait queue.\n"
+        "that have a shorter time limit may preempt other jobs with longer "
+        "time limits in the queue.\n"
         "This might be helpful if you want to run a quick job when there are "
         "lots of jobs in the SLURM queue.\n\n"
         "The time limit must be of format \"hh:mm:ss\" where mm and ss must be "
@@ -323,6 +323,7 @@ static int PromptForTimeLimit(ReadOnlyString key) {
         "Please enter a new time limit for the job,\n"
         "or enter 'b' to discard changes and return to the previous menu");
     PromptForInput("", buf, kSavioTimeLimitLengthMax);
+    if (strcmp(buf, "b") == 0) return 0;
     while (!IsValidTimeLimit(buf)) {
         printf(
             "\nSorry, the time limit you entered (%s) is outside of the valid "
@@ -332,6 +333,7 @@ static int PromptForTimeLimit(ReadOnlyString key) {
             "the previous menu",
             buf);
         PromptForInput("", buf, kSavioTimeLimitLengthMax);
+        if (strcmp(buf, "b") == 0) return 0;
     }
     strcpy(settings.time_limit, buf);
 
