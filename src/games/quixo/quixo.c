@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 2.0.0
- * @date 2025-01-07
+ * @version 2.1.0
+ * @date 2025-03-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,6 +38,7 @@
 #include <string.h>     // strtok_r, strlen, strcpy
 #include <x86intrin.h>  // __m128i
 
+#include "core/constants.h"
 #include "core/hash/x86_simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -1059,6 +1060,158 @@ static int QuixoFinalize(void) {
     return kNoError;
 }
 
+// ================================ kQuixoUwapi ================================
+
+static bool IsValidPieceConfig(int num_blanks, int num_x, int num_o) {
+    if (num_blanks < 0 || num_x < 0 || num_o < 0) return false;
+    if (num_blanks + num_x + num_o != board_size) return false;
+
+    return true;
+}
+
+static __m128i StrToBoard(const char *board) {
+    // Translate board
+    uint64_t x_pattern = 0, o_pattern = 0;
+    for (int i = 0; i < side_length; ++i) {
+        for (int j = 0; j < side_length; ++j) {
+            uint64_t mask = (1ULL << (8 * i + j));
+            int buff_index = board_size - (i * side_length + j) - 1;
+            char piece = board[buff_index];
+            if (piece == 'X') {
+                x_pattern |= mask;
+            } else if (piece == 'O') {
+                o_pattern |= mask;
+            }
+        }
+    }
+
+    return _mm_set_epi64x(o_pattern, x_pattern);
+}
+
+static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
+    // Check if FORMAL_POSITION is of the correct format.
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+    if (strlen(formal_position) != (size_t)(2 + board_size)) return false;
+
+    // Check if the board corresponds to a valid tier.
+    ConstantReadOnlyString board = formal_position + 2;
+    int num_blanks = 0, num_x = 0, num_o = 0;
+    for (int i = 0; i < board_size; ++i) {
+        if (board[i] != '-' && board[i] != 'X' && board[i] != 'O') return false;
+        num_blanks += (board[i] == '-');
+        num_x += (board[i] == 'X');
+        num_o += (board[i] == 'O');
+    }
+    if (!IsValidPieceConfig(num_blanks, num_x, num_o)) return false;
+
+    // Check if the board is a valid position.
+    int turn = formal_position[0] - '1';
+    QuixoTier t = {.unpacked = {num_x, num_o}};
+    TierPosition tier_position = {
+        .tier = t.hash,
+        .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
+    };
+    if (!QuixoIsLegalPosition(tier_position)) return false;
+
+    return true;
+}
+
+static TierPosition QuixoFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    //
+    ConstantReadOnlyString board = formal_position + 2;
+    int turn = formal_position[0] - '1';
+    int num_blanks = 0, num_x = 0, num_o = 0;
+    for (int i = 0; i < board_size; ++i) {
+        num_blanks += (board[i] == '-');
+        num_x += (board[i] == 'X');
+        num_o += (board[i] == 'O');
+    }
+
+    QuixoTier t = {.unpacked = {num_x, num_o}};
+    TierPosition ret = {
+        .tier = t.hash,
+        .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
+    };
+
+    return ret;
+}
+
+static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
+    // Unhash
+    QuixoTier t = {.hash = tier_position.tier};
+    __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
+                                              t.unpacked[0], t.unpacked[1]);
+    char board_str[kBoardSizeMax + 1];
+    BoardToStr(board, board_str);
+    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position) + 1;
+
+    return AutoGuiMakePosition(turn, board_str);
+}
+
+static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
+    // AutoGUI currently does not support mapping '-' (the blank piece) to
+    // images. Must use a different character here.
+    CString ret = QuixoTierPositionToFormalPosition(tier_position);
+    for (int64_t i = 0; i < ret.length; ++i) {
+        if (ret.str[i] == '-') ret.str[i] = 'B';
+    }
+
+    return ret;
+}
+
+static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused;
+    char buf[5];
+    QuixoMoveToString(move, buf);
+    CString ret;
+    CStringInitCopyCharArray(&ret, buf);
+
+    return ret;
+}
+
+static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    // Format: M_<src>_<dest>_x, where src is the center of the source tile and
+    // dest is an invisible center inside the source tile in the move's
+    // direction. The first board_size centers (indexed from 0 to board_size -
+    // 1) correspond to the centers of the tiles. The next board_size centers
+    // (board_size - 2 * board_size - 1) correspond to the destinations of all
+    // left arrows. Then follow right, upward, and downward arrows. The sound
+    // effect character is hard coded as an 'x'.
+    (void)tier_position;  // Unused;
+    QuixoMove m = {.hash = move};
+    int src = kDirIndexToSrc[curr_variant_idx][m.unpacked.dir][m.unpacked.idx];
+    int dest_center = src + (1 + m.unpacked.dir) * board_size;
+
+    char buf[16];
+    sprintf(buf, "M_%d_%d", src, dest_center);
+    sprintf(buf, "M_%d_%d_x", src, dest_center);
+    CString ret;
+    CStringInitCopyCharArray(&ret, buf);
+
+    return ret;
+}
+
+static const UwapiTier kQuixoUwapiTier = {
+    .GetInitialTier = &QuixoGetInitialTier,
+    .GetInitialPosition = &QuixoGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+
+    .GenerateMoves = &QuixoGenerateMovesGameplay,
+    .DoMove = &QuixoDoMove,
+    .Primitive = &QuixoPrimitive,
+
+    .IsLegalFormalPosition = &QuixoIsLegalFormalPosition,
+    .FormalPositionToTierPosition = &QuixoFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = &QuixoTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = &QuixoTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = &QuixoMoveToFormalMove,
+    .MoveToAutoGuiMove = &QuixoMoveToAutoGuiMove,
+};
+
+static const Uwapi kQuixoUwapi = {.tier = &kQuixoUwapiTier};
+
 // ================================== kQuixo ==================================
 
 const Game kQuixo = {
@@ -1067,7 +1220,7 @@ const Game kQuixo = {
     .solver = &kTierSolver,
     .solver_api = &kQuixoSolverApi,
     .gameplay_api = &kQuixoGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kQuixoUwapi,  // TODO
 
     .Init = QuixoInit,
     .Finalize = QuixoFinalize,
