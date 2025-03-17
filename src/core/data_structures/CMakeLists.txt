@@ -1,5 +1,6 @@
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/bitstream.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrent_bitset.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cstring.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map_sc.h
@@ -9,6 +10,7 @@ set(HEADERS
 
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/bitstream.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrent_bitset.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cstring.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map_sc.c

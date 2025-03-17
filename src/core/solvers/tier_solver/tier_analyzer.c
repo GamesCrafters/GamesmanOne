@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 1.2.3
- * @date 2024-12-22
+ * @version 1.2.4
+ * @date 2025-03-17
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,7 +34,7 @@
 #include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
 #include "core/concurrency.h"
-#include "core/data_structures/bitstream.h"
+#include "core/data_structures/concurrent_bitset.h"
 #include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -57,11 +57,8 @@ static int num_child_tiers;  // Size of child_tiers.
 // Child tier to its index in the child_tiers array.
 static TierHashMap child_tier_to_index;
 
-static BitStream this_tier_map;
-static BitStream *child_tier_maps;
-#ifdef _OPENMP
-static omp_lock_t *child_tier_map_locks;
-#endif  // _OPENMP
+static ConcurrentBitset *this_tier_map;
+static ConcurrentBitset **child_tier_maps;
 
 static int num_threads;            // Number of threads available.
 static PositionArray *fringe;      // Discovered but unprocessed positions.
@@ -74,7 +71,7 @@ static int GetCanonicalChildTiers(
     Tier tier, Tier canonical_children[kTierSolverNumChildTiersMax]);
 
 static bool Step1LoadDiscoveryMaps(void);
-static BitStream LoadDiscoveryMap(Tier tier);
+static ConcurrentBitset *LoadDiscoveryMap(Tier tier);
 
 static bool Step2LoadFringe(void);
 
@@ -164,12 +161,8 @@ static bool Step0Initialize(Analysis *dest) {
         if (!success) return false;
     }
 
-    memset(&this_tier_map, 0, sizeof(this_tier_map));
+    this_tier_map = NULL;
     child_tier_maps = NULL;
-#ifdef _OPENMP
-    child_tier_map_locks = NULL;
-#endif  // _OPENMP
-
     AnalysisInit(dest);
     AnalysisSetHashSize(dest, this_tier_size);
 
@@ -199,47 +192,40 @@ static int GetCanonicalChildTiers(
 }
 
 static bool Step1LoadDiscoveryMaps(void) {
-    child_tier_maps = (BitStream *)calloc(num_child_tiers, sizeof(BitStream));
+    child_tier_maps = (ConcurrentBitset **)calloc(num_child_tiers,
+                                                  sizeof(ConcurrentBitset *));
     if (child_tier_maps == NULL) return false;
 
-#ifdef _OPENMP
-    child_tier_map_locks =
-        (omp_lock_t *)malloc(num_child_tiers * sizeof(omp_lock_t));
-    if (child_tier_map_locks == NULL) return false;
-    for (int i = 0; i < num_child_tiers; ++i) {
-        omp_init_lock(&child_tier_map_locks[i]);
-    }
-#endif  // _OPENMP
-
     this_tier_map = LoadDiscoveryMap(this_tier);
-    if (this_tier_map.size == 0) return false;
+    if (this_tier_map == NULL) return false;
 
     for (int i = 0; i < num_child_tiers; ++i) {
         child_tier_maps[i] = LoadDiscoveryMap(child_tiers[i]);
-        if (child_tier_maps[i].size == 0) return false;
+        if (child_tier_maps[i] == NULL) return false;
     }
 
     return true;
 }
 
-// Loads discovery map of TIER, or returns an empty BitStream if not found
-// on disk. IF TIER IS THE INITIAL TIER, ALSO SETS THE INITIAL POSITION BIT.
-static BitStream LoadDiscoveryMap(Tier tier) {
+// Loads discovery map of TIER, or returns NULL if not found on disk. IF TIER IS
+// THE INITIAL TIER, ALSO SETS THE INITIAL POSITION BIT.
+static ConcurrentBitset *LoadDiscoveryMap(Tier tier) {
     // Try to load from disk first.
     int64_t tier_size = api_internal->GetTierSize(tier);
-    BitStream ret = {0};
+    ConcurrentBitset *ret = NULL;
     int error = StatManagerLoadDiscoveryMap(tier, tier_size, &ret);
     if (error != kFileSystemError) return ret;
 
     // Create a discovery map for the tier.
-    error = BitStreamInit(&ret, tier_size);
-    if (error != 0) {
+    ret = ConcurrentBitsetCreate(tier_size);
+    if (ret == NULL) {
         fprintf(stderr, "LoadDiscoveryMap: failed to initialize stream\n");
         return ret;
     }
 
     if (tier == api_internal->GetInitialTier()) {
-        BitStreamSet(&ret, api_internal->GetInitialPosition());
+        ConcurrentBitsetSet(ret, api_internal->GetInitialPosition(),
+                            memory_order_relaxed);
     }
 
     return ret;
@@ -253,7 +239,8 @@ static bool Step2LoadFringe(void) {
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
         for (Position position = 0; position < this_tier_size; ++position) {
             if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
-            if (BitStreamGet(&this_tier_map, position)) {
+            if (ConcurrentBitsetTest(this_tier_map, position,
+                                     memory_order_relaxed)) {
                 if (!PositionArrayAppend(&fringe[tid], position)) {
                     ConcurrentBoolStore(&success, false);
                 }
@@ -339,14 +326,8 @@ static bool DiscoverHelper(Analysis *dest) {
 
 static bool DiscoverHelperProcessThisTier(Position child, int tid) {
     int error = 0;
-    bool child_is_discovered;
-    PRAGMA_OMP_CRITICAL(tier_analyzer_this_tier_map) {
-        child_is_discovered = BitStreamGet(&this_tier_map, child);
-        if (!child_is_discovered) {
-            error = BitStreamSet(&this_tier_map, child);
-        }
-    }
-    if (error != 0) return false;
+    bool child_is_discovered =
+        ConcurrentBitsetSet(this_tier_map, child, memory_order_relaxed);
 
     // Only add each unique position to the fringe once.
     if (!child_is_discovered) {
@@ -373,16 +354,10 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
     }
 
     int64_t child_tier_index = TierHashMapIteratorValue(&it);
-    BitStream *target_map = &child_tier_maps[child_tier_index];
-#ifdef _OPENMP
-    omp_set_lock(&child_tier_map_locks[child_tier_index]);
-#endif  // _OPENMP
-    int error = BitStreamSet(target_map, child.position);
-#ifdef _OPENMP
-    omp_unset_lock(&child_tier_map_locks[child_tier_index]);
-#endif  // _OPENMP
+    ConcurrentBitset *target_map = child_tier_maps[child_tier_index];
+    ConcurrentBitsetSet(target_map, child.position, memory_order_relaxed);
 
-    return error == 0;
+    return true;
 }
 
 static TierPositionArray GetChildPositions(TierPosition tier_position,
@@ -429,20 +404,13 @@ static bool IsCanonicalPosition(TierPosition tier_position) {
 static bool Step4SaveChildMaps(void) {
     for (int64_t i = 0; i < num_child_tiers; ++i) {
         int error =
-            StatManagerSaveDiscoveryMap(&child_tier_maps[i], child_tiers[i]);
+            StatManagerSaveDiscoveryMap(child_tier_maps[i], child_tiers[i]);
         if (error != 0) return false;
-        BitStreamDestroy(&child_tier_maps[i]);
-#ifdef _OPENMP
-        omp_destroy_lock(&child_tier_map_locks[i]);
-#endif  // _OPENMP
+        ConcurrentBitsetDestroy(child_tier_maps[i]);
+        child_tier_maps[i] = NULL;
     }
-
     free(child_tier_maps);
     child_tier_maps = NULL;
-#ifdef _OPENMP
-    free(child_tier_map_locks);
-    child_tier_map_locks = NULL;
-#endif  // _OPENMP
 
     return true;
 }
@@ -466,7 +434,9 @@ static bool Step5Analyze(Analysis *dest) {
             if (!ConcurrentBoolLoad(&success)) continue;  // fail fast.
 
             // Skip if the current position is not reachable.
-            if (!BitStreamGet(&this_tier_map, i)) continue;
+            if (!ConcurrentBitsetTest(this_tier_map, i, memory_order_relaxed)) {
+                continue;
+            }
 
             TierPosition tier_position = {.tier = this_tier, .position = i};
             Position canonical =
@@ -489,7 +459,8 @@ static bool Step5Analyze(Analysis *dest) {
 
     error = DbManagerUnloadTier(this_tier);
     if (error != kNoError) ConcurrentBoolStore(&success, false);
-    BitStreamDestroy(&this_tier_map);
+    ConcurrentBitsetDestroy(this_tier_map);
+    this_tier_map = NULL;
 
     return ConcurrentBoolLoad(&success);
 }
@@ -507,19 +478,13 @@ static bool Step6SaveAnalysis(const Analysis *dest) {
 static void Step7CleanUp(void) {
     num_child_tiers = 0;
     TierHashMapDestroy(&child_tier_to_index);
-    BitStreamDestroy(&this_tier_map);
+    ConcurrentBitsetDestroy(this_tier_map);
+    this_tier_map = NULL;
     for (int i = 0; i < num_child_tiers; ++i) {
-        BitStreamDestroy(&child_tier_maps[i]);
-#ifdef _OPENMP
-        omp_destroy_lock(&child_tier_map_locks[i]);
-#endif  // _OPENMP
+        ConcurrentBitsetDestroy(child_tier_maps[i]);
     }
     free(child_tier_maps);
     child_tier_maps = NULL;
-#ifdef _OPENMP
-    free(child_tier_map_locks);
-    child_tier_map_locks = NULL;
-#endif  // _OPENMP
 
     // Clean up fringe and discovered queues.
     DestroyFringe(fringe);

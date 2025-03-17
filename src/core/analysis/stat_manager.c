@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Statistics Manager Module for game analysis.
- * @version 1.2.1
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-03-17
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,7 +28,7 @@
 
 #include <assert.h>    // assert
 #include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
-#include <stddef.h>    // NULL
+#include <stddef.h>    // NULL, size_t
 #include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
 #include <stdlib.h>    // calloc, free
 #include <string.h>    // strlen, memset
@@ -37,6 +37,7 @@
 
 #include "core/analysis/analysis.h"
 #include "core/constants.h"
+#include "core/data_structures/concurrent_bitset.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 #include "libs/lz4_utils/lz4_utils.h"
@@ -126,48 +127,74 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
     return error;
 }
 
-int StatManagerLoadDiscoveryMap(Tier tier, int64_t size, BitStream *dest) {
+int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
+                                ConcurrentBitset **dest) {
     char *filename = GetPathToTierDiscoveryMap(tier);
     if (filename == NULL) return kMallocFailureError;
 
-    int error = BitStreamInit(dest, size);
-    if (error != 0) {
+    ConcurrentBitset *s = ConcurrentBitsetCreate(size);
+    if (s == NULL) {
         free(filename);
         return kMallocFailureError;
     }
 
-    int64_t res =
-        Lz4UtilsDecompressFile(filename, dest->stream, dest->num_bytes);
+    // Allocate deserialization buffer
+    size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
+    void *buf = malloc(buf_size);
+    if (buf == NULL) {
+        free(filename);
+        ConcurrentBitsetDestroy(s);
+        return kMallocFailureError;
+    }
+
+    int64_t res = Lz4UtilsDecompressFile(filename, buf, buf_size);
     free(filename);
+
+    // Handle error
     switch (res) {
         case -1:
+            free(buf);
             return kFileSystemError;
         case -2:
+            free(buf);
             return kMallocFailureError;
         case -3:
+            free(buf);
             fprintf(stderr,
                     "StatManagerLoadDiscoveryMap: discovery map appears to be "
                     "corrupt for tier %" PRITier "\n",
                     tier);
             return kRuntimeError;
         case -4:
+            free(buf);
             NotReached(
                 "StatManagerLoadDiscoveryMap: not enough space for "
                 "destination bit stream allocated, likely a bug\n");
-            break;
+            return kRuntimeError;
         default:
             break;
     }
 
+    // Deserialize
+    ConcurrentBitsetDeserialize(s, buf);
+    free(buf);
+    *dest = s;
+
     return kNoError;
 }
 
-int StatManagerSaveDiscoveryMap(const BitStream *stream, Tier tier) {
+int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
     char *filename = GetPathToTierDiscoveryMap(tier);
     if (filename == NULL) return kMallocFailureError;
 
-    int64_t res =
-        Lz4UtilsCompressStream(stream->stream, stream->num_bytes, 0, filename);
+    // Serialize the bitset
+    size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
+    void *buf = malloc(buf_size);
+    if (buf == NULL) return kMallocFailureError;
+    ConcurrentBitsetSerialize(s, buf);
+
+    int64_t res = Lz4UtilsCompressStream(buf, buf_size, 0, filename);
+    free(buf);
     free(filename);
     switch (res) {
         case -1:
