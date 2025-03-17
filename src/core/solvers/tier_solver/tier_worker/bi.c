@@ -521,11 +521,11 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
 
 #ifdef _OPENMP
 /**
- * @brief Atomically decrements the content of OBJ, which is of type unsigned
- * char, if and only if it was greater than 0, and returns the original value.
- * If multiple threads call this function on the same OBJ at the same time, the
- * value returned is guaranteed to be unique for each thread if no threads are
- * performing other operations on OBJ.
+ * @brief Atomically decrements the content of OBJ, which is of type
+ * ChildPosCounterType, if and only if it was greater than 0, and returns the
+ * original value. If multiple threads call this function on the same OBJ at the
+ * same time, the value returned is guaranteed to be unique for each thread if
+ * no threads are performing other operations on OBJ.
  *
  * @note This is a helper function that is only used by ProcessWinPosition.
  *
