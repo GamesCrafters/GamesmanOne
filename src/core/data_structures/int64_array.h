@@ -51,7 +51,7 @@
 typedef struct Int64Array {
     int64_t *array;   /**< The actual array. */
     int64_t size;     /**< Number of items in the array. */
-    int64_t capacity; /**< Currentcapacity of the array. */
+    int64_t capacity; /**< Current capacity of the array. */
 } Int64Array;
 
 /**
