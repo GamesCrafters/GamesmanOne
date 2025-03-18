@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array.
- * @version 2.0.2
- * @date 2024-12-20
+ * @version 2.1.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -52,6 +52,7 @@ typedef struct Int64Array {
     int64_t *array;   /**< The actual array. */
     int64_t size;     /**< Number of items in the array. */
     int64_t capacity; /**< Current capacity of the array. */
+    int align;        /**< Alignment size in bytes, 0 if not aligned. */
 } Int64Array;
 
 /**
@@ -60,6 +61,19 @@ typedef struct Int64Array {
  * @param array Array to initialize.
  */
 void Int64ArrayInit(Int64Array *array);
+
+/**
+ * @brief Initializes \p array to be a \p align -byte aligned array in memory.
+ *
+ * @param array Array to initialize.
+ * @param align Size of alignment in bytes, which must be a power of two and a
+ * multiple of sizeof(void *). Pass 0 to this argument disables alignment and is
+ * equivalent to calling Int64ArrayInit. If this requirement is not met, the
+ * \p array is not initialized and error code 1 is returned.
+ * @return 0 on success,
+ * @return 1 if align is invalid.
+ */
+int Int64ArrayInitAligned(Int64Array *array, int align);
 
 /**
  * @brief Initializes DEST array to be a copy of the SRC array.
