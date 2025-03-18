@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Game analysis helper structure.
- * @version 1.1.1
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-03-17
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -107,6 +107,18 @@ typedef struct Analysis {
 } Analysis;
 
 /**
+ * @brief Analysis padded to cache line size for efficient multithreaded access
+ * in an array.
+ */
+typedef struct CacheAlignedAnalysis {
+    Analysis data; /**< Unpadded data. */
+    /** Padding CacheAlignedAnalysis to GAMESMAN_CACHE_LINE_SIZE bytes. */
+    char padding[(sizeof(Analysis) + GAMESMAN_CACHE_LINE_SIZE - 1) /
+                     GAMESMAN_CACHE_LINE_SIZE * GAMESMAN_CACHE_LINE_SIZE -
+                 sizeof(Analysis)];
+} CacheAlignedAnalysis;
+
+/**
  * @brief Initializes the given ANALYSIS, setting all counters to 0 and all
  * example tier positions to invalid tier positions.
  */
@@ -161,6 +173,25 @@ void AnalysisSetHashSize(Analysis *analysis, int64_t hash_size);
 void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
                            int num_moves, int num_canonical_moves);
 
+/**
+ * @brief Merges all move-related counters of \p part into \p dest.
+ *
+ * @details This function is for reducing multiple thread-local analyses from a
+ * multithreading context. The expected usage is to initialize an exclusive
+ * \c CacheAlignedAnalysis struct for each thread and merge the results at the
+ * end of the discovery phase of an analysis. The counters of \p dest are simply
+ * incremented by the amount of the corresponding fields of \p part.
+ *
+ * The counters merged include the following fields of the \c Analysis struct:
+ *
+ * move_count, canonical_move_count, max_num_moves, position_with_most_moves
+ *
+ * @param dest Destination \c Analysis.
+ * @param part A partial analysis whose counters should be merged into
+ * \p dest.
+ */
+void AnalysisMergeMoves(Analysis *dest, const CacheAlignedAnalysis *part);
+
 // Counting (number of positions of each type)
 
 /**
@@ -184,14 +215,15 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
 
 /**
  * @brief Merges all counters and examples except for those that are related to
- * moves of \p part into \p dest:
+ * moves of \p part into \p dest.
  *
- * @details This function is for reducing multiple thread-local analyses in a
+ * @details This function is for reducing multiple thread-local analyses from a
  * multithreading context. The expected usage is to initialize an exclusive
- * \c Analysis structs for each thread and merge the results at the end of the
- * counting phase of an analysis. The counters of \p dest are simply incremented
- * by the amount of the corresponding fields of \p part, and the examples are
- * only replaced if \p dest does not have those examples available yet.
+ * \c CacheAlignedAnalysis struct for each thread and merge the results at the
+ * end of the counting phase of an analysis. The counters of \p dest are simply
+ * incremented by the amount of the corresponding fields of \p part, and the
+ * examples are only replaced if \p dest does not have those examples available
+ * yet.
  *
  * The counters and examples merged include the following fields of the
  * \c Analysis struct:
@@ -206,10 +238,10 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
  * largest_lose_remoteness, largest_tie_remoteness.
  *
  * @param dest Destination \c Analysis.
- * @param part A partial \c Analysis whose counters and examples should be
+ * @param part A partial analysis whose counters and examples should be
  * merged into \p dest.
  */
-void AnalysisMergeCounts(Analysis *dest, const Analysis *part);
+void AnalysisMergeCounts(Analysis *dest, const CacheAlignedAnalysis *part);
 
 // Aggregating (analysis of each tier into the analysis of the entire game)
 

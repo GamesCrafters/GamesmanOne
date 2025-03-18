@@ -285,6 +285,15 @@ static void UpdateFringeId(int *fringe_id, int64_t i,
 static bool DiscoverHelper(Analysis *dest) {
     int64_t *fringe_offsets = MakeFringeOffsets();
     if (fringe_offsets == NULL) return false;
+    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
+        GAMESMAN_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
+    if (parts == NULL) {
+        free(fringe_offsets);
+        return false;
+    }
+    for (int i = 0; i < num_threads; ++i) {
+        AnalysisInit(&parts[i].data);
+    }
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
@@ -302,7 +311,8 @@ static bool DiscoverHelper(Analysis *dest) {
             // Do not generate children of primitive positions.
             if (IsPrimitive(parent)) continue;
 
-            TierPositionArray children = GetChildPositions(parent, dest);
+            TierPositionArray children =
+                GetChildPositions(parent, &parts[tid].data);
             if (children.size < 0) {
                 ConcurrentBoolStore(&success, false);
                 continue;
@@ -320,6 +330,10 @@ static bool DiscoverHelper(Analysis *dest) {
     }
     free(fringe_offsets);
     fringe_offsets = NULL;
+    for (int i = 0; i < num_threads; ++i) {
+        AnalysisMergeMoves(dest, &parts[i]);
+    }
+    free(parts);
 
     return ConcurrentBoolLoad(&success);
 }
@@ -387,11 +401,7 @@ static TierPositionArray GetChildPositions(TierPosition tier_position,
     int num_canonical_moves =
         (int)deduplication_set.size * IsCanonicalPosition(tier_position);
     TierPositionHashSetDestroy(&deduplication_set);
-
-    PRAGMA_OMP_CRITICAL(tier_analyzer_get_child_positions_dest) {
-        AnalysisDiscoverMoves(dest, tier_position, num_moves,
-                              num_canonical_moves);
-    }
+    AnalysisDiscoverMoves(dest, tier_position, num_moves, num_canonical_moves);
 
     return ret;
 }
@@ -421,10 +431,11 @@ static bool Step5Analyze(Analysis *dest) {
     int error = DbManagerLoadTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
-    Analysis *parts = (Analysis *)malloc(num_threads * sizeof(Analysis));
+    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
+        GAMESMAN_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
     if (parts == NULL) return false;
     for (int i = 0; i < num_threads; ++i) {
-        AnalysisInit(&parts[i]);
+        AnalysisInit(&parts[i].data);
     }
 
     PRAGMA_OMP_PARALLEL {
@@ -447,7 +458,7 @@ static bool Step5Analyze(Analysis *dest) {
             int remoteness =
                 DbManagerGetRemotenessFromLoaded(this_tier, canonical);
             bool is_canonical = (tier_position.position == canonical);
-            int error = AnalysisCount(&parts[tid], tier_position, value,
+            int error = AnalysisCount(&parts[tid].data, tier_position, value,
                                       remoteness, is_canonical);
             if (error != 0) ConcurrentBoolStore(&success, false);
         }
