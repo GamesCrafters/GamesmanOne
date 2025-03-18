@@ -286,7 +286,7 @@ static bool DiscoverHelper(Analysis *dest) {
     int64_t *fringe_offsets = MakeFringeOffsets();
     if (fringe_offsets == NULL) return false;
     CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
-        GAMESMAN_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
+        GM_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
     if (parts == NULL) {
         free(fringe_offsets);
         return false;
@@ -432,7 +432,7 @@ static bool Step5Analyze(Analysis *dest) {
     if (error != kNoError) return false;
 
     CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
-        GAMESMAN_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
+        GM_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
     if (parts == NULL) return false;
     for (int i = 0; i < num_threads; ++i) {
         AnalysisInit(&parts[i].data);

@@ -112,10 +112,8 @@ typedef struct Analysis {
  */
 typedef struct CacheAlignedAnalysis {
     Analysis data; /**< Unpadded data. */
-    /** Padding CacheAlignedAnalysis to GAMESMAN_CACHE_LINE_SIZE bytes. */
-    char padding[(sizeof(Analysis) + GAMESMAN_CACHE_LINE_SIZE - 1) /
-                     GAMESMAN_CACHE_LINE_SIZE * GAMESMAN_CACHE_LINE_SIZE -
-                 sizeof(Analysis)];
+    /** Padding CacheAlignedAnalysis to GM_CACHE_LINE_SIZE bytes. */
+    char padding[GM_CACHE_LINE_PAD(sizeof(Analysis))];
 } CacheAlignedAnalysis;
 
 /**
