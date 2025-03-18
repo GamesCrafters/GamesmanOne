@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.2
- * @date 2024-12-22
+ * @version 1.1.3
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -397,8 +397,9 @@ static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
 
     frontier_offsets[0] = 0;
     for (int i = 1; i <= num_threads; ++i) {
-        frontier_offsets[i] =
-            frontier_offsets[i - 1] + frontiers[i - 1].buckets[remoteness].size;
+        int64_t prev_bucket_size =
+            FrontierGetBucketSize(&frontiers[i - 1], remoteness);
+        frontier_offsets[i] = frontier_offsets[i - 1] + prev_bucket_size;
     }
 
     return frontier_offsets;
@@ -416,8 +417,9 @@ static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
         *child_index = 0;
     }
     int64_t index_in_frontier = i - frontier_offsets[*frontier_id];
+    const Frontier *frontier = &frontiers[*frontier_id];
     while (index_in_frontier >=
-           frontiers[*frontier_id].dividers[remoteness][*child_index]) {
+           FrontierGetDivider(frontier, remoteness, *child_index)) {
         ++(*child_index);
     }
 }
