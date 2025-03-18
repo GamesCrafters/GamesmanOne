@@ -60,9 +60,14 @@ static TierHashMap child_tier_to_index;
 static ConcurrentBitset *this_tier_map;
 static ConcurrentBitset **child_tier_maps;
 
-static int num_threads;            // Number of threads available.
-static PositionArray *fringe;      // Discovered but unprocessed positions.
-static PositionArray *discovered;  // Newly discovered positions.
+static int num_threads;  // Number of threads available.
+
+typedef struct {
+    PositionArray a;
+    char padding[GM_CACHE_LINE_PAD(sizeof(PositionArray))];
+} PaddedPositionArray;
+static PaddedPositionArray *fringe;  // Discovered but unprocessed positions.
+static PaddedPositionArray *discovered;  // Newly discovered positions.
 
 static int AnalysisStatus(Tier tier);
 
@@ -94,8 +99,8 @@ static void Step7CleanUp(void);
 static int GetThreadId(void);
 static int64_t GetFringeSize(void);
 static int64_t *MakeFringeOffsets(void);
-static void DestroyFringe(PositionArray *target);
-static void InitFringe(PositionArray *target);
+static void DestroyFringe(PaddedPositionArray *target);
+static void InitFringe(PaddedPositionArray *target);
 
 // -----------------------------------------------------------------------------
 
@@ -148,8 +153,10 @@ static bool Step0Initialize(Analysis *dest) {
     this_tier_size = api_internal->GetTierSize(this_tier);
     num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
 
-    fringe = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
-    discovered = (PositionArray *)malloc(num_threads * sizeof(PositionArray));
+    fringe = (PaddedPositionArray *)malloc(num_threads *
+                                           sizeof(PaddedPositionArray));
+    discovered = (PaddedPositionArray *)malloc(num_threads *
+                                               sizeof(PaddedPositionArray));
     if (fringe == NULL || discovered == NULL) return false;
 
     InitFringe(fringe);
@@ -241,7 +248,7 @@ static bool Step2LoadFringe(void) {
             if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
             if (ConcurrentBitsetTest(this_tier_map, position,
                                      memory_order_relaxed)) {
-                if (!PositionArrayAppend(&fringe[tid], position)) {
+                if (!PositionArrayAppend(&fringe[tid].a, position)) {
                     ConcurrentBoolStore(&success, false);
                 }
             }
@@ -260,7 +267,7 @@ static bool Step3Discover(Analysis *dest) {
         // Swap fringe with discovered and restart.
         DestroyFringe(fringe);
         InitFringe(fringe);
-        PositionArray *tmp = fringe;
+        PaddedPositionArray *tmp = fringe;
         fringe = discovered;
         discovered = tmp;
     }
@@ -307,7 +314,7 @@ static bool DiscoverHelper(Analysis *dest) {
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
             TierPosition parent;
             parent.tier = this_tier;
-            parent.position = fringe[fringe_id].array[index_in_fringe];
+            parent.position = fringe[fringe_id].a.array[index_in_fringe];
             // Do not generate children of primitive positions.
             if (IsPrimitive(parent)) continue;
 
@@ -345,7 +352,7 @@ static bool DiscoverHelperProcessThisTier(Position child, int tid) {
 
     // Only add each unique position to the fringe once.
     if (!child_is_discovered) {
-        error = !PositionArrayAppend(&discovered[tid], child);
+        error = !PositionArrayAppend(&discovered[tid].a, child);
     }
 
     return error == 0;
@@ -515,7 +522,7 @@ static int GetThreadId(void) {
 static int64_t GetFringeSize(void) {
     int64_t size = 0;
     for (int i = 0; i < num_threads; ++i) {
-        size += fringe[i].size;
+        size += fringe[i].a.size;
     }
 
     return size;
@@ -528,21 +535,21 @@ static int64_t *MakeFringeOffsets(void) {
 
     frontier_offsets[0] = 0;
     for (int i = 1; i <= num_threads; ++i) {
-        frontier_offsets[i] = frontier_offsets[i - 1] + fringe[i - 1].size;
+        frontier_offsets[i] = frontier_offsets[i - 1] + fringe[i - 1].a.size;
     }
 
     return frontier_offsets;
 }
 
-static void DestroyFringe(PositionArray *target) {
+static void DestroyFringe(PaddedPositionArray *target) {
     if (target == NULL) return;
     for (int i = 0; i < num_threads; ++i) {
-        PositionArrayDestroy(&target[i]);
+        PositionArrayDestroy(&target[i].a);
     }
 }
 
-static void InitFringe(PositionArray *target) {
+static void InitFringe(PaddedPositionArray *target) {
     for (int i = 0; i < num_threads; ++i) {
-        PositionArrayInit(&target[i]);
+        PositionArrayInitAligned(&target[i].a, GM_CACHE_LINE_SIZE);
     }
 }
