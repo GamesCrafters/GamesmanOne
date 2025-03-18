@@ -1,6 +1,5 @@
 # Add subdirectories for each component
 add_subdirectory(arraydb)
-add_subdirectory(bpdb)
 add_subdirectory(naivedb)
 
 set(LIBS core_db_bpdb core_db_naivedb)
