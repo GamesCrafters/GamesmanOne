@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.5.0
- * @date 2025-01-07
+ * @version 2.0.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -68,6 +68,19 @@ void *SafeMalloc(size_t size);
  * @brief Same behavior as calloc() on success; terminates GAMESMAN on failure.
  */
 void *SafeCalloc(size_t n, size_t size);
+
+/**
+ * @brief Allocates an \p alignment -byte aligned space that can hold at least
+ * \p n elements of size \p size bytes each. Calls aligned_alloc() internally
+ * and the returned pointer should be freed using the free() function.
+ *
+ * @param alignment Alignement size in bytes.
+ * @param n Number of elements.
+ * @param size Size of each element.
+ * @return Pointer to the newly allocates space on success, or
+ * @return \c NULL on failure.
+ */
+void *AlignedCalloc(size_t alignment, size_t n, size_t size);
 
 /**
  * @brief Same behavior as strncpy if the end of SRC is found before N
@@ -363,12 +376,6 @@ int64_t PrevPrime(int64_t n);
  * @return Next prime of N.
  */
 int64_t NextPrime(int64_t n);
-
-/**
- * @brief Returns the next multiple of MULTIPLE starting from N. Returns
- * N if N is a multiple of MULTIPLE.
- */
-int64_t NextMultiple(int64_t n, int64_t multiple);
 
 /**
  * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.

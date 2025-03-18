@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.5.0
- * @date 2025-01-07
+ * @version 2.0.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,8 +36,8 @@
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint32_t, uint64_t, INT64_MAX, uint8_t
 #include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
-#include <stdlib.h>     // exit, malloc, calloc, free
-#include <string.h>     // strcspn, strlen, strncpy
+#include <stdlib.h>     // exit, malloc, calloc, aligned_alloc, free
+#include <string.h>     // strcspn, strlen, strncpy, memset
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
@@ -90,6 +90,29 @@ void *SafeCalloc(size_t n, size_t size) {
         fflush(stderr);
         _exit(kMallocFailureError);
     }
+    return ret;
+}
+
+static bool IsValidAlignment(size_t alignment) {
+    // Must be a multiple of pointer size.
+    if (alignment % sizeof(void *)) return false;
+
+    // Must be a power of 2.
+    if (alignment & (alignment - 1)) return false;
+
+    return true;
+}
+
+void *AlignedCalloc(size_t alignment, size_t n, size_t size) {
+    if (!IsValidAlignment(alignment)) return NULL;
+
+    size_t desired = n * size;
+    size_t required = (desired + alignment - 1) / alignment * alignment;
+    void *ret = aligned_alloc(alignment, required);
+    if (ret == NULL) return ret;
+
+    memset(ret, 0, required);
+
     return ret;
 }
 
@@ -484,12 +507,6 @@ int64_t NextPrime(int64_t n) {
         ++n;
     }
     return n;
-}
-
-int64_t NextMultiple(int64_t n, int64_t multiple) {
-    int64_t remainder = n % multiple;
-    if (remainder == 0) return n;
-    return n + multiple - remainder;
 }
 
 int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
