@@ -129,58 +129,59 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
 
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 ConcurrentBitset **dest) {
+    int error = kNoError;
+    void *buf = NULL;  // Deserialization buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
-    if (filename == NULL) return kMallocFailureError;
-
     ConcurrentBitset *s = ConcurrentBitsetCreate(size);
-    if (s == NULL) {
-        free(filename);
-        return kMallocFailureError;
+    if (filename == NULL || s == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
     }
 
     // Allocate deserialization buffer
     size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    void *buf = malloc(buf_size);
+    buf = malloc(buf_size);
     if (buf == NULL) {
-        free(filename);
-        ConcurrentBitsetDestroy(s);
-        return kMallocFailureError;
+        error = kMallocFailureError;
+        goto _bailout;
     }
 
+    // Decompress into buffer.
     int64_t res = Lz4UtilsDecompressFile(filename, buf, buf_size);
-    free(filename);
-
-    // Handle error
     switch (res) {
         case -1:
-            free(buf);
-            return kFileSystemError;
+            error = kFileSystemError;
+            goto _bailout;
         case -2:
-            free(buf);
-            return kMallocFailureError;
+            error = kMallocFailureError;
+            goto _bailout;
         case -3:
-            free(buf);
             fprintf(stderr,
                     "StatManagerLoadDiscoveryMap: discovery map appears to be "
                     "corrupt for tier %" PRITier "\n",
                     tier);
-            return kRuntimeError;
+            error = kRuntimeError;
+            goto _bailout;
         case -4:
-            free(buf);
             NotReached(
                 "StatManagerLoadDiscoveryMap: not enough space for "
                 "destination bit stream allocated, likely a bug\n");
-            return kRuntimeError;
+            error = kRuntimeError;
+            goto _bailout;
         default:
-            break;
+            break;  // Success.
     }
 
     // Deserialize
     ConcurrentBitsetDeserialize(s, buf);
-    free(buf);
     *dest = s;
 
-    return kNoError;
+_bailout:
+    free(filename);
+    free(buf);
+    if (error != kNoError) ConcurrentBitsetDestroy(s);
+
+    return error;
 }
 
 int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {

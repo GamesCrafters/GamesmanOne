@@ -53,6 +53,8 @@ enum { kBoardSizeMax = 32 };
 
 static bool nCrInitialized;
 static int64_t nCr[kBoardSizeMax + 1][kBoardSizeMax + 1];
+
+static bool system_initialized;
 static int board_rows;
 static int board_cols;
 static int curr_board_size;
@@ -131,6 +133,10 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
                 board_size, kBoardSizeMax);
         return kIllegalArgumentError;
     }
+
+    // Clear previous system state if exist.
+    if (system_initialized) X86SimdTwoPieceHashFinalize();
+
     board_rows = rows;
     board_cols = cols;
     curr_board_size = board_size;
@@ -140,6 +146,7 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     // Initialize the tables
     int error = InitTables();
     if (error != kNoError) X86SimdTwoPieceHashFinalize();
+    system_initialized = true;
 
     return error;
 }

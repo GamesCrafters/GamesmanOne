@@ -74,8 +74,10 @@ int HeadlessSolve(ReadOnlyString game_name, int variant_id,
     void *options = GenerateSolveOptions(force, verbose, memlimit);
     error = SolverManagerSolve(options);
     free(options);
+    GameManagerFinalize();
     if (error != 0) {
         fprintf(stderr, "HeadlessSolve: solve failed with code %d\n", error);
     }
+
     return error;
 }
