@@ -49,25 +49,4 @@
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 
-#ifndef GM_CACHE_LINE_SIZE
-/**
- * @brief Size of each cache line in bytes. Either set at build time or defaults
- * to 64.
- */
-#define GM_CACHE_LINE_SIZE 64
-#endif
-
-/**
- * @brief Returns the number of bytes to be padded to an object of size \p n so
- * that its size becomes a multiple of \c GM_CACHE_LINE_SIZE.
- *
- * @param n Size of the object.
- * @return The number of bytes to be padded to an object of size \p n so
- * that its size becomes a multiple of \c GM_CACHE_LINE_SIZE.
- */
-#define GM_CACHE_LINE_PAD(n)                                    \
-    ((((n) + (GM_CACHE_LINE_SIZE) - 1) / (GM_CACHE_LINE_SIZE) * \
-      (GM_CACHE_LINE_SIZE)) -                                   \
-     n)
-
 #endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_

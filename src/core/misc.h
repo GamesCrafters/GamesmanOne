@@ -306,22 +306,6 @@ int GuardedGzseek(gzFile file, off_t off, int whence);
 int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
 
 /**
- * @brief Calls gz64_read with the given FILE, BUF, and LENGTH and returns 0 if
- * the correct number of bytes are read or EOF_OK is set to true; returns a
- * non-zero error code otherwise.
- *
- * @param file Source gzFile.
- * @param buf Destination buffer, which is assumed to be of size at least LENGTH
- * bytes.
- * @param length Number of uncompressed bytes to read from FILE.
- * @param eof_ok Whether end-of-file is accepted as no error. Set this to false
- * if you expect FILE to contain at least LENGTH bytes of uncompressed data.
- * @return 0 on success, 2 if EOF_OK is set to false and EOF is reached before
- * LENGTH bytes are read, or 3 if gzerror returns an error on FILE.
- */
-int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok);
-
-/**
  * @brief Calls gzwrite with the given FILE, BUF, and LEN and returns 0 if the
  * correct number of bytes are written; returns the error value returned by
  * gzerror otherwise.

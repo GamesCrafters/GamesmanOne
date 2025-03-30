@@ -48,7 +48,6 @@
 #endif  // USE_MPI
 
 #include "core/types/gamesman_types.h"
-#include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
@@ -369,26 +368,6 @@ int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
         return 3;
     }
     NotReached("GuardedGzread: unknown error occurred during gzread()");
-    return 4;
-}
-
-int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok) {
-    int64_t bytes_read = gz64_read(file, buf, length);
-    if ((uint64_t)bytes_read == length) return 0;
-
-    int error;
-    if (gzeof(file)) {
-        if (eof_ok) return 0;
-        fprintf(stderr,
-                "GuardedGz64Read: end-of-file reached before reading %" PRIu64
-                " bytes, only %" PRId64 " bytes were actually read\n",
-                length, bytes_read);
-        return 2;
-    } else if (gzerror(file, &error)) {
-        fprintf(stderr, "GuardedGz64Read: gzread() error code %d\n", error);
-        return 3;
-    }
-    NotReached("GuardedGz64Read: unknown error occurred during gzread()");
     return 4;
 }
 

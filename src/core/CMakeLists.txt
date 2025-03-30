@@ -5,7 +5,6 @@ if(USE_MPI) # MPI
   target_link_libraries(misc PRIVATE MPI::MPI_C)
 endif()
 target_link_libraries(misc PRIVATE common_flags)
-target_link_libraries(misc PRIVATE mgz)
 find_package(ZLIB REQUIRED)
 target_link_libraries(misc PUBLIC ZLIB::ZLIB)
 find_package(liblzma 5.4.0 REQUIRED CONFIG)
@@ -27,14 +26,16 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/game_manager.h
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.h)
 
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.c
     ${CMAKE_CURRENT_SOURCE_DIR}/game_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
 
 target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
 target_link_libraries(gamesman PRIVATE misc)
