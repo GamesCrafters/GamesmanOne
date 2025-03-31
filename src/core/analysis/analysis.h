@@ -32,6 +32,7 @@
 #include <stdio.h>    // FILE
 
 #include "core/constants.h"
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
 
 /**

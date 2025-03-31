@@ -36,7 +36,8 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/types/gamesman_types.h"  // PositionArray
+#include "core/gamesman_memory.h"
+#include "core/types/gamesman_types.h"
 
 /**
  * @brief Internal data structure of a frontier.
