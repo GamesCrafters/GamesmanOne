@@ -6,8 +6,8 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.0.0
- * @date 2024-12-10
+ * @version 1.1.0
+ * @date 2025-03-30
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -72,5 +72,8 @@ void ConcurrentBoolStore(ConcurrentBool *cb, bool val);
 void ConcurrentIntInit(ConcurrentInt *ci, int val);
 int ConcurrentIntLoad(const ConcurrentInt *ci);
 void ConcurrentIntStore(ConcurrentInt *ci, int val);
+
+int ConcurrencyGetOmpNumThreads(void);
+int ConcurrencyGetOmpThreadId(void);
 
 #endif  // GAMESMANONE_CORE_CONCURRENCY_H_
