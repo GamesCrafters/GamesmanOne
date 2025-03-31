@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief A Concurrent Bitset suitable in a multi-writer multi-reader context.
- * @version 1.0.0
- * @date 2025-03-16
+ * @version 1.1.0
+ * @date 2025-03-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,15 @@
 #include <stdint.h>     // int64_t
 
 typedef struct ConcurrentBitset ConcurrentBitset;
+
+/**
+ * @brief Returns the amount of memory required in bytes to create a
+ * ConcurrentBitset of size \p num_bits bits.
+ *
+ * @param num_bits Number of bits in the new ConcurrentBitset.
+ * @return The amount of memory required.
+ */
+size_t ConcurrentBitsetMemRequired(int64_t num_bits);
 
 /**
  * @brief Constructs a ConcurrentBitset of \p num_bits bits. All bits are

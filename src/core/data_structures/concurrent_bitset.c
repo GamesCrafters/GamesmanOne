@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Concurrent bitset implementation
- * @version 1.0.0
- * @date 2025-03-16
+ * @version 1.1.0
+ * @date 2025-03-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -55,11 +55,15 @@ static int64_t NumBitsToNumBlocks(int64_t num_bits) {
     return (num_bits + kBitsPerBlock - 1) / kBitsPerBlock;
 }
 
-ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits) {
-    if (num_bits < 0) return 0;
+size_t ConcurrentBitsetMemRequired(int64_t num_bits) {
+    if (num_bits < 0) num_bits = 0;
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
-    size_t alloc_size =
-        sizeof(ConcurrentBitset) + num_blocks * sizeof(AtomicBlockType);
+    return sizeof(ConcurrentBitset) + num_blocks * sizeof(AtomicBlockType);
+}
+
+ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits) {
+    if (num_bits < 0) num_bits = 0;
+    size_t alloc_size = ConcurrentBitsetMemRequired(num_bits);
     ConcurrentBitset *ret = (ConcurrentBitset *)calloc(alloc_size, 1);
     if (ret == NULL) return ret;
 
