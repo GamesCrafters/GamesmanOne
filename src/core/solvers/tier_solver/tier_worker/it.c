@@ -35,6 +35,7 @@
 #include "core/constants.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"

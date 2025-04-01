@@ -56,8 +56,8 @@
 #endif                  // GAMESMAN_HAS_BMI2
 #include <stdint.h>     // int64_t, uint32_t, uint64_t
 #include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // malloc, free
 
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
@@ -85,14 +85,14 @@ intptr_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
 static int InitTables(void) {
     // Allocate space
     pattern_to_order =
-        (int32_t *)malloc((1 << curr_board_size) * sizeof(int32_t));
-    pop_order_to_pattern =
-        (uint32_t **)malloc((curr_board_size + 1) * sizeof(uint32_t *));
+        (int32_t *)GamesmanMalloc((1 << curr_board_size) * sizeof(int32_t));
+    pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
+        (curr_board_size + 1), sizeof(uint32_t *));
     if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
 
     for (int i = 0; i <= curr_board_size; ++i) {
-        pop_order_to_pattern[i] =
-            (uint32_t *)malloc(NChooseR(curr_board_size, i) * sizeof(uint32_t));
+        pop_order_to_pattern[i] = (uint32_t *)GamesmanMalloc(
+            NChooseR(curr_board_size, i) * sizeof(uint32_t));
         if (!pop_order_to_pattern[i]) return kMallocFailureError;
     }
 
@@ -110,12 +110,12 @@ static int InitTables(void) {
 
 static int InitSymmetries(const int *const *symmetry_matrix) {
     // Allocate space
-    pattern_symmetries =
-        (uint32_t **)malloc(curr_num_symmetries * sizeof(uint32_t *));
+    pattern_symmetries = (uint32_t **)GamesmanCallocWhole(curr_num_symmetries,
+                                                          sizeof(uint32_t *));
     if (!pattern_symmetries) return kMallocFailureError;
     for (int i = 0; i < curr_num_symmetries; ++i) {
-        pattern_symmetries[i] =
-            (uint32_t *)malloc((1 << curr_board_size) * sizeof(uint32_t));
+        pattern_symmetries[i] = (uint32_t *)GamesmanMalloc(
+            (1 << curr_board_size) * sizeof(uint32_t));
         if (!pattern_symmetries[i]) return kMallocFailureError;
     }
 
@@ -175,24 +175,24 @@ int TwoPieceHashInit(int board_size, const int *const *symmetry_matrix,
 
 void TwoPieceHashFinalize(void) {
     // pattern_to_order
-    free(pattern_to_order);
+    GamesmanFree(pattern_to_order);
     pattern_to_order = NULL;
 
     // pop_order_to_pattern
     if (pop_order_to_pattern != NULL) {
         for (int i = 0; i <= curr_board_size; ++i) {
-            free(pop_order_to_pattern[i]);
+            GamesmanFree(pop_order_to_pattern[i]);
         }
-        free(pop_order_to_pattern);
+        GamesmanFree(pop_order_to_pattern);
         pop_order_to_pattern = NULL;
     }
 
     // pattern_symmetries
     if (pattern_symmetries != NULL) {
         for (int i = 0; i < curr_num_symmetries; ++i) {
-            free(pattern_symmetries[i]);
+            GamesmanFree(pattern_symmetries[i]);
         }
-        free(pattern_symmetries);
+        GamesmanFree(pattern_symmetries);
         pattern_symmetries = NULL;
     }
 

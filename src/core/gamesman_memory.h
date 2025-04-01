@@ -29,6 +29,7 @@
 
 #include <assert.h>  // static_assert
 #include <stddef.h>  // size_t
+#include <stdint.h>  // intptr_t
 
 #ifndef GM_CACHE_LINE_SIZE
 /**
@@ -229,5 +230,26 @@ void *GamesmanAlignedRealloc(size_t alignment, void *ptr, size_t old_size,
  * @param ptr Pointer to the space to deallocate.
  */
 void GamesmanFree(void *ptr);
+
+/**
+ * @brief Returns the amount of physical memory available on the system in
+ * bytes.
+ *
+ * @return Amount of physical memory in bytes or
+ * @return 0 if the detection fails.
+ */
+intptr_t GetPhysicalMemory(void);
+
+/**
+ * @brief Same behavior as GamesmanMalloc on success; terminates GAMESMAN on
+ * failure.
+ */
+void *SafeMalloc(size_t size);
+
+/**
+ * @brief Same behavior as GamesmanCalloc on success; terminates GAMESMAN on
+ * failure.
+ */
+void *SafeCalloc(size_t n, size_t size);
 
 #endif  // GAMESMANONE_CORE_GAMESMAN_MEMORY_H_

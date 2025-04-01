@@ -36,10 +36,10 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
 #include "core/concurrency.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
@@ -48,7 +48,8 @@
 #endif  // _OPENMP
 
 static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
-    frontier->f.buckets = (PositionArray *)calloc(size, sizeof(PositionArray));
+    frontier->f.buckets =
+        (PositionArray *)GamesmanCallocWhole(size, sizeof(PositionArray));
     if (frontier->f.buckets == NULL) {
         fprintf(stderr, "FrontierInit: failed to calloc buckets.\n");
         return false;
@@ -59,16 +60,16 @@ static bool FrontierAllocateBuckets(Frontier *frontier, int size) {
 
 static bool FrontierAllocateDividers(Frontier *frontier, int frontier_size,
                                      int dividers_size) {
-    frontier->f.dividers = (int64_t **)AlignedCalloc(
-        GM_CACHE_LINE_SIZE, frontier_size, sizeof(int64_t *));
+    frontier->f.dividers =
+        (int64_t **)GamesmanCallocWhole(frontier_size, sizeof(int64_t *));
     if (frontier->f.dividers == NULL) {
         fprintf(stderr, "FrontierInit: failed to calloc dividers.\n");
         return false;
     }
 
     for (int i = 0; i < frontier_size; ++i) {
-        frontier->f.dividers[i] = (int64_t *)AlignedCalloc(
-            GM_CACHE_LINE_SIZE, dividers_size, sizeof(int64_t));
+        frontier->f.dividers[i] =
+            (int64_t *)GamesmanCallocWhole(dividers_size, sizeof(int64_t));
         if (frontier->f.dividers[i] == NULL) {
             fprintf(stderr, "FrontierInit: failed to calloc dividers.\n");
             return false;
@@ -80,7 +81,7 @@ static bool FrontierAllocateDividers(Frontier *frontier, int frontier_size,
 
 static void FrontierInitAllFields(Frontier *frontier) {
     for (int i = 0; i < frontier->f.size; ++i) {
-        PositionArrayInitAligned(&frontier->f.buckets[i], GM_CACHE_LINE_SIZE);
+        PositionArrayInit(&frontier->f.buckets[i]);
     }
 }
 
@@ -99,12 +100,12 @@ bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size) {
     } else {
         // Otherwise, pointers are either NULL or pointing
         // to spaces that can be freed with function free.
-        free(frontier->f.buckets);
+        GamesmanFree(frontier->f.buckets);
         if (frontier->f.dividers) {
             for (int i = 0; i < frontier_size; ++i) {
-                free(frontier->f.dividers[i]);
+                GamesmanFree(frontier->f.dividers[i]);
             }
-            free(frontier->f.dividers);
+            GamesmanFree(frontier->f.dividers);
         }
 
         // Set all member pointers to NULL and all fields to 0.
@@ -119,15 +120,15 @@ void FrontierDestroy(Frontier *frontier) {
         for (int i = 0; i < frontier->f.size; ++i) {
             PositionArrayDestroy(&frontier->f.buckets[i]);
         }
-        free(frontier->f.buckets);
+        GamesmanFree(frontier->f.buckets);
     }
 
     // Dividers.
     if (frontier->f.dividers) {
         for (int i = 0; i < frontier->f.dividers_size; ++i) {
-            free(frontier->f.dividers[i]);
+            GamesmanFree(frontier->f.dividers[i]);
         }
-        free(frontier->f.dividers);
+        GamesmanFree(frontier->f.dividers);
     }
 
     // Set all member pointers to NULL and all fields to 0.
@@ -176,6 +177,6 @@ Position FrontierGetPosition(const Frontier *frontier, int remoteness,
 
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness) {
     PositionArrayDestroy(&frontier->f.buckets[remoteness]);
-    free(frontier->f.dividers[remoteness]);
+    GamesmanFree(frontier->f.dividers[remoteness]);
     frontier->f.dividers[remoteness] = NULL;
 }

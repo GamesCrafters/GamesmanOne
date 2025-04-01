@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Position array implementation.
- * @version 1.1.0
- * @date 2025-03-18
+ * @version 1.0.1
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,10 +30,6 @@
 #include "core/types/base.h"
 
 void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
-
-int PositionArrayInitAligned(PositionArray *array, int align) {
-    return Int64ArrayInitAligned(array, align);
-}
 
 void PositionArrayDestroy(PositionArray *array) { Int64ArrayDestroy(array); }
 

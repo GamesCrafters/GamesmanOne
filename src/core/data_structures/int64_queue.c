@@ -31,13 +31,15 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // realloc, free
 #include <string.h>   // memcpy
+
+#include "core/gamesman_memory.h"
 
 static bool Expand(Int64Queue *queue) {
     int64_t new_capacity = queue->capacity == 0 ? 1 : queue->capacity * 2;
-    int64_t *new_array =
-        (int64_t *)realloc(queue->array, new_capacity * sizeof(int64_t));
+    int64_t *new_array = (int64_t *)GamesmanRealloc(
+        queue->array, queue->capacity * sizeof(int64_t),
+        new_capacity * sizeof(int64_t));
     if (new_array == NULL) return false;
     memcpy(&new_array[queue->capacity], new_array,
            queue->front * sizeof(int64_t));
@@ -56,7 +58,7 @@ void Int64QueueInit(Int64Queue *queue) {
 
 // Function to destroy the queue and free the allocated memory
 void Int64QueueDestroy(Int64Queue *queue) {
-    free(queue->array);
+    GamesmanFree(queue->array);
     queue->array = NULL;
     queue->capacity = 0;
     queue->front = 0;

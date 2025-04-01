@@ -35,12 +35,12 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, malloc, free
 #include <string.h>   // memcpy
 
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/frontier.h"
 #include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
@@ -108,9 +108,9 @@ static bool Step0_1InitFrontiers(int dividers_size) {
 #else   // _OPENMP not defined.
     num_threads = 1;
 #endif  // _OPENMP
-    win_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
-    lose_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
-    tie_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
+    win_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
+    lose_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
+    tie_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
     if (!win_frontiers || !lose_frontiers || !tie_frontiers) {
         return false;
     }
@@ -284,7 +284,7 @@ static bool Step2SetupSolverArrays(void) {
     if (error != 0) return false;
 
 #ifdef _OPENMP
-    num_undecided_children = (AtomicChildPosCounterType *)malloc(
+    num_undecided_children = (AtomicChildPosCounterType *)GamesmanMalloc(
         this_tier_size * sizeof(AtomicChildPosCounterType));
     if (num_undecided_children == NULL) return false;
 
@@ -292,7 +292,7 @@ static bool Step2SetupSolverArrays(void) {
         atomic_init(&num_undecided_children[i], 0);
     }
 #else   // _OPENMP not defined
-    num_undecided_children = (ChildPosCounterType *)calloc(
+    num_undecided_children = (ChildPosCounterType *)GamesmanCallocWhole(
         this_tier_size, sizeof(ChildPosCounterType));
 #endif  // _OPENMP
 
@@ -392,7 +392,7 @@ static bool Step3ScanTier(void) {
 
 static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
     int64_t *frontier_offsets =
-        (int64_t *)calloc(num_threads + 1, sizeof(int64_t));
+        (int64_t *)GamesmanCallocWhole(num_threads + 1, sizeof(int64_t));
     if (frontier_offsets == NULL) return NULL;
 
     frontier_offsets[0] = 0;
@@ -476,7 +476,7 @@ static bool PushFrontierHelper(
     for (int i = 0; i < num_threads; ++i) {
         FrontierFreeRemoteness(&frontiers[i], remoteness);
     }
-    free(frontier_offsets);
+    GamesmanFree(frontier_offsets);
     frontier_offsets = NULL;
 
     return ConcurrentBoolLoad(&success);
@@ -597,11 +597,11 @@ static void DestroyFrontiers(void) {
         if (lose_frontiers) FrontierDestroy(&lose_frontiers[i]);
         if (tie_frontiers) FrontierDestroy(&tie_frontiers[i]);
     }
-    free(win_frontiers);
+    GamesmanFree(win_frontiers);
     win_frontiers = NULL;
-    free(lose_frontiers);
+    GamesmanFree(lose_frontiers);
     lose_frontiers = NULL;
-    free(tie_frontiers);
+    GamesmanFree(tie_frontiers);
     tie_frontiers = NULL;
 }
 
@@ -654,7 +654,7 @@ static void Step5MarkDrawPositions(void) {
             continue;
         }
     }
-    free(num_undecided_children);
+    GamesmanFree(num_undecided_children);
     num_undecided_children = NULL;
 }
 
@@ -730,7 +730,7 @@ static void Step7Cleanup(void) {
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
     DestroyFrontiers();
-    free(num_undecided_children);
+    GamesmanFree(num_undecided_children);
     num_undecided_children = NULL;
     if (use_reverse_graph) {
         ReverseGraphDestroy(&reverse_graph);

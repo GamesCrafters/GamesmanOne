@@ -33,6 +33,7 @@
 #include <unistd.h>  // usleep
 
 #include "config.h"
+#include "core/gamesman_memory.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
@@ -89,7 +90,7 @@ static void PrintOpeningCredits(void) {
         usleep(800);
     }
 
-    free(opening_credits);
+    GamesmanFree(opening_credits);
 }
 
 int GamesmanInteractiveMain(void) {

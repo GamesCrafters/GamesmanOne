@@ -35,7 +35,7 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // malloc, free
+#include <stdlib.h>   // strtoll
 #include <string.h>   // memset
 
 #include "core/analysis/stat_manager.h"
@@ -43,6 +43,7 @@
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/db/naivedb/naivedb.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -334,7 +335,7 @@ static int RegularSolverAnalyze(void *aux) {
         .memlimit = 0,
     };
 
-    Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
+    Analysis *analysis = (Analysis *)GamesmanMalloc(sizeof(Analysis));
     if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
 
@@ -351,7 +352,7 @@ static int RegularSolverAnalyze(void *aux) {
         fprintf(stderr, "RegularSolverAnalyze: failed with code %d\n", error);
     }
 
-    free(analysis);
+    GamesmanFree(analysis);
     return error;
 }
 

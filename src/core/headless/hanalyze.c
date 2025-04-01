@@ -31,9 +31,9 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // intptr_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // free
 
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -75,7 +75,7 @@ int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
 
     void *options = GenerateAnalyzeOptions(force, verbose, memlimit);
     error = SolverManagerAnalyze(options);
-    free(options);
+    GamesmanFree(options);
     if (error != 0) {
         fprintf(stderr, "HeadlessAnalyze: analysis failed with code %d\n",
                 error);

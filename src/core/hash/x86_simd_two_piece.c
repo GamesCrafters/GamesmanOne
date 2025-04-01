@@ -35,9 +35,9 @@
 #include <stdbool.h>    // bool, true, false
 #include <stdint.h>     // intptr_t, int64_t, uint64_t, uint32_t
 #include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // malloc, free
 #include <x86intrin.h>  // __m128i
 
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
 
 /**
@@ -93,14 +93,14 @@ static void BuildHashMask(void) {
 static int InitTables(void) {
     // Allocate space
     pattern_to_order =
-        (int32_t *)calloc((1 << curr_board_size), sizeof(int32_t));
-    pop_order_to_pattern =
-        (uint32_t **)calloc((curr_board_size + 1), sizeof(uint32_t *));
+        (int32_t *)GamesmanCallocWhole((1 << curr_board_size), sizeof(int32_t));
+    pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
+        (curr_board_size + 1), sizeof(uint32_t *));
     if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
 
     for (int i = 0; i <= curr_board_size; ++i) {
-        pop_order_to_pattern[i] =
-            (uint32_t *)malloc(nCr[curr_board_size][i] * sizeof(uint32_t));
+        pop_order_to_pattern[i] = (uint32_t *)GamesmanMalloc(
+            nCr[curr_board_size][i] * sizeof(uint32_t));
         if (!pop_order_to_pattern[i]) return kMallocFailureError;
     }
 
@@ -155,15 +155,15 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
 
 void X86SimdTwoPieceHashFinalize(void) {
     // pattern_to_order
-    free(pattern_to_order);
+    GamesmanFree(pattern_to_order);
     pattern_to_order = NULL;
 
     // pop_order_to_pattern
     if (pop_order_to_pattern != NULL) {
         for (int i = 0; i <= curr_board_size; ++i) {
-            free(pop_order_to_pattern[i]);
+            GamesmanFree(pop_order_to_pattern[i]);
         }
-        free(pop_order_to_pattern);
+        GamesmanFree(pop_order_to_pattern);
         pop_order_to_pattern = NULL;
     }
 

@@ -41,11 +41,11 @@
 #include <stddef.h>    // NULL
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // printf, fprintf, stderr
-#include <stdlib.h>    // malloc, free
 #include <time.h>      // time_t, time, difftime
 
 #include "core/analysis/analysis.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/reverse_tier_graph.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
@@ -829,7 +829,7 @@ static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit) {
         Tier canonical = api_internal->GetCanonicalTier(tier);
 
         // Analyze the canonical tier instead.
-        Analysis *tier_analysis = (Analysis *)malloc(sizeof(Analysis));
+        Analysis *tier_analysis = (Analysis *)GamesmanMalloc(sizeof(Analysis));
         if (tier_analysis == NULL) {
             TierAnalyzerFinalize();
             return kMallocFailureError;
@@ -857,7 +857,7 @@ static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit) {
                    error);
             ++failed_tiers;
         }
-        free(tier_analysis);
+        GamesmanFree(tier_analysis);
     }
 
     if (verbose > 0) PrintAnalyzerResult();

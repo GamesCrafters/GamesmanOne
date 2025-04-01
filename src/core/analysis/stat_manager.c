@@ -30,7 +30,6 @@
 #include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
 #include <stddef.h>    // NULL, size_t
 #include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
-#include <stdlib.h>    // calloc, free
 #include <string.h>    // strlen, memset
 #include <sys/stat.h>  // S_IRWXU, S_IRWXG, S_IRWXO
 #include <zlib.h>      // gzread, gzFile, Z_NULL
@@ -38,6 +37,7 @@
 #include "core/analysis/analysis.h"
 #include "core/constants.h"
 #include "core/data_structures/concurrent_bitset.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 #include "libs/lz4_utils/lz4_utils.h"
@@ -64,7 +64,7 @@ int StatManagerInit(ReadOnlyString game_name, int variant,
 }
 
 void StatManagerFinalize(void) {
-    free(sandbox_path);
+    GamesmanFree(sandbox_path);
     sandbox_path = NULL;
 }
 
@@ -78,7 +78,7 @@ int StatManagerGetStatus(Tier tier) {
     if (filename == NULL) return kAnalysisTierCheckError;
 
     FILE *stat_file = fopen(filename, "rb");
-    free(filename);
+    GamesmanFree(filename);
     if (stat_file == NULL) return kAnalysisTierUnanalyzed;
 
     int error = GuardedFclose(stat_file);
@@ -97,7 +97,7 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis) {
     if (filename == NULL) return kMallocFailureError;
     mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;  // This sets permissions to 0777
     int stat_fd = open(filename, O_CREAT | O_WRONLY, mode);
-    free(filename);
+    GamesmanFree(filename);
     if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisWrite(analysis, stat_fd);
@@ -117,7 +117,7 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
     if (filename == NULL) return kMallocFailureError;
 
     int stat_fd = GuardedOpen(filename, O_RDONLY);
-    free(filename);
+    GamesmanFree(filename);
     if (stat_fd < 0) return kFileSystemError;
 
     int error = AnalysisRead(dest, stat_fd);
@@ -140,7 +140,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
 
     // Allocate deserialization buffer
     size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    buf = malloc(buf_size);
+    buf = GamesmanMalloc(buf_size);
     if (buf == NULL) {
         error = kMallocFailureError;
         goto _bailout;
@@ -177,8 +177,8 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
     *dest = s;
 
 _bailout:
-    free(filename);
-    free(buf);
+    GamesmanFree(filename);
+    GamesmanFree(buf);
     if (error != kNoError) ConcurrentBitsetDestroy(s);
 
     return error;
@@ -190,13 +190,13 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
 
     // Serialize the bitset
     size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    void *buf = malloc(buf_size);
+    void *buf = GamesmanMalloc(buf_size);
     if (buf == NULL) return kMallocFailureError;
     ConcurrentBitsetSerialize(s, buf);
 
     int64_t res = Lz4UtilsCompressStream(buf, buf_size, 0, filename);
-    free(buf);
-    free(filename);
+    GamesmanFree(buf);
+    GamesmanFree(filename);
     switch (res) {
         case -1:
             return kIllegalArgumentError;
@@ -216,7 +216,7 @@ int StatManagerRemoveDiscoveryMap(Tier tier) {
     if (filename == NULL) return kMallocFailureError;
 
     int error = GuardedRemove(filename);
-    free(filename);
+    GamesmanFree(filename);
     if (error != 0) return kFileSystemError;
 
     return kNoError;
@@ -235,7 +235,7 @@ static char *SetupStatPath(ReadOnlyString game_name, int variant,
     path_length += (int)strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
     path_length += (int)strlen(kAnalysisDirName) + 1;
-    path = (char *)calloc((path_length + 1), sizeof(char));
+    path = (char *)GamesmanCallocWhole((path_length + 1), sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "SetupStatPath: failed to calloc path.\n");
         return NULL;
@@ -246,13 +246,13 @@ static char *SetupStatPath(ReadOnlyString game_name, int variant,
         fprintf(stderr,
                 "SetupStatPath: (BUG) not enough space was allocated for "
                 "path. Please check the implementation of this function.\n");
-        free(path);
+        GamesmanFree(path);
         return NULL;
     }
     if (MkdirRecursive(path) != 0) {
         fprintf(stderr,
                 "SetupStatPath: failed to create path in the file system.\n");
-        free(path);
+        GamesmanFree(path);
         return NULL;
     }
     return path;
@@ -277,7 +277,7 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
 
     // +1 for '/', and +1 for '\0'.
     int path_length = (int)strlen(sandbox_path) + 1 + file_name_length + 1;
-    char *path = (char *)calloc(path_length, sizeof(char));
+    char *path = (char *)GamesmanCallocWhole(path_length, sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "GetPathToTierAnalysis: failed to calloc path.\n");
         return NULL;

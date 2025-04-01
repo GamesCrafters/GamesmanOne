@@ -2,9 +2,9 @@
 
 #include <stddef.h>  // NULL
 #include <stdio.h>   // printf, fprintf, stderr, sprintf
-#include <stdlib.h>  // free
 #include <string.h>  // strcat, strncat, strlen
 
+#include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/choices/choices.h"
@@ -115,11 +115,11 @@ static HookFunctionPointer *AllocateHooks(int num_items) {
 
 static void FreeAll(int num_items, char **keys, HookFunctionPointer *hooks) {
     for (int i = 0; i < num_items; ++i) {
-        free(items[i]);
-        free(keys[i]);
+        GamesmanFree(items[i]);
+        GamesmanFree(keys[i]);
     }
-    free(items);
+    GamesmanFree(items);
     items = NULL;
-    free(keys);
-    free(hooks);
+    GamesmanFree(keys);
+    GamesmanFree(hooks);
 }

@@ -31,9 +31,9 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // intptr_t
 #include <stdio.h>    // printf, fprintf, stderr
-#include <stdlib.h>   // free
 
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -73,7 +73,7 @@ int HeadlessSolve(ReadOnlyString game_name, int variant_id,
 
     void *options = GenerateSolveOptions(force, verbose, memlimit);
     error = SolverManagerSolve(options);
-    free(options);
+    GamesmanFree(options);
     GameManagerFinalize();
     if (error != 0) {
         fprintf(stderr, "HeadlessSolve: solve failed with code %d\n", error);

@@ -34,6 +34,7 @@
 
 #include "core/data_structures/int64_array.h"
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
 #include "core/types/gamesman_types.h"
@@ -103,6 +104,6 @@ static int MakeDirectory(ReadOnlyString output) {
         }
     }
     // We still reach here if no '/' character is found in path.
-    free(path);
+    GamesmanFree(path);
     return ret;
 }

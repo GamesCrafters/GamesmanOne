@@ -26,13 +26,19 @@
 #include "core/gamesman_memory.h"
 
 #include <assert.h>  // assert
+#include <lzma.h>    // lzma_physmem
 #include <stddef.h>  // size_t, NULL
+#include <stdint.h>  // intptr_t
+#include <stdio.h>   // fprintf, stderr
 #include <stdlib.h>  // aligned_alloc, malloc, calloc, free
 #include <string.h>  // memset, memcpy
+#include <unistd.h>  // _exit
 
 // #ifdef _OPENMP
 #include <omp.h>
 // #endif  // _OPENMP
+
+#include "core/types/gamesman_types.h"
 
 static size_t NextMultiple(size_t n, size_t mult) {
     return (n + mult - 1) / mult * mult;
@@ -215,4 +221,33 @@ void GamesmanFree(void *ptr) {
 #else
     free(ptr);
 #endif
+}
+
+intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
+
+void *SafeMalloc(size_t size) {
+    void *ret = GamesmanMalloc(size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeMalloc: failed to allocate %zd bytes. This ususally "
+                "indicates a bug.\n",
+                size);
+        fflush(stderr);
+        _exit(kMallocFailureError);
+    }
+    return ret;
+}
+
+void *SafeCalloc(size_t n, size_t size) {
+    void *ret = GamesmanCallocWhole(n, size);
+    if (ret == NULL) {
+        fprintf(stderr,
+                "SafeCalloc: failed to allocate %zd elements each of %zd "
+                "bytes. This ususally "
+                "indicates a bug.\n",
+                n, size);
+        fflush(stderr);
+        _exit(kMallocFailureError);
+    }
+    return ret;
 }

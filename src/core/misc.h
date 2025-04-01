@@ -51,38 +51,6 @@ void GamesmanExit(void);
 void NotReached(ReadOnlyString message);
 
 /**
- * @brief Returns the amount of physical memory available on the system in
- * bytes.
- *
- * @return Amount of physical memory in bytes or
- * @return 0 if the detection fails.
- */
-intptr_t GetPhysicalMemory(void);
-
-/**
- * @brief Same behavior as malloc() on success; terminates GAMESMAN on failure.
- */
-void *SafeMalloc(size_t size);
-
-/**
- * @brief Same behavior as calloc() on success; terminates GAMESMAN on failure.
- */
-void *SafeCalloc(size_t n, size_t size);
-
-/**
- * @brief Allocates an \p alignment -byte aligned space that can hold at least
- * \p n elements of size \p size bytes each. Calls aligned_alloc() internally
- * and the returned pointer should be freed using the free() function.
- *
- * @param alignment Alignement size in bytes.
- * @param n Number of elements.
- * @param size Size of each element.
- * @return Pointer to the newly allocates space on success, or
- * @return \c NULL on failure.
- */
-void *AlignedCalloc(size_t alignment, size_t n, size_t size);
-
-/**
  * @brief Same behavior as strncpy if the end of SRC is found before N
  * characters are copied. Otherwise, copies N-1 characters from SRC to DEST and
  * terminates DEST with a null-terminator. Therefore, DEST will always be a null

@@ -29,7 +29,6 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, intptr_t
-#include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // memset
 
 #include "core/analysis/analysis.h"
@@ -38,7 +37,6 @@
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
@@ -113,7 +111,7 @@ static int GetCanonicalChildTiers(
 
 static void InitFringe(PaddedPositionArray *target) {
     for (int i = 0; i < num_threads; ++i) {
-        PositionArrayInitAligned(&target[i].a, GM_CACHE_LINE_SIZE);
+        PositionArrayInit(&target[i].a);
     }
 }
 
@@ -122,10 +120,10 @@ static bool Step0Initialize(Analysis *dest) {
     this_tier_size = api_internal->GetTierSize(this_tier);
     num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
 
-    fringe = (PaddedPositionArray *)malloc(num_threads *
-                                           sizeof(PaddedPositionArray));
-    discovered = (PaddedPositionArray *)malloc(num_threads *
-                                               sizeof(PaddedPositionArray));
+    fringe = (PaddedPositionArray *)GamesmanCallocEach(
+        num_threads, sizeof(PaddedPositionArray));
+    discovered = (PaddedPositionArray *)GamesmanCallocEach(
+        num_threads, sizeof(PaddedPositionArray));
     if (fringe == NULL || discovered == NULL) return false;
 
     InitFringe(fringe);
@@ -173,8 +171,8 @@ static ConcurrentBitset *LoadDiscoveryMap(Tier tier) {
 }
 
 static bool Step1LoadDiscoveryMaps(void) {
-    child_tier_maps = (ConcurrentBitset **)calloc(num_child_tiers,
-                                                  sizeof(ConcurrentBitset *));
+    child_tier_maps = (ConcurrentBitset **)GamesmanCallocWhole(
+        num_child_tiers, sizeof(ConcurrentBitset *));
     if (child_tier_maps == NULL) return false;
 
     this_tier_map = LoadDiscoveryMap(this_tier);
@@ -223,7 +221,7 @@ static int64_t GetFringeSize(void) {
 
 static int64_t *MakeFringeOffsets(void) {
     int64_t *frontier_offsets =
-        (int64_t *)calloc(num_threads + 1, sizeof(int64_t));
+        (int64_t *)GamesmanCallocWhole(num_threads + 1, sizeof(int64_t));
     if (frontier_offsets == NULL) return NULL;
 
     frontier_offsets[0] = 0;
@@ -321,12 +319,14 @@ static bool DiscoverHelperProcessChildTier(TierPosition child) {
 static bool DiscoverHelper(Analysis *dest) {
     int64_t *fringe_offsets = MakeFringeOffsets();
     if (fringe_offsets == NULL) return false;
-    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
-        GM_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
+
+    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)GamesmanMalloc(
+        num_threads * sizeof(CacheAlignedAnalysis));
     if (parts == NULL) {
-        free(fringe_offsets);
+        GamesmanFree(fringe_offsets);
         return false;
     }
+
     for (int i = 0; i < num_threads; ++i) {
         AnalysisInit(&parts[i].data);
     }
@@ -364,12 +364,12 @@ static bool DiscoverHelper(Analysis *dest) {
             TierPositionArrayDestroy(&children);
         }
     }
-    free(fringe_offsets);
+    GamesmanFree(fringe_offsets);
     fringe_offsets = NULL;
     for (int i = 0; i < num_threads; ++i) {
         AnalysisMergeMoves(dest, &parts[i]);
     }
-    free(parts);
+    GamesmanFree(parts);
 
     return ConcurrentBoolLoad(&success);
 }
@@ -411,7 +411,7 @@ static bool Step4SaveChildMaps(void) {
         ConcurrentBitsetDestroy(child_tier_maps[i]);
         child_tier_maps[i] = NULL;
     }
-    free(child_tier_maps);
+    GamesmanFree(child_tier_maps);
     child_tier_maps = NULL;
 
     return true;
@@ -420,18 +420,19 @@ static bool Step4SaveChildMaps(void) {
 // Step5Analyze
 
 static bool Step5Analyze(Analysis *dest) {
-    ConcurrentBool success;
-    ConcurrentBoolInit(&success, true);
     int error = DbManagerLoadTier(this_tier, this_tier_size);
     if (error != kNoError) return false;
 
-    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)aligned_alloc(
-        GM_CACHE_LINE_SIZE, num_threads * sizeof(CacheAlignedAnalysis));
+    CacheAlignedAnalysis *parts = (CacheAlignedAnalysis *)GamesmanMalloc(
+        num_threads * sizeof(CacheAlignedAnalysis));
     if (parts == NULL) return false;
+
     for (int i = 0; i < num_threads; ++i) {
         AnalysisInit(&parts[i].data);
     }
 
+    ConcurrentBool success;
+    ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int tid = ConcurrencyGetOmpThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
@@ -460,7 +461,7 @@ static bool Step5Analyze(Analysis *dest) {
     for (int i = 0; i < num_threads; ++i) {
         AnalysisMergeCounts(dest, &parts[i]);
     }
-    free(parts);
+    GamesmanFree(parts);
 
     error = DbManagerUnloadTier(this_tier);
     if (error != kNoError) ConcurrentBoolStore(&success, false);
@@ -492,14 +493,14 @@ static void Step7CleanUp(void) {
     for (int i = 0; i < num_child_tiers; ++i) {
         ConcurrentBitsetDestroy(child_tier_maps[i]);
     }
-    free(child_tier_maps);
+    GamesmanFree(child_tier_maps);
     child_tier_maps = NULL;
 
     // Clean up fringe and discovered queues.
     DestroyFringe(fringe);
     DestroyFringe(discovered);
-    free(fringe);
-    free(discovered);
+    GamesmanFree(fringe);
+    GamesmanFree(discovered);
 }
 
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }

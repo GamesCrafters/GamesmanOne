@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 2.1.0
- * @date 2025-03-18
+ * @version 2.0.2
+ * @date 2024-12-20
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,97 +30,47 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // free, aligned_alloc, realloc, qsort
+#include <stdlib.h>   // qsort
 #include <string.h>   // memset, memmove
 
-void Int64ArrayInit(Int64Array *array) { Int64ArrayInitAligned(array, 0); }
+#include "core/gamesman_memory.h"
 
-int Int64ArrayInitAligned(Int64Array *array, int align) {
-    // Check alignemnt requirements.
-    if (align % sizeof(void *) || (align & (align - 1))) {
-        return 1;
-    }
-
+void Int64ArrayInit(Int64Array *array) {
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
-    array->align = align;
-
-    return 0;
 }
 
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
     Int64ArrayInit(dest);
     if (src->size == 0) return true;
 
-    dest->array = (int64_t *)malloc(src->size * sizeof(int64_t));
+    dest->array = (int64_t *)GamesmanMalloc(src->size * sizeof(int64_t));
     if (dest->array == NULL) return false;
 
     memcpy(dest->array, src->array, src->size * sizeof(int64_t));
     dest->size = src->size;
     dest->capacity = src->size;
-    dest->align = src->align;
 
     return true;
 }
 
 void Int64ArrayDestroy(Int64Array *array) {
-    free(array->array);
+    GamesmanFree(array->array);
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
-    array->align = 0;
 }
 
-static int64_t NextMultiple(int64_t n, int64_t mult) {
-    return (n + mult - 1) / mult * mult;
-}
-
-static bool ExpandAligned(Int64Array *array, int64_t desired_capacity) {
-    size_t required_bytes = desired_capacity * sizeof(int64_t);
-
-    // aligned_alloc requires the allocation size to be a multiple of the
-    // alignment. Adjust alloc_size to the smallest multiple of array->align
-    // that is >= required_bytes.
-    size_t alloc_size = NextMultiple(required_bytes, array->align);
-
-    // Update new capacity based on the actual allocation size (avoiding wasted
-    // space)
-    int64_t new_capacity = alloc_size / sizeof(int64_t);
-
-    // Allocate new memory with the specified alignment.
-    int64_t *new_array = aligned_alloc(array->align, alloc_size);
-    if (!new_array) return false;
-
-    // If the array already contains data, copy it to the new memory block.
-    if (array->array) {
-        memcpy(new_array, array->array, array->size * sizeof(int64_t));
-        free(array->array);
-    }
-
-    // Update the array structure with the new allocation and capacity.
-    array->array = new_array;
-    array->capacity = new_capacity;
-
-    return true;
-}
-
-static bool ExpandUnaligned(Int64Array *array, int new_capacity) {
-    int64_t *new_array =
-        (int64_t *)realloc(array->array, new_capacity * sizeof(int64_t));
+bool Int64ArrayExpand(Int64Array *array) {
+    int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
+    int64_t *new_array = (int64_t *)GamesmanRealloc(
+        array->array, array->capacity * sizeof(int64_t),
+        new_capacity * sizeof(int64_t));
     if (!new_array) return false;
     array->array = new_array;
     array->capacity = new_capacity;
-
     return true;
-}
-
-static bool Int64ArrayExpand(Int64Array *array) {
-    int64_t desired_capacity = (array->capacity == 0 ? 1 : array->capacity * 2);
-    if (array->align) return ExpandAligned(array, desired_capacity);
-
-    return ExpandUnaligned(array, desired_capacity);
 }
 
 bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
@@ -178,19 +128,21 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
 
     // Expand if necessary.
     if (array->capacity < size) {
-        if (array->align) {
-            if (!ExpandAligned(array, size)) return false;
-        } else {
-            if (!ExpandUnaligned(array, size)) return false;
-        }
+        int64_t *new_array = (int64_t *)GamesmanRealloc(
+            array->array, array->capacity * sizeof(int64_t),
+            size * sizeof(int64_t));
+        if (new_array == NULL) return false;
+
+        array->array = new_array;
+        array->capacity = size;
     }
 
     int64_t pad_length = size - array->size;
     if (pad_length > 0) {
         memset(&array->array[array->size], 0, pad_length * sizeof(int64_t));
     }
-    array->size = size;
 
+    array->size = size;
     return true;
 }
 

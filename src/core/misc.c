@@ -30,13 +30,12 @@
 #include <errno.h>      // errno
 #include <fcntl.h>      // open
 #include <inttypes.h>   // PRId64, PRIu64
-#include <lzma.h>       // lzma_physmem
 #include <stdarg.h>     // va_list, va_start, va_end
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint32_t, uint64_t, INT64_MAX, uint8_t
 #include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
-#include <stdlib.h>     // exit, malloc, calloc, aligned_alloc, free
+#include <stdlib.h>     // exit
 #include <string.h>     // strcspn, strlen, strncpy, memset
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
@@ -47,6 +46,7 @@
 #include <mpi.h>
 #endif  // USE_MPI
 
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
 
 void GamesmanExit(void) {
@@ -61,58 +61,6 @@ void NotReached(ReadOnlyString message) {
             message);
     fflush(stderr);
     _exit(kNotReachedError);
-}
-
-intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
-
-void *SafeMalloc(size_t size) {
-    void *ret = malloc(size);
-    if (ret == NULL) {
-        fprintf(stderr,
-                "SafeMalloc: failed to allocate %zd bytes. This ususally "
-                "indicates a bug.\n",
-                size);
-        fflush(stderr);
-        _exit(kMallocFailureError);
-    }
-    return ret;
-}
-
-void *SafeCalloc(size_t n, size_t size) {
-    void *ret = calloc(n, size);
-    if (ret == NULL) {
-        fprintf(stderr,
-                "SafeCalloc: failed to allocate %zd elements each of %zd "
-                "bytes. This ususally "
-                "indicates a bug.\n",
-                n, size);
-        fflush(stderr);
-        _exit(kMallocFailureError);
-    }
-    return ret;
-}
-
-static bool IsValidAlignment(size_t alignment) {
-    // Must be a multiple of pointer size.
-    if (alignment % sizeof(void *)) return false;
-
-    // Must be a power of 2.
-    if (alignment & (alignment - 1)) return false;
-
-    return true;
-}
-
-void *AlignedCalloc(size_t alignment, size_t n, size_t size) {
-    if (!IsValidAlignment(alignment)) return NULL;
-
-    size_t desired = n * size;
-    size_t required = (desired + alignment - 1) / alignment * alignment;
-    void *ret = aligned_alloc(alignment, required);
-    if (ret == NULL) return ret;
-
-    memset(ret, 0, required);
-
-    return ret;
 }
 
 char *SafeStrncpy(char *dest, const char *src, size_t n) {
@@ -438,7 +386,7 @@ int MkdirRecursive(ReadOnlyString path) {
 
     // Copy string so it's mutable
     size_t path_length = strlen(path);
-    char *path_copy = (char *)malloc((path_length + 1) * sizeof(char));
+    char *path_copy = (char *)GamesmanMalloc((path_length + 1) * sizeof(char));
     if (path_copy == NULL) {
         ret = kMallocFailureError;
         errno = ENOMEM;
@@ -457,7 +405,7 @@ int MkdirRecursive(ReadOnlyString path) {
     ret = kNoError;  // Success
 
 _bailout:
-    free(path_copy);
+    GamesmanFree(path_copy);
     return ret;
 }
 

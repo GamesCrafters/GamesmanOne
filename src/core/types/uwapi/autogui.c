@@ -33,7 +33,7 @@
 
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/misc.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 CString AutoGuiMakePosition(int turn, ReadOnlyString entities) {
@@ -97,7 +97,7 @@ CString AutoGuiMakeMoveT(ReadOnlyString text, int center, char sound) {
         sprintf(buffer, "T_%s_%d", text, center);
     }
     CStringInitCopyCharArray(&ret, buffer);
-    free(buffer);
+    GamesmanFree(buffer);
 
     return ret;
 }
