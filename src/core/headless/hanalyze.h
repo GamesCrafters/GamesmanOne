@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Analyze functionality of headless mode.
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 2.0.0
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // intptr_t
 
 #include "core/types/gamesman_types.h"
 
@@ -44,9 +45,11 @@
  * @param verbose May take values 0, 1, or 2. If set to 0, no output will be
  * produced to stdout. Set to 1 for default output level. Set to 2 for more
  * detailed output.
+ * @param memlimit Approximate heap memory limit in bytes.
  * @return 0 on success, non-zero error code otherwise.
  */
 int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
-                    ReadOnlyString data_path, bool force, int verbose);
+                    ReadOnlyString data_path, bool force, int verbose,
+                    intptr_t memlimit);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HANALYZE_H_

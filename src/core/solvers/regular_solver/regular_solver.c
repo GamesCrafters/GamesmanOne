@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 2.0.0
- * @date 2025-01-10
+ * @version 2.1.0
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -331,16 +331,17 @@ static int RegularSolverAnalyze(void *aux) {
     static const RegularSolverAnalyzeOptions kDefaultAnalyzeOptions = {
         .force = false,
         .verbose = 1,
+        .memlimit = 0,
     };
 
     Analysis *analysis = (Analysis *)malloc(sizeof(Analysis));
     if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
 
-    TierAnalyzerInit(&current_api);
     const RegularSolverAnalyzeOptions *options =
         (const RegularSolverAnalyzeOptions *)aux;
     if (options == NULL) options = &kDefaultAnalyzeOptions;
+    TierAnalyzerInit(&current_api, options->memlimit);
     int error = TierAnalyzerAnalyze(analysis, kDefaultTier, options->force);
     TierAnalyzerFinalize();
     if (error == 0 && options->verbose > 0) {

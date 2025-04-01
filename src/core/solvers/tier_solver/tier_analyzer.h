@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Analyzer module for the Loopy Tier Solver.
- * @version 1.2.4
- * @date 2025-03-17
+ * @version 2.0.0
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
 
 #include <stdbool.h>  // bool
+#include <stdint.h>   // intptr_t
 
 #include "core/analysis/analysis.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -37,8 +38,10 @@
  * @brief Initializes the Tier Analyzer Module using the given API functions.
  *
  * @param api Game-specific implementation of the Tier Solver API functions.
+ * @param memlimit Approximate maximum amount of heap memory that can be used by
+ * the tier analyzer.
  */
-void TierAnalyzerInit(const TierSolverApi *api);
+void TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit);
 
 /**
  * @brief Analyzes the given TIER.

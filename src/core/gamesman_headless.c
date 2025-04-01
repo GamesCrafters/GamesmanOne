@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN headless mode.
- * @version 1.2.0
- * @date 2024-09-08
+ * @version 1.2.1
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -87,8 +87,8 @@ int GamesmanHeadlessMain(int argc, char **argv) {
                                   memlimit);
             break;
         case kHeadlessAnalyze:
-            error =
-                HeadlessAnalyze(game, variant_id, data_path, force, verbose);
+            error = HeadlessAnalyze(game, variant_id, data_path, force, verbose,
+                                    memlimit);
             break;
         case kHeadlessQuery:
             error = HeadlessQuery(game, variant_id, data_path, position);

@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.4.2
- * @date 2024-12-22
+ * @version 1.5.0
+ * @date 2025-03-30
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -158,7 +158,7 @@ static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
-static int DiscoverTierGraph(bool force, int verbose);
+static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit);
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
@@ -195,7 +195,8 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
     return ret;
 }
 
-int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
+int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
+                       intptr_t memlimit) {
     api_internal = api;
     int error = InitGlobalVariables(kTierAnalyzing);
     if (error != 0) {
@@ -205,7 +206,7 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose) {
         return error;
     }
 
-    int ret = DiscoverTierGraph(force, verbose);
+    int ret = DiscoverTierGraph(force, verbose, memlimit);
     DestroyGlobalVariables();
 
     return ret;
@@ -821,8 +822,8 @@ static bool IsCanonicalTier(Tier tier) {
     return api_internal->GetCanonicalTier(tier) == tier;
 }
 
-static int DiscoverTierGraph(bool force, int verbose) {
-    TierAnalyzerInit(api_internal);
+static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit) {
+    TierAnalyzerInit(api_internal, memlimit);
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
         Tier canonical = api_internal->GetCanonicalTier(tier);

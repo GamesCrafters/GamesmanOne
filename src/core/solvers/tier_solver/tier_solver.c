@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the generic tier solver.
- * @version 2.0.0
- * @date 2025-01-09
+ * @version 2.1.0
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -356,10 +356,13 @@ static int TierSolverAnalyze(void *aux) {
     static const TierSolverAnalyzeOptions kDefaultAnalyzeOptions = {
         .force = false,
         .verbose = 1,
+        .memlimit = 0,  // Use default memory limit.
     };
     const TierSolverAnalyzeOptions *options = (TierSolverAnalyzeOptions *)aux;
     if (options == NULL) options = &kDefaultAnalyzeOptions;
-    return TierManagerAnalyze(&current_api, options->force, options->verbose);
+
+    return TierManagerAnalyze(&current_api, options->force, options->verbose,
+                              options->memlimit);
 }
 
 static int TierSolverGetStatus(void) { return solver_status; }
