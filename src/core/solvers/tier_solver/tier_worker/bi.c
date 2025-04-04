@@ -541,7 +541,7 @@ static ChildPosCounterType DecrementIfNonZero(AtomicChildPosCounterType *obj) {
         // This function will set OBJ to current_value - 1 if OBJ is still equal
         // to current_value. Otherwise, it updates current_value to the new
         // value of OBJ and returns false.
-        bool success = atomic_compare_exchange_strong_explicit(
+        bool success = atomic_compare_exchange_weak_explicit(
             obj, &current_value, (ChildPosCounterType)(current_value - 1),
             memory_order_relaxed, memory_order_relaxed);
         // If decrement was successful, quit and return the original value of
