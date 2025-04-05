@@ -29,7 +29,6 @@
 #include <lzma.h>     // lzma_physmem
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // size_t, NULL
-#include <stdint.h>   // intptr_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // aligned_alloc, malloc, calloc, free
 #include <string.h>   // memset, memcpy
@@ -356,7 +355,7 @@ void GamesmanFree(void *ptr) {
 #endif
 }
 
-intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
+size_t GetPhysicalMemory(void) { return (size_t)lzma_physmem(); }
 
 void *SafeMalloc(size_t size) {
     void *ret = GamesmanMalloc(size);

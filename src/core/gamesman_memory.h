@@ -30,7 +30,6 @@
 
 #include <assert.h>  // static_assert
 #include <stddef.h>  // size_t
-#include <stdint.h>  // intptr_t
 
 ////////////
 // MACROS //
@@ -325,7 +324,7 @@ void GamesmanFree(void *ptr);
  * @return Amount of physical memory in bytes or
  * @return 0 if the detection fails.
  */
-intptr_t GetPhysicalMemory(void);
+size_t GetPhysicalMemory(void);
 
 /**
  * @brief Same behavior as GamesmanMalloc on success; terminates GAMESMAN on
