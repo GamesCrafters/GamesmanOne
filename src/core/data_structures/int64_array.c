@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array implementation.
- * @version 2.0.2
- * @date 2024-12-20
+ * @version 2.1.0
+ * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,17 +35,21 @@
 
 #include "core/gamesman_memory.h"
 
-void Int64ArrayInit(Int64Array *array) {
+void Int64ArrayInit(Int64Array *array) { Int64ArrayInitAllocator(array, NULL); }
+
+void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator) {
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
+    array->allocator = allocator;
 }
 
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
-    Int64ArrayInit(dest);
+    Int64ArrayInitAllocator(dest, src->allocator);
     if (src->size == 0) return true;
 
-    dest->array = (int64_t *)GamesmanMalloc(src->size * sizeof(int64_t));
+    dest->array = (int64_t *)GamesmanAllocatorAllocate(
+        dest->allocator, src->size * sizeof(int64_t));
     if (dest->array == NULL) return false;
 
     memcpy(dest->array, src->array, src->size * sizeof(int64_t));
@@ -64,12 +68,16 @@ void Int64ArrayDestroy(Int64Array *array) {
 
 bool Int64ArrayExpand(Int64Array *array) {
     int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
-    int64_t *new_array = (int64_t *)GamesmanRealloc(
-        array->array, array->capacity * sizeof(int64_t),
-        new_capacity * sizeof(int64_t));
+    int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
+        array->allocator, new_capacity * sizeof(int64_t));
     if (!new_array) return false;
+
+    // Copy contents over.
+    memcpy(new_array, array->array, array->capacity * sizeof(int64_t));
+    GamesmanAllocatorDeallocate(array->allocator, array->array);
     array->array = new_array;
     array->capacity = new_capacity;
+
     return true;
 }
 
@@ -128,11 +136,12 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
 
     // Expand if necessary.
     if (array->capacity < size) {
-        int64_t *new_array = (int64_t *)GamesmanRealloc(
-            array->array, array->capacity * sizeof(int64_t),
-            size * sizeof(int64_t));
+        int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
+            array->allocator, size * sizeof(int64_t));
         if (new_array == NULL) return false;
 
+        memcpy(new_array, array->array, array->size * sizeof(int64_t));
+        GamesmanAllocatorDeallocate(array->allocator, array->array);
         array->array = new_array;
         array->capacity = size;
     }
@@ -141,8 +150,8 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
     if (pad_length > 0) {
         memset(&array->array[array->size], 0, pad_length * sizeof(int64_t));
     }
-
     array->size = size;
+
     return true;
 }
 

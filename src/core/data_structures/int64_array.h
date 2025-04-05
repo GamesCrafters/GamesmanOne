@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array.
- * @version 2.0.2
- * @date 2024-12-20
+ * @version 2.1.0
+ * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,6 +30,8 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
+#include "core/gamesman_memory.h"
+
 /**
  * @brief Dynamic int64_t array.
  *
@@ -49,9 +51,10 @@
  * Int64ArrayDestroy(&array);
  */
 typedef struct Int64Array {
-    int64_t *array;   /**< The actual array. */
-    int64_t size;     /**< Number of items in the array. */
-    int64_t capacity; /**< Currentcapacity of the array. */
+    int64_t *array;               /**< The actual array. */
+    int64_t size;                 /**< Number of items in the array. */
+    int64_t capacity;             /**< Currentcapacity of the array. */
+    GamesmanAllocator *allocator; /**< Allocator to use. */
 } Int64Array;
 
 /**
@@ -60,6 +63,15 @@ typedef struct Int64Array {
  * @param array Array to initialize.
  */
 void Int64ArrayInit(Int64Array *array);
+
+/**
+ * @brief Initializes \p array, using \p allocator as the underlying memory
+ * allocator.
+ *
+ * @param array Array to initialize.
+ * @param allocator Memory allocator to use.
+ */
+void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator);
 
 /**
  * @brief Initializes DEST array to be a copy of the SRC array.
