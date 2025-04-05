@@ -3,9 +3,9 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Gamesman memory management system.
+ * @brief Implementation of the Gamesman memory management system.
  * @version 1.0.0
- * @date 2025-03-29
+ * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -25,24 +25,157 @@
  */
 #include "core/gamesman_memory.h"
 
-#include <assert.h>  // assert
-#include <lzma.h>    // lzma_physmem
-#include <stddef.h>  // size_t, NULL
-#include <stdint.h>  // intptr_t
-#include <stdio.h>   // fprintf, stderr
-#include <stdlib.h>  // aligned_alloc, malloc, calloc, free
-#include <string.h>  // memset, memcpy
-#include <unistd.h>  // _exit
+#include <assert.h>   // assert
+#include <lzma.h>     // lzma_physmem
+#include <stdbool.h>  // bool, true, false
+#include <stddef.h>   // size_t, NULL
+#include <stdint.h>   // intptr_t
+#include <stdio.h>    // fprintf, stderr
+#include <stdlib.h>   // aligned_alloc, malloc, calloc, free
+#include <string.h>   // memset, memcpy
+#include <unistd.h>   // _exit
 
 // #ifdef _OPENMP
 #include <omp.h>
+#include <stdatomic.h>
 // #endif  // _OPENMP
 
+#include "core/concurrency.h"
 #include "core/types/gamesman_types.h"
+
+///////////////
+// ALLOCATOR //
+///////////////
+
+static const GamesmanAllocatorOptions kDefaultAllocatorOptions = {
+    .alignment = 0,
+    .pool_size = SIZE_MAX,
+};
+
+void GamesmanAllocatorOptionsSetDefaults(GamesmanAllocatorOptions *options) {
+    *options = kDefaultAllocatorOptions;
+}
+
+struct GamesmanAllocator {
+    size_t alignment;
+    ConcurrentSizeType pool_size;
+};
+
+GamesmanAllocator *GamesmanAllocatorCreate(
+    const GamesmanAllocatorOptions *options) {
+    //
+    GamesmanAllocator *ret =
+        (GamesmanAllocator *)GamesmanMalloc(sizeof(GamesmanAllocator));
+    if (ret == NULL) return ret;
+
+    if (options == NULL) options = &kDefaultAllocatorOptions;
+    ret->alignment = options->alignment;
+    ConcurrentSizeTypeInit(&ret->pool_size, options->pool_size);
+
+    return ret;
+}
+
+void GamesmanAllocatorDestroy(GamesmanAllocator *allocator) {
+    GamesmanFree(allocator);
+}
+
+size_t GamesmanAllocatorGetRemainingPoolSize(
+    const GamesmanAllocator *allocator) {
+    //
+    return ConcurrentSizeTypeLoad(&allocator->pool_size);
+}
+
+typedef struct AllocHeader {
+    /** Total amount of memory in bytes allocated from memory pool, including
+     * this header. */
+    size_t size;
+} AllocHeader;
 
 static size_t NextMultiple(size_t n, size_t mult) {
     return (n + mult - 1) / mult * mult;
 }
+
+static size_t GetHeaderSize(size_t alignment) {
+#ifdef _OPENMP
+    // This also deals with the case where alignment is 0.
+    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
+
+    return NextMultiple(sizeof(AllocHeader), alignment);
+#else
+    if (alignment) {
+        return NextMultiple(sizeof(AllocHeader), alignment);
+    }
+
+    return sizeof(AllocHeader);
+#endif  // _OPENMP
+}
+
+static void WriteHeader(void *dest, size_t size) { *((size_t *)dest) = size; }
+
+void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
+    // If no allocator is provided, use default allocation function.
+    if (allocator == NULL) return GamesmanMalloc(size);
+
+    // If size is 0, return NULL.
+    if (size == 0) return NULL;
+
+    // Make an attempt to reserve space from the memory pool. We must also take
+    // the header into account.
+    size_t header_size = GetHeaderSize(allocator->alignment);
+    if (size > SIZE_MAX - header_size) return NULL;  // Overflow prevention.
+    size_t alloc_size = header_size + size;  // Total amount to allocate.
+    bool success = ConcurrentSizeTypeSubtractIfGreaterEqual(
+        &allocator->pool_size, alloc_size);
+    if (!success) return NULL;  // Allocation failed due to pool OOM.
+
+    // There is enough space in the pool. Make an allocation large enough for
+    // the specified size and a header.
+    void *space;
+    if (allocator->alignment) {  // Alignment amount specified.
+        space = GamesmanAlignedAlloc(allocator->alignment, alloc_size);
+    } else {  // Use default alignment.
+        space = GamesmanMalloc(alloc_size);
+    }
+
+    // Roll back the pool subtraction on underlying allocation failure.
+    if (space == NULL) {
+        ConcurrentSizeTypeAdd(&allocator->pool_size, alloc_size);
+        return NULL;
+    }
+
+    // Write the header at the beginning of the allocated space.
+    WriteHeader(space, alloc_size);
+
+    // Return the space after the header.
+    return (void *)((char *)space + header_size);
+}
+
+void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
+    // If no allocator is provided, use default deallocation function.
+    if (allocator == NULL) {
+        GamesmanFree(ptr);
+        return;
+    }
+
+    // Do nothing if ptr is NULL.
+    if (ptr == NULL) return;
+
+    // Read allocation size from header.
+    size_t header_size = GetHeaderSize(allocator->alignment);
+    void *space = (void *)((char *)ptr - header_size);
+    const AllocHeader *header = (const AllocHeader *)space;
+    size_t alloc_size = header->size;
+
+    // Deallocate the space.
+    GamesmanFree(space);
+
+    // Add size back to the memory pool after the space has been deallocated.
+    ConcurrentSizeTypeAdd(&allocator->pool_size, alloc_size);
+}
+
+///////////////////////////
+// MEMORY ALLOCATION API //
+///////////////////////////
 
 void *GamesmanMalloc(size_t size) {
 #ifdef _OPENMP

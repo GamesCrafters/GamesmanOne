@@ -6,8 +6,8 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.1.0
- * @date 2025-03-30
+ * @version 1.2.0
+ * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,6 +30,7 @@
 #define GAMESMANONE_CORE_CONCURRENCY_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 
 #ifdef _OPENMP
 
@@ -47,6 +48,7 @@
 
 typedef atomic_bool ConcurrentBool;
 typedef atomic_int ConcurrentInt;
+typedef atomic_size_t ConcurrentSizeType;
 
 #else  // _OPENMP not defined.
 
@@ -62,18 +64,123 @@ typedef atomic_int ConcurrentInt;
 
 typedef bool ConcurrentBool;
 typedef int ConcurrentInt;
+typedef size_t ConcurrentSizeType;
 
 #endif  // _OPENMP
 
+/**
+ * @brief Initializes the ConcurrentBool variable at \p cb to \p val.
+ *
+ * @param cb Pointer to the ConcurrentBool to initialize.
+ * @param val Value to initialize to.
+ */
 void ConcurrentBoolInit(ConcurrentBool *cb, bool val);
+
+/**
+ * @brief Returns the current value of the ConcurrentBool variable at \p cb.
+ * In a multithreaded context, the load operation is atomic with default memory
+ * order.
+ *
+ * @param cb Pointer to the ConcurrentBool variable to load the value from.
+ * @return The current value of the ConcurrentBool variable.
+ */
 bool ConcurrentBoolLoad(const ConcurrentBool *cb);
+
+/**
+ * @brief Stores the value \p val into the ConcurrentBool variable at \p cb.
+ * In a multithreaded context, the store operation is atomic with default memory
+ * order.
+ *
+ * @param cb Pointer to the ConcurrentBool variable to store the value into.
+ * @return The value to store.
+ */
 void ConcurrentBoolStore(ConcurrentBool *cb, bool val);
 
+/**
+ * @brief Initializes the ConcurrentInt variable at \p ci to \p val.
+ *
+ * @param ci Pointer to the ConcurrentInt to initialize.
+ * @param val Value to initialize to.
+ */
 void ConcurrentIntInit(ConcurrentInt *ci, int val);
+
+/**
+ * @brief Returns the current value of the ConcurrentInt variable at \p ci.
+ * In a multithreaded context, the load operation is atomic with default memory
+ * order.
+ *
+ * @param ci Pointer to the ConcurrentInt variable to load the value from.
+ * @return The current value of the ConcurrentInt variable.
+ */
 int ConcurrentIntLoad(const ConcurrentInt *ci);
+
+/**
+ * @brief Stores the value \p val into the ConcurrentInt variable at \p ci.
+ * In a multithreaded context, the store operation is atomic with default memory
+ * order.
+ *
+ * @param ci Pointer to the ConcurrentInt variable to store the value into.
+ * @return The value to store.
+ */
 void ConcurrentIntStore(ConcurrentInt *ci, int val);
 
+/**
+ * @brief Initializes the ConcurrentSizeType variable at \p cs to \p val.
+ *
+ * @param cs Pointer to the ConcurrentSizeType to initialize.
+ * @param val Value to initialize to.
+ */
+void ConcurrentSizeTypeInit(ConcurrentSizeType *cs, size_t val);
+
+/**
+ * @brief Returns the current value of the ConcurrentSizeType variable at \p cs.
+ * In a multithreaded context, the load operation is atomic with default memory
+ * order.
+ *
+ * @param cs Pointer to the ConcurrentSizeType variable to load the value from.
+ * @return The current value of the ConcurrentSizeType variable.
+ */
+size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs);
+
+/**
+ * @brief Subtracts \p val from the ConcurrentSizeType variable at \p cs if and
+ * only if its current value is greater than or equal to \p val. In a
+ * multithreaded context, the subtraction is atomic with default memory order.
+ *
+ * @param cs Pointer to the ConcurrentSizeType variable to subtract the value
+ * from.
+ * @param val Value to subtract.
+ * @return \c true if the subtraction is successfully completed, or
+ * @return \c false if the current value of \p cs is smaller than \p val.
+ */
+bool ConcurrentSizeTypeSubtractIfGreaterEqual(ConcurrentSizeType *cs,
+                                              size_t val);
+
+/**
+ * @brief Adds \p val to the ConcurrentSizeType variable at \p cs and returns
+ * its original value. In a multithreaded context, the addition is atomic with
+ * default memory order.
+ *
+ * @param cs Pointer to the ConcurrentSizeType variable to add the value to.
+ * @param val Value to add.
+ * @return The original value in \p cs before the addition.
+ */
+size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val);
+
+/**
+ * @brief Returns the number of OpenMP threads available. Returns 1 if OpenMP is
+ * disabled.
+ *
+ * @return Number of OpenMP threads available.
+ */
 int ConcurrencyGetOmpNumThreads(void);
+
+/**
+ * @brief Returns the caller's OpenMP thread ID. Returns 0 if OpenMP is
+ * disabled.
+ *
+ * @return The caller's OpenMP thread ID.
+ */
 int ConcurrencyGetOmpThreadId(void);
 
 #endif  // GAMESMANONE_CORE_CONCURRENCY_H_

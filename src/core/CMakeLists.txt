@@ -1,5 +1,9 @@
 # gamesman_memory library
-add_library(gamesman_memory STATIC ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.h ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
+add_library(gamesman_memory STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
 target_link_libraries(gamesman_memory PRIVATE common_flags)
 find_package(liblzma 5.4.0 REQUIRED CONFIG)
 target_link_libraries(gamesman_memory PRIVATE liblzma::liblzma)

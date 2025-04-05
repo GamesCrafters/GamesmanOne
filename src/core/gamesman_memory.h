@@ -3,9 +3,10 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Gamesman memory management system.
+ * @brief Gamesman memory management system. All provided functions are
+ * thread-safe unless otherwise noted.
  * @version 1.0.0
- * @date 2025-03-29
+ * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,6 +31,10 @@
 #include <assert.h>  // static_assert
 #include <stddef.h>  // size_t
 #include <stdint.h>  // intptr_t
+
+////////////
+// MACROS //
+////////////
 
 #ifndef GM_CACHE_LINE_SIZE
 /**
@@ -59,12 +64,94 @@ static_assert((GM_CACHE_LINE_SIZE & (GM_CACHE_LINE_SIZE - 1)) == 0,
       (GM_CACHE_LINE_SIZE)) -                                   \
      n)
 
+///////////////
+// ALLOCATOR //
+///////////////
+
+typedef struct GamesmanAllocatorOptions {
+    size_t alignment;
+    size_t pool_size;
+} GamesmanAllocatorOptions;
+
+void GamesmanAllocatorOptionsSetDefaults(GamesmanAllocatorOptions *options);
+
 /**
- * @brief Returns a space of size at least \p size bytes. If Gamesman is built
- * with multithreading enabled, the returned memory address will also be aligned
- * at least to the \c GM_CACHE_LINE_SIZE -byte boundary. Returns \c NULL on
- * failure. To prevent memory leak, the returned pointer must be deallocated
- * using the GamesmanFree function.
+ * @brief Opaque allocator type.
+ */
+typedef struct GamesmanAllocator GamesmanAllocator;
+
+/**
+ * @brief Creates a new GamesmanAllocator object using the \p options provided.
+ * If \c NULL is provided, the default settings will be used. To prevent memory
+ * leak, the returned object must be deallocated using the
+ * GamesmanAllocatorDestroy function.
+ *
+ * @param options Allocator options.
+ * @return Pointer to a new GamesmanAllocator object, or
+ * @return \c NULL if the Allocator cannot be created.
+ */
+GamesmanAllocator *GamesmanAllocatorCreate(
+    const GamesmanAllocatorOptions *options);
+
+/**
+ * @brief Deallocates the given GamesmanAllocator object. Does nothing if
+ * \c NULL is provided.
+ *
+ * @note This function is not thread-safe.
+ *
+ * @param allocator The GamesmanAllocator object to deallocate.
+ */
+void GamesmanAllocatorDestroy(GamesmanAllocator *allocator);
+
+/**
+ * @brief Returns the remaining size of the memory pool allotted to the given
+ * \p allocator in number of bytes.
+ *
+ * @note In a multithreaded context, simply testing the remaining pool size with
+ * this function is not sufficient to guarantee that the next allocation of a
+ * smaller size will succeed. The caller of GamesmanAllocatorAllocate still
+ * needs to test if the pointer returned is \c NULL.
+ *
+ * @param allocator Allocator to use.
+ * @return The remaining size of the memory pool in bytes.
+ */
+size_t GamesmanAllocatorGetRemainingPoolSize(
+    const GamesmanAllocator *allocator);
+
+/**
+ * @brief Allocates a space of size at least \p size bytes using the given
+ * \p allocator. If \p allocator is \c NULL, the call is equivalent to
+ * GamesmanMalloc(size). Returns \p NULL if \p size is 0 or on failure.
+ * To prevent memory leak, the returned pointer must be deallocated using
+ * GamesmanAllocatorDeallocate with the same \p allocator.
+ *
+ * @param allocator Allocator to use.
+ * @param size Minimum number of bytes to allocate.
+ * @return Pointer to the allocated space, or
+ * @return \c NULL if \p size is 0 or on failure.
+ */
+void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size);
+
+/**
+ * @brief Deallocates the space at \p ptr, which is assumed to be previously
+ * allocated by the given \p allocator. If \p allocator is \p NULL, the call is
+ * equivalent to GamesmanFree(ptr). Does nothing if \p ptr is \c NULL.
+ *
+ * @param allocator Allocator that was used to allocate the provided space.
+ * @param ptr Pointer to the space to deallocate.
+ */
+void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr);
+
+///////////////////////////
+// MEMORY ALLOCATION API //
+///////////////////////////
+
+/**
+ * @brief Returns a space of size at least \p size bytes. If Gamesman is
+ * built with multithreading enabled, the returned memory address will also
+ * be aligned at least to the \c GM_CACHE_LINE_SIZE -byte boundary. Returns
+ * \c NULL on failure. To prevent memory leak, the returned pointer must be
+ * deallocated using the GamesmanFree function.
  *
  * @note \p size does not need to be a multiple of \c GM_CACHE_LINE_SIZE.
  *
