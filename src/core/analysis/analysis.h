@@ -194,20 +194,19 @@ void AnalysisMergeMoves(Analysis *dest, const CacheAlignedAnalysis *part);
 // Counting (number of positions of each type)
 
 /**
- * @brief Reports to ANALYSIS that TIER_POSITION has value VALUE, remoteness
- * REMOTENESS, and whether it IS_CANONICAL.
+ * @brief Reports to \p analysis that \p tier_position has value \p value,
+ * remoteness \p remoteness, and whether it \p is_canonical.
  * @details Typical usage is to call this function once on each position during
  * the counting phase of analysis to count the number of positions of each type.
- * For games that only solve for values and remotenesses, a type is a
- * value-remoteness pair (e.g., lose in 0, win in 1, tie in 2, draw, etc.)
  *
- * @param analysis Destination.
+ * @param analysis Output variable.
  * @param tier_position A newly scanned tier position, which is assumed to be
- * valid for the given ANALYSIS.
- * @param value
- * @param remoteness
- * @param is_canonical
- * @return 0 on success, kIllegalGamePositionValueError if VALUE is invalid.
+ * valid for the given \p analysis.
+ * @param value Value of \p tier_position.
+ * @param remoteness Remoteness of \p tier_position.
+ * @param is_canonical Whether \p tier_position is canonical.
+ * @return 0 on success,
+ * @return \c kIllegalGamePositionValueError if \p value is invalid.
  */
 int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                   int remoteness, bool is_canonical);
