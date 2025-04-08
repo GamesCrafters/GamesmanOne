@@ -8,8 +8,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 2.1.0
- * @date 2025-03-31
+ * @version 2.1.1
+ * @date 2025-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -571,11 +571,8 @@ static int TierGetCanonicalChildPositions(
     Position raw[kRegularSolverNumMovesMax];
     int num_raw =
         original_api.GetCanonicalChildPositions(tier_position.position, raw);
-    TierPositionArray ret;
-    TierPositionArrayInit(&ret);
     for (int i = 0; i < num_raw; ++i) {
         children[i].tier = kDefaultTier;
-        ;
         children[i].position = raw[i];
     }
 
