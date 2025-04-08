@@ -31,6 +31,11 @@
 
 void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }
 
+void PositionArrayInitAllocator(PositionArray *array,
+                                GamesmanAllocator *allocator) {
+    Int64ArrayInitAllocator(array, allocator);
+}
+
 void PositionArrayDestroy(PositionArray *array) { Int64ArrayDestroy(array); }
 
 bool PositionArrayAppend(PositionArray *array, Position position) {

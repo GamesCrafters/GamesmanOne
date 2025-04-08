@@ -95,7 +95,7 @@ static bool Step0_0SetupChildTiers(void) {
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
                             intptr_t memlimit) {
     api_internal = api;
-    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
+    mem = memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 

@@ -128,11 +128,12 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
 }
 
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
+                                GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
     int error = kNoError;
     void *buf = NULL;  // Deserialization buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
-    ConcurrentBitset *s = ConcurrentBitsetCreate(size);
+    ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
     if (filename == NULL || s == NULL) {
         error = kMallocFailureError;
         goto _bailout;
@@ -140,7 +141,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
 
     // Allocate deserialization buffer
     size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    buf = GamesmanMalloc(buf_size);
+    buf = GamesmanAllocatorAllocate(allocator, buf_size);
     if (buf == NULL) {
         error = kMallocFailureError;
         goto _bailout;
@@ -178,7 +179,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
 
 _bailout:
     GamesmanFree(filename);
-    GamesmanFree(buf);
+    GamesmanAllocatorDeallocate(allocator, buf);
     if (error != kNoError) ConcurrentBitsetDestroy(s);
 
     return error;

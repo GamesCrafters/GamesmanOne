@@ -168,8 +168,20 @@ bool ConcurrentSizeTypeSubtractIfGreaterEqual(ConcurrentSizeType *cs,
 size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val);
 
 /**
- * @brief Returns the number of OpenMP threads available. Returns 1 if OpenMP is
- * disabled.
+ * @brief Subtracts \p val to the ConcurrentSizeType variable at \p cs and
+ * returns its original value. In a multithreaded context, the addition is
+ * atomic with default memory order.
+ *
+ * @param cs Pointer to the ConcurrentSizeType variable to subtract the value
+ * from.
+ * @param val Value to add.
+ * @return The original value in \p cs before the subtraction.
+ */
+size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs, size_t val);
+
+/**
+ * @brief Returns the number of OpenMP threads available. Returns 1 if
+ * OpenMP is disabled.
  *
  * @return Number of OpenMP threads available.
  */

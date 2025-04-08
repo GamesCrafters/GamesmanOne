@@ -80,10 +80,10 @@ void GamesmanAllocatorOptionsSetDefaults(GamesmanAllocatorOptions *options);
 typedef struct GamesmanAllocator GamesmanAllocator;
 
 /**
- * @brief Creates a new GamesmanAllocator object using the \p options provided.
- * If \c NULL is provided, the default settings will be used. To prevent memory
- * leak, the returned object must be deallocated using the
- * GamesmanAllocatorDestroy function.
+ * @brief Creates a new GamesmanAllocator object using the \p options provided,
+ * setting its reference count to 1. If \c NULL is provided, the default
+ * settings will be used. To prevent memory leak, the returned object must be
+ * deallocated using the GamesmanAllocatorRelease function.
  *
  * @param options Allocator options.
  * @return Pointer to a new GamesmanAllocator object, or
@@ -93,14 +93,24 @@ GamesmanAllocator *GamesmanAllocatorCreate(
     const GamesmanAllocatorOptions *options);
 
 /**
- * @brief Deallocates the given GamesmanAllocator object. Does nothing if
- * \c NULL is provided.
+ * @brief Increments the reference count of the given \p allocator. Does nothing
+ * if \p allocator is \c NULL. Otherwise, the function assumes that \p allocator
+ * has been initialized and has not been deallocated.
  *
- * @note This function is not thread-safe.
- *
- * @param allocator The GamesmanAllocator object to deallocate.
+ * @param allocator Allocator object to retain.
+ * @return The \p allocator parameter passed in, or
+ * @return \c NULL if \p allocator is \c NULL.
  */
-void GamesmanAllocatorDestroy(GamesmanAllocator *allocator);
+GamesmanAllocator *GamesmanAllocatorAddRef(GamesmanAllocator *allocator);
+
+/**
+ * @brief Decrements the reference count of the given \p allocator, deallocating
+ * it if its reference count decreases to 0. Does nothing if \c NULL is
+ * provided.
+ *
+ * @param allocator The GamesmanAllocator object to release.
+ */
+void GamesmanAllocatorRelease(GamesmanAllocator *allocator);
 
 /**
  * @brief Returns the remaining size of the memory pool allotted to the given

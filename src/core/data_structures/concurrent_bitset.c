@@ -30,9 +30,9 @@
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // int64_t
-#include <stdlib.h>     // calloc, free
 
 #include "core/concurrency.h"
+#include "core/gamesman_memory.h"
 
 // Pick the largest lock-free type available
 #if (ATOMIC_LLONG_LOCK_FREE == 2)
@@ -47,6 +47,7 @@ static const int64_t kBitsPerBlock = sizeof(BlockType) * 8;
 static const BlockType kOne = 1;
 
 struct ConcurrentBitset {
+    GamesmanAllocator *allocator;
     int64_t num_bits;
     AtomicBlockType data[];
 };
@@ -62,16 +63,63 @@ size_t ConcurrentBitsetMemRequired(int64_t num_bits) {
 }
 
 ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits) {
+    return ConcurrentBitsetCreateAllocator(num_bits, NULL);
+}
+
+ConcurrentBitset *ConcurrentBitsetCreateAllocator(
+    int64_t num_bits, GamesmanAllocator *allocator) {
+    // Allocate space.
     if (num_bits < 0) num_bits = 0;
     size_t alloc_size = ConcurrentBitsetMemRequired(num_bits);
-    ConcurrentBitset *ret = (ConcurrentBitset *)calloc(alloc_size, 1);
+    ConcurrentBitset *ret =
+        (ConcurrentBitset *)GamesmanAllocatorAllocate(allocator, alloc_size);
     if (ret == NULL) return ret;
 
+    // Initialize all blocks to 0.
+    int64_t num_blocks = NumBitsToNumBlocks(num_bits);
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < num_blocks; ++i) {
+        atomic_init(&ret->data[i], 0);
+    }
+
+    // Create a new reference of the allocator.
+    GamesmanAllocatorAddRef(allocator);
+    ret->allocator = allocator;
     ret->num_bits = num_bits;
+
     return ret;
 }
 
-void ConcurrentBitsetDestroy(ConcurrentBitset *s) { free(s); }
+ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
+    // Allocate space.
+    size_t alloc_size = ConcurrentBitsetMemRequired(other->num_bits);
+    ConcurrentBitset *ret = (ConcurrentBitset *)GamesmanAllocatorAllocate(
+        other->allocator, alloc_size);
+    if (ret == NULL) return ret;
+
+    // Copy all blocks from other.
+    int64_t num_blocks = NumBitsToNumBlocks(other->num_bits);
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < num_blocks; ++i) {
+        BlockType block =
+            atomic_load_explicit(&other->data[i], memory_order_relaxed);
+        atomic_init(&ret->data[i], block);
+    }
+
+    // Create a new reference of the allocator.
+    GamesmanAllocatorAddRef(other->allocator);
+    ret->allocator = other->allocator;
+    ret->num_bits = other->num_bits;
+
+    return ret;
+}
+
+void ConcurrentBitsetDestroy(ConcurrentBitset *s) {
+    if (s == NULL) return;
+    GamesmanAllocator *allocator = s->allocator;
+    GamesmanAllocatorDeallocate(allocator, s);
+    GamesmanAllocatorRelease(allocator);
+}
 
 int64_t ConcurrentBitsetGetNumBits(const ConcurrentBitset *s) {
     return s->num_bits;
@@ -107,6 +155,16 @@ bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
         atomic_fetch_and_explicit(&s->data[block_index], ~mask, order);
 
     return previous & mask;
+}
+
+void ConcurrentBitsetResetAll(ConcurrentBitset *s) {
+    if (s == NULL) return;
+
+    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
+    PRAGMA_OMP_PARALLEL_FOR
+    for (int64_t i = 0; i < num_blocks; ++i) {
+        atomic_store_explicit(&s->data[i], 0, memory_order_relaxed);
+    }
 }
 
 bool ConcurrentBitsetTest(ConcurrentBitset *s, int64_t bit_index,

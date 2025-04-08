@@ -114,6 +114,17 @@ size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
     return ret;
 }
 
+size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs, size_t val) {
+#ifdef _OPENMP
+    size_t ret = atomic_fetch_sub(cs, val);
+#else
+    size_t ret = *cs;
+    *cs -= val;
+#endif  // _OPENMP
+
+    return ret;
+}
+
 bool ConcurrentSizeTypeSubtractIfGreaterEqual(ConcurrentSizeType *cs,
                                               size_t val) {
 #ifdef _OPENMP

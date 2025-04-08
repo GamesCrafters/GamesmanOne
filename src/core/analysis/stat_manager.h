@@ -93,12 +93,14 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
  *
  * @param tier Tier to load.
  * @param size Size of \p tier.
+ * @param allocator Memory allocator to use for \p dest.
  * @param dest Pointer to the pointer that will be modified to point to the
  * destination bitset on success. Not modified on failure.
  * @return \c kNoError on success, or
  * @return non-zero error code otherwise.
  */
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
+                                GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest);
 
 /**

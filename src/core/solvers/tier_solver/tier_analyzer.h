@@ -40,8 +40,10 @@
  * @param api Game-specific implementation of the Tier Solver API functions.
  * @param memlimit Approximate maximum amount of heap memory that can be used by
  * the tier analyzer.
+ * @return \c true on success,
+ * @return \c false otherwise.
  */
-void TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit);
+bool TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit);
 
 /**
  * @brief Analyzes the given TIER.

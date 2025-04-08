@@ -58,6 +58,7 @@ void GamesmanAllocatorOptionsSetDefaults(GamesmanAllocatorOptions *options) {
 struct GamesmanAllocator {
     size_t alignment;
     ConcurrentSizeType pool_size;
+    ConcurrentSizeType ref_count;
 };
 
 GamesmanAllocator *GamesmanAllocatorCreate(
@@ -70,12 +71,23 @@ GamesmanAllocator *GamesmanAllocatorCreate(
     if (options == NULL) options = &kDefaultAllocatorOptions;
     ret->alignment = options->alignment;
     ConcurrentSizeTypeInit(&ret->pool_size, options->pool_size);
+    ConcurrentSizeTypeInit(&ret->ref_count, 1);
 
     return ret;
 }
 
-void GamesmanAllocatorDestroy(GamesmanAllocator *allocator) {
-    GamesmanFree(allocator);
+GamesmanAllocator *GamesmanAllocatorAddRef(GamesmanAllocator *allocator) {
+    if (allocator == NULL) return NULL;
+    ConcurrentSizeTypeAdd(&allocator->ref_count, 1);
+
+    return allocator;
+}
+
+void GamesmanAllocatorRelease(GamesmanAllocator *allocator) {
+    if (allocator == NULL) return;
+    if (ConcurrentSizeTypeSubtract(&allocator->ref_count, 1) == 1) {
+        GamesmanFree(allocator);
+    }
 }
 
 size_t GamesmanAllocatorGetRemainingPoolSize(
@@ -111,6 +123,8 @@ static size_t GetHeaderSize(size_t alignment) {
 
 static void WriteHeader(void *dest, size_t size) { *((size_t *)dest) = size; }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
 void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // If no allocator is provided, use default allocation function.
     if (allocator == NULL) return GamesmanMalloc(size);
@@ -148,6 +162,7 @@ void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // Return the space after the header.
     return (void *)((char *)space + header_size);
 }
+#pragma GCC diagnostic pop
 
 void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
     // If no allocator is provided, use default deallocation function.

@@ -65,8 +65,11 @@ typedef struct Int64Array {
 void Int64ArrayInit(Int64Array *array);
 
 /**
- * @brief Initializes \p array, using \p allocator as the underlying memory
- * allocator.
+ * @brief Initializes \p array using \p allocator as the underlying memory
+ * allocator. If \p allocator is \c NULL, the function call is equivalent to
+ * Int64ArrayInit(array). Note that this function does not transfer the
+ * ownership of \p allocator to the new array object. The caller is responsible
+ * for releasing its own copy of the allocator.
  *
  * @param array Array to initialize.
  * @param allocator Memory allocator to use.
@@ -74,12 +77,14 @@ void Int64ArrayInit(Int64Array *array);
 void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator);
 
 /**
- * @brief Initializes DEST array to be a copy of the SRC array.
+ * @brief Initializes \p dest array to be a copy of the \p src array. If \p src
+ * uses a custom memory allocator, a new reference will be copied to the \p dest
+ * array.
  *
  * @param dest Array to initialize.
  * @param src Source array to copy from.
- * @return true on success, or
- * @return false otherwise.
+ * @return \c true on success, or
+ * @return \c false otherwise.
  */
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src);
 

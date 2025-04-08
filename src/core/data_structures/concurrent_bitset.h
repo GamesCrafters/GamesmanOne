@@ -32,6 +32,8 @@
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t
 
+#include "core/gamesman_memory.h"
+
 typedef struct ConcurrentBitset ConcurrentBitset;
 
 /**
@@ -53,6 +55,36 @@ size_t ConcurrentBitsetMemRequired(int64_t num_bits);
  * failure.
  */
 ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits);
+
+/**
+ * @brief Constructs a ConcurrentBitset of \p num_bits bits using \p allocator
+ * as the underlying memory allocator. If \p allocator is \c NULL, the function
+ * call is equivalent to ConcurrentBitsetCreate(num_bits). Note that this
+ * function does not transfer the ownership of \p allocator to the new array
+ * object. The caller is responsible for releasing its own copy of the
+ * allocator.
+ *
+ * @param num_bits Number of bits in the new ConcurrentBitset.
+ * @param allocator Memory allocator to use.
+ * @return Pointer to a newly created ConcurrentBitset object, or
+ * @return \c NULL on failure due to invalid \p num_bits or memory allocation
+ * failure.
+ */
+ConcurrentBitset *ConcurrentBitsetCreateAllocator(int64_t num_bits,
+                                                  GamesmanAllocator *allocator);
+
+/**
+ * @brief Constructs a copy of the given ConcurrentBitset. If the \p other
+ * ConcurrentBitset uses a custom memory allocator, the copy will also create
+ * a reference of the same memory allocator and use it.
+ * @note This function does not provide thread-safety. The copy operation is
+ * not atomic.
+ *
+ * @param other ConcurrentBitset object to copy.
+ * @return Pointer to the copy of the given ConcurrentBitset object, or
+ * @return \c NULL on memory allocation failure.
+ */
+ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other);
 
 /**
  * @brief Destroys the given ConcurrentBitset object.
@@ -93,6 +125,17 @@ bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
  */
 bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
                            memory_order order);
+
+/**
+ * @brief Resets all bits in the given ConcurrentBitset \p s. Does nothing if
+ * \p s is \c NULL.
+ * @note This function does not provide thread-safety. If \p s is modified
+ * by another thread while this function is in progress, the result is
+ * undefined.
+ *
+ * @param s Pointer to the target ConcurrentBitset object to modify.
+ */
+void ConcurrentBitsetResetAll(ConcurrentBitset *s);
 
 /**
  * @brief Returns the bit at index \p bit_index as a boolean value.

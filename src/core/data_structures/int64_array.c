@@ -41,26 +41,34 @@ void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator) {
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
+
+    // Creates a new reference of the allocator.
+    GamesmanAllocatorAddRef(allocator);
     array->allocator = allocator;
 }
 
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
-    Int64ArrayInitAllocator(dest, src->allocator);
-    if (src->size == 0) return true;
+    if (src->size == 0) {
+        Int64ArrayInitAllocator(dest, src->allocator);
+        return true;
+    }
 
     dest->array = (int64_t *)GamesmanAllocatorAllocate(
-        dest->allocator, src->size * sizeof(int64_t));
+        src->allocator, src->size * sizeof(int64_t));
     if (dest->array == NULL) return false;
 
     memcpy(dest->array, src->array, src->size * sizeof(int64_t));
     dest->size = src->size;
     dest->capacity = src->size;
+    GamesmanAllocatorAddRef(src->allocator);
+    dest->allocator = src->allocator;
 
     return true;
 }
 
 void Int64ArrayDestroy(Int64Array *array) {
-    GamesmanFree(array->array);
+    GamesmanAllocatorDeallocate(array->allocator, array->array);
+    GamesmanAllocatorRelease(array->allocator);
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;

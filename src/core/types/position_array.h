@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H_
 
 #include "core/data_structures/int64_array.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 /** @brief Dynamic Position array. */
@@ -35,6 +36,9 @@ typedef Int64Array PositionArray;
 
 /** @brief Initializes the position ARRAY to an empty array. */
 void PositionArrayInit(PositionArray *array);
+
+void PositionArrayInitAllocator(PositionArray *array,
+                                GamesmanAllocator *allocator);
 
 /** @brief Destroyes the position ARRAY. */
 void PositionArrayDestroy(PositionArray *array);
