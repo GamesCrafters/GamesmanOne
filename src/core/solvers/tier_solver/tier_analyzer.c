@@ -512,7 +512,9 @@ static bool DiscoverFromBitsetToArray(Analysis *dest) {
                 if (children[j].tier == this_tier) {
                     bool step_success =
                         DiscoverProcessThisTierArray(children[j].position, tid);
-                    ConcurrentBoolStore(&success, step_success);
+                    if (!step_success) {
+                        ConcurrentBoolStore(&success, false);
+                    }
                 } else {
                     DiscoverProcessChildTier(children[j]);
                 }
@@ -584,7 +586,9 @@ static bool DiscoverFromArrayToArray(Analysis *dest) {
                 if (children[j].tier == this_tier) {
                     bool step_success =
                         DiscoverProcessThisTierArray(children[j].position, tid);
-                    ConcurrentBoolStore(&success, step_success);
+                    if (!step_success) {
+                        ConcurrentBoolStore(&success, false);
+                    }
                 } else {
                     DiscoverProcessChildTier(children[j]);
                 }
