@@ -80,10 +80,7 @@ static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 
 // Number of undecided child positions array (malloc'ed and owned by the
 // TierWorkerSolve function). Note that we are assuming the number of children
-// of ANY position is no more than 254. This allows us to use an unsigned 8-bit
-// integer to save memory. If this assumption no longer holds for any new
-// games in the future, the programmer should change this type to a wider
-// integer type such as int16_t.
+// of ANY position is no more than 32767.
 typedef int16_t ChildPosCounterType;
 #ifdef _OPENMP
 typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
