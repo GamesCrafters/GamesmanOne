@@ -400,6 +400,51 @@ static void SwapFringeBitsets(void) {
     bs_discovered = tmp;
 }
 
+/**
+ * @brief Expands the given \p parent position and collect information into \p
+ * dest. Assumes that \p parent has not been expanded and will only be expanded
+ * once by the calling thread.
+ *
+ * @param parent Position to expand as parent.
+ * @param dest Destination Analysis object.
+ * @param tid ID of the calling thread.
+ * @param use_array If set to \p true, the function will begin by collecting
+ * child positions into the array fringe. Otherwise, the function begins by
+ * collecting child positions into the bitset fringe.
+ * @return \p true if \c true was passed to \p use_array and the function did
+ * not encounter an OOM error (in other words, the function call successfully
+ * completed by collecting all child positions of \p parent into the array
+ * fringe with no error), or
+ * @return \p false otherwise. There are two cases where this function may
+ * return false:
+ *  1. \c false was passed to \p use_array;
+ *  2. \p use_array was true but the function encountered OOM while trying to
+ * push the child positions into the array fringe.
+ */
+static bool Expand(TierPosition parent, Analysis *dest, int tid,
+                   bool use_array) {
+    // Do not generate children of primitive positions.
+    if (IsPrimitive(parent)) return true;
+
+    // Mark parent position as expanded.
+    ConcurrentBitsetSet(expanded, parent.position, memory_order_relaxed);
+
+    TierPosition children[kTierSolverNumChildPositionsMax];
+    int num_children = GetChildPositions(parent, children, dest);
+    for (int64_t j = 0; j < num_children; ++j) {
+        if (children[j].tier != this_tier) {
+            DiscoverProcessChildTier(children[j]);
+        } else if (use_array) {
+            use_array = DiscoverProcessThisTierArray(children[j].position, tid);
+            j -= (!use_array);  // Reprocess the j-th child if failed.
+        } else {                // Already OOM, expand to bitset fringe
+            DiscoverProcessThisTierBitset(children[j].position);
+        }
+    }
+
+    return use_array;
+}
+
 // Preconditions:
 //   - array fringe is empty initialized
 //   - array discovered is empty initialized
@@ -430,26 +475,7 @@ static void DiscoverFromBitsetToBitset(Analysis *dest) {
                 .tier = this_tier,
                 .position = i,
             };
-
-            // Do not generate children of primitive positions.
-            if (IsPrimitive(parent)) continue;
-
-            // Mark parent position as expanded. If already expanded in the
-            // previous level, skip it.
-            bool is_expanded = ConcurrentBitsetSet(expanded, parent.position,
-                                                   memory_order_relaxed);
-            if (is_expanded) continue;
-
-            TierPosition children[kTierSolverNumChildPositionsMax];
-            int num_children =
-                GetChildPositions(parent, children, &parts[tid].data);
-            for (int64_t j = 0; j < num_children; ++j) {
-                if (children[j].tier == this_tier) {
-                    DiscoverProcessThisTierBitset(children[j].position);
-                } else {
-                    DiscoverProcessChildTier(children[j]);
-                }
-            }
+            Expand(parent, &parts[tid].data, tid, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
@@ -497,28 +523,8 @@ static bool DiscoverFromBitsetToArray(Analysis *dest) {
                 .tier = this_tier,
                 .position = i,
             };
-
-            // Do not generate children of primitive positions.
-            if (IsPrimitive(parent)) continue;
-
-            // Mark parent position as expanded.
-            ConcurrentBitsetSet(expanded, parent.position,
-                                memory_order_relaxed);
-
-            TierPosition children[kTierSolverNumChildPositionsMax];
-            int num_children =
-                GetChildPositions(parent, children, &parts[tid].data);
-            for (int64_t j = 0; j < num_children; ++j) {
-                if (children[j].tier == this_tier) {
-                    bool step_success =
-                        DiscoverProcessThisTierArray(children[j].position, tid);
-                    if (!step_success) {
-                        ConcurrentBoolStore(&success, false);
-                    }
-                } else {
-                    DiscoverProcessChildTier(children[j]);
-                }
-            }
+            bool step_success = Expand(parent, &parts[tid].data, tid, true);
+            if (!step_success) ConcurrentBoolStore(&success, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
@@ -571,28 +577,8 @@ static bool DiscoverFromArrayToArray(Analysis *dest) {
                 .tier = this_tier,
                 .position = fringe[fringe_id].a.array[index_in_fringe],
             };
-
-            // Do not generate children of primitive positions.
-            if (IsPrimitive(parent)) continue;
-
-            // Mark parent position as expanded.
-            ConcurrentBitsetSet(expanded, parent.position,
-                                memory_order_relaxed);
-
-            TierPosition children[kTierSolverNumChildPositionsMax];
-            int num_children =
-                GetChildPositions(parent, children, &parts[tid].data);
-            for (int64_t j = 0; j < num_children; ++j) {
-                if (children[j].tier == this_tier) {
-                    bool step_success =
-                        DiscoverProcessThisTierArray(children[j].position, tid);
-                    if (!step_success) {
-                        ConcurrentBoolStore(&success, false);
-                    }
-                } else {
-                    DiscoverProcessChildTier(children[j]);
-                }
-            }
+            bool step_success = Expand(parent, &parts[tid].data, tid, true);
+            if (!step_success) ConcurrentBoolStore(&success, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
@@ -622,7 +608,9 @@ static void TransferFringeHelper(PaddedPositionArray *src) {
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
             Position pos = src[fringe_id].a.array[index_in_fringe];
-            ConcurrentBitsetSet(bs_fringe, pos, memory_order_relaxed);
+            if (!ConcurrentBitsetTest(expanded, pos, memory_order_relaxed)) {
+                ConcurrentBitsetSet(bs_fringe, pos, memory_order_relaxed);
+            }
         }
     }
     GamesmanAllocatorDeallocate(allocator, fringe_offsets);
@@ -633,17 +621,24 @@ static void TransferFringeHelper(PaddedPositionArray *src) {
 //   - array fringe may contain positions
 //   - array discovered contains positions discovered so far
 //   - bitset fringe may contain positions
-//   - bitset discovered is zero initialized
+//   - bitset discovered may contain a very few positions that were discovered
+//   from the parent position where the OOM occurred on
 //
 // Output:
 //   - array fringe is empty initialized
 //   - array discovered is empty initialized
 //   - bitset fringe contains the union of {array fringe/bitset fringe} and
 //   {array discovered}
-//   - bitset discovered remains zero initialized
+//   - bitset discovered remains unmodified
 static void TransferFringe(int prev_state) {
     enum State { ArrayToArray, BitsetToArray, BitsetToBitset };
+    assert(prev_state == ArrayToArray || prev_state == BitsetToArray);
+
+    // Transfer the array fringe only if we were using the array fringe in the
+    // previous state.
     if (prev_state == ArrayToArray) TransferFringeHelper(fringe);
+
+    // The array discovered fringe is always used when an OOM occurs.
     TransferFringeHelper(discovered);
 }
 
