@@ -633,6 +633,8 @@ static void TransferFringeHelper(PaddedPositionArray *src) {
 static void TransferFringe(int prev_state) {
     enum State { ArrayToArray, BitsetToArray, BitsetToBitset };
     assert(prev_state == ArrayToArray || prev_state == BitsetToArray);
+    printf("TransferFringe: %s\n",
+           prev_state == ArrayToArray ? "array to array" : "bitset to array");
 
     // Transfer the array fringe only if we were using the array fringe in the
     // previous state.
@@ -761,9 +763,9 @@ static bool Step5SaveAnalysis(const Analysis *dest) {
     bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
     if (!success) return false;
 
-    if (this_tier != api_internal->GetInitialTier()) {
-        StatManagerRemoveDiscoveryMap(this_tier);
-    }
+    // if (this_tier != api_internal->GetInitialTier()) {
+    //     StatManagerRemoveDiscoveryMap(this_tier);
+    // }
     return true;
 }
 
@@ -780,14 +782,19 @@ static void Step6CleanUp(void) {
     GamesmanAllocatorDeallocate(allocator, child_tier_maps);
     child_tier_maps = NULL;
     ConcurrentBitsetDestroy(expanded);
+    expanded = NULL;
 
     // Clean up fringes.
     DestroyFringeArray(fringe);
-    DestroyFringeArray(discovered);
     GamesmanAllocatorDeallocate(allocator, fringe);
+    fringe = NULL;
+    DestroyFringeArray(discovered);
     GamesmanAllocatorDeallocate(allocator, discovered);
+    discovered = NULL;
     ConcurrentBitsetDestroy(bs_fringe);
+    bs_fringe = NULL;
     ConcurrentBitsetDestroy(bs_discovered);
+    bs_discovered = NULL;
 }
 
 static int AnalysisStatus(Tier tier) { return StatManagerGetStatus(tier); }
