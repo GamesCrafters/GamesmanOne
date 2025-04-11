@@ -877,6 +877,7 @@ static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
     } else if (verbose > 0) {
         AnalysisPrintStatistics(stdout, analysis);
     }
+    fflush(stdout);
 }
 
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier) {
@@ -913,6 +914,7 @@ static void PrintAnalyzerResult(void) {
     }
 
     AnalysisPrintEverything(stdout, &game_analysis);
+    fflush(stdout);
 }
 
 static int TestTierGraph(long seed, int64_t test_size) {
