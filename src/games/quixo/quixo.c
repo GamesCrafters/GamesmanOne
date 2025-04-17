@@ -107,18 +107,10 @@ static const uint64_t kLines[kNumVariants][kNumLinesMax] = {
     // =========
     // == 3x3 ==
     // =========
-    {0x70000, 0x700, 0x7,
-
-     0x40404, 0x20202, 0x10101,
-
-     0x40201, 0x10204},
+    {0x70000, 0x700, 0x7, 0x40404, 0x20202, 0x10101, 0x40201, 0x10204},
 };
 
-static const uint64_t kEdges[kNumVariants] = {
-    0x1f1111111f,
-    0xf09090f,
-    0x70507,
-};
+static const uint64_t kEdges[kNumVariants] = {0x1f1111111f, 0xf09090f, 0x70507};
 
 static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][3] = {
     // =========
@@ -134,11 +126,7 @@ static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x10, 0x1, 0x1f},
      {0x8, 0x1, 0xf},
      {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+     {0x2, 0x1, 0x3}},
     // =========
     // == 4x4 ==
     // =========
@@ -149,11 +137,7 @@ static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x800, 0x100, 0xf00},
      {0x8, 0x1, 0xf},
      {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+     {0x2, 0x1, 0x3}},
     // =========
     // == 3x3 ==
     // =========
@@ -161,11 +145,7 @@ static const uint64_t kMoveLeft[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x20000, 0x10000, 0x30000},
      {0x400, 0x100, 0x700},
      {0x4, 0x1, 0x7},
-     {
-         0x2,
-         0x1,
-         0x3,
-     }},
+     {0x2, 0x1, 0x3}},
 };
 
 static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][3] = {
@@ -182,11 +162,7 @@ static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x8, 0x10, 0x18},
      {0x4, 0x10, 0x1c},
      {0x2, 0x10, 0x1e},
-     {
-         0x1,
-         0x10,
-         0x1f,
-     }},
+     {0x1, 0x10, 0x1f}},
     // =========
     // == 4x4 ==
     // =========
@@ -197,11 +173,7 @@ static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x100, 0x800, 0xf00},
      {0x4, 0x8, 0xc},
      {0x2, 0x8, 0xe},
-     {
-         0x1,
-         0x8,
-         0xf,
-     }},
+     {0x1, 0x8, 0xf}},
     // =========
     // == 3x3 ==
     // =========
@@ -209,11 +181,7 @@ static const uint64_t kMoveRight[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x10000, 0x40000, 0x70000},
      {0x100, 0x400, 0x700},
      {0x2, 0x4, 0x6},
-     {
-         0x1,
-         0x4,
-         0x7,
-     }},
+     {0x1, 0x4, 0x7}},
 };
 
 static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][3] = {
@@ -230,11 +198,7 @@ static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x100000, 0x10, 0x101010},
      {0x10000, 0x1, 0x10101},
      {0x1000, 0x10, 0x1010},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+     {0x100, 0x1, 0x101}},
     // =========
     // == 4x4 ==
     // =========
@@ -245,11 +209,7 @@ static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x80000, 0x8, 0x80808},
      {0x10000, 0x1, 0x10101},
      {0x800, 0x8, 0x808},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+     {0x100, 0x1, 0x101}},
     // =========
     // == 3x3 ==
     // =========
@@ -257,11 +217,7 @@ static const uint64_t kMoveUp[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x20000, 0x2, 0x20202},
      {0x10000, 0x1, 0x10101},
      {0x400, 0x4, 0x404},
-     {
-         0x100,
-         0x1,
-         0x101,
-     }},
+     {0x100, 0x1, 0x101}},
 };
 
 static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][3] = {
@@ -278,11 +234,7 @@ static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x8, 0x800000000, 0x808080808},
      {0x4, 0x400000000, 0x404040404},
      {0x2, 0x200000000, 0x202020202},
-     {
-         0x1,
-         0x100000000,
-         0x101010101,
-     }},
+     {0x1, 0x100000000, 0x101010101}},
     // =========
     // == 4x4 ==
     // =========
@@ -293,11 +245,7 @@ static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x8, 0x8000000, 0x8080808},
      {0x4, 0x4000000, 0x4040404},
      {0x2, 0x2000000, 0x2020202},
-     {
-         0x1,
-         0x1000000,
-         0x1010101,
-     }},
+     {0x1, 0x1000000, 0x1010101}},
     // =========
     // == 3x3 ==
     // =========
@@ -305,11 +253,7 @@ static const uint64_t kMoveDown[kNumVariants][kNumMovesPerDirMax][3] = {
      {0x100, 0x10000, 0x10100},
      {0x4, 0x40000, 0x40404},
      {0x2, 0x20000, 0x20202},
-     {
-         0x1,
-         0x10000,
-         0x10101,
-     }},
+     {0x1, 0x10000, 0x10101}},
 };
 
 static const int kDirIndexToSrc[kNumVariants][4][kNumMovesPerDirMax] = {
