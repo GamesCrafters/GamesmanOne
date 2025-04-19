@@ -93,9 +93,9 @@ GamesmanAllocator *GamesmanAllocatorCreate(
     const GamesmanAllocatorOptions *options);
 
 /**
- * @brief Increments the reference count of the given \p allocator. Does nothing
- * if \p allocator is \c NULL. Otherwise, the function assumes that \p allocator
- * has been initialized and has not been deallocated.
+ * @brief Increments the reference count of the given \p allocator and returns
+ * it. Does nothing if \p allocator is \c NULL. Otherwise, the function assumes
+ * that \p allocator has been initialized and has not been deallocated.
  *
  * @param allocator Allocator object to retain.
  * @return The \p allocator parameter passed in, or
