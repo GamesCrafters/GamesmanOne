@@ -41,7 +41,7 @@ install_rhel() {
 install_macos() {
     # Assuming Homebrew is installed
     xcode-select --install
-    brew install git cmake zlib || error_exit "brew install failed"
+    brew install git cmake zlib llvm libomp || error_exit "brew install failed"
 }
 
 #########################
@@ -146,7 +146,17 @@ cd ..
 ############################
 
 mkdir_if_not_exist "build"
-cd build || error_exit "Failed to change directory to build"
-cmake -DCMAKE_BUILD_TYPE=Release .. || error_exit "CMake failed to configure GamesmanOne."
-cd .. || error_exit "Failed to change directory back to the project root."
+
+case "$OS" in
+Darwin*)
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/gamesman_macos_llvm_openmp.cmake \
+      || error_exit "CMake failed to configure GamesmanOne"
+    ;;
+*)
+    cd build || error_exit "Failed to change directory to build"
+    cmake -DCMAKE_BUILD_TYPE=Release .. || error_exit "CMake failed to configure GamesmanOne"
+    cd .. || error_exit "Failed to change directory back to the project root."
+    ;;
+esac
+
 cmake --build build -- -j || error_exit "CMake failed to build GamesmanOne."
