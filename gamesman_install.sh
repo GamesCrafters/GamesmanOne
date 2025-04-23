@@ -98,7 +98,7 @@ fi
 
 # Check for required commands
 command_not_found_msg="Try installing dependencies by running this script with --install"
-for cmd in git autoconf automake autoreconf cmake; do
+for cmd in git cmake; do
     command_exists "$cmd" || error_exit "command $cmd not found. $command_not_found_msg"
 done
 
