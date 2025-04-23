@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.3
- * @date 2025-03-18
+ * @version 1.1.4
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -452,7 +452,7 @@ static bool PushFrontierHelper(
     ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_index = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(16)
+        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                           &child_index, remoteness,

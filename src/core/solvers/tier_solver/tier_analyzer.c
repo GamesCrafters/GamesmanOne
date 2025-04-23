@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version -0.0
- * @date 2025-03-31
+ * @version 2.0.1
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -568,7 +568,7 @@ static bool DiscoverFromArrayToArray(Analysis *dest) {
     PRAGMA_OMP_PARALLEL {
         int tid = ConcurrencyGetOmpThreadId();
         int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
             if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
             UpdateFringeId(&fringe_id, i, fringe_offsets);
@@ -603,7 +603,7 @@ static void TransferFringeHelper(PaddedPositionArray *src) {
 
     PRAGMA_OMP_PARALLEL {
         int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];

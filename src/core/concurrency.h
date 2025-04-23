@@ -6,8 +6,8 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.2.0
- * @date 2025-04-04
+ * @version 1.3.0
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -40,6 +40,7 @@
 
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
+#define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k) PRAGMA(omp for schedule(monotonic:dynamic, k))
 
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
 #define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
@@ -56,6 +57,7 @@ typedef atomic_size_t ConcurrentSizeType;
 
 #define PRAGMA_OMP_PARALLEL
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
+#define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k)
 
 #define PRAGMA_OMP_PARALLEL_FOR
 #define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
