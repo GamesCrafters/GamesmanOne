@@ -34,10 +34,10 @@
 #include <string.h>   // memset, memcpy
 #include <unistd.h>   // _exit
 
-// #ifdef _OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #include <stdatomic.h>
-// #endif  // _OPENMP
+#endif  // _OPENMP
 
 #include "core/concurrency.h"
 #include "core/types/gamesman_types.h"
