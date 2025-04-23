@@ -1066,9 +1066,8 @@ static TierPosition QuixoFormalPositionToTierPosition(
     //
     ConstantReadOnlyString board = formal_position + 2;
     int turn = formal_position[0] - '1';
-    int num_blanks = 0, num_x = 0, num_o = 0;
+    int num_x = 0, num_o = 0;
     for (int i = 0; i < board_size; ++i) {
-        num_blanks += (board[i] == '-');
         num_x += (board[i] == 'X');
         num_o += (board[i] == 'O');
     }
