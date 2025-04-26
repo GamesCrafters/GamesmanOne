@@ -6,7 +6,7 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.3.0
+ * @version 1.1.0
  * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

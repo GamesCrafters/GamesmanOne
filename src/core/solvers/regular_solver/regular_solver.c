@@ -4,11 +4,10 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Regular Solver.
- *
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 2.1.1
+ * @version 2.1.0
  * @date 2025-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

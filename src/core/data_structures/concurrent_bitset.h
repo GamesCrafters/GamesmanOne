@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief A Concurrent Bitset suitable in a multi-writer multi-reader context.
- * @version 1.1.0
+ * @version 1.0.0
  * @date 2025-03-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

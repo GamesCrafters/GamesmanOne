@@ -3,9 +3,9 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Declarations of GAMESMAN types and global macros.
- * @version 1.4.0
- * @date 2025-03-17
+ * @brief Declarations of GAMESMAN types.
+ * @version 1.3.0
+ * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

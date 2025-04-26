@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Regular Solver API.
- * @version 2.1.1
+ * @version 2.1.0
  * @date 2025-04-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person

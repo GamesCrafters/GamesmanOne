@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.3
- * @date 2024-12-22
+ * @version 1.2.4
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

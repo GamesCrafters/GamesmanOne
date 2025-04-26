@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN interactive mode.
- * @version 1.1.1
- * @date 2024-12-10
+ * @version 1.1.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the concurrency convenience library.
- * @version 1.3.0
+ * @version 1.1.0
  * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
