@@ -1,6 +1,36 @@
 /**
+ * This file is a C language translation and modification of:
+ *   folly/folly/ConcurrentBitSet.h from Meta Platforms, Inc. (Facebook)
+ * https://github.com/facebook/folly/blob/main/folly/ConcurrentBitSet.h
+ *
+ * Original file Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Modifications:
+ *   - Translated from C++ to C
+ *   - Reformatted and adapted to C idioms
+ *   - Integrated into a GPL-3.0 project
+ *
+ * This file is dual-licensed:
+ *   - Portions are licensed under the Apache License 2.0.
+ *   - Modifications are licensed under the GNU General Public License v3.0.
+ *
+ * See the COPYING and THIRD_PARTY_LICENSES files for details.
+ *
  * @file concurrent_bitset.h
- * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author Meta Platforms, Inc. and affiliates (original C++ version)
+ * @author Robert Shi (robertyishi@berkeley.edu): adapted to C.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief A Concurrent Bitset suitable in a multi-writer multi-reader context.

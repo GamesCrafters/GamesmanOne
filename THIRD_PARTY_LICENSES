@@ -25,3 +25,7 @@ Copyright (c) Yann Collet
 All rights reserved.
 
 -------------------------------------------------------------------------------
+File: folly/folly/ConcurrentBitSet.h
+Website: <https://github.com/facebook/folly/blob/main/folly/ConcurrentBitSet.h>
+License: Apache License, Version 2.0
+Copyright (c) Meta Platforms, Inc. and affiliates
