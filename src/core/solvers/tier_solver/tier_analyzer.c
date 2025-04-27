@@ -763,9 +763,9 @@ static bool Step5SaveAnalysis(const Analysis *dest) {
     bool success = (StatManagerSaveAnalysis(this_tier, dest) == 0);
     if (!success) return false;
 
-    // if (this_tier != api_internal->GetInitialTier()) {
-    //     StatManagerRemoveDiscoveryMap(this_tier);
-    // }
+    if (this_tier != api_internal->GetInitialTier()) {
+        StatManagerRemoveDiscoveryMap(this_tier);
+    }
     return true;
 }
 
