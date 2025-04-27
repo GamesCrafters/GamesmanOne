@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the concurrency convenience library.
- * @version 1.0.0
- * @date 2024-12-10
+ * @version 1.1.0
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,6 +27,7 @@
 #include "core/concurrency.h"
 
 #ifdef _OPENMP
+#include <omp.h>
 #include <stdatomic.h>
 #endif
 
@@ -82,4 +83,79 @@ void ConcurrentIntStore(ConcurrentInt *ci, int val) {
 #else
     *ci = val;
 #endif
+}
+
+void ConcurrentSizeTypeInit(ConcurrentSizeType *cs, size_t val) {
+#ifdef _OPENMP
+    atomic_init(cs, val);
+#else
+    *cs = val;
+#endif  // _OPENMP
+}
+
+size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs) {
+#ifdef _OPENMP
+    size_t ret = atomic_load(cs);
+#else
+    size_t ret = *cs;
+#endif  // _OPENMP
+
+    return ret;
+}
+
+size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
+#ifdef _OPENMP
+    size_t ret = atomic_fetch_add(cs, val);
+#else
+    size_t ret = *cs;
+    *cs += val;
+#endif  // _OPENMP
+
+    return ret;
+}
+
+size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs, size_t val) {
+#ifdef _OPENMP
+    size_t ret = atomic_fetch_sub(cs, val);
+#else
+    size_t ret = *cs;
+    *cs -= val;
+#endif  // _OPENMP
+
+    return ret;
+}
+
+bool ConcurrentSizeTypeSubtractIfGreaterEqual(ConcurrentSizeType *cs,
+                                              size_t val) {
+#ifdef _OPENMP
+    size_t cur_size = atomic_load(cs);
+    while (cur_size >= val) {
+        bool success =
+            atomic_compare_exchange_weak(cs, &cur_size, cur_size - val);
+        if (success) return true;
+    }
+
+    return false;
+#else
+    if (*cs < val) return false;
+    *cs -= val;
+
+    return true;
+#endif  // _OPENMP
+}
+
+int ConcurrencyGetOmpNumThreads(void) {
+#ifdef _OPENMP
+    return omp_get_max_threads();
+#else   // _OPENMP not defined.
+    return 1;
+#endif  // _OPENMP
+}
+
+int ConcurrencyGetOmpThreadId(void) {
+#ifdef _OPENMP
+    return omp_get_thread_num();
+#else   // _OPENMP not defined, thread 0 is the only available thread.
+    return 0;
+#endif  // _OPENMP
 }

@@ -9,6 +9,7 @@
 #include <string.h>   // strcmp
 
 #include "core/constants.h"
+#include "core/gamesman_memory.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
@@ -78,7 +79,7 @@ static void PrintCurrentPosition(const Game *game) {
         exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
     }
     printf("%s\t", position_string);
-    free(position_string);
+    GamesmanFree(position_string);
     if (solved) PrintPrediction();
     printf("\n");
 }
@@ -252,7 +253,7 @@ static bool PrintSortedMoveValues(const Game *game) {
     printf("\n\t==========================================================\n");
     printf("\n");
 
-    free(move_string);
+    GamesmanFree(move_string);
     MoveArrayDestroy(&moves);
     return true;
 }
@@ -314,7 +315,7 @@ static void PrintMove(const Game *game, Move move) {
         game->gameplay_api->common->move_string_length_max + 2;
     char *move_string = (char *)SafeMalloc(move_string_size * sizeof(char));
     PrintMoveBuffer(game, move, move_string);
-    free(move_string);
+    GamesmanFree(move_string);
 }
 
 static int PromptForAndProcessUserMove(const Game *game) {
@@ -353,24 +354,24 @@ static int PromptForAndProcessUserMove(const Game *game) {
     } else if (strcmp(move_string, "q") == 0) {  // Quit.
         GamesmanExit();
     } else if (strcmp(move_string, "a") == 0) {  // Abort game.
-        free(move_string);
+        GamesmanFree(move_string);
         return 2;
     } else if (strcmp(move_string, "u") == 0) {  // Undo.
         return InteractiveMatchUndo();
     }
     if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
-        free(move_string);
+        GamesmanFree(move_string);
         return 1;
     }
     Move user_move = game->gameplay_api->common->StringToMove(move_string);
     if (!MoveArrayContains(&moves, user_move)) {
         printf("Sorry, I don't know that option. Try another.\n");
-        free(move_string);
+        GamesmanFree(move_string);
         return 1;
     }
     MoveArrayDestroy(&moves);
-    free(move_string);
+    GamesmanFree(move_string);
     InteractiveMatchCommitMove(user_move);
     return 0;
 }

@@ -10,8 +10,8 @@
  * @brief Implementation of the x86 SIMD hash system for tier games with
  * rectangular boards of size 32 or less and using no more than two types of
  * pieces.
- * @version 1.0.0
- * @date 2025-01-14
+ * @version 1.0.1
+ * @date 2025-03-30
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,12 +31,13 @@
  */
 #include "core/hash/x86_simd_two_piece.h"
 
+#include <assert.h>     // assert
 #include <stdbool.h>    // bool, true, false
 #include <stdint.h>     // intptr_t, int64_t, uint64_t, uint32_t
 #include <stdio.h>      // fprintf, stderr
-#include <stdlib.h>     // malloc, free
 #include <x86intrin.h>  // __m128i
 
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
 
 /**
@@ -53,6 +54,8 @@ enum { kBoardSizeMax = 32 };
 
 static bool nCrInitialized;
 static int64_t nCr[kBoardSizeMax + 1][kBoardSizeMax + 1];
+
+static bool system_initialized;
 static int board_rows;
 static int board_cols;
 static int curr_board_size;
@@ -90,14 +93,14 @@ static void BuildHashMask(void) {
 static int InitTables(void) {
     // Allocate space
     pattern_to_order =
-        (int32_t *)malloc((1 << curr_board_size) * sizeof(int32_t));
-    pop_order_to_pattern =
-        (uint32_t **)malloc((curr_board_size + 1) * sizeof(uint32_t *));
+        (int32_t *)GamesmanCallocWhole((1 << curr_board_size), sizeof(int32_t));
+    pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
+        (curr_board_size + 1), sizeof(uint32_t *));
     if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
 
     for (int i = 0; i <= curr_board_size; ++i) {
-        pop_order_to_pattern[i] =
-            (uint32_t *)malloc(nCr[curr_board_size][i] * sizeof(uint32_t));
+        pop_order_to_pattern[i] = (uint32_t *)GamesmanMalloc(
+            nCr[curr_board_size][i] * sizeof(uint32_t));
         if (!pop_order_to_pattern[i]) return kMallocFailureError;
     }
 
@@ -105,6 +108,7 @@ static int InitTables(void) {
     int32_t order_count[kBoardSizeMax] = {0};
     for (uint32_t i = 0; i < (1U << curr_board_size); ++i) {
         int pop = _popcnt32(i);
+        assert(pop <= curr_board_size);
         int32_t order = order_count[pop]++;
         pattern_to_order[i] = order;
         pop_order_to_pattern[pop][order] = i;
@@ -131,6 +135,10 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
                 board_size, kBoardSizeMax);
         return kIllegalArgumentError;
     }
+
+    // Clear previous system state if exists.
+    if (system_initialized) X86SimdTwoPieceHashFinalize();
+
     board_rows = rows;
     board_cols = cols;
     curr_board_size = board_size;
@@ -140,21 +148,24 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     // Initialize the tables
     int error = InitTables();
     if (error != kNoError) X86SimdTwoPieceHashFinalize();
+    system_initialized = true;
 
     return error;
 }
 
 void X86SimdTwoPieceHashFinalize(void) {
     // pattern_to_order
-    free(pattern_to_order);
+    GamesmanFree(pattern_to_order);
     pattern_to_order = NULL;
 
     // pop_order_to_pattern
-    for (int i = 0; i <= curr_board_size; ++i) {
-        free(pop_order_to_pattern[i]);
+    if (pop_order_to_pattern != NULL) {
+        for (int i = 0; i <= curr_board_size; ++i) {
+            GamesmanFree(pop_order_to_pattern[i]);
+        }
+        GamesmanFree(pop_order_to_pattern);
+        pop_order_to_pattern = NULL;
     }
-    free(pop_order_to_pattern);
-    pop_order_to_pattern = NULL;
 
     // Reset the board size
     board_rows = board_cols = 0;

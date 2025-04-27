@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
- * @version 1.0.3
- * @date 2024-12-22
+ * @version 1.0.4
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,8 +31,8 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
-#include <stdlib.h>   // calloc, free
 
+#include "core/gamesman_memory.h"
 #include "core/misc.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
@@ -53,7 +53,7 @@ void Int64HashMapInit(Int64HashMap *map, double max_load_factor) {
 }
 
 void Int64HashMapDestroy(Int64HashMap *map) {
-    free(map->entries);
+    GamesmanFree(map->entries);
     map->entries = NULL;
     map->capacity = 0;
     map->size = 0;
@@ -83,8 +83,8 @@ Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
 
 static bool Expand(Int64HashMap *map) {
     int64_t new_capacity = NextPrime(map->capacity * 2);
-    Int64HashMapEntry *new_entries =
-        (Int64HashMapEntry *)calloc(new_capacity, sizeof(Int64HashMapEntry));
+    Int64HashMapEntry *new_entries = (Int64HashMapEntry *)GamesmanCallocWhole(
+        new_capacity, sizeof(Int64HashMapEntry));
     if (new_entries == NULL) return false;
     for (int64_t i = 0; i < map->capacity; ++i) {
         if (map->entries[i].used) {
@@ -95,7 +95,7 @@ static bool Expand(Int64HashMap *map) {
             new_entries[new_index] = map->entries[i];
         }
     }
-    free(map->entries);
+    GamesmanFree(map->entries);
     map->entries = new_entries;
     map->capacity = new_capacity;
     return true;

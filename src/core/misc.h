@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 1.5.0
- * @date 2025-01-07
+ * @version 2.0.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -49,25 +49,6 @@ void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
 void NotReached(ReadOnlyString message);
-
-/**
- * @brief Returns the amount of physical memory available on the system in
- * bytes.
- *
- * @return Amount of physical memory in bytes or
- * @return 0 if the detection fails.
- */
-intptr_t GetPhysicalMemory(void);
-
-/**
- * @brief Same behavior as malloc() on success; terminates GAMESMAN on failure.
- */
-void *SafeMalloc(size_t size);
-
-/**
- * @brief Same behavior as calloc() on success; terminates GAMESMAN on failure.
- */
-void *SafeCalloc(size_t n, size_t size);
 
 /**
  * @brief Same behavior as strncpy if the end of SRC is found before N
@@ -293,22 +274,6 @@ int GuardedGzseek(gzFile file, off_t off, int whence);
 int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
 
 /**
- * @brief Calls gz64_read with the given FILE, BUF, and LENGTH and returns 0 if
- * the correct number of bytes are read or EOF_OK is set to true; returns a
- * non-zero error code otherwise.
- *
- * @param file Source gzFile.
- * @param buf Destination buffer, which is assumed to be of size at least LENGTH
- * bytes.
- * @param length Number of uncompressed bytes to read from FILE.
- * @param eof_ok Whether end-of-file is accepted as no error. Set this to false
- * if you expect FILE to contain at least LENGTH bytes of uncompressed data.
- * @return 0 on success, 2 if EOF_OK is set to false and EOF is reached before
- * LENGTH bytes are read, or 3 if gzerror returns an error on FILE.
- */
-int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok);
-
-/**
  * @brief Calls gzwrite with the given FILE, BUF, and LEN and returns 0 if the
  * correct number of bytes are written; returns the error value returned by
  * gzerror otherwise.
@@ -363,12 +328,6 @@ int64_t PrevPrime(int64_t n);
  * @return Next prime of N.
  */
 int64_t NextPrime(int64_t n);
-
-/**
- * @brief Returns the next multiple of MULTIPLE starting from N. Returns
- * N if N is a multiple of MULTIPLE.
- */
-int64_t NextMultiple(int64_t n, int64_t multiple);
 
 /**
  * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.

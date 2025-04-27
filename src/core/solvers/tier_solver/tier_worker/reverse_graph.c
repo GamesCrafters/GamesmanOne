@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the ReverseGraph type.
- * @version 1.1.0
- * @date 2023-10-20
+ * @version 1.1.1
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,10 +35,10 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdlib.h>   // malloc, free
 #include <string.h>   // memset
 
-#include "core/types/gamesman_types.h"  // PositionArray, TierArray, TierPosition
+#include "core/gamesman_memory.h"
+#include "core/types/gamesman_types.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -75,7 +75,7 @@ static bool InitOffsetMap(ReverseGraph *graph, const Tier *child_tiers,
 static bool InitParentPositionArrays(ReverseGraph *graph) {
     // Assumes graph->size has been set.
     graph->parents_of =
-        (PositionArray *)malloc(graph->size * sizeof(PositionArray));
+        (PositionArray *)GamesmanMalloc(graph->size * sizeof(PositionArray));
     if (graph->parents_of == NULL) return false;
     for (int64_t i = 0; i < graph->size; ++i) {
         PositionArrayInit(&graph->parents_of[i]);
@@ -85,7 +85,8 @@ static bool InitParentPositionArrays(ReverseGraph *graph) {
 
 #ifdef _OPENMP
 static bool InitLocks(ReverseGraph *graph) {
-    graph->locks = (omp_lock_t *)malloc(graph->size * sizeof(omp_lock_t));
+    graph->locks =
+        (omp_lock_t *)GamesmanMalloc(graph->size * sizeof(omp_lock_t));
     if (graph->locks == NULL) return false;
     for (int64_t i = 0; i < graph->size; ++i) {
         omp_init_lock(&graph->locks[i]);
@@ -108,7 +109,7 @@ bool ReverseGraphInit(ReverseGraph *graph, const Tier *child_tiers,
     }
 #ifdef _OPENMP
     if (!InitLocks(graph)) {
-        free(graph->parents_of);
+        GamesmanFree(graph->parents_of);
         graph->parents_of = NULL;
         TierHashMapDestroy(&graph->offset_map);
         return false;
@@ -125,9 +126,9 @@ void ReverseGraphDestroy(ReverseGraph *graph) {
             omp_destroy_lock(&graph->locks[i]);
 #endif  // _OPENMP
         }
-        free(graph->parents_of);
+        GamesmanFree(graph->parents_of);
 #ifdef _OPENMP
-        free(graph->locks);
+        GamesmanFree(graph->locks);
 #endif  // _OPENMP
     }
     graph->parents_of = NULL;

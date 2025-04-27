@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the common utility functions for headless mode.
- * @version 1.0.1
- * @date 2024-12-22
+ * @version 1.0.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,6 +34,7 @@
 
 #include "core/data_structures/int64_array.h"
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
 #include "core/types/gamesman_types.h"
@@ -103,6 +104,6 @@ static int MakeDirectory(ReadOnlyString output) {
         }
     }
     // We still reach here if no '/' character is found in path.
-    free(path);
+    GamesmanFree(path);
     return ret;
 }

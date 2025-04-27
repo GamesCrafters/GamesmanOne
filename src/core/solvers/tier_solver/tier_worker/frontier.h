@@ -10,8 +10,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic 2D Position array which stores solved positions that have not
  * been used to deduce the values of their parents.
- * @version 2.0.2
- * @date 2024-12-10
+ * @version 2.1.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,17 +36,13 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
-#include "core/types/gamesman_types.h"  // PositionArray
+#include "core/gamesman_memory.h"
+#include "core/types/gamesman_types.h"
 
 /**
- * @brief A Frontier is a dynamic 2D Position array which stores solved
- * positions that have not been used to deduce the values of their parents.
- *
- * @details A Frontier object contains an array of PositionArray objects,
- * where the i-th PositionArray stores solved but unprocessed Positions
- * with remoteness i.
+ * @brief Internal data structure of a frontier.
  */
-typedef struct Frontier {
+typedef struct FrontierInternal {
     /**
      * 2-dimensional Position array. The first dimension is fixed and set to
      * the frontier_size passed to the FrontierInit() function. This is usually
@@ -74,9 +70,9 @@ typedef struct Frontier {
      * processed sequentially so that positions loaded from each child tier are
      * in consecutive chunks.
      *
-     * The dividers are used by the tier solver to figure out the tier from
-     * which the unprocess position was loaded from. Otherwise, we would have
-     * to store TierPosition arrays instead, which would cost more memory.
+     * The dividers are used by the tier solver to figure out which tier the
+     * unprocess position was loaded from. Otherwise, we would have to store
+     * TierPosition arrays instead, which would cost more memory.
      */
     int64_t **dividers;
 
@@ -85,6 +81,20 @@ typedef struct Frontier {
 
     /** Number of dividers. */
     int dividers_size;
+} FrontierInternal;
+
+/**
+ * @brief A Frontier is a dynamic data structure that stores solved
+ * positions that have not been used to deduce the values of their parents.
+ *
+ * @details A Frontier object contains an array of PositionArray objects,
+ * where the i-th PositionArray stores solved but unprocessed Positions
+ * with remoteness i.
+ */
+typedef struct Frontier {
+    FrontierInternal f; /**< Unpadded frontier object. */
+    /** Padding Frontier to GM_CACHE_LINE_SIZE bytes. */
+    char padding[GM_CACHE_LINE_PAD(sizeof(FrontierInternal))];
 } Frontier;
 
 /**
@@ -141,6 +151,27 @@ void FrontierAccumulateDividers(Frontier *frontier);
  */
 Position FrontierGetPosition(const Frontier *frontier, int remoteness,
                              int64_t i);
+
+/**
+ * @brief Returns the size of the bucket for the given \p remoteness.
+ *
+ * @param frontier Source Frontier.
+ * @param remoteness Remoteness.
+ * @return Size of the bucket for \p remoteness.
+ */
+static inline int64_t FrontierGetBucketSize(const Frontier *frontier,
+                                            int remoteness) {
+    return frontier->f.buckets[remoteness].size;
+}
+
+/**
+ * @brief Returns the divider value at the given \p remoteness and
+ * \p child_tier_index.
+ */
+static inline int64_t FrontierGetDivider(const Frontier *frontier,
+                                         int remoteness, int child_tier_index) {
+    return frontier->f.dividers[remoteness][child_tier_index];
+}
 
 /**
  * @brief Deallocates the bucket and divider array for remoteness REMOTENESS in

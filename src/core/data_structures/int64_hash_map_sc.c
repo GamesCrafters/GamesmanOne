@@ -7,8 +7,8 @@
  * @details This hash map implementation allows removal of map entries at the
  * cost of being considerably slower than the regular open addressing hash map
  * provided by int64_hash_map.h.
- * @version 1.0.3
- * @date 2024-12-22
+ * @version 1.0.4
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,9 +33,9 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdlib.h>   // calloc, free
 #include <string.h>   // memset
 
+#include "core/gamesman_memory.h"
 #include "core/misc.h"  // NextPrime
 
 void Int64HashMapSCInit(Int64HashMapSC *map, double max_load_factor) {
@@ -52,11 +52,11 @@ void Int64HashMapSCDestroy(Int64HashMapSC *map) {
         Int64HashMapSCEntry *walker = map->buckets[i];
         while (walker) {
             Int64HashMapSCEntry *next = walker->next;
-            free(walker);
+            GamesmanFree(walker);
             walker = next;
         }
     }
-    free(map->buckets);
+    GamesmanFree(map->buckets);
     memset(map, 0, sizeof(*map));
 }
 
@@ -95,8 +95,9 @@ bool Int64HashMapSCGet(const Int64HashMapSC *map, int64_t key, int64_t *value) {
 
 static bool Expand(Int64HashMapSC *map) {
     int64_t new_num_buckets = NextPrime(map->num_buckets * 2);
-    Int64HashMapSCEntry **new_buckets = (Int64HashMapSCEntry **)calloc(
-        new_num_buckets, sizeof(Int64HashMapSCEntry *));
+    Int64HashMapSCEntry **new_buckets =
+        (Int64HashMapSCEntry **)GamesmanCallocWhole(
+            new_num_buckets, sizeof(Int64HashMapSCEntry *));
     if (new_buckets == NULL) return false;
 
     for (int64_t i = 0; i < map->num_buckets; ++i) {
@@ -110,7 +111,7 @@ static bool Expand(Int64HashMapSC *map) {
         }
     }
 
-    free(map->buckets);
+    GamesmanFree(map->buckets);
     map->buckets = new_buckets;
     map->num_buckets = new_num_buckets;
 
@@ -139,7 +140,7 @@ bool Int64HashMapSCSet(Int64HashMapSC *map, int64_t key, int64_t value) {
     }
 
     // Key does not exist. Create a new entry.
-    entry = (Int64HashMapSCEntry *)malloc(sizeof(Int64HashMapSCEntry));
+    entry = (Int64HashMapSCEntry *)GamesmanMalloc(sizeof(Int64HashMapSCEntry));
     if (!entry) return false;
 
     entry->key = key;
@@ -161,7 +162,7 @@ void Int64HashMapSCRemove(Int64HashMapSC *map, int64_t key) {
     while (entry) {
         if (entry->key == key) {
             *prev_next = entry->next;
-            free(entry);
+            GamesmanFree(entry);
             --map->num_entries;
             return;
         }
