@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.1.1
- * @date 2024-12-22
+ * @version 1.1.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,7 +36,6 @@
 #include <stddef.h>   // NULL, size_t
 #include <stdint.h>   // intptr_t, uint64_t, int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // malloc, calloc, free
 #include <string.h>   // strcpy
 
 #ifdef _OPENMP
@@ -46,6 +45,7 @@
 #include "core/constants.h"
 #include "core/db/arraydb/record.h"
 #include "core/db/arraydb/record_array.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
 #include "libs/lz4_utils/lz4_utils.h"
@@ -170,7 +170,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     enable_extreme_compression = options->extreme_compression;
 
     assert(sandbox_path == NULL);
-    sandbox_path = (char *)malloc((strlen(path) + 1) * sizeof(char));
+    sandbox_path = (char *)GamesmanMalloc((strlen(path) + 1) * sizeof(char));
     if (sandbox_path == NULL) {
         fprintf(stderr, "ArrayDbInit: failed to malloc path.\n");
         return kMallocFailureError;
@@ -188,7 +188,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
 }
 
 static void ArrayDbFinalize(void) {
-    free(sandbox_path);
+    GamesmanFree(sandbox_path);
     sandbox_path = NULL;
     TierHashMapSCDestroy(&loaded_tier_to_index);
     for (int i = 0; i < kArrayDbNumLoadedTiersMax; ++i) {
@@ -226,7 +226,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name><ext>", +2 for '/' and '\0'.
     static const char extension[] = ".adb.xz";
-    char *full_path = (char *)calloc(
+    char *full_path = (char *)GamesmanCallocWhole(
         (strlen(sandbox_path) + kDbFileNameLengthMax + sizeof(extension) + 2),
         sizeof(char));
     if (full_path == NULL) {
@@ -251,14 +251,16 @@ static char *GetFullPathPlusExtension(Tier tier, GetTierNameFunc GetTierName,
     if (full_path_to_tier_file == NULL) return NULL;
 
     size_t length = strlen(full_path_to_tier_file);
-    char *full_path =
-        (char *)realloc(full_path_to_tier_file, length + strlen(extension) + 1);
+    char *full_path = (char *)GamesmanCallocWhole(
+        length + strlen(extension) + 1, sizeof(char));
     if (full_path == NULL) {
-        free(full_path_to_tier_file);
+        GamesmanFree(full_path_to_tier_file);
         return NULL;
     }
-
+    strcat(full_path, full_path_to_tier_file);
+    GamesmanFree(full_path_to_tier_file);
     strcat(full_path, extension);
+
     return full_path;
 }
 
@@ -278,7 +280,7 @@ static char *GetFullPathToTempCheckpoint(Tier tier,
 static char *GetFullPathToFinishFlag(void) {
     // Full path: "<path>/.finish", +2 for '/' and '\0'.
     static const char finish_flag_name[] = ".finish";
-    char *full_path = (char *)calloc(
+    char *full_path = (char *)GamesmanCallocWhole(
         (strlen(sandbox_path) + sizeof(finish_flag_name) + 2), sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr,
@@ -334,8 +336,8 @@ static int ArrayDbFlushSolvingTier(void *aux) {
     }
 
 _bailout:
-    free(full_path);
-    free(tmp_full_path);
+    GamesmanFree(full_path);
+    GamesmanFree(tmp_full_path);
 
     return error;
 }
@@ -353,7 +355,7 @@ static int ArrayDbSetGameSolved(void) {
     if (flag_filename == NULL) return kMallocFailureError;
 
     FILE *flag_file = GuardedFopen(flag_filename, "w");
-    free(flag_filename);
+    GamesmanFree(flag_filename);
     if (flag_file == NULL) return kFileSystemError;
 
     int error = GuardedFclose(flag_file);
@@ -385,7 +387,7 @@ static int ArrayDbGetRemoteness(Position position) {
 bool ArrayDbCheckpointExists(Tier tier) {
     char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
     bool ret = full_path && FileExists(full_path);
-    free(full_path);
+    GamesmanFree(full_path);
 
     return ret;
 }
@@ -426,8 +428,8 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
     }
 
 _bailout:
-    free(full_path);
-    free(tmp_full_path);
+    GamesmanFree(full_path);
+    GamesmanFree(tmp_full_path);
 
     return error;
 }
@@ -458,7 +460,7 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
                           status_size};
     int64_t decomp_size =
         Lz4UtilsDecompressFileMultistream(full_path, out_buffers, out_sizes, 2);
-    free(full_path);
+    GamesmanFree(full_path);
     if (decomp_size < 0) {
         RecordArrayDestroy(&loaded_records[0]);
         return kRuntimeError;
@@ -477,7 +479,7 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
 static int ArrayDbCheckpointRemove(Tier tier) {
     char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
     int error = GuardedRemove(full_path);
-    free(full_path);
+    GamesmanFree(full_path);
     if (error != 0) return kFileSystemError;
 
     return kNoError;
@@ -522,7 +524,7 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
     int64_t decomp_size = XzraDecompressFile(
         RecordArrayGetData(&loaded_records[i]), size * kArrayDbRecordSize,
         GetNumThreads(), mem, full_path);
-    free(full_path);
+    GamesmanFree(full_path);
     if (decomp_size < 0) {
         RecordArrayDestroy(&loaded_records[i]);
         return kRuntimeError;
@@ -578,7 +580,7 @@ static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position) {
 }
 
 static int ArrayDbProbeInit(DbProbe *probe) {
-    probe->buffer = calloc(1, sizeof(AdbProbeInternal));
+    probe->buffer = GamesmanCallocWhole(1, sizeof(AdbProbeInternal));
     if (probe->buffer == NULL) return kMallocFailureError;
 
     probe->tier = kIllegalTier;
@@ -590,7 +592,7 @@ static int ArrayDbProbeInit(DbProbe *probe) {
 static int ArrayDbProbeDestroy(DbProbe *probe) {
     AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
     XzraFileClose(probe_internal->file);
-    free(probe->buffer);
+    GamesmanFree(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 
     return kNoError;
@@ -611,7 +613,7 @@ static int ProbeLoadNewTier(DbProbe *probe, Tier tier) {
     if (full_path == NULL) return kMallocFailureError;
 
     probe_internal->file = XzraFileOpen(full_path);
-    free(full_path);
+    GamesmanFree(full_path);
     if (probe_internal->file == NULL) return kFileSystemError;
 
     probe_internal->init = true;
@@ -668,7 +670,7 @@ static int ArrayDbTierStatus(Tier tier) {
     if (full_path == NULL) return kDbTierStatusCheckError;
 
     FILE *db_file = fopen(full_path, "rb");
-    free(full_path);
+    GamesmanFree(full_path);
     if (db_file == NULL) return kDbTierStatusMissing;
 
     int error = GuardedFclose(db_file);
@@ -682,7 +684,7 @@ static int ArrayDbGameStatus(void) {
     if (full_path == NULL) return kDbGameStatusCheckError;
 
     bool exists = FileExists(full_path);
-    free(full_path);
+    GamesmanFree(full_path);
 
     return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }

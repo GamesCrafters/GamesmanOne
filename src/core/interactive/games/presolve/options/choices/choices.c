@@ -4,9 +4,9 @@
 #include <stdio.h>   // sprintf, fprintf, stderr
 #include <stdlib.h>  // atoi
 
+#include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
-#include "core/misc.h"
 #include "core/types/gamesman_types.h"
 
 static int option_index = -1;
@@ -86,10 +86,10 @@ static void UpdateTitle(void) {
 
 static void FreeAll(int num_items, ReadOnlyString *items, char **keys,
                     HookFunctionPointer *hooks) {
-    free(items);
+    GamesmanFree(items);
     for (int i = 0; i < num_items; ++i) {
-        free(keys[i]);
+        GamesmanFree(keys[i]);
     }
-    free(keys);
-    free(hooks);
+    GamesmanFree(keys);
+    GamesmanFree(hooks);
 }

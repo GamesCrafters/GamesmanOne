@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyze functionality of headless mode.
- * @version 1.0.0
- * @date 2024-01-15
+ * @version 2.0.0
+ * @date 2025-03-31
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,10 +29,11 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool
 #include <stddef.h>   // NULL
+#include <stdint.h>   // intptr_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // free
 
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -40,28 +41,8 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
-static void *GenerateAnalyzeOptions(bool force, int verbose);
-
-// -----------------------------------------------------------------------------
-
-int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
-                    ReadOnlyString data_path, bool force, int verbose) {
-    int error = HeadlessInitSolver(game_name, variant_id, data_path);
-    if (error != 0) return error;
-
-    void *options = GenerateAnalyzeOptions(force, verbose);
-    error = SolverManagerAnalyze(options);
-    free(options);
-    if (error != 0) {
-        fprintf(stderr, "HeadlessAnalyze: analysis failed with code %d\n",
-                error);
-    }
-    return error;
-}
-
-// -----------------------------------------------------------------------------
-
-static void *GenerateAnalyzeOptions(bool force, int verbose) {
+static void *GenerateAnalyzeOptions(bool force, int verbose,
+                                    intptr_t memlimit) {
     const Game *game = GameManagerGetCurrentGame();
     assert(game != NULL);
     if (game->solver == &kRegularSolver) {
@@ -70,6 +51,7 @@ static void *GenerateAnalyzeOptions(bool force, int verbose) {
                 sizeof(RegularSolverAnalyzeOptions));
         options->force = force;
         options->verbose = verbose;
+        options->memlimit = memlimit;
         return (void *)options;
     } else if (game->solver == &kTierSolver) {
         TierSolverAnalyzeOptions *options =
@@ -77,8 +59,27 @@ static void *GenerateAnalyzeOptions(bool force, int verbose) {
                 sizeof(TierSolverAnalyzeOptions));
         options->force = force;
         options->verbose = verbose;
+        options->memlimit = memlimit;
         return (void *)options;
     }
+
     NotReached("GenerateAnalyzeOptions: no valid solver found");
     return NULL;
+}
+
+int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
+                    ReadOnlyString data_path, bool force, int verbose,
+                    intptr_t memlimit) {
+    int error = HeadlessInitSolver(game_name, variant_id, data_path);
+    if (error != 0) return error;
+
+    void *options = GenerateAnalyzeOptions(force, verbose, memlimit);
+    error = SolverManagerAnalyze(options);
+    GamesmanFree(options);
+    if (error != 0) {
+        fprintf(stderr, "HeadlessAnalyze: analysis failed with code %d\n",
+                error);
+    }
+
+    return error;
 }

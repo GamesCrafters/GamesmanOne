@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of miscellaneous utility functions.
- * @version 1.5.0
- * @date 2025-01-07
+ * @version 2.0.0
+ * @date 2025-03-18
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,14 +30,13 @@
 #include <errno.h>      // errno
 #include <fcntl.h>      // open
 #include <inttypes.h>   // PRId64, PRIu64
-#include <lzma.h>       // lzma_physmem
 #include <stdarg.h>     // va_list, va_start, va_end
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t, uint32_t, uint64_t, INT64_MAX, uint8_t
 #include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
-#include <stdlib.h>     // exit, malloc, calloc, free
-#include <string.h>     // strcspn, strlen, strncpy
+#include <stdlib.h>     // exit
+#include <string.h>     // strcspn, strlen, strncpy, memset
 #include <sys/stat.h>   // mkdir, struct stat
 #include <sys/types.h>  // mode_t
 #include <time.h>       // clock_t, CLOCKS_PER_SEC
@@ -47,8 +46,8 @@
 #include <mpi.h>
 #endif  // USE_MPI
 
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
-#include "libs/mgz/gz64.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
@@ -62,35 +61,6 @@ void NotReached(ReadOnlyString message) {
             message);
     fflush(stderr);
     _exit(kNotReachedError);
-}
-
-intptr_t GetPhysicalMemory(void) { return (intptr_t)lzma_physmem(); }
-
-void *SafeMalloc(size_t size) {
-    void *ret = malloc(size);
-    if (ret == NULL) {
-        fprintf(stderr,
-                "SafeMalloc: failed to allocate %zd bytes. This ususally "
-                "indicates a bug.\n",
-                size);
-        fflush(stderr);
-        _exit(kMallocFailureError);
-    }
-    return ret;
-}
-
-void *SafeCalloc(size_t n, size_t size) {
-    void *ret = calloc(n, size);
-    if (ret == NULL) {
-        fprintf(stderr,
-                "SafeCalloc: failed to allocate %zd elements each of %zd "
-                "bytes. This ususally "
-                "indicates a bug.\n",
-                n, size);
-        fflush(stderr);
-        _exit(kMallocFailureError);
-    }
-    return ret;
 }
 
 char *SafeStrncpy(char *dest, const char *src, size_t n) {
@@ -349,26 +319,6 @@ int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
     return 4;
 }
 
-int GuardedGz64Read(gzFile file, voidp buf, uint64_t length, bool eof_ok) {
-    int64_t bytes_read = gz64_read(file, buf, length);
-    if ((uint64_t)bytes_read == length) return 0;
-
-    int error;
-    if (gzeof(file)) {
-        if (eof_ok) return 0;
-        fprintf(stderr,
-                "GuardedGz64Read: end-of-file reached before reading %" PRIu64
-                " bytes, only %" PRId64 " bytes were actually read\n",
-                length, bytes_read);
-        return 2;
-    } else if (gzerror(file, &error)) {
-        fprintf(stderr, "GuardedGz64Read: gzread() error code %d\n", error);
-        return 3;
-    }
-    NotReached("GuardedGz64Read: unknown error occurred during gzread()");
-    return 4;
-}
-
 int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
     int bytes_written = gzwrite(file, buf, len);
     if ((unsigned int)bytes_written < len) {
@@ -436,7 +386,7 @@ int MkdirRecursive(ReadOnlyString path) {
 
     // Copy string so it's mutable
     size_t path_length = strlen(path);
-    char *path_copy = (char *)malloc((path_length + 1) * sizeof(char));
+    char *path_copy = (char *)GamesmanMalloc((path_length + 1) * sizeof(char));
     if (path_copy == NULL) {
         ret = kMallocFailureError;
         errno = ENOMEM;
@@ -455,7 +405,7 @@ int MkdirRecursive(ReadOnlyString path) {
     ret = kNoError;  // Success
 
 _bailout:
-    free(path_copy);
+    GamesmanFree(path_copy);
     return ret;
 }
 
@@ -484,12 +434,6 @@ int64_t NextPrime(int64_t n) {
         ++n;
     }
     return n;
-}
-
-int64_t NextMultiple(int64_t n, int64_t multiple) {
-    int64_t remainder = n % multiple;
-    if (remainder == 0) return n;
-    return n + multiple - remainder;
 }
 
 int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN interactive mode.
- * @version 1.1.1
- * @date 2024-12-10
+ * @version 1.1.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,6 +33,7 @@
 #include <unistd.h>  // usleep
 
 #include "config.h"
+#include "core/gamesman_memory.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
 #include "core/types/gamesman_types.h"
@@ -71,15 +72,15 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage =
 #endif  // USE_MPI
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(GAMESMAN_DATE) +
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
                     kOpeningCreditsMessageSize;
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
 #ifndef USE_MPI
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
-            GAMESMAN_DATE);
+            GM_DATE);
 #else   // USE_MPI defined.
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
-            GAMESMAN_DATE);
+            GM_DATE);
 #endif  // USE_MPI
 
     int i = 0;
@@ -89,7 +90,7 @@ static void PrintOpeningCredits(void) {
         usleep(800);
     }
 
-    free(opening_credits);
+    GamesmanFree(opening_credits);
 }
 
 int GamesmanInteractiveMain(void) {

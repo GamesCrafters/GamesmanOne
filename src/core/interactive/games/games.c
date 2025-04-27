@@ -1,13 +1,13 @@
 #include "core/interactive/games/games.h"
 
-#include <stdio.h>   // sprintf
-#include <stdlib.h>  // free
+#include <stdio.h>  // sprintf
 
-#include "core/game_manager.h"  // GameManagerGetAllGames, GameManagerNumGames
+#include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
-#include "core/misc.h"                  // SafeMalloc
-#include "core/types/gamesman_types.h"  // Game
+#include "core/misc.h"
+#include "core/types/gamesman_types.h"
 
 static char **AllocateItems(int num_items) {
     char **items = (char **)SafeMalloc(num_items * sizeof(char *));
@@ -33,12 +33,12 @@ static HookFunctionPointer *AllocateHooks(int num_items) {
 static void FreeAll(int num_items, char **items, char **keys,
                     HookFunctionPointer *hooks) {
     for (int i = 0; i < num_items; ++i) {
-        free(items[i]);
-        free(keys[i]);
+        GamesmanFree(items[i]);
+        GamesmanFree(keys[i]);
     }
-    free(items);
-    free(keys);
-    free(hooks);
+    GamesmanFree(items);
+    GamesmanFree(keys);
+    GamesmanFree(hooks);
 }
 
 int InteractiveGames(ReadOnlyString key) {

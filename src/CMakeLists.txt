@@ -24,7 +24,7 @@ if(NOT DISABLE_OPENMP) # OpenMP
   if(OpenMP_FOUND)
     message(STATUS "OpenMP multithreading enabled")
   else()
-    message(STATUS "OpenMP not found, configuring without multithreading")
+    message(WARNING "OpenMP not found, configuring without multithreading")
   endif()
 else()
   message(STATUS "OpenMP multithreading disabled")

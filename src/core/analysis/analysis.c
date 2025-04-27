@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 1.1.1
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-03-17
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -131,6 +131,15 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
     }
 }
 
+void AnalysisMergeMoves(Analysis *dest, const CacheAlignedAnalysis *part) {
+    dest->move_count += part->data.move_count;
+    dest->canonical_move_count += part->data.canonical_move_count;
+    if (part->data.max_num_moves > dest->max_num_moves) {
+        dest->max_num_moves = part->data.max_num_moves;
+        dest->position_with_most_moves = part->data.position_with_most_moves;
+    }
+}
+
 // Counting
 
 int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
@@ -232,11 +241,11 @@ static void MergeDrawCounts(Analysis *dest, const Analysis *part) {
     }
 }
 
-void AnalysisMergeCounts(Analysis *dest, const Analysis *part) {
-    MergeWinCounts(dest, part);
-    MergeLoseCounts(dest, part);
-    MergeTieCounts(dest, part);
-    MergeDrawCounts(dest, part);
+void AnalysisMergeCounts(Analysis *dest, const CacheAlignedAnalysis *part) {
+    MergeWinCounts(dest, &part->data);
+    MergeLoseCounts(dest, &part->data);
+    MergeTieCounts(dest, &part->data);
+    MergeDrawCounts(dest, &part->data);
 }
 
 // Aggregating

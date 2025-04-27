@@ -29,8 +29,8 @@
  * specialized version in x86_simd_two_piece.h. If the board size is smaller
  * than 32, then only the lower BOARD_SIZE bits of each 32-bit range contains
  * useful information and the upper (32-BOARD_SIZE) bits should be all zeros.
- * @version 1.0.0
- * @date 2025-01-14
+ * @version 1.0.1
+ * @date 2025-03-30
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

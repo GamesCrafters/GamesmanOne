@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t hash set implementation.
- * @version 1.1.0
- * @date 2025-03-13
+ * @version 1.1.1
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,8 +31,8 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
-#include <stdlib.h>   // calloc, free
 
+#include "core/gamesman_memory.h"
 #include "core/misc.h"  // NextPrime
 
 static int64_t Hash(int64_t key, int64_t capacity) {
@@ -53,8 +53,8 @@ void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
 }
 
 static bool Expand(Int64HashSet *set, int64_t new_capacity) {
-    Int64HashSetEntry *new_entries =
-        (Int64HashSetEntry *)calloc(new_capacity, sizeof(Int64HashSetEntry));
+    Int64HashSetEntry *new_entries = (Int64HashSetEntry *)GamesmanCallocWhole(
+        new_capacity, sizeof(Int64HashSetEntry));
     if (new_entries == NULL) return false;
 
     for (int64_t i = 0; i < set->capacity; ++i) {
@@ -66,9 +66,10 @@ static bool Expand(Int64HashSet *set, int64_t new_capacity) {
             new_entries[new_index] = set->entries[i];
         }
     }
-    free(set->entries);
+    GamesmanFree(set->entries);
     set->entries = new_entries;
     set->capacity = new_capacity;
+
     return true;
 }
 
@@ -81,7 +82,7 @@ bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
 }
 
 void Int64HashSetDestroy(Int64HashSet *set) {
-    free(set->entries);
+    GamesmanFree(set->entries);
     set->entries = NULL;
     set->capacity = 0;
     set->size = 0;

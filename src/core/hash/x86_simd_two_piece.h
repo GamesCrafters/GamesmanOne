@@ -75,8 +75,8 @@
  * Methods to perform these operations are provided in this library for
  * efficient symmetry removal.
  *
- * @version 1.0.0
- * @date 2025-01-14
+ * @version 1.0.1
+ * @date 2025-03-30
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

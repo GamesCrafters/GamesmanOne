@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.1.1
- * @date 2024-12-22
+ * @version 1.1.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:

@@ -1,0 +1,31 @@
+THIRD_PARTY_LICENSES
+=====================
+
+This project includes third-party open source software. 
+Below is a list of these libraries along with their licenses.
+
+-------------------------------------------------------------------------------
+Library: json-c
+Website: <https://github.com/json-c/json-c>
+License: MIT License
+Copyright (c) 2004, 2005 Metaparadigm Pte Ltd  
+Copyright (c) 2009-2012 Eric Haszlakiewicz
+
+-------------------------------------------------------------------------------
+Library: XZ Utils
+Website: <https://github.com/tukaani-project/xz>
+License: Mixed – primarily BSD Zero Clause License (0BSD), with components under LGPLv2.1+, GPLv2+, and GPLv3+
+Copyright (C) The XZ Utils authors and contributors
+
+-------------------------------------------------------------------------------
+Library: LZ4
+Website: <https://github.com/lz4/lz4>
+License: Mixed – BSD 2-Clause (for `lib/`), GPL-2.0-or-later (for other parts)
+Copyright (c) Yann Collet
+All rights reserved.
+
+-------------------------------------------------------------------------------
+File: folly/folly/ConcurrentBitSet.h
+Website: <https://github.com/facebook/folly/blob/main/folly/ConcurrentBitSet.h>
+License: Apache License, Version 2.0
+Copyright (c) Meta Platforms, Inc. and affiliates

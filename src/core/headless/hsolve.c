@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the game solving functionality of headless mode.
- * @version 1.0.1
- * @date 2024-09-08
+ * @version 1.0.2
+ * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,9 +31,9 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // intptr_t
 #include <stdio.h>    // printf, fprintf, stderr
-#include <stdlib.h>   // free
 
 #include "core/game_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
@@ -73,9 +73,11 @@ int HeadlessSolve(ReadOnlyString game_name, int variant_id,
 
     void *options = GenerateSolveOptions(force, verbose, memlimit);
     error = SolverManagerSolve(options);
-    free(options);
+    GamesmanFree(options);
+    GameManagerFinalize();
     if (error != 0) {
         fprintf(stderr, "HeadlessSolve: solve failed with code %d\n", error);
     }
+
     return error;
 }

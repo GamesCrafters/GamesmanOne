@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm implementation.
- * @version 1.1.1
- * @date 2024-12-22
+ * @version 1.1.2
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,6 +35,7 @@
 #include "core/constants.h"
 #include "core/data_structures/bitstream.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -94,7 +95,7 @@ static bool Step0_0SetupChildTiers(void) {
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
                             intptr_t memlimit) {
     api_internal = api;
-    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
+    mem = memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 

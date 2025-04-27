@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(GamesmanOne VERSION 1.2.2 DESCRIPTION 2025.03.15)
+project(GamesmanOne VERSION 1.3.0 DESCRIPTION 2025.04.26)
 
 ##########################
 # Common Flags Interface #
@@ -58,8 +58,28 @@ endif()
 # Custom CMake Options #
 ########################
 
-option(DISABLE_OPENMP "Disable OpenMP." OFF)  # Set this to ON to disable OpenMP.
-option(USE_MPI "Enable MPI." OFF)             # Set this to ON to enable MPI.
+option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP.
+option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI.
+
+#######################
+# Compile-time Macros #
+#######################
+
+# Run a small cache line size detection program to configure
+# GamesmanOne_CACHE_LINE_SIZE
+try_run(
+  CACHE_LINE_RUN_RESULT
+  CACHE_LINE_COMPILE_RESULT
+  ${CMAKE_BINARY_DIR}/scripts
+  ${PROJECT_SOURCE_DIR}/scripts/cacheline.c
+  RUN_OUTPUT_STDOUT_VARIABLE CACHE_LINE_STDOUT
+)
+if(CACHE_LINE_COMPILE_RESULT AND CACHE_LINE_RUN_RESULT EQUAL 0)
+  set(GamesmanOne_CACHE_LINE_SIZE ${CACHE_LINE_STDOUT})
+else()
+  message(WARNING "Failed to automatically detect cache line size, falling back to 64 bytes.")
+  set(GamesmanOne_CACHE_LINE_SIZE 64) # fallback
+endif()
 
 #####################################
 # Global Compilation Configurations #

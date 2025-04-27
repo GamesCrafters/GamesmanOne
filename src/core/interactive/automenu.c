@@ -7,7 +7,7 @@
 #include <stdlib.h>   // exit, EXIT_SUCCESS
 #include <string.h>   // strncmp, strchr
 
-#include "core/misc.h"  // SafeMalloc, GamesmanExit
+#include "core/misc.h"  // GamesmanExit
 
 static void FormatInput(char *input) {
     // Convert all characters to lowercase.

@@ -33,6 +33,7 @@
 #include "core/hash/generic_context.h"
 
 #include <assert.h>   // assert
+#include <limits.h>   // CHAR_MAX
 #include <stdbool.h>  // bool
 #include <stdint.h>   // INT8_MAX, int64_t
 #include <stdio.h>    // fprintf, stderr

@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.2
- * @date 2024-12-22
+ * @version 1.1.4
+ * @date 2025-04-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,12 +35,12 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, malloc, free
 #include <string.h>   // memcpy
 
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/frontier.h"
 #include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
@@ -80,10 +80,7 @@ static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 
 // Number of undecided child positions array (malloc'ed and owned by the
 // TierWorkerSolve function). Note that we are assuming the number of children
-// of ANY position is no more than 254. This allows us to use an unsigned 8-bit
-// integer to save memory. If this assumption no longer holds for any new
-// games in the future, the programmer should change this type to a wider
-// integer type such as int16_t.
+// of ANY position is no more than 32767.
 typedef int16_t ChildPosCounterType;
 #ifdef _OPENMP
 typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
@@ -108,9 +105,9 @@ static bool Step0_1InitFrontiers(int dividers_size) {
 #else   // _OPENMP not defined.
     num_threads = 1;
 #endif  // _OPENMP
-    win_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
-    lose_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
-    tie_frontiers = (Frontier *)malloc(num_threads * sizeof(Frontier));
+    win_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
+    lose_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
+    tie_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
     if (!win_frontiers || !lose_frontiers || !tie_frontiers) {
         return false;
     }
@@ -284,7 +281,7 @@ static bool Step2SetupSolverArrays(void) {
     if (error != 0) return false;
 
 #ifdef _OPENMP
-    num_undecided_children = (AtomicChildPosCounterType *)malloc(
+    num_undecided_children = (AtomicChildPosCounterType *)GamesmanMalloc(
         this_tier_size * sizeof(AtomicChildPosCounterType));
     if (num_undecided_children == NULL) return false;
 
@@ -292,7 +289,7 @@ static bool Step2SetupSolverArrays(void) {
         atomic_init(&num_undecided_children[i], 0);
     }
 #else   // _OPENMP not defined
-    num_undecided_children = (ChildPosCounterType *)calloc(
+    num_undecided_children = (ChildPosCounterType *)GamesmanCallocWhole(
         this_tier_size, sizeof(ChildPosCounterType));
 #endif  // _OPENMP
 
@@ -392,13 +389,14 @@ static bool Step3ScanTier(void) {
 
 static int64_t *MakeFrontierOffsets(const Frontier *frontiers, int remoteness) {
     int64_t *frontier_offsets =
-        (int64_t *)calloc(num_threads + 1, sizeof(int64_t));
+        (int64_t *)GamesmanCallocWhole(num_threads + 1, sizeof(int64_t));
     if (frontier_offsets == NULL) return NULL;
 
     frontier_offsets[0] = 0;
     for (int i = 1; i <= num_threads; ++i) {
-        frontier_offsets[i] =
-            frontier_offsets[i - 1] + frontiers[i - 1].buckets[remoteness].size;
+        int64_t prev_bucket_size =
+            FrontierGetBucketSize(&frontiers[i - 1], remoteness);
+        frontier_offsets[i] = frontier_offsets[i - 1] + prev_bucket_size;
     }
 
     return frontier_offsets;
@@ -416,8 +414,9 @@ static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
         *child_index = 0;
     }
     int64_t index_in_frontier = i - frontier_offsets[*frontier_id];
+    const Frontier *frontier = &frontiers[*frontier_id];
     while (index_in_frontier >=
-           frontiers[*frontier_id].dividers[remoteness][*child_index]) {
+           FrontierGetDivider(frontier, remoteness, *child_index)) {
         ++(*child_index);
     }
 }
@@ -453,7 +452,7 @@ static bool PushFrontierHelper(
     ConcurrentBoolInit(&success, true);
     PRAGMA_OMP_PARALLEL {
         int frontier_id = 0, child_index = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(16)
+        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                           &child_index, remoteness,
@@ -474,7 +473,7 @@ static bool PushFrontierHelper(
     for (int i = 0; i < num_threads; ++i) {
         FrontierFreeRemoteness(&frontiers[i], remoteness);
     }
-    free(frontier_offsets);
+    GamesmanFree(frontier_offsets);
     frontier_offsets = NULL;
 
     return ConcurrentBoolLoad(&success);
@@ -521,11 +520,11 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
 
 #ifdef _OPENMP
 /**
- * @brief Atomically decrements the content of OBJ, which is of type unsigned
- * char, if and only if it was greater than 0, and returns the original value.
- * If multiple threads call this function on the same OBJ at the same time, the
- * value returned is guaranteed to be unique for each thread if no threads are
- * performing other operations on OBJ.
+ * @brief Atomically decrements the content of OBJ, which is of type
+ * ChildPosCounterType, if and only if it was greater than 0, and returns the
+ * original value. If multiple threads call this function on the same OBJ at the
+ * same time, the value returned is guaranteed to be unique for each thread if
+ * no threads are performing other operations on OBJ.
  *
  * @note This is a helper function that is only used by ProcessWinPosition.
  *
@@ -539,7 +538,7 @@ static ChildPosCounterType DecrementIfNonZero(AtomicChildPosCounterType *obj) {
         // This function will set OBJ to current_value - 1 if OBJ is still equal
         // to current_value. Otherwise, it updates current_value to the new
         // value of OBJ and returns false.
-        bool success = atomic_compare_exchange_strong_explicit(
+        bool success = atomic_compare_exchange_weak_explicit(
             obj, &current_value, (ChildPosCounterType)(current_value - 1),
             memory_order_relaxed, memory_order_relaxed);
         // If decrement was successful, quit and return the original value of
@@ -595,11 +594,11 @@ static void DestroyFrontiers(void) {
         if (lose_frontiers) FrontierDestroy(&lose_frontiers[i]);
         if (tie_frontiers) FrontierDestroy(&tie_frontiers[i]);
     }
-    free(win_frontiers);
+    GamesmanFree(win_frontiers);
     win_frontiers = NULL;
-    free(lose_frontiers);
+    GamesmanFree(lose_frontiers);
     lose_frontiers = NULL;
-    free(tie_frontiers);
+    GamesmanFree(tie_frontiers);
     tie_frontiers = NULL;
 }
 
@@ -652,7 +651,7 @@ static void Step5MarkDrawPositions(void) {
             continue;
         }
     }
-    free(num_undecided_children);
+    GamesmanFree(num_undecided_children);
     num_undecided_children = NULL;
 }
 
@@ -728,7 +727,7 @@ static void Step7Cleanup(void) {
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
     DestroyFrontiers();
-    free(num_undecided_children);
+    GamesmanFree(num_undecided_children);
     num_undecided_children = NULL;
     if (use_reverse_graph) {
         ReverseGraphDestroy(&reverse_graph);

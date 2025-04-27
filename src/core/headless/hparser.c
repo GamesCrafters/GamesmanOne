@@ -165,8 +165,7 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
 // -----------------------------------------------------------------------------
 
 static void PrintVersion(FILE *stream) {
-    fprintf(stream, "GamesmanOne version %s (%s)\n", GAMESMAN_VERSION,
-            GAMESMAN_DATE);
+    fprintf(stream, "GamesmanOne version %s (%s)\n", GM_VERSION, GM_DATE);
 }
 
 static void ParseOption(int key, int option_index) {
