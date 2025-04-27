@@ -31,17 +31,12 @@
 #include <assert.h>  // static_assert
 #include <stddef.h>  // size_t
 
+#include "config.h"
+
 ////////////
 // MACROS //
 ////////////
 
-#ifndef GM_CACHE_LINE_SIZE
-/**
- * @brief Size of each cache line in bytes. Either set at build time or defaults
- * to 64.
- */
-#define GM_CACHE_LINE_SIZE 64
-#endif
 static_assert(GM_CACHE_LINE_SIZE > 0,
               "GM_CACHE_LINE_SIZE is not defined as a positive value");
 static_assert(

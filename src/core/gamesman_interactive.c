@@ -72,15 +72,15 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage =
 #endif  // USE_MPI
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(GAMESMAN_DATE) +
+    size_t length = strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
                     kOpeningCreditsMessageSize;
     char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
 #ifndef USE_MPI
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
-            GAMESMAN_DATE);
+            GM_DATE);
 #else   // USE_MPI defined.
     sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
-            GAMESMAN_DATE);
+            GM_DATE);
 #endif  // USE_MPI
 
     int i = 0;
