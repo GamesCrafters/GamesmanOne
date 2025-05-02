@@ -56,18 +56,15 @@ static bool nCrInitialized;
 static int64_t nCr[kBoardSizeMax + 1][kBoardSizeMax + 1];
 
 static bool system_initialized;
-static int board_rows;
-static int board_cols;
 static int curr_board_size;
 static uint64_t hash_mask;
 static int32_t *pattern_to_order;
 static uint32_t **pop_order_to_pattern;
 
-intptr_t X86SimdTwoPieceHashGetMemoryRequired(int rows, int cols) {
-    int board_size = rows * cols;
-    intptr_t ret = (1LL << board_size) * sizeof(int32_t);
-    ret += (board_size + 1) * sizeof(uint32_t *);
-    ret += (1LL << board_size) * sizeof(int32_t);  // Binomial theorem
+intptr_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots) {
+    intptr_t ret = (1LL << num_slots) * sizeof(int32_t);
+    ret += (num_slots + 1) * sizeof(uint32_t *);
+    ret += (1LL << num_slots) * sizeof(int32_t);  // Binomial theorem
 
     return ret;
 }
@@ -83,11 +80,13 @@ static void MakeTriangle(void) {
     nCrInitialized = true;
 }
 
-static void BuildHashMask(void) {
-    hash_mask = 0;
-    for (int i = 0; i < board_rows; ++i) {
-        hash_mask |= ((1ULL << board_cols) - 1) << (i * 8);
+static uint64_t BuildRectangularHashMask(int rows, int cols) {
+    uint64_t mask = 0;
+    for (int i = 0; i < rows; ++i) {
+        mask |= ((1ULL << cols) - 1) << (i * 8);
     }
+
+    return mask;
 }
 
 static int InitTables(void) {
@@ -139,11 +138,33 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     // Clear previous system state if exists.
     if (system_initialized) X86SimdTwoPieceHashFinalize();
 
-    board_rows = rows;
-    board_cols = cols;
     curr_board_size = board_size;
     MakeTriangle();
-    BuildHashMask();
+    hash_mask = BuildRectangularHashMask(rows, cols);
+
+    // Initialize the tables
+    int error = InitTables();
+    if (error != kNoError) X86SimdTwoPieceHashFinalize();
+    system_initialized = true;
+
+    return error;
+}
+
+int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
+    if (board_mask == 0) {
+        fprintf(stderr,
+                "X86SimdTwoPieceHashInitIrregular: invalid board mask "
+                "provided; the mask does not contain any set bit and results "
+                "in a board of size 0\n");
+        return kIllegalArgumentError;
+    }
+
+    // Clear previous system state if exists.
+    if (system_initialized) X86SimdTwoPieceHashFinalize();
+
+    curr_board_size = _popcnt64(board_mask);
+    MakeTriangle();
+    hash_mask = board_mask;
 
     // Initialize the tables
     int error = InitTables();
@@ -168,7 +189,6 @@ void X86SimdTwoPieceHashFinalize(void) {
     }
 
     // Reset the board size
-    board_rows = board_cols = 0;
     curr_board_size = 0;
 
     // Reset the hash mask
@@ -180,35 +200,51 @@ int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o) {
            2;
 }
 
+int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o) {
+    return nCr[curr_board_size - num_o][num_x] * nCr[curr_board_size][num_o];
+}
+
 Position X86SimdTwoPieceHashHash(__m128i board, int turn) {
+    return (X86SimdTwoPieceHashHashFixedTurn(board) << 1) | turn;
+}
+
+Position X86SimdTwoPieceHashHashMem(uint64_t patterns[2], int turn) {
+    return (X86SimdTwoPieceHashHashFixedTurnMem(patterns) << 1) | turn;
+}
+
+Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
     // Extract the two 64-bit patterns to 16-byte-aligned stack memory
     __attribute__((aligned(16))) uint64_t s[2];
     _mm_store_si128((__m128i *)s, board);
 
+    return X86SimdTwoPieceHashHashFixedTurnMem(s);
+}
+
+Position X86SimdTwoPieceHashHashFixedTurnMem(uint64_t patterns[2]) {
     // Convert the 8x8 padded pattern to tightly packed pattern
-    s[0] = _pext_u64(s[0], hash_mask);
-    s[1] = _pext_u64(s[1], hash_mask);
+    patterns[0] = _pext_u64(patterns[0], hash_mask);
+    patterns[1] = _pext_u64(patterns[1], hash_mask);
 
     // Perform the normal hashing procedure.
-    s[0] = _pext_u64(s[0], ~s[1]);
-    int pop_x = _popcnt64(s[0]);
-    int pop_o = _popcnt64(s[1]);
+    patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
+    int pop_x = _popcnt64(patterns[0]);
+    int pop_o = _popcnt64(patterns[1]);
     int64_t offset = nCr[curr_board_size - pop_o][pop_x];
-    Position ret = offset * pattern_to_order[s[1]] + pattern_to_order[s[0]];
+    Position ret =
+        offset * pattern_to_order[patterns[1]] + pattern_to_order[patterns[0]];
 
-    return (ret << 1) | turn;
+    return ret;
 }
 
 __m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {
-    hash >>= 1;  // get rid of the turn bit
-    int64_t offset = nCr[curr_board_size - num_o][num_x];
-    __attribute__((aligned(16))) uint64_t s[2] = {
-        pop_order_to_pattern[num_x][hash % offset],
-        pop_order_to_pattern[num_o][hash / offset],
-    };
-    s[0] = _pdep_u64(s[0], ~s[1]);
-    s[0] = _pdep_u64(s[0], hash_mask);
-    s[1] = _pdep_u64(s[1], hash_mask);
+    // Get rid of the turn bit and then use the same algorithm.
+    return X86SimdTwoPieceHashUnhashFixedTurn(hash >> 1, num_x, num_o);
+}
+
+__m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
+                                           int num_o) {
+    __attribute__((aligned(16))) uint64_t s[2];
+    X86SimdTwoPieceHashUnhashFixedTurnMem(hash, num_x, num_o, s);
 
     // TODO: benchmark _mm_stream_load_si128
     return _mm_load_si128((const __m128i *)s);
@@ -216,7 +252,12 @@ __m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {
 
 void X86SimdTwoPieceHashUnhashMem(Position hash, int num_x, int num_o,
                                   uint64_t patterns[2]) {
-    hash >>= 1;  // get rid of the turn bit
+    // Get rid of the turn bit and then use the same algorithm.
+    X86SimdTwoPieceHashUnhashFixedTurnMem(hash >> 1, num_x, num_o, patterns);
+}
+
+void X86SimdTwoPieceHashUnhashFixedTurnMem(Position hash, int num_x, int num_o,
+                                           uint64_t patterns[2]) {
     int64_t offset = nCr[curr_board_size - num_o][num_x];
     patterns[0] = pop_order_to_pattern[num_x][hash % offset];
     patterns[1] = pop_order_to_pattern[num_o][hash / offset];
