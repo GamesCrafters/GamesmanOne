@@ -26,5 +26,5 @@ def convert_binary_to_hex(file_path):
         file.write(updated_content)
 
 # Replace with the path to your C source file
-file_path = 'mills.c'
+file_path = 'constants_hardcode.cpp'
 convert_binary_to_hex(file_path)
