@@ -266,7 +266,7 @@ static bool ClosesMill(uint64_t pattern, MillsMove m) {
     int bid = BoardId();
     for (int i = 0; i < kNumParticipatingLines[bid][m.unpacked.dest]; ++i) {
         uint64_t line = kParticipatingLines[bid][m.unpacked.dest][i];
-        if (line == line & pattern) return true;
+        if (line == (line & pattern)) return true;
     }
 
     return false;
@@ -333,6 +333,12 @@ static void GenerateSlidingMoves(MillsTier t, uint64_t patterns[2], int turn,
         }
     }
 }
+
+/**
+ * @brief Returns 0 if \p b is true, or the value with all 64 bits set to 1 if
+ * \p b is true.
+ */
+static inline uint64_t BooleanMask(bool b) { return -(uint64_t)b; }
 
 /**
  * @brief Returns a mask with all set bits corresponding to valid removal
@@ -412,12 +418,6 @@ static Value MillsPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
-/**
- * @brief Returns 0 if \p b is true, or the value with all 64 bits set to 1 if
- * \p b is true.
- */
-static inline uint64_t BooleanMask(bool b) { return -(uint64_t)b; }
-
 static TierPosition MillsDoMoveInternal(MillsTier t, uint64_t patterns[2],
                                         MillsMove m, int turn) {
     // Create and apply toggle masks for each player's bit board.
@@ -480,16 +480,6 @@ static int MillsGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     // TODO
-}
-
-static Tier ConstructTier(int rem_x, int rem_o, int num_x, int num_o) {
-    MillsTier t = {.hash = 0};
-    t.unpacked.remaining[0] = rem_x;
-    t.unpacked.remaining[1] = rem_o;
-    t.unpacked.on_board[0] = num_x;
-    t.unpacked.on_board[1] = num_o;
-
-    return t.hash;
 }
 
 static int GetChildTiersInternal(
@@ -575,6 +565,8 @@ static int GetChildTiersLaskerInternal(
             --t.unpacked.on_board[turn];
         }
     }
+
+    return ret;
 }
 
 static int MillsGetChildTiers(
@@ -641,7 +633,7 @@ static int MillsSetVariantOption(int option, int selection) {
     if (selection < 0) return kIllegalArgumentError;
     switch (option) {
         case 0: {
-            if (selection >= NUM_BOARD_AND_PIECES_CHOICES) {
+            if (selection >= (int)NUM_BOARD_AND_PIECES_CHOICES) {
                 return kIllegalArgumentError;
             }
             int error =
