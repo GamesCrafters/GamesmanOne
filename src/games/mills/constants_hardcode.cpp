@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -54,8 +55,27 @@ static void PrintLineMasks(int board_id) {
     }
 }
 
+static void PrintParticipatingLines(int board_id) {
+    std::cout << "PRINTING PARTICIPATING LINES MASK FOR BOARD ID == "
+              << board_id << "\n";
+    for (int i = 0; i < 56; ++i) {
+        for (int j = 0; j < kNumParticipatingLines[board_id][i]; ++j) {
+            PrintMask(kParticipatingLines[board_id][i][j], board_id);
+        }
+        if (kNumParticipatingLines[board_id][i]) {
+            std::cout << "grid index " << i << " has "
+                      << kNumParticipatingLines[board_id][i]
+                      << " line completions\n\n";
+        }
+    }
+}
+
 int main(void) {
     BuildGridIdxToBoardIdx();
+
+    for (int i = 0; i < 8; ++i) {
+        PrintParticipatingLines(i);
+    }
 
     return 0;
 }

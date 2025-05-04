@@ -135,10 +135,6 @@ static const int kPiecesPerPlayer[NUM_BOARD_AND_PIECES_CHOICES] = {
 
 static const MillsMove kMillsMoveInit = {.hash = 0};
 
-static const int kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES][56];
-
-static const uint64_t kParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES][56][6];
-
 static inline uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
     uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
 
@@ -266,7 +262,7 @@ static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
 static bool ClosesMill(uint64_t pattern, MillsMove m) {
     // The most significant bit might be set by a placing move but it doesn't
     // affect the result of this function.
-    pattern ^= ((1ULL << m.unpacked.src) | (1ULL << m.unpacked.dest));
+    pattern ^= 1ULL << m.unpacked.src;
     int bid = BoardId();
     for (int i = 0; i < kNumParticipatingLines[bid][m.unpacked.dest]; ++i) {
         uint64_t line = kParticipatingLines[bid][m.unpacked.dest][i];
