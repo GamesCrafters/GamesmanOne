@@ -45,7 +45,7 @@
 #include "games/mills/masks.h"
 #include "games/mills/variants.h"
 
-// =================================== Types ===================================
+// ============================ Types and Constants ============================
 
 /**
  * @brief Mills tier definition:
@@ -82,6 +82,8 @@ typedef union {
     } unpacked;
     Move hash;
 } MillsMove;
+
+static const MillsMove kMillsMoveInit = {.hash = 0};
 
 enum {
     /**
@@ -122,18 +124,26 @@ union {
         },
 };
 
+static inline int BoardId(void) {
+    return variant_option_selections.unpacked.board_and_pieces;
+}
+
+static inline int Lasker(void) {
+    return variant_option_selections.unpacked.lasker_rule;
+}
+
+static inline int FlyThreshold(void) {
+    static const int ret[3] = {0, 3, 64};
+
+    return ret[variant_option_selections.unpacked.flying_rule];
+}
+
 static GameVariant current_variant = {
     .options = mills_variant_options,
     .selections = variant_option_selections.array,
 };
 
 // ================================= Constants =================================
-
-static const int kPiecesPerPlayer[NUM_BOARD_AND_PIECES_CHOICES] = {
-    5, 6, 7, 9, 10, 11, 12, 12,
-};
-
-static const MillsMove kMillsMoveInit = {.hash = 0};
 
 static inline uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
     uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
@@ -144,11 +154,11 @@ static inline uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
 static inline __m128i SwapInnerOuterRings(__m128i board) {
     __attribute__((aligned(16))) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
-    int board_variant = variant_option_selections.unpacked.board_and_pieces;
-    patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_variant],
-                           kOuterRingMasks[board_variant]);
-    patterns[1] = SwapBits(patterns[1], kInnerRingMasks[board_variant],
-                           kOuterRingMasks[board_variant]);
+    int board_id = BoardId();
+    patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_id],
+                           kOuterRingMasks[board_id]);
+    patterns[1] = SwapBits(patterns[1], kInnerRingMasks[board_id],
+                           kOuterRingMasks[board_id]);
 
     return _mm_load_si128((const __m128i *)patterns);
 }
@@ -156,7 +166,7 @@ static inline __m128i SwapInnerOuterRings(__m128i board) {
 // ============================== kMillsSolverApi ==============================
 
 static Tier MillsGetInitialTier(void) {
-    int pieces_per_player =
+    int8_t pieces_per_player =
         kPiecesPerPlayer[variant_option_selections.unpacked.board_and_pieces];
     MillsTier t = {
         .unpacked =
@@ -171,24 +181,8 @@ static Tier MillsGetInitialTier(void) {
 
 static Position MillsGetInitialPosition(void) {
     // The initial board is always empty, which by definition is the bit board
-    // that is filled with all zeros.
-    __m128i board = _mm_set1_epi64x(0);
-
-    return X86SimdTwoPieceHashHashFixedTurn(board);
-}
-
-static inline int BoardId(void) {
-    return variant_option_selections.unpacked.board_and_pieces;
-}
-
-static inline int Lasker(void) {
-    return variant_option_selections.unpacked.lasker_rule;
-}
-
-static inline int FlyThreshold(void) {
-    static const int ret[3] = {0, 3, 64};
-
-    return ret[variant_option_selections.unpacked.flying_rule];
+    // filled with all zeros.
+    return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_ps());
 }
 
 static inline bool IsTierFixedTurn(MillsTier t) {
@@ -232,7 +226,7 @@ static int GetTurnFromLaskerTier(MillsTier t) {
     return -1;
 }
 
-static int GetTurnFromTierGeneric(MillsTier t) {
+static int GetTurnFromGenericTier(MillsTier t) {
     if (!Lasker()) {
         return GetTurnFromPlacementTier(t);
     }
@@ -244,7 +238,7 @@ static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
     MillsTier t = {.hash = tp.tier};
     int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
     if (IsTierFixedTurn(t)) {
-        *turn = GetTurnFromTierGeneric(t);
+        *turn = GetTurnFromGenericTier(t);
         X86SimdTwoPieceHashUnhashFixedTurnMem(tp.position, num_x, num_o,
                                               patterns);
     } else {
@@ -264,7 +258,7 @@ static bool ClosesMill(uint64_t pattern, MillsMove m) {
     // affect the result of this function.
     pattern ^= 1ULL << m.unpacked.src;
     int bid = BoardId();
-    for (int i = 0; i < kNumParticipatingLines[bid][m.unpacked.dest]; ++i) {
+    for (int8_t i = 0; i < kNumParticipatingLines[bid][m.unpacked.dest]; ++i) {
         uint64_t line = kParticipatingLines[bid][m.unpacked.dest][i];
         if (line == (line & pattern)) return true;
     }
@@ -350,7 +344,7 @@ static uint64_t BuildLegalRemovesMask(uint64_t pattern) {
     }
 
     uint64_t formed_mills = 0ULL;
-    for (int i = 0; i < kNumLines[BoardId()]; ++i) {
+    for (int8_t i = 0; i < kNumLines[BoardId()]; ++i) {
         uint64_t line = kLineMasks[BoardId()][i];
         bool formed = (line & pattern) == line;
         formed_mills |= BooleanMask(formed) & line;
@@ -573,8 +567,8 @@ static int MillsGetChildTiers(
     Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
     // Primitive tiers have no children.
     MillsTier t = {.hash = tier};
-    int rem_x = t.unpacked.remaining[0], rem_o = t.unpacked.remaining[1];
-    int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
+    int8_t rem_x = t.unpacked.remaining[0], rem_o = t.unpacked.remaining[1];
+    int8_t num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
     if (rem_x + num_x == 2 || rem_o + num_o == 2) return 0;
 
     // Not using Lasker rule

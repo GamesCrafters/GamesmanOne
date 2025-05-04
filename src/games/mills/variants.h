@@ -1,6 +1,8 @@
 #ifndef GAMESMANONE_GAMES_MILLS_VARIANTS_H_
 #define GAMESMANONE_GAMES_MILLS_VARIANTS_H_
 
+#include <stdint.h>  // int8_t
+
 #include "core/types/gamesman_types.h"
 
 /*
@@ -44,7 +46,7 @@ Standard combinations of options:
     (h) Sesotho Morabaraba: [hbaaa]
 */
 
-static const ConstantReadOnlyString kMillsBoardAndPiecesChoices[] = {
+static const char *const kMillsBoardAndPiecesChoices[] = {
     "5 pieces each on a 16-slot board (Five Men's Morris)",
     "6 pieces each on a 16-slot board (Six Men's Morris)",
     "7 pieces each on a 17-slot board (Seven Men's Morris)",
@@ -59,18 +61,22 @@ static const ConstantReadOnlyString kMillsBoardAndPiecesChoices[] = {
     (sizeof(kMillsBoardAndPiecesChoices) / \
      sizeof(kMillsBoardAndPiecesChoices[0]))
 
-static const ConstantReadOnlyString kMillsFlyingRuleChoices[] = {
+static const int8_t kPiecesPerPlayer[NUM_BOARD_AND_PIECES_CHOICES] = {
+    5, 6, 7, 9, 10, 11, 12, 12,
+};
+
+static const char *const kMillsFlyingRuleChoices[] = {
     "Not allowed",
     "Allowed with fewer than 3 pieces on board",
     "Allowed always",
 };
 
-static const ConstantReadOnlyString kBooleanChoices[] = {
+static const char *const kBooleanChoices[] = {
     "False",
     "True",
 };
 
-static const ConstantReadOnlyString kMillsRemovalRuleChoices[] = {
+static const char *const kMillsRemovalRuleChoices[] = {
     "Standard",
     "Strict",
     "Lenient",

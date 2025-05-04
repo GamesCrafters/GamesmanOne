@@ -1,7 +1,7 @@
 #ifndef GAMESMANONE_GAMES_MILLS_MASKS_H_
 #define GAMESMANONE_GAMES_MILLS_MASKS_H_
 
-#include <stdint.h>
+#include <stdint.h>  // int8_t, uint64_t
 
 #include "games/mills/variants.h"
 
@@ -9,7 +9,7 @@
  * @brief Number of slots on each board variant. kNumSlots[i] gives the number
  * of slots on board with index i.
  */
-static const int kNumSlots[NUM_BOARD_AND_PIECES_CHOICES] = {
+static const int8_t kNumSlots[NUM_BOARD_AND_PIECES_CHOICES] = {
     16, 16, 17, 24, 24, 24, 24, 25,
 };
 
@@ -278,7 +278,7 @@ static const uint64_t *kDestMasks[NUM_BOARD_AND_PIECES_CHOICES] = {
 /**
  * @brief Number of 3-in-a-rows on each board variant.
  */
-static const int kNumLines[NUM_BOARD_AND_PIECES_CHOICES] = {
+static const int8_t kNumLines[NUM_BOARD_AND_PIECES_CHOICES] = {
     8, 8, 14, 16, 16, 20, 20, 22,
 };
 
@@ -364,29 +364,29 @@ static const uint64_t *kLineMasks[NUM_BOARD_AND_PIECES_CHOICES] = {
     kLineMasks24, kLineMasks24Plus, kLineMasks24Plus, kLineMasks25,
 };
 
-static const int kNumParticipatingLines16[] = {
+static const int8_t kNumParticipatingLines16[] = {
     2, 0, 1, 0, 2, 0, 0, 0, 0, 2, 1, 2, 0, 0, 0, 0, 1, 1, 0,
     1, 1, 0, 0, 0, 0, 2, 1, 2, 0, 0, 0, 0, 2, 0, 1, 0, 2,
 };
 
-static const int kNumParticipatingLines17[] = {
+static const int8_t kNumParticipatingLines17[] = {
     2, 0, 2, 0, 2, 0, 0, 0, 0, 2, 3, 2, 0, 0, 0, 0, 2, 3, 6,
     3, 2, 0, 0, 0, 0, 2, 3, 2, 0, 0, 0, 0, 2, 0, 2, 0, 2,
 };
 
-static const int kNumParticipatingLines24[] = {
+static const int8_t kNumParticipatingLines24[] = {
     2, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 0, 0, 2,
     2, 2, 0, 0, 0, 2, 2, 2, 0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 0,
     0, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0, 2,
 };
 
-static const int kNumParticipatingLines24Plus[] = {
+static const int8_t kNumParticipatingLines24Plus[] = {
     3, 0, 0, 2, 0, 0, 3, 0, 0, 3, 0, 2, 0, 3, 0, 0, 0, 0, 3,
     2, 3, 0, 0, 0, 2, 2, 2, 0, 2, 2, 2, 0, 0, 0, 3, 2, 3, 0,
     0, 0, 0, 3, 0, 2, 0, 3, 0, 0, 3, 0, 0, 2, 0, 0, 3,
 };
 
-static const int kNumParticipatingLines25[] = {
+static const int8_t kNumParticipatingLines25[] = {
     2, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 3, 0, 2, 0, 0, 0, 0, 2,
     4, 2, 0, 0, 0, 2, 3, 4, 6, 4, 3, 2, 0, 0, 0, 2, 4, 2, 0,
     0, 0, 0, 2, 0, 3, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0, 2,
@@ -657,7 +657,7 @@ static const uint64_t (
     kParticipatingLines24Plus, kParticipatingLines25,
 };
 
-static const int *kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES] = {
+static const int8_t *kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES] = {
     kNumParticipatingLines16,     kNumParticipatingLines16,
     kNumParticipatingLines17,     kNumParticipatingLines24,
     kNumParticipatingLines24,     kNumParticipatingLines24Plus,
@@ -669,7 +669,7 @@ static const int *kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES] = {
  * kBoardIdxToGridIdx[board_id][i] gives the 8x8 bit board index corresponding
  * to the i-th row-major board slot on the board with index board_id.
  */
-static const int kBoardIdxToGridIdx[NUM_BOARD_AND_PIECES_CHOICES][25] = {
+static const int8_t kBoardIdxToGridIdx[NUM_BOARD_AND_PIECES_CHOICES][25] = {
     {0, 2, 4, 9, 10, 11, 16, 17, 19, 20, 25, 26, 27, 32, 34, 36},
     {0, 2, 4, 9, 10, 11, 16, 17, 19, 20, 25, 26, 27, 32, 34, 36},
     {0, 2, 4, 9, 10, 11, 16, 17, 18, 19, 20, 25, 26, 27, 32, 34, 36},
