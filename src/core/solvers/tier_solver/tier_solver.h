@@ -316,7 +316,7 @@ typedef struct TierSolverApi {
      * @details By convention, a canonical tier is one with the smallest tier
      * value in a set of symmetrical tiers. For each tier[i] within the set
      * including the canonical tier itself, calling
-     * \c TierSolverApi2::GetCanonicalTier(tier[i]) returns the canonical tier.
+     * \c TierSolverApi::GetCanonicalTier(tier[i]) returns the canonical tier.
      *
      * @note Assumes \p tier is valid. Results in undefined behavior otherwise.
      *
