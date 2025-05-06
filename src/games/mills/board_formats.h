@@ -5,7 +5,7 @@
 
 static const char *const kFormat16 =
     "\n"
-    "          0 ----- 1 ----- 2    %c ----- %c ----- %c     It is %c's turn.\n"
+    "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
     "          |       |       |    |       |       |\n"
     "          |   3 - 4 - 5   |    |   %c - %c - %c   |     X has %d pieces left to place.\n"
     "          |   |       |   |    |   |       |   |     X has %d pieces on the board.\n"
@@ -30,7 +30,7 @@ static const char *const kFormat16BoardOnly =
 
 static const char *const kFormat17 =
     "\n"
-    "          0 ----- 1 ----- 2    %c ----- %c ----- %c     It is %c's turn.\n"
+    "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
     "          |       |       |    |       |       |\n"
     "          |   3 - 4 - 5   |    |   %c - %c - %c   |     X has %d pieces left to place.\n"
     "          |   |   |   |   |    |   |   |   |   |     X has %d pieces on the board.\n"
@@ -54,7 +54,7 @@ static const char *const kFormat17BoardOnly =
 
 static const char *const kFormat24 =
     "\n"
-    "        0 --------- 1 --------- 2       %c --------- %c --------- %c     It is %c's turn.\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        |           |           |       |           |           |\n"
     "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
     "        |   |       |       |   |       |   |       |       |   |     X has %d pieces left to place.\n"
@@ -86,7 +86,7 @@ static const char *const kFormat24BoardOnly =
 
 static const char *const kFormat24Plus =
     "\n"
-    "        0 --------- 1 --------- 2       %c --------- %c --------- %c     It is %c's turn.\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        | \\         |         / |       | \\         |         / |\n"
     "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
     "        |   | \\     |     / |   |       |   | \\     |     / |   |     X has %d pieces left to place.\n"
@@ -118,7 +118,7 @@ static const char *const kFormat24PlusBoardOnly =
 
 static const char *const kFormat25 =
     "\n"
-    "        0 --------- 1 --------- 2       %c --------- %c --------- %c     It is %c's turn.\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        | \\         |         / |       | \\         |         / |\n"
     "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
     "        |   |       |       |   |       |   |       |       |   |     X has %d pieces left to place.\n"

@@ -101,7 +101,6 @@ enum {
 
 // ============================= Variant Settings =============================
 
-// Defaults to standard Nine Men's Morris rules.
 union {
     int array[6];
     struct {
@@ -116,7 +115,7 @@ union {
     .unpacked =
         {
             .board_and_pieces = 3,
-            .flying_rule = 1,
+            .flying_rule = 0,
             .lasker_rule = 0,
             .removal_rule = 0,
             .misere = 0,
@@ -133,7 +132,7 @@ static inline int Lasker(void) {
 }
 
 static inline int FlyThreshold(void) {
-    static const int ret[3] = {0, 3, 64};
+    static const int ret[3] = {3, 0, 64};
 
     return ret[variant_option_selections.unpacked.flying_rule];
 }
@@ -144,6 +143,16 @@ static GameVariant current_variant = {
 };
 
 // ================================= Constants =================================
+
+static int kGridIdxToBoardIdx[NUM_BOARD_AND_PIECES_CHOICES][64];
+
+static void BuildGridIdxToBoardIdx(void) {
+    for (size_t i = 0; i < NUM_BOARD_AND_PIECES_CHOICES; ++i) {
+        for (int j = 0; j < kNumSlots[i]; ++j) {
+            kGridIdxToBoardIdx[i][kBoardIdxToGridIdx[i][j]] = j;
+        }
+    }
+}
 
 static inline uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
     uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
@@ -182,7 +191,7 @@ static Tier MillsGetInitialTier(void) {
 static Position MillsGetInitialPosition(void) {
     // The initial board is always empty, which by definition is the bit board
     // filled with all zeros.
-    return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_ps());
+    return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_si128());
 }
 
 static inline bool IsTierFixedTurn(MillsTier t) {
@@ -296,10 +305,10 @@ static void GeneratePlacingMoves(uint64_t patterns[2], int turn,
 static inline uint64_t BuildDestMask(MillsTier t, int turn, int8_t src,
                                      uint64_t blanks) {
     if (t.unpacked.on_board[turn] <= FlyThreshold()) {
-        return kDestMasks[BoardId()][src] & blanks;
+        return blanks;
     }
 
-    return blanks;
+    return kDestMasks[BoardId()][src] & blanks;
 }
 
 static void GenerateSlidingMoves(MillsTier t, uint64_t patterns[2], int turn,
@@ -359,7 +368,7 @@ static uint64_t BuildLegalRemovesMask(uint64_t pattern) {
 }
 
 static inline uint64_t BuildBlanksMask(const uint64_t patterns[2]) {
-    return ~(patterns[0] & patterns[1]);
+    return (~(patterns[0] | patterns[1])) & kBoardMasks[BoardId()];
 }
 
 static int GenerateMovesInternal(MillsTier t, uint64_t patterns[2], int turn,
@@ -412,8 +421,12 @@ static Value MillsPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
-static TierPosition MillsDoMoveInternal(MillsTier t, uint64_t patterns[2],
+static TierPosition MillsDoMoveInternal(MillsTier t,
+                                        const uint64_t _patterns[2],
                                         MillsMove m, int turn) {
+    // Create a copy of the patterns
+    uint64_t patterns[2] = {_patterns[0], _patterns[1]};
+
     // Create and apply toggle masks for each player's bit board.
     // First handle the current player's bit board by applying the move.
     bool placing = (m.unpacked.src == kFromRemaining);
@@ -461,20 +474,67 @@ static Position MillsGetCanonicalPosition(TierPosition tier_position) {
 }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
-    // TODO
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+
+    // Generate moves
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GenerateMovesInternal(t, patterns, turn, moves);
+
+    // Collect children
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    TierPositionHashSetReserve(&dedup, num_moves);
+    for (int i = 0; i < num_moves; ++i) {
+        MillsMove m = {.hash = moves[i]};
+        TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        if (!TierPositionHashSetContains(&dedup, child)) {
+            TierPositionHashSetAdd(&dedup, child);
+        }
+    }
+    int ret = (int)dedup.size;
+    TierPositionHashSetDestroy(&dedup);
+
+    return ret;
 }
 
 static int MillsGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
-    // TODO
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+
+    // Generate moves
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = GenerateMovesInternal(t, patterns, turn, moves);
+
+    // Collect children
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    TierPositionHashSetReserve(&dedup, num_moves);
+    int ret = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        MillsMove m = {.hash = moves[i]};
+        TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        if (!TierPositionHashSetContains(&dedup, child)) {
+            TierPositionHashSetAdd(&dedup, child);
+            children[ret++] = child;
+        }
+    }
+    TierPositionHashSetDestroy(&dedup);
+
+    return ret;
 }
 
-static int MillsGetCanonicalParentPositions(
-    TierPosition tier_position, Tier parent_tier,
-    Position parents[static kTierSolverNumParentPositionsMax]) {
-    // TODO
-}
+// static int MillsGetCanonicalParentPositions(
+//     TierPosition tier_position, Tier parent_tier,
+//     Position parents[static kTierSolverNumParentPositionsMax]) {
+//     // TODO
+// }
 
 static int GetChildTiersInternal(
     MillsTier t, Tier children[static kTierSolverNumChildTiersMax]) {
@@ -608,11 +668,161 @@ static const TierSolverApi kMillsSolverApi = {
     .GetNumberOfCanonicalChildPositions =
         MillsGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
-    .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
+    // .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
+
+    .GetPositionInSymmetricTier = NULL,  // TODO
+    .GetCanonicalTier = NULL,            // TODO: color swap symmetry
 
     .GetChildTiers = MillsGetChildTiers,
     .GetTierType = MillsGetTierType,
     .GetTierName = MillsGetTierName,
+};
+
+// ============================= kMillsGameplayApi =============================
+
+MoveArray MillsGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = MillsGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
+}
+
+static void PatternsToStr(uint64_t patterns[2], char *buffer) {
+    int board_id = BoardId();
+    int num_slots = kNumSlots[board_id];
+    for (int i = 0; i < num_slots; ++i) {
+        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'X';
+        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'O';
+        } else {
+            buffer[i] = '-';
+        }
+    }
+}
+
+static void FillChars(const char *fmt, int count, const char *chars,
+                      char *out_buf) {
+    const char *p = fmt;
+    char *out = out_buf;
+    int chars_used = 0;
+
+    while (*p) {
+        if (*p == '%' && *(p + 1) == 'c' && chars_used < count) {
+            *out++ = chars[chars_used++];
+            p += 2;
+        } else {
+            *out++ = *p++;
+        }
+    }
+
+    *out = '\0';
+}
+
+static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+    char board[25];
+    PatternsToStr(patterns, board);
+
+    char tmp[2048];
+    FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
+    sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
+            t.unpacked.remaining[1], t.unpacked.on_board[1]);
+
+    return kNoError;
+}
+
+static int GetBoardIndex(int8_t grid_index) {
+    return kGridIdxToBoardIdx[BoardId()][grid_index];
+}
+
+static int MillsMoveToString(Move move, char *buffer) {
+    MillsMove m = {.hash = move};
+    if (m.unpacked.src == kFromRemaining) {  // placement
+        if (m.unpacked.remove == kNoRemoval) {
+            sprintf(buffer, "%d", GetBoardIndex(m.unpacked.dest));
+        } else {
+            sprintf(buffer, "%dr%d", GetBoardIndex(m.unpacked.dest),
+                    GetBoardIndex(m.unpacked.remove));
+        }
+    } else {  // sliding/flying
+        if (m.unpacked.remove == kNoRemoval) {
+            sprintf(buffer, "%d-%d", GetBoardIndex(m.unpacked.src),
+                    GetBoardIndex(m.unpacked.dest));
+        } else {
+            sprintf(buffer, "%d-%dr%d", GetBoardIndex(m.unpacked.src),
+                    GetBoardIndex(m.unpacked.dest),
+                    GetBoardIndex(m.unpacked.remove));
+        }
+    }
+
+    return kNoError;
+}
+
+static bool MillsIsValidMoveString(ReadOnlyString move_string) {
+    (void)move_string;
+    return true;
+}
+
+static int8_t GetGridIndex(int board_index) {
+    return kBoardIdxToGridIdx[BoardId()][board_index];
+}
+
+static Move MillsStringToMove(ReadOnlyString move_string) {
+    MillsMove m = kMillsMoveInit;
+    m.unpacked.src = kFromRemaining;
+    m.unpacked.remove = kNoRemoval;
+
+    int src, dest, remove;
+    if (sscanf(move_string, "%d-%dr%d", &src, &dest, &remove) == 3) {
+        m.unpacked.src = GetGridIndex(src);
+        m.unpacked.dest = GetGridIndex(dest);
+        m.unpacked.remove = GetGridIndex(remove);
+    } else if (sscanf(move_string, "%d-%d", &src, &dest) == 2) {
+        m.unpacked.src = GetGridIndex(src);
+        m.unpacked.dest = GetGridIndex(dest);
+    } else if (sscanf(move_string, "%dr%d", &dest, &remove) == 2) {
+        m.unpacked.dest = GetGridIndex(dest);
+        m.unpacked.remove = GetGridIndex(remove);
+    } else if (sscanf(move_string, "%d", &dest) == 1) {
+        m.unpacked.dest = GetGridIndex(dest);
+    }
+
+    return m.hash;
+}
+
+static const GameplayApiCommon MillsGameplayApiCommon = {
+    .GetInitialPosition = MillsGetInitialPosition,
+    .position_string_length_max = 2048,
+
+    .move_string_length_max = 8,
+    .MoveToString = MillsMoveToString,
+
+    .IsValidMoveString = MillsIsValidMoveString,
+    .StringToMove = MillsStringToMove,
+};
+
+static const GameplayApiTier MillsGameplayApiTier = {
+    .GetInitialTier = MillsGetInitialTier,
+
+    .TierPositionToString = MillsTierPositionToString,
+
+    .GenerateMoves = MillsGenerateMovesGameplay,
+    .DoMove = MillsDoMove,
+    .Primitive = MillsPrimitive,
+};
+
+static const GameplayApi kMillsGameplayApi = {
+    .common = &MillsGameplayApiCommon,
+    .tier = &MillsGameplayApiTier,
 };
 
 // ========================== MillsGetCurrentVariant ==========================
@@ -661,13 +871,14 @@ static int MillsInit(void *aux) {
     (void)aux;  // Unused.
 
     // Initialize the default variant.
-    for (int i = 1; i < 6; ++i) {
+    for (int i = 1; i < 5; ++i) {
         int ret = MillsSetVariantOption(i, 0);
         assert(ret == kNoError);
         (void)ret;
     }
+    BuildGridIdxToBoardIdx();
 
-    return MillsSetVariantOption(0, 0);
+    return MillsSetVariantOption(0, 3);
 }
 
 // =============================== MillsFinalize ===============================
@@ -685,8 +896,8 @@ const Game kMills = {
     .formal_name = "Mills",
     .solver = &kTierSolver,
     .solver_api = &kMillsSolverApi,
-    .gameplay_api = NULL,  // TODO
-    .uwapi = NULL,         // TODO
+    .gameplay_api = &kMillsGameplayApi,
+    .uwapi = NULL,  // TODO
 
     .Init = MillsInit,
     .Finalize = MillsFinalize,

@@ -17,8 +17,8 @@ Option 1: board and pieces
     h) 12 pieces each on a 25-slot Sesotho board (Sesotho Morabaraba)
 
 Option 2: flying rule
-    a) not allowed
-    b) allowed when left with <= 3 pieces
+    a) allowed when left with <= 3 pieces
+    b) not allowed
     c) allowed at all times
 
 Option 3: Lasker rule (merge placement and moving phases)
@@ -36,14 +36,14 @@ Option 5: Misère (flip winning and losing conditions)
     b) true
 
 Standard combinations of options:
-    (a) Five Men's Morris: [aaaaa]
-    (b) Six Men's Morris: [baaaa]
-    (c) Seven Men's Morris: [caaaa]
-    (d) Nine Men's Morris: [dbaaa], [dbaba]
-    (e) Lasker Morris: [ebbaa], [ebbba]
-    (f) Eleven Men's Morris: [fbaaa]
-    (g) Twelve Men's Morris/Morabaraba: [gbaaa]
-    (h) Sesotho Morabaraba: [hbaaa]
+    (a) Five Men's Morris: [abaaa]
+    (b) Six Men's Morris: [bbaaa]
+    (c) Seven Men's Morris: [cbaaa]
+    (d) Nine Men's Morris: [daaaa], [daaba]
+    (e) Lasker Morris: [eabaa], [eabba]
+    (f) Eleven Men's Morris: [faaaa]
+    (g) Twelve Men's Morris/Morabaraba: [gaaaa]
+    (h) Sesotho Morabaraba: [haaaa]
 */
 
 static const char *const kMillsBoardAndPiecesChoices[] = {
@@ -66,8 +66,8 @@ static const int8_t kPiecesPerPlayer[NUM_BOARD_AND_PIECES_CHOICES] = {
 };
 
 static const char *const kMillsFlyingRuleChoices[] = {
-    "Not allowed",
     "Allowed with fewer than 3 pieces on board",
+    "Not allowed",
     "Allowed always",
 };
 
