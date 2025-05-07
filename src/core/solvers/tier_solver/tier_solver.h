@@ -39,7 +39,7 @@
 extern const Solver kTierSolver;
 
 typedef enum {
-    kTierSolverNumMovesMax = 1024,
+    kTierSolverNumMovesMax = 32768,
     kTierSolverNumChildPositionsMax = kTierSolverNumMovesMax,
     kTierSolverNumParentPositionsMax = kTierSolverNumMovesMax,
     kTierSolverNumChildTiersMax = 128,
@@ -344,6 +344,10 @@ typedef struct TierSolverApi {
      * @return non-zero error code on failure.
      */
     int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax + 1]);
+
+    int position_string_length_max;
+
+    int (*TierPositionToString)(TierPosition tier_position, char *buffer);
 } TierSolverApi;
 
 /**

@@ -273,6 +273,19 @@ static int TestChildToParentMatching(Tier tier, Position position) {
     return error;
 }
 
+static void PrintTierPositionAsStringIfPossible(TierPosition tp) {
+    char *buf;
+    if (api_internal->TierPositionToString) {
+        buf = (char *)SafeCalloc(api_internal->position_string_length_max + 1,
+                                 sizeof(char));
+        api_internal->TierPositionToString(tp, buf);
+    } else {
+        buf = (char *)SafeCalloc(1, sizeof(char));
+    }
+    printf("%s\n", buf);
+    GamesmanFree(buf);
+}
+
 static int TestParentToChildMatching(Tier tier, Position position,
                                      const TierArray *parent_tiers) {
     TierPosition child = {.tier = tier, .position = position};
@@ -285,8 +298,7 @@ static int TestParentToChildMatching(Tier tier, Position position,
         Tier parent_tier = parent_tiers->array[i];
 
         // The GetCanonicalParentPositions function does not need to work on
-        // parent tiers that does not use the backward induction loopy
-        // algorithm.
+        // parent tiers that do not use the backward induction loopy algorithm.
         if (!UsesLoopyAlgorithm(parent_tier)) continue;
 
         Position parents[kTierSolverNumParentPositionsMax];
@@ -313,6 +325,8 @@ static int TestParentToChildMatching(Tier tier, Position position,
             }
             if (!found) {
                 error = kTierSolverTestParentChildMismatchError;
+                printf("Parnet position: %" PRIPos "\n", parent.position);
+                PrintTierPositionAsStringIfPossible(parent);
                 break;
             }
         }
@@ -329,9 +343,20 @@ static void TestPrintError(Tier tier, Position position) {
         sprintf(name, "GetTierName ERROR");
     }
 
+    char *buf;
+    if (api_internal->TierPositionToString) {
+        buf = (char *)SafeCalloc(api_internal->position_string_length_max + 1,
+                                 sizeof(char));
+        TierPosition tp = {.tier = tier, .position = position};
+        api_internal->TierPositionToString(tp, buf);
+    } else {
+        buf = (char *)SafeCalloc(1, sizeof(char));
+    }
+
     printf("\nTierWorkerTest: error detected at position %" PRIPos
-           " of tier [%s] (#%" PRITier ")\n",
-           position, name, tier);
+           " of tier [%s] (#%" PRITier ")\n%s\n",
+           position, name, tier, buf);
+    GamesmanFree(buf);
 }
 
 static TierHashSet GetCanonicalChildTiers(const TierSolverApi *api,

@@ -293,7 +293,7 @@ int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o);
  */
 Position X86SimdTwoPieceHashHash(__m128i board, int turn);
 
-Position X86SimdTwoPieceHashHashMem(uint64_t patterns[2], int turn);
+Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn);
 
 /**
  * @brief Returns the hash for the given position represented as 64-bit piece
@@ -306,7 +306,7 @@ Position X86SimdTwoPieceHashHashMem(uint64_t patterns[2], int turn);
  */
 Position X86SimdTwoPieceHashHashFixedTurn(__m128i board);
 
-Position X86SimdTwoPieceHashHashFixedTurnMem(uint64_t patterns[2]);
+Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t patterns[2]);
 
 /**
  * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose

@@ -123,18 +123,26 @@ union {
         },
 };
 
-static inline int BoardId(void) {
+static int BoardId(void) {
     return variant_option_selections.unpacked.board_and_pieces;
 }
 
-static inline int Lasker(void) {
+static int Lasker(void) {
     return variant_option_selections.unpacked.lasker_rule;
 }
 
-static inline int FlyThreshold(void) {
+static int FlyThreshold(void) {
     static const int ret[3] = {3, 0, 64};
 
     return ret[variant_option_selections.unpacked.flying_rule];
+}
+
+static bool StrictRemoval(void) {
+    return variant_option_selections.unpacked.removal_rule == 1;
+}
+
+static bool LenientRemoval(void) {
+    return variant_option_selections.unpacked.removal_rule == 2;
 }
 
 static GameVariant current_variant = {
@@ -154,13 +162,13 @@ static void BuildGridIdxToBoardIdx(void) {
     }
 }
 
-static inline uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
+static uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
     uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
 
     return x ^ _pdep_u64(toggles, mask1) ^ _pdep_u64(toggles, mask2);
 }
 
-static inline __m128i SwapInnerOuterRings(__m128i board) {
+static __m128i SwapInnerOuterRings(__m128i board) {
     __attribute__((aligned(16))) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
     int board_id = BoardId();
@@ -194,32 +202,6 @@ static Position MillsGetInitialPosition(void) {
     return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_si128());
 }
 
-static inline bool IsTierFixedTurn(MillsTier t) {
-    if (!Lasker()) {  // Not using Lasker rule
-        // The turn of all positions in all placement phase tiers can be deduced
-        // from the number of each player's remaining pieces.
-        return t.unpacked.remaining[0] + t.unpacked.remaining[1] > 0;
-    }
-
-    // Reach here if using Lasker rule.
-    // If only one of the players has no pieces on the board, then it must
-    // be that player's turn. As long as one of the players has pieces on
-    // the board, it is possible for either player to move a piece without
-    // capturing and pass the turn to the opponent.
-    return t.unpacked.on_board[0] == 0 || t.unpacked.on_board[1] == 0;
-}
-
-static int64_t MillsGetTierSize(Tier tier) {
-    MillsTier t = {.hash = tier};
-    int num_x = t.unpacked.on_board[0];
-    int num_o = t.unpacked.on_board[1];
-    if (IsTierFixedTurn(t)) {
-        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o);
-    }
-
-    return X86SimdTwoPieceHashGetNumPositions(num_x, num_o);
-}
-
 static bool IsPlacementTier(MillsTier t) { return t.unpacked.remaining[1]; }
 
 static int GetTurnFromPlacementTier(MillsTier t) {
@@ -227,27 +209,52 @@ static int GetTurnFromPlacementTier(MillsTier t) {
     return t.unpacked.remaining[0] != t.unpacked.remaining[1];
 }
 
-// Returns -1 if it can be either player's turn.
 static int GetTurnFromLaskerTier(MillsTier t) {
     if (t.unpacked.on_board[0] == 0) return 0;
     if (t.unpacked.on_board[1] == 0) return 1;
+    if (t.unpacked.remaining[0] + t.unpacked.on_board[0] == 2) return 0;
+    if (t.unpacked.remaining[1] + t.unpacked.on_board[1] == 2) return 1;
 
     return -1;
 }
 
-static int GetTurnFromGenericTier(MillsTier t) {
+static int GetTurnFromNonLaskerTier(MillsTier t) {
+    if (t.unpacked.remaining[0] + t.unpacked.remaining[1] > 0) {
+        // Assuming both players start with the same number of pieces.
+        return t.unpacked.remaining[0] != t.unpacked.remaining[1];
+    } else if (t.unpacked.on_board[0] == 2) {
+        return 0;
+    } else if (t.unpacked.on_board[1] == 2) {
+        return 1;
+    }
+
+    return -1;
+}
+
+// Returns -1 if it can be either player's turn.
+static int GetTurnFromTier(MillsTier t) {
     if (!Lasker()) {
-        return GetTurnFromPlacementTier(t);
+        return GetTurnFromNonLaskerTier(t);
     }
 
     return GetTurnFromLaskerTier(t);
 }
 
+static int64_t MillsGetTierSize(Tier tier) {
+    MillsTier t = {.hash = tier};
+    int num_x = t.unpacked.on_board[0];
+    int num_o = t.unpacked.on_board[1];
+    if (GetTurnFromTier(t) >= 0) {
+        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o);
+    }
+
+    return X86SimdTwoPieceHashGetNumPositions(num_x, num_o);
+}
+
 static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
     MillsTier t = {.hash = tp.tier};
     int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
-    if (IsTierFixedTurn(t)) {
-        *turn = GetTurnFromGenericTier(t);
+    if ((*turn = GetTurnFromTier(t)) >= 0) {
         X86SimdTwoPieceHashUnhashFixedTurnMem(tp.position, num_x, num_o,
                                               patterns);
     } else {
@@ -297,13 +304,12 @@ static void GeneratePlacingMoves(uint64_t patterns[2], int turn,
 }
 
 /**
- * @brief Returns a 64-bit mask with all bits corresponding to valid
- * destinations set to 1. A valid destination must be blank and adjacent to src,
- * unless the current player is allowed to fly, in which case any blank space is
- * valid.
+ * @brief Returns a 64-bit mask with all set bits corresponding to valid
+ * destinations. A valid destination must be blank and adjacent to src, unless
+ * the current player is allowed to fly, in which case any blank space is valid.
  */
-static inline uint64_t BuildDestMask(MillsTier t, int turn, int8_t src,
-                                     uint64_t blanks) {
+static uint64_t BuildDestMask(MillsTier t, int turn, int8_t src,
+                              uint64_t blanks) {
     if (t.unpacked.on_board[turn] <= FlyThreshold()) {
         return blanks;
     }
@@ -341,40 +347,58 @@ static void GenerateSlidingMoves(MillsTier t, uint64_t patterns[2], int turn,
  * @brief Returns 0 if \p b is true, or the value with all 64 bits set to 1 if
  * \p b is true.
  */
-static inline uint64_t BooleanMask(bool b) { return -(uint64_t)b; }
+static uint64_t BooleanMask(bool b) { return -(uint64_t)b; }
 
 /**
- * @brief Returns a mask with all set bits corresponding to valid removal
- * locations in \p pattern.
+ * @brief Returns a mask with all set bits corresponding to locations that are
+ * currently in mills in \p pattern.
  */
-static uint64_t BuildLegalRemovesMask(uint64_t pattern) {
-    if (variant_option_selections.unpacked.removal_rule == 2) {
-        return pattern;
-    }
-
+static uint64_t BuildInMillMask(uint64_t pattern) {
     uint64_t formed_mills = 0ULL;
     for (int8_t i = 0; i < kNumLines[BoardId()]; ++i) {
         uint64_t line = kLineMasks[BoardId()][i];
         bool formed = (line & pattern) == line;
         formed_mills |= BooleanMask(formed) & line;
     }
-    uint64_t ret = pattern ^ formed_mills;
 
-    if (variant_option_selections.unpacked.removal_rule == 1) {
+    return formed_mills;
+}
+
+/**
+ * @brief Returns a mask with all set bits corresponding to locations that are
+ * not in mills in \p pattern.
+ */
+static uint64_t BuildNotInMillMask(uint64_t pattern) {
+    uint64_t formed_mills = BuildInMillMask(pattern);
+
+    return pattern ^ formed_mills;
+}
+
+/**
+ * @brief Returns a mask with all set bits corresponding to valid removal
+ * locations in \p pattern.
+ */
+static uint64_t BuildLegalRemovalsMask(uint64_t pattern) {
+    if (LenientRemoval()) {
+        return pattern;
+    }
+
+    uint64_t ret = BuildNotInMillMask(pattern);
+    if (StrictRemoval()) {
         return ret;
     }
 
     return ret | (BooleanMask(ret == 0ULL) & pattern);
 }
 
-static inline uint64_t BuildBlanksMask(const uint64_t patterns[2]) {
+static uint64_t BuildBlanksMask(const uint64_t patterns[2]) {
     return (~(patterns[0] | patterns[1])) & kBoardMasks[BoardId()];
 }
 
 static int GenerateMovesInternal(MillsTier t, uint64_t patterns[2], int turn,
                                  Move moves[static kTierSolverNumMovesMax]) {
     // Legal removal indices of opponent pieces as set bits
-    uint64_t legal_removes = BuildLegalRemovesMask(patterns[!turn]);
+    uint64_t legal_removes = BuildLegalRemovalsMask(patterns[!turn]);
     uint64_t blanks = BuildBlanksMask(patterns);  // All blank slots as set bits
     int ret = 0;
 
@@ -443,7 +467,7 @@ static TierPosition MillsDoMoveInternal(MillsTier t,
     t.unpacked.on_board[!turn] -= removing;
 
     TierPosition ret = {.tier = t.hash};
-    if (IsTierFixedTurn(t)) {
+    if (GetTurnFromTier(t) >= 0) {
         ret.position = X86SimdTwoPieceHashHashFixedTurnMem(patterns);
     } else {
         ret.position = X86SimdTwoPieceHashHashMem(patterns, !turn);
@@ -520,6 +544,7 @@ static int MillsGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        child.position = MillsGetCanonicalPosition(child);
         if (!TierPositionHashSetContains(&dedup, child)) {
             TierPositionHashSetAdd(&dedup, child);
             children[ret++] = child;
@@ -530,11 +555,212 @@ static int MillsGetCanonicalChildPositions(
     return ret;
 }
 
-// static int MillsGetCanonicalParentPositions(
-//     TierPosition tier_position, Tier parent_tier,
-//     Position parents[static kTierSolverNumParentPositionsMax]) {
-//     // TODO
-// }
+static void AddCanonicalParent(
+    MillsTier pt, const uint64_t patterns[2], int opp_turn,
+    PositionHashSet *dedup,
+    Position parents[static kTierSolverNumParentPositionsMax], int *ret) {
+    //
+    TierPosition parent = {
+        .tier = pt.hash,
+        .position = X86SimdTwoPieceHashHashMem(patterns, opp_turn),
+    };
+    parent.position = MillsGetCanonicalPosition(parent);
+    if (!PositionHashSetContains(dedup, parent.position)) {
+        PositionHashSetAdd(dedup, parent.position);
+        parents[(*ret)++] = parent.position;
+    }
+}
+
+static uint64_t BuildOpponentNoCapturePossibleDestMask(
+    const uint64_t patterns[2], int turn) {
+    //
+    uint64_t mask;
+    int opp_turn = !turn;
+    if (BuildLegalRemovalsMask(patterns[turn])) {  // We have vulnerable pieces.
+        // The opponent could only have moved/placed those pieces that are
+        // currently not in a mill. Otherwise, they would have removed one of
+        // our pieces.
+        mask = BuildNotInMillMask(patterns[opp_turn]);
+    } else {
+        // The opponent had no legal removals to make in the previous turn.
+        // This means that the opponent could have moved/placed any piece on the
+        // board, even those that are currently in a mill.
+        mask = patterns[opp_turn];
+    }
+
+    return mask;
+}
+
+static int GetParentsSlidingNoCapture(
+    MillsTier t, uint64_t patterns[2], int turn,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
+    int opp_turn = !turn;
+    const uint64_t blanks = BuildBlanksMask(patterns);
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetReserve(&dedup, 256);
+    int ret = 0;
+    for (uint64_t opp_possible_dests =
+             BuildOpponentNoCapturePossibleDestMask(patterns, turn);
+         opp_possible_dests;
+         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
+        int8_t dest = (int8_t)_tzcnt_u64(opp_possible_dests);
+        uint64_t dest_mask = 1ULL << dest;
+        for (uint64_t sources = BuildDestMask(t, opp_turn, dest, blanks);
+             sources; sources = _blsr_u64(sources)) {
+            uint64_t move_mask = dest_mask | _blsi_u64(sources);
+            patterns[opp_turn] ^= move_mask;  // Undo opponent's move
+            AddCanonicalParent(t, patterns, opp_turn, &dedup, parents, &ret);
+            patterns[opp_turn] ^= move_mask;  // Redo opponent's move
+        }
+    }
+    PositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
+static int GetParentsPlacingNoCapture(
+    MillsTier pt, uint64_t patterns[2], int turn,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
+    int opp_turn = !turn;
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetReserve(&dedup, 256);
+    int ret = 0;
+    for (uint64_t opp_possible_dests =
+             BuildOpponentNoCapturePossibleDestMask(patterns, turn);
+         opp_possible_dests;
+         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
+        uint64_t move_mask = _blsi_u64(opp_possible_dests);
+        patterns[opp_turn] ^= move_mask;  // Undo opponent's placement
+        AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents, &ret);
+        patterns[opp_turn] ^= move_mask;  // Redo opponent's placement
+    }
+    PositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
+/**
+ * @brief Assuming that the opponent had just removed one of our pieces to
+ * reach the current board, returns a mask with all set bits corresponding to
+ * possible removal locations.
+ */
+static uint64_t BuildPriorLegalRemovalsMask(uint64_t patterns[2], int turn) {
+    uint64_t ret = 0ULL;
+    for (uint64_t blanks = BuildBlanksMask(patterns); blanks;
+         blanks = _blsr_u64(blanks)) {
+        uint64_t candidate = _blsi_u64(blanks);
+        patterns[turn] ^= candidate;  // Place a piece at the candidate location
+        uint64_t legal_removals = BuildLegalRemovalsMask(patterns[turn]);
+        patterns[turn] ^= candidate;  // Revert placement
+        if (legal_removals & candidate) {
+            ret |= candidate;
+        }
+    }
+
+    return ret;
+}
+
+static int GetParentsPlacingCapture(
+    MillsTier pt, uint64_t patterns[2], int turn,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
+    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(patterns, turn);
+    int opp_turn = !turn;
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetReserve(&dedup, 256);
+    int ret = 0;
+    for (uint64_t opp_possible_dests = BuildInMillMask(patterns[opp_turn]);
+         opp_possible_dests;
+         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
+        uint64_t dest_mask = _blsi_u64(opp_possible_dests);
+        patterns[opp_turn] ^= dest_mask;  // Undo opponent's placement
+
+        for (uint64_t plr = prior_legal_removals; plr; plr = _blsr_u64(plr)) {
+            uint64_t capture_mask = _blsi_u64(plr);
+            patterns[turn] ^= capture_mask;  // Undo opponent's capture
+            AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents, &ret);
+            patterns[turn] ^= capture_mask;  // Redo opponent's capture
+        }
+
+        patterns[opp_turn] ^= dest_mask;  // Redo opponent's placement
+    }
+    PositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
+static int GetParentsSlidingCapture(
+    MillsTier pt, uint64_t patterns[2], int turn,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
+    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(patterns, turn);
+    int opp_turn = !turn;
+    const uint64_t blanks = BuildBlanksMask(patterns);
+    PositionHashSet dedup;
+    PositionHashSetInit(&dedup, 0.5);
+    PositionHashSetReserve(&dedup, 256);
+    int ret = 0;
+    for (uint64_t opp_possible_dests = BuildInMillMask(patterns[opp_turn]);
+         opp_possible_dests;
+         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
+        int8_t dest = (int8_t)_tzcnt_u64(opp_possible_dests);
+        uint64_t dest_mask = 1ULL << dest;
+        for (uint64_t sources = BuildDestMask(pt, opp_turn, dest, blanks);
+             sources; sources = _blsr_u64(sources)) {
+            uint64_t src_mask = _blsi_u64(sources);
+            uint64_t move_mask = dest_mask | src_mask;
+            patterns[opp_turn] ^= move_mask;  // Undo opponent's move
+
+            for (uint64_t plr = prior_legal_removals & (~src_mask); plr;
+                 plr = _blsr_u64(plr)) {
+                uint64_t capture_mask = _blsi_u64(plr);
+                patterns[turn] ^= capture_mask;  // Undo opponent's capture
+                AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents,
+                                   &ret);
+                patterns[turn] ^= capture_mask;  // Redo opponent's capture
+            }
+
+            patterns[opp_turn] ^= move_mask;  // Redo opponent's move
+        }
+    }
+    PositionHashSetDestroy(&dedup);
+
+    return ret;
+}
+
+static int MillsGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier pt = {.hash = parent_tier};
+    int opp_turn = !turn;
+    if (pt.hash == t.hash) {  // No tier transition
+        return GetParentsSlidingNoCapture(t, patterns, turn, parents);
+    } else if (pt.unpacked.on_board[opp_turn] ==
+               t.unpacked.on_board[opp_turn] - 1) {  // Opponent placed
+        if (pt.unpacked.on_board[turn] == t.unpacked.on_board[turn]) {
+            return GetParentsPlacingNoCapture(pt, patterns, turn, parents);
+        } else {  // TODO: validate if this is okay
+            return GetParentsPlacingCapture(pt, patterns, turn, parents);
+        }
+    } else if (pt.unpacked.on_board[turn] - 1 == t.unpacked.on_board[turn]) {
+        // Opponent captured one of our pieces but didn't place a new piece
+        return GetParentsSlidingCapture(pt, patterns, turn, parents);
+    }
+
+    // It is also possible that the current turn does not match the tier
+    // transition that happened. In this case, no parents exist in the given
+    // parent_tier.
+    return 0;
+}
 
 static int GetChildTiersInternal(
     MillsTier t, Tier children[static kTierSolverNumChildTiersMax]) {
@@ -597,17 +823,17 @@ static int GetChildTiersLaskerInternal(
             ++t.unpacked.on_board[!turn];  // Revert capture
         }
 
-        // Placement is possible if the current player has at least 1 remaining
-        // piece
+        // Placement is possible if the current player has at least 1
+        // remaining piece
         if (t.unpacked.remaining[turn]) {
-            // Placement without capturing is always possible when placement is
-            // possible
+            // Placement without capturing is always possible when placement
+            // is possible
             --t.unpacked.remaining[turn];
             ++t.unpacked.on_board[turn];
             children[ret++] = t.hash;
 
-            // Place-and-capture is possible only if the current player has 3 or
-            // more pieces on the board after placing
+            // Place-and-capture is possible only if the current player has
+            // 3 or more pieces on the board after placing
             if (t.unpacked.on_board[turn] >= 3) {
                 --t.unpacked.on_board[!turn];
                 children[ret++] = t.hash;
@@ -640,7 +866,7 @@ static int MillsGetChildTiers(
 
 TierType MillsGetTierType(Tier tier) {
     MillsTier t = {.hash = tier};
-    if (IsTierFixedTurn(t)) return kTierTypeImmediateTransition;
+    if (GetTurnFromTier(t) >= 0) return kTierTypeImmediateTransition;
 
     return kTierTypeLoopy;
 }
@@ -653,43 +879,6 @@ static int MillsGetTierName(Tier tier,
             t.unpacked.on_board[1]);
 
     return kNoError;
-}
-
-static const TierSolverApi kMillsSolverApi = {
-    .GetInitialTier = MillsGetInitialTier,
-    .GetInitialPosition = MillsGetInitialPosition,
-    .GetTierSize = MillsGetTierSize,
-
-    .GenerateMoves = MillsGenerateMoves,
-    .Primitive = MillsPrimitive,
-    .DoMove = MillsDoMove,
-    .IsLegalPosition = MillsIsLegalPosition,
-    .GetCanonicalPosition = MillsGetCanonicalPosition,
-    .GetNumberOfCanonicalChildPositions =
-        MillsGetNumberOfCanonicalChildPositions,
-    .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
-    // .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
-
-    .GetPositionInSymmetricTier = NULL,  // TODO
-    .GetCanonicalTier = NULL,            // TODO: color swap symmetry
-
-    .GetChildTiers = MillsGetChildTiers,
-    .GetTierType = MillsGetTierType,
-    .GetTierName = MillsGetTierName,
-};
-
-// ============================= kMillsGameplayApi =============================
-
-MoveArray MillsGenerateMovesGameplay(TierPosition tier_position) {
-    Move moves[kTierSolverNumMovesMax];
-    int num_moves = MillsGenerateMoves(tier_position, moves);
-    MoveArray ret;
-    MoveArrayInit(&ret);
-    for (int i = 0; i < num_moves; ++i) {
-        MoveArrayAppend(&ret, moves[i]);
-    }
-
-    return ret;
 }
 
 static void PatternsToStr(uint64_t patterns[2], char *buffer) {
@@ -736,8 +925,49 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
     FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
     sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
             t.unpacked.remaining[1], t.unpacked.on_board[1]);
+    printf("it is %d's turn\n", turn);
 
     return kNoError;
+}
+
+static const TierSolverApi kMillsSolverApi = {
+    .GetInitialTier = MillsGetInitialTier,
+    .GetInitialPosition = MillsGetInitialPosition,
+    .GetTierSize = MillsGetTierSize,
+
+    .GenerateMoves = MillsGenerateMoves,
+    .Primitive = MillsPrimitive,
+    .DoMove = MillsDoMove,
+    .IsLegalPosition = MillsIsLegalPosition,
+    .GetCanonicalPosition = MillsGetCanonicalPosition,
+    .GetNumberOfCanonicalChildPositions =
+        MillsGetNumberOfCanonicalChildPositions,
+    .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
+    .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
+
+    .GetPositionInSymmetricTier = NULL,  // TODO
+    .GetCanonicalTier = NULL,            // TODO: color swap symmetry
+
+    .GetChildTiers = MillsGetChildTiers,
+    .GetTierType = MillsGetTierType,
+    .GetTierName = MillsGetTierName,
+
+    .position_string_length_max = 2047,
+    .TierPositionToString = MillsTierPositionToString,
+};
+
+// ============================= kMillsGameplayApi =============================
+
+MoveArray MillsGenerateMovesGameplay(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = MillsGenerateMoves(tier_position, moves);
+    MoveArray ret;
+    MoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MoveArrayAppend(&ret, moves[i]);
+    }
+
+    return ret;
 }
 
 static int GetBoardIndex(int8_t grid_index) {
@@ -801,7 +1031,7 @@ static Move MillsStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon MillsGameplayApiCommon = {
     .GetInitialPosition = MillsGetInitialPosition,
-    .position_string_length_max = 2048,
+    .position_string_length_max = 2047,
 
     .move_string_length_max = 8,
     .MoveToString = MillsMoveToString,

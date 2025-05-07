@@ -208,7 +208,7 @@ Position X86SimdTwoPieceHashHash(__m128i board, int turn) {
     return (X86SimdTwoPieceHashHashFixedTurn(board) << 1) | turn;
 }
 
-Position X86SimdTwoPieceHashHashMem(uint64_t patterns[2], int turn) {
+Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn) {
     return (X86SimdTwoPieceHashHashFixedTurnMem(patterns) << 1) | turn;
 }
 
@@ -220,10 +220,12 @@ Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
     return X86SimdTwoPieceHashHashFixedTurnMem(s);
 }
 
-Position X86SimdTwoPieceHashHashFixedTurnMem(uint64_t patterns[2]) {
+Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
     // Convert the 8x8 padded pattern to tightly packed pattern
-    patterns[0] = _pext_u64(patterns[0], hash_mask);
-    patterns[1] = _pext_u64(patterns[1], hash_mask);
+    uint64_t patterns[2] = {
+        _pext_u64(_patterns[0], hash_mask),
+        _pext_u64(_patterns[1], hash_mask),
+    };
 
     // Perform the normal hashing procedure.
     patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
