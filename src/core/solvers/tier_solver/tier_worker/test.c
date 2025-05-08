@@ -124,12 +124,8 @@ static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
 
     // Convert to the tier position inside the canonical tier.
     canonical.tier = api_internal->GetCanonicalTier(tier_position.tier);
-    if (canonical.tier == tier_position.tier) {  // Original tier is canonical.
-        canonical.position = tier_position.position;
-    } else {  // Original tier is not canonical.
-        canonical.position = api_internal->GetPositionInSymmetricTier(
-            tier_position, canonical.tier);
-    }
+    canonical.position =
+        api_internal->GetPositionInSymmetricTier(tier_position, canonical.tier);
 
     // Find the canonical position inside the canonical tier.
     canonical.position = api_internal->GetCanonicalPosition(canonical);
@@ -190,6 +186,8 @@ _bailout:
     return ret;
 }
 
+// This test must be performed after confirming that tier symmetry functions
+// work properly.
 static int TestChildPositions(Tier tier, Position position,
                               const TierHashSet *canonical_child_tiers) {
     // Skip this test if the position is primitive, in which case
@@ -240,13 +238,11 @@ static int TestChildToParentMatching(Tier tier, Position position) {
     if (IsPrimitive(tier, position)) return kTierSolverTestNoError;
 
     // The GetCanonicalParentPositions function does not need to work on parent
-    // tiers that does not use the backward induction loopy algorithm.
+    // tiers that do not use the backward induction loopy algorithm.
     if (!UsesLoopyAlgorithm(tier)) return kTierSolverTestNoError;
 
     TierPosition parent = {.tier = tier, .position = position};
-    TierPosition canonical_parent = parent;
-    canonical_parent.position =
-        api_internal->GetCanonicalPosition(canonical_parent);
+    TierPosition canonical_parent = GetCanonicalTierPosition(parent);
     TierPosition children[kTierSolverNumChildPositionsMax];
     int num_children =
         api_internal->GetCanonicalChildPositions(parent, children);
@@ -289,9 +285,7 @@ static void PrintTierPositionAsStringIfPossible(TierPosition tp) {
 static int TestParentToChildMatching(Tier tier, Position position,
                                      const TierArray *parent_tiers) {
     TierPosition child = {.tier = tier, .position = position};
-    TierPosition canonical_child = child;
-    canonical_child.position =
-        api_internal->GetCanonicalPosition(canonical_child);
+    TierPosition canonical_child = GetCanonicalTierPosition(child);
 
     int error = kTierSolverTestNoError;
     for (int64_t i = 0; i < parent_tiers->size; ++i) {
@@ -303,7 +297,7 @@ static int TestParentToChildMatching(Tier tier, Position position,
 
         Position parents[kTierSolverNumParentPositionsMax];
         int num_parents = api_internal->GetCanonicalParentPositions(
-            canonical_child, parent_tier, parents);
+            child, parent_tier, parents);
         for (int j = 0; j < num_parents; ++j) {
             // Skip illegal and primitive parent positions as they are also
             // skipped in solving.

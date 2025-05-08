@@ -145,12 +145,16 @@ static bool LenientRemoval(void) {
     return variant_option_selections.unpacked.removal_rule == 2;
 }
 
+static int8_t PaddedSideLength(void) { return kPaddedSideLengths[BoardId()]; }
+
 static GameVariant current_variant = {
     .options = mills_variant_options,
     .selections = variant_option_selections.array,
 };
 
-// ================================= Constants =================================
+// ============================= Variant Constants =============================
+
+static MillsTier second_lasker_tier;
 
 static int kGridIdxToBoardIdx[NUM_BOARD_AND_PIECES_CHOICES][64];
 
@@ -160,24 +164,6 @@ static void BuildGridIdxToBoardIdx(void) {
             kGridIdxToBoardIdx[i][kBoardIdxToGridIdx[i][j]] = j;
         }
     }
-}
-
-static uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
-    uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
-
-    return x ^ _pdep_u64(toggles, mask1) ^ _pdep_u64(toggles, mask2);
-}
-
-static __m128i SwapInnerOuterRings(__m128i board) {
-    __attribute__((aligned(16))) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
-    int board_id = BoardId();
-    patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_id],
-                           kOuterRingMasks[board_id]);
-    patterns[1] = SwapBits(patterns[1], kInnerRingMasks[board_id],
-                           kOuterRingMasks[board_id]);
-
-    return _mm_load_si128((const __m128i *)patterns);
 }
 
 // ============================== kMillsSolverApi ==============================
@@ -263,6 +249,20 @@ static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
     }
 
     return t;
+}
+
+static __m128i UnhashSimd(TierPosition tp, MillsTier *t, int *turn,
+                          bool *not_fixed_turn) {
+    t->hash = tp.tier;
+    int num_x = t->unpacked.on_board[0], num_o = t->unpacked.on_board[1];
+    if ((*turn = GetTurnFromTier(*t)) >= 0) {
+        *not_fixed_turn = false;
+        return X86SimdTwoPieceHashUnhashFixedTurn(tp.position, num_x, num_o);
+    }
+
+    *turn = X86SimdTwoPieceHashGetTurn(tp.position);
+    *not_fixed_turn = true;
+    return X86SimdTwoPieceHashUnhash(tp.position, num_x, num_o);
 }
 
 /**
@@ -492,10 +492,104 @@ static bool MillsIsLegalPosition(TierPosition tier_position) {
     return true;
 }
 
-static Position MillsGetCanonicalPosition(TierPosition tier_position) {
-    // TODO
-    return tier_position.position;
+static uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
+    uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
+
+    return x ^ _pdep_u64(toggles, mask1) ^ _pdep_u64(toggles, mask2);
 }
+
+static __m128i SwapInnerOuterRings(__m128i board) {
+    __attribute__((aligned(16))) uint64_t patterns[2];
+    _mm_store_si128((__m128i *)patterns, board);
+    int board_id = BoardId();
+    patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_id],
+                           kOuterRingMasks[board_id]);
+    patterns[1] = SwapBits(patterns[1], kInnerRingMasks[board_id],
+                           kOuterRingMasks[board_id]);
+
+    return _mm_load_si128((const __m128i *)patterns);
+}
+
+static __m128i GetCanonicalBoardRotation(__m128i board) {
+    __m128i canonical = board;
+    int8_t padded_side_length = PaddedSideLength();
+
+    // 8 symmetries
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+
+    return canonical;
+}
+
+static __m128i GetCanonicalBoardRotationRingSwap(__m128i board) {
+    // Rotational symmetries are always present
+    __m128i canonical = GetCanonicalBoardRotation(board);
+
+    // Ring swap symmetries are present in certain board variants
+    if (kInnerRingMasks[BoardId()]) {
+        __m128i swapped = SwapInnerOuterRings(board);
+        __m128i ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
+        if (X86SimdTwoPieceHashBoardLessThan(ring_swapped_canonical,
+                                             canonical)) {
+            canonical = ring_swapped_canonical;
+        }
+    }
+
+    return canonical;
+}
+
+static Position MillsGetCanonicalPosition(TierPosition tier_position) {
+    // Unhash
+    MillsTier t;
+    int turn;
+    bool not_fixed_turn;
+    __m128i board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
+    __m128i canonical = GetCanonicalBoardRotationRingSwap(board);
+
+    // If swapping colors results in a position within the same tier, apply that
+    // symmetry as well.
+    // if (t.unpacked.on_board[0] == t.unpacked.on_board[1] &&
+    //     t.unpacked.remaining[0] == t.unpacked.remaining[1] && not_fixed_turn)
+    //     {
+    //     __m128i swapped = X86SimdTwoPieceHashSwapPieces(board);
+    //     __m128i pieces_swapped_canonical =
+    //         GetCanonicalBoardRotationRingSwap(swapped);
+    //     if (X86SimdTwoPieceHashBoardLessThan(pieces_swapped_canonical,
+    //                                          canonical)) {
+    //         canonical = pieces_swapped_canonical;
+    //         turn = !turn;
+    //     }
+    // }
+
+    // Hash
+    if (not_fixed_turn) return X86SimdTwoPieceHashHash(canonical, turn);
+    return X86SimdTwoPieceHashHashFixedTurn(canonical);
+}
+
+// static TierPosition GetCanonicalTierPosition(TierPosition tp) {
+//     TierPosition canonical;
+
+//     // Convert to the tier position inside the canonical tier.
+//     canonical.tier = MillsGetCanonicalTier(tp.tier);
+//     canonical.position = MillsGetPositionInSymmetricTier(tp, canonical.tier);
+
+//     // Find the canonical position inside the canonical tier.
+//     canonical.position = MillsGetCanonicalPosition(canonical);
+
+//     return canonical;
+// }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
@@ -514,6 +608,8 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        child.position = MillsGetCanonicalPosition(child);
+        // child = GetCanonicalTierPosition(child);
         if (!TierPositionHashSetContains(&dedup, child)) {
             TierPositionHashSetAdd(&dedup, child);
         }
@@ -545,6 +641,7 @@ static int MillsGetCanonicalChildPositions(
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
         child.position = MillsGetCanonicalPosition(child);
+        // child = GetCanonicalTierPosition(child);
         if (!TierPositionHashSetContains(&dedup, child)) {
             TierPositionHashSetAdd(&dedup, child);
             children[ret++] = child;
@@ -748,7 +845,7 @@ static int MillsGetCanonicalParentPositions(
                t.unpacked.on_board[opp_turn] - 1) {  // Opponent placed
         if (pt.unpacked.on_board[turn] == t.unpacked.on_board[turn]) {
             return GetParentsPlacingNoCapture(pt, patterns, turn, parents);
-        } else {  // TODO: validate if this is okay
+        } else {
             return GetParentsPlacingCapture(pt, patterns, turn, parents);
         }
     } else if (pt.unpacked.on_board[turn] - 1 == t.unpacked.on_board[turn]) {
@@ -757,10 +854,50 @@ static int MillsGetCanonicalParentPositions(
     }
 
     // It is also possible that the current turn does not match the tier
-    // transition that happened. In this case, no parents exist in the given
+    // transition that happened. In this case, no parent exists in the given
     // parent_tier.
     return 0;
 }
+
+// static Position MillsGetPositionInSymmetricTier(TierPosition tier_position,
+//                                                 Tier symmetric) {
+//     if (tier_position.tier == symmetric) {
+//         return tier_position.position;
+//     }
+
+//     // Unhash
+//     MillsTier t;
+//     int turn;
+//     bool not_fixed_turn;
+//     __m128i board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
+
+//     // Swap colors
+//     board = X86SimdTwoPieceHashSwapPieces(board);
+
+//     // Hash
+//     if (not_fixed_turn) return X86SimdTwoPieceHashHash(board, !turn);
+//     return X86SimdTwoPieceHashHashFixedTurn(board);
+// }
+
+// static Tier MillsGetCanonicalTier(Tier tier) {
+//     MillsTier t = {.hash = tier};
+//     if (!Lasker()) {
+//         if (IsPlacementTier(t)) return tier;
+//     } else if (tier == second_lasker_tier.hash) {
+//         return tier;
+//     }
+
+//     // Swap colors
+//     MillsTier symmetric = t;
+//     int8_t tmp = symmetric.unpacked.remaining[0];
+//     symmetric.unpacked.remaining[0] = symmetric.unpacked.remaining[1];
+//     symmetric.unpacked.remaining[1] = tmp;
+//     tmp = symmetric.unpacked.on_board[0];
+//     symmetric.unpacked.on_board[0] = symmetric.unpacked.on_board[1];
+//     symmetric.unpacked.on_board[1] = tmp;
+
+//     return symmetric.hash < t.hash ? symmetric.hash : t.hash;
+// }
 
 static int GetChildTiersInternal(
     MillsTier t, Tier children[static kTierSolverNumChildTiersMax]) {
@@ -881,20 +1018,6 @@ static int MillsGetTierName(Tier tier,
     return kNoError;
 }
 
-static void PatternsToStr(uint64_t patterns[2], char *buffer) {
-    int board_id = BoardId();
-    int num_slots = kNumSlots[board_id];
-    for (int i = 0; i < num_slots; ++i) {
-        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'X';
-        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'O';
-        } else {
-            buffer[i] = '-';
-        }
-    }
-}
-
 static void FillChars(const char *fmt, int count, const char *chars,
                       char *out_buf) {
     const char *p = fmt;
@@ -911,6 +1034,20 @@ static void FillChars(const char *fmt, int count, const char *chars,
     }
 
     *out = '\0';
+}
+
+static void PatternsToStr(uint64_t patterns[2], char *buffer) {
+    int board_id = BoardId();
+    int num_slots = kNumSlots[board_id];
+    for (int i = 0; i < num_slots; ++i) {
+        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'X';
+        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'O';
+        } else {
+            buffer[i] = '-';
+        }
+    }
 }
 
 static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
@@ -945,8 +1082,8 @@ static const TierSolverApi kMillsSolverApi = {
     .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
     .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
 
-    .GetPositionInSymmetricTier = NULL,  // TODO
-    .GetCanonicalTier = NULL,            // TODO: color swap symmetry
+    // .GetPositionInSymmetricTier = MillsGetPositionInSymmetricTier,
+    // .GetCanonicalTier = MillsGetCanonicalTier,
 
     .GetChildTiers = MillsGetChildTiers,
     .GetTierType = MillsGetTierType,
@@ -1063,10 +1200,18 @@ static const GameVariant *MillsGetCurrentVariant(void) {
 
 // =========================== MillsSetVariantOption ===========================
 
+static void UpdateSecondLaskerTier(void) {
+    int8_t n = kPiecesPerPlayer[BoardId()];
+    second_lasker_tier.unpacked.on_board[0] = 1;
+    second_lasker_tier.unpacked.on_board[1] = 0;
+    second_lasker_tier.unpacked.remaining[0] = n - 1;
+    second_lasker_tier.unpacked.remaining[1] = n;
+}
+
 static int MillsSetVariantOption(int option, int selection) {
     if (selection < 0) return kIllegalArgumentError;
     switch (option) {
-        case 0: {
+        case 0: {  // Board and pieces
             if (selection >= (int)NUM_BOARD_AND_PIECES_CHOICES) {
                 return kIllegalArgumentError;
             }
@@ -1077,13 +1222,13 @@ static int MillsSetVariantOption(int option, int selection) {
             break;
         }
 
-        case 1:
-        case 3:
+        case 1:  // Flying rule
+        case 3:  // Lasker rule
             if (selection >= 3) return kIllegalArgumentError;
             break;
 
-        case 2:
-        case 4:
+        case 2:  // Removal rule
+        case 4:  // Misère
             if (selection >= 2) return kIllegalArgumentError;
             break;
 
@@ -1091,6 +1236,7 @@ static int MillsSetVariantOption(int option, int selection) {
             return kIllegalArgumentError;
     }
     variant_option_selections.array[option] = selection;
+    if (option == 0) UpdateSecondLaskerTier();
 
     return kNoError;
 }

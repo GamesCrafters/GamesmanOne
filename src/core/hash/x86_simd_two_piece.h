@@ -507,6 +507,16 @@ static inline __m128i X86SimdTwoPieceHashMirrorHorizontal(__m128i board,
 }
 
 /**
+ * @brief Swaps the X and O pieces on the given \p board .
+ *
+ * @param board Packed 64-bit patterns.
+ * @return Board after swapping X and O pieces.
+ */
+static inline __m128i X86SimdTwoPieceHashSwapPieces(__m128i board) {
+    return _mm_shuffle_epi32(board, _MM_SHUFFLE(1, 0, 3, 2));
+}
+
+/**
  * @brief For boards with <= 7 rows only, returns true iff the hash value for
  * board \p a is strictly less than the hash value for board \p b.
  * @note This function is more efficient than cmplt_u128 but only gives the

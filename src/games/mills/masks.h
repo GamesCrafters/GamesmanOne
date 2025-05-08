@@ -22,6 +22,10 @@ static const uint64_t kBoardMasks[NUM_BOARD_AND_PIECES_CHOICES] = {
     0x492a1c771c2a49, 0x492a1c771c2a49, 0x492a1c771c2a49, 0x492a1c7f1c2a49,
 };
 
+static const int8_t kPaddedSideLengths[NUM_BOARD_AND_PIECES_CHOICES] = {
+    5, 5, 5, 7, 7, 7, 7, 7,
+};
+
 /**
  * @brief Masks with set bits corresponding to slots on the inner ring of each
  * board variant if it has a ring symmetry; otherwise the mask contains all
