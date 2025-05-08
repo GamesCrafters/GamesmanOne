@@ -67,6 +67,9 @@ void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
  * \c true is returned, the target hash set \p set is guaranteed to have space
  * for at least \p size Tier Positions before it expands internally. If \c false
  * is returned, the hash set remains unchanged.
+ * @note This function takes O( \p size ) time due to the initialization of the
+ * internal array. This may become a bottleneck in a hot loop if the size of the
+ * set exceeds L1 cache size.
  *
  * @param set Target hash set.
  * @param size Number of Tier Positions to reserve space for.

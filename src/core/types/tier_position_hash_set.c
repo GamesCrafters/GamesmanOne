@@ -30,8 +30,8 @@
 #include <stdbool.h>  // bool
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, calloc
 
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/base.h"
 
@@ -53,8 +53,9 @@ static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
 
 static bool TierPositionHashSetExpand(TierPositionHashSet *set,
                                       int64_t new_capacity) {
-    TierPositionHashSetEntry *new_entries = (TierPositionHashSetEntry *)calloc(
-        new_capacity, sizeof(TierPositionHashSetEntry));
+    TierPositionHashSetEntry *new_entries =
+        (TierPositionHashSetEntry *)GamesmanCallocWhole(
+            new_capacity, sizeof(TierPositionHashSetEntry));
     if (new_entries == NULL) return false;
     for (int64_t i = 0; i < set->capacity; ++i) {
         if (set->entries[i].used) {
@@ -66,7 +67,7 @@ static bool TierPositionHashSetExpand(TierPositionHashSet *set,
             new_entries[new_index] = set->entries[i];
         }
     }
-    free(set->entries);
+    GamesmanFree(set->entries);
     set->entries = new_entries;
     set->capacity = new_capacity;
     return true;
@@ -81,7 +82,7 @@ bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size) {
 }
 
 void TierPositionHashSetDestroy(TierPositionHashSet *set) {
-    free(set->entries);
+    GamesmanFree(set->entries);
     set->entries = NULL;
     set->capacity = 0;
     set->size = 0;

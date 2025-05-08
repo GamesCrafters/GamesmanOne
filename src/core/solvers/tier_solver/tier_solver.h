@@ -39,7 +39,7 @@
 extern const Solver kTierSolver;
 
 typedef enum {
-    kTierSolverNumMovesMax = 32768,
+    kTierSolverNumMovesMax = 4096,
     kTierSolverNumChildPositionsMax = kTierSolverNumMovesMax,
     kTierSolverNumParentPositionsMax = kTierSolverNumMovesMax,
     kTierSolverNumChildTiersMax = 128,

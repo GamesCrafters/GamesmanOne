@@ -322,7 +322,7 @@ static int GetChildPositions(
 
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, kTierSolverNumChildPositionsMax);
+    TierPositionHashSetReserve(&dedup, num_moves / 2);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(parent, moves[i]);
         children[ret++] = child;

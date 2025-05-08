@@ -612,7 +612,7 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Collect children
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, num_moves);
+    TierPositionHashSetReserve(&dedup, num_moves / 4);
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
@@ -643,7 +643,7 @@ static int MillsGetCanonicalChildPositions(
     // Collect children
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, num_moves);
+    TierPositionHashSetReserve(&dedup, num_moves / 4);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
