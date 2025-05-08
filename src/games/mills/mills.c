@@ -147,6 +147,8 @@ static bool LenientRemoval(void) {
 
 static int8_t PaddedSideLength(void) { return kPaddedSideLengths[BoardId()]; }
 
+static bool Misere(void) { return variant_option_selections.unpacked.misere; }
+
 static GameVariant current_variant = {
     .options = mills_variant_options,
     .selections = variant_option_selections.array,
@@ -430,17 +432,23 @@ static int MillsGenerateMoves(TierPosition tier_position,
 
 static Value MillsPrimitive(TierPosition tier_position) {
     MillsTier t = {.hash = tier_position.tier};
+    bool misere = Misere();
 
     // The current player loses if their remaining pieces has been reduced to 2.
     // It doesn't matter whose turn it is since it's not possible for players
     // to capture their own pieces.
-    if (t.unpacked.remaining[0] + t.unpacked.on_board[0] == 2) return kLose;
-    if (t.unpacked.remaining[1] + t.unpacked.on_board[1] == 2) return kLose;
+    if (t.unpacked.remaining[0] + t.unpacked.on_board[0] == 2) {
+        return misere ? kWin : kLose;
+    } else if (t.unpacked.remaining[1] + t.unpacked.on_board[1] == 2) {
+        return misere ? kWin : kLose;
+    }
 
     // The current player also loses if they have no moves to make.
     Move moves[kTierSolverNumMovesMax];
     int num_moves = MillsGenerateMoves(tier_position, moves);
-    if (num_moves == 0) return kLose;
+    if (num_moves == 0) {
+        return misere ? kWin : kLose;
+    }
 
     return kUndecided;
 }
