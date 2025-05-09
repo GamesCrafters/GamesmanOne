@@ -54,8 +54,8 @@ static bool IsPrimitive(Tier tier, Position pos) {
     return api_internal->Primitive(tier_position) != kUndecided;
 }
 
-static int TestTierSymmetryRemoval(Tier tier, Position position,
-                                   Tier canonical_tier) {
+static int TestTierSymmetryRemoval(Tier tier, Position position) {
+    Tier canonical_tier = api_internal->GetCanonicalTier(tier);
     Position (*ApplySymm)(TierPosition, Tier) =
         api_internal->GetPositionInSymmetricTier;
 
@@ -73,7 +73,7 @@ static int TestTierSymmetryRemoval(Tier tier, Position position,
         return kTierSolverTestTierSymmetrySelfMappingError;
     }
 
-    // Skip the next test if both tiers are the same.
+    // Skip the next test if the input tier is canonical.
     if (tier == canonical_tier) return kTierSolverTestNoError;
 
     // Test if applying the symmetry twice returns the same position.
@@ -287,7 +287,6 @@ static int TestParentToChildMatching(Tier tier, Position position,
     TierPosition child = {.tier = tier, .position = position};
     TierPosition canonical_child = GetCanonicalTierPosition(child);
 
-    int error = kTierSolverTestNoError;
     for (int64_t i = 0; i < parent_tiers->size; ++i) {
         Tier parent_tier = parent_tiers->array[i];
 
@@ -318,16 +317,14 @@ static int TestParentToChildMatching(Tier tier, Position position,
                 }
             }
             if (!found) {
-                error = kTierSolverTestParentChildMismatchError;
-                printf("Parnet position: %" PRIPos "\n", parent.position);
+                printf("\nParnet position: %" PRIPos "\n", parent.position);
                 PrintTierPositionAsStringIfPossible(parent);
-                break;
+                return kTierSolverTestParentChildMismatchError;
             }
         }
-        if (error != kTierSolverTestNoError) break;
     }
 
-    return error;
+    return kNoError;
 }
 
 static void TestPrintError(Tier tier, Position position) {
@@ -382,7 +379,6 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
     int64_t tier_size = api_internal->GetTierSize(tier);
     bool random_test = tier_size > test_size;  // Cap test size at tier size.
     if (!random_test) test_size = tier_size;
-    Tier canonical_tier = api_internal->GetCanonicalTier(tier);
     TierHashSet canonical_child_tiers = GetCanonicalChildTiers(api, tier);
     ConcurrentInt error;
     ConcurrentIntInit(&error, kTierSolverTestNoError);
@@ -393,16 +389,18 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
             continue;  // Fail fast.
         }
 
-        long long next_rand64;
-        PRAGMA_OMP_CRITICAL(mt19937) { next_rand64 = genrand64_int63(); }
-        Position position = random_test ? next_rand64 % tier_size : i;
+        Position position = i;
+        if (!random_test) {
+            long long next_rand64;
+            PRAGMA_OMP_CRITICAL(mt19937) { next_rand64 = genrand64_int63(); }
+            position = next_rand64 % tier_size;
+        }
 
         // Skip if the current position is not legal.
         if (!IsLegalPosition(tier, position)) continue;
 
         // Check tier symmetry removal implementation.
-        int local_error =
-            TestTierSymmetryRemoval(tier, position, canonical_tier);
+        int local_error = TestTierSymmetryRemoval(tier, position);
         if (local_error != kTierSolverTestNoError) {
             TestPrintError(tier, position);
             ConcurrentIntStore(&error, local_error);

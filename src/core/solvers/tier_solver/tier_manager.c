@@ -274,13 +274,14 @@ static void DestroyGlobalVariables(void) {
  *
  * @details Iterative topological sort using DFS and node coloring (status
  * marking). Algorithm by Ctrl, stackoverflow.com.
- * @link https://stackoverflow.com/a/73210346
+ * https://stackoverflow.com/a/73210346
  */
 static int BuildTierGraph(int type) {
     int ret = 1;
     TierStack fringe;
     TierStackInit(&fringe);
     Tier initial_tier = api_internal->GetInitialTier();
+    initial_tier = api_internal->GetCanonicalTier(initial_tier);
     if (!TierStackPush(&fringe, initial_tier)) goto _bailout;
     if (!TierGraphSetInitial(initial_tier)) goto _bailout;
 
@@ -321,8 +322,8 @@ _bailout:
 
 /**
  * @brief Returns an array of unique canonical child tiers of tier \p parent.
- * Uniqueness enforced through deduplication of child tiers that are symmetric
- * to each other.
+ * Uniqueness is enforced through deduplication of child tiers that are
+ * symmetric to each other.
  */
 static int GetCanonicalChildTiers(
     Tier parent, Tier child_tiers[static kTierSolverNumChildTiersMax]) {
@@ -342,6 +343,26 @@ static int GetCanonicalChildTiers(
     TierHashSetDestroy(&dedup);
 
     return ret;
+}
+
+static void PrintDuplicateError(
+    Tier parent, const Tier children[static kTierSolverNumChildTiersMax],
+    int num_children, int i) {
+    //
+    char name[kDbFileNameLengthMax + 1];
+    api_internal->GetTierName(parent, name);
+    printf("ERROR: tier [%s] (#%" PRITier
+           ") contains duplicate tier children\n",
+           name, parent);
+    api_internal->GetTierName(children[i], name);
+    printf("The duplicated child tier is [%s] (#%" PRITier ")\n", name,
+           children[i]);
+    printf("List of all child tiers:\n");
+    for (int j = 0; j < num_children; ++j) {
+        api_internal->GetTierName(children[j], name);
+        printf("[%s] (#%" PRITier ")\n", name, children[j]);
+    }
+    printf("\n");
 }
 
 /**
@@ -373,23 +394,7 @@ static int GetNumCanonicalChildTiers(
     }
     TierHashSetDestroy(&dedup);
     TierHashSetDestroy(&canonical_dedup);
-
-    if (ret < 0) {
-        char name[kDbFileNameLengthMax + 1];
-        api_internal->GetTierName(parent, name);
-        printf("ERROR: tier [%s] (#%" PRITier
-               ") contains duplicate tier children\n",
-               name, parent);
-        api_internal->GetTierName(children[i], name);
-        printf("The duplicated child tier is [%s] (#%" PRITier ")\n", name,
-               children[i]);
-        printf("List of all child tiers:\n");
-        for (int j = 0; j < num_children; ++j) {
-            api_internal->GetTierName(children[j], name);
-            printf("[%s] (#%" PRITier ")\n", name, children[j]);
-        }
-        printf("\n");
-    }
+    if (ret < 0) PrintDuplicateError(parent, children, num_children, i);
 
     return ret;
 }

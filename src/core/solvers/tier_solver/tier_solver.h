@@ -49,8 +49,14 @@ typedef enum {
  * @brief API for Tier Solver.
  */
 typedef struct TierSolverApi {
+    /////////////////////////////////////////////////////////
+    /// Tier Graph Construction Base Functions (Required) ///
+    /////////////////////////////////////////////////////////
+
     /**
-     * @brief Returns the initial tier of the current game variant.
+     * @brief Returns the initial tier of the current game variant. The actual
+     * initial tier is always be returned even if tier symmetry removal is
+     * implemented and the actual initial tier is not canonical.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -58,19 +64,37 @@ typedef struct TierSolverApi {
     Tier (*GetInitialTier)(void);
 
     /**
-     * @brief Returns the initial position (within the initial tier) of the
-     * current game variant.
+     * @brief Stores all distinct child tiers of the given \p tier in as an
+     * array in \p child_tiers and returns the size of the array. All child
+     * tiers, including ones that are not canonical if tier symmetry removal is
+     * implemented, will be returned.
+     *
+     * @details A child tier is a tier that has at least one position that can
+     * be reached by performing a single move from a position within its parent
+     * tier.
+     *
+     * @note The current version of the Tier Solver does not support generating
+     * more than \c kTierSolverNumChildTiersMax child tiers.
+     *
+     * @note The behavior of this function is undefined if \p tier is not valid.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
      */
-    Position (*GetInitialPosition)(void);
+    int (*GetChildTiers)(Tier tier,
+                         Tier child_tiers[static kTierSolverNumChildTiersMax]);
+
+    /////////////////////////////////////////////////////////////
+    /// Position Graph Construction Base Functions (Required) ///
+    /////////////////////////////////////////////////////////////
 
     /**
-     * @brief Returns the number of positions in \p tier.
+     * @brief Returns the number of positions in the given \p tier . If tier
+     * symmetry removal is implemented, calling this function on two different
+     * tiers that are symmetric to each other returns the same size.
      *
-     * @details The size of a tier is defined as (the maximum hash value within
-     * the tier + 1). The database will allocate an array of records for each
+     * @details The size of a tier is defined as the maximum hash value within
+     * the tier + 1. The database will allocate an array of records for each
      * position within the given tier of this size. If this function returns a
      * value smaller than the actual size, the database system will, at some
      * point, complain about an out-of-bounds array access and the solver will
@@ -87,13 +111,40 @@ typedef struct TierSolverApi {
     int64_t (*GetTierSize)(Tier tier);
 
     /**
-     * @brief Stores the array of moves available at \p tier_position to
-     * \p moves and returns the size of the array.
+     * @brief Returns the initial position within the initial tier of the
+     * current game variant. The actual initial position is always returned even
+     * if position symmetry removal is implemented and the actual initial
+     * position is not canonical.
      *
-     * @note To game developers: the current version of Tier Solver does not
-     * support more than \c kTierSolverNumMovesMax moves to be generated. If
-     * you think your game may exceed this limit, please contact the author of
-     * this API.
+     * @note This function is REQUIRED. The solver system will panic if this
+     * function is not implemented.
+     */
+    Position (*GetInitialPosition)(void);
+
+    /**
+     * @brief Returns the value of \p tier_position if \p tier_position is
+     * primitive. Returns \c kUndecided otherwise. If position symmetry removal
+     * is implemented, calling this function on two different positions that are
+     * symmetric to each other within the same tier returns the same value.
+     *
+     * @note Assumes \p tier_position is valid. Passing an invalid tier or an
+     * illegal position within the tier results in undefined behavior.
+     *
+     * @note This function is REQUIRED. The solver system will panic if this
+     * function is not implemented.
+     */
+    Value (*Primitive)(TierPosition tier_position);
+
+    /**
+     * @brief Stores the array of available moves at \p tier_position in
+     * \p moves and returns the size of the array. If position symmetry removal
+     * is implemented, calling this function on two different positions that are
+     * symmetric to each other within the same tier returns the same number of
+     * moves and the moves should also be symmetrical but no necessarily in the
+     * same order.
+     *
+     * @note The current version of Tier Solver does not support generating more
+     * than \c kTierSolverNumMovesMax moves.
      *
      * @note Assumes \p tier_position is valid and non-primitive. Passing an
      * invalid tier, or an illegal/primitive position within the tier results in
@@ -106,24 +157,14 @@ typedef struct TierSolverApi {
                          Move moves[static kTierSolverNumMovesMax]);
 
     /**
-     * @brief Returns the value of \p tier_position if \p tier_position is
-     * primitive. Returns kUndecided otherwise.
-     *
-     * @note Assumes \p tier_position is valid. Passing an invalid tier or an
-     * illegal position within the tier results in undefined behavior.
-     *
-     * @note This function is REQUIRED. The solver system will panic if this
-     * function is not implemented.
-     */
-    Value (*Primitive)(TierPosition tier_position);
-
-    /**
-     * @brief Returns the resulting tier position after performing \p move at
-     * \p tier_position.
+     * @brief Returns the resulting tier position after performing the given
+     * \p move at \p tier_position . This function accepts non-canonical
+     * \p tier_position inputs and always returns the actual resulting tier
+     * position without applying tier/position symmetries.
      *
      * @note Assumes \p tier_position is valid and \p move is a valid move at
-     * \p tier_position. Passing an invalid tier, an illegal position within the
-     * tier, or an illegal move results in undefined behavior.
+     * \p tier_position . Passing an invalid tier, an illegal position within
+     * the tier, or an illegal move results in undefined behavior.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -131,21 +172,25 @@ typedef struct TierSolverApi {
     TierPosition (*DoMove)(TierPosition tier_position, Move move);
 
     /**
-     * @brief Performs a weak test on the legality of \p tier_position. The
+     * @brief Performs a weak test on the legality of \p tier_position . The
      * function returns false if \p tier_position is definitely illegal, or
      * true if \p tier_position is considered legal and safe to be passed to all
-     * other Tier Solver API functions.
+     * other Tier Solver API functions. If tier/position symmetry is
+     * implemented, passing two tier positions that are symmetric to each other
+     * returns the same result.
      *
-     * @details This function is for speed optimization only. It is not intended
-     * for statistical purposes. Even if this function reports that
-     * \p tier_position is legal, that position might in fact be unreachable
-     * from the initial tier position. However, if this function reports that
-     * \p tier_position is illegal, then \p tier_position is definitely not
-     * reachable from the inital tier position. Furthermore, it must be
-     * guaranteed by the game developer that calling all other API functions
-     * such as \c TierSolverApi::GenerateMoves and \c TierSolverApi::DoMove on
-     * tier positions that are deemed legal by this function results in
-     * well-defined behavior.
+     * @details This function serves two purposes: eliminating inputs that may
+     * cause errors when passed to other API functions, and for speed
+     * optimizations. It is NOT intended for statistical purposes. Even if this
+     * function reports that \p tier_position is legal, that position might in
+     * fact be unreachable from the initial tier position. However, if this
+     * function reports that \p tier_position is illegal, then \p tier_position
+     * is definitely not reachable from the inital tier position and the solver
+     * will not use them to, for example, generate moves or parent positions
+     * while solving the game. Therefore, the game developer is responsible for
+     * making sure that all tier positions deemed legal by this function are
+     * actually safe to be passed to other API functions such as
+     * \c TierSolverApi::GenerateMoves and \c TierSolverApi::DoMove .
      *
      * @note Assumes \p tier_position.position is between 0 and
      * GetTierSize(tier_position.tier) - 1. Passing an out-of-bounds position
@@ -156,112 +201,34 @@ typedef struct TierSolverApi {
      */
     bool (*IsLegalPosition)(TierPosition tier_position);
 
-    /**
-     * @brief Returns the canonical position that is symmetric to
-     * \p tier_position within the same tier.
-     *
-     * @details GAMESMAN currently does not support position symmetry removal
-     * across tiers. By convention, a canonical position is one with the
-     * smallest hash value in a set of symmetrical positions that all belong to
-     * the same tier. For each position[i] within the set (including the
-     * canonical position itself), calling
-     * \c TierSolverApi::GetCanonicalPosition on position[i] returns the
-     * canonical position.
-     *
-     * @note Assumes \p tier_position is legal. Passing an invalid tier, or an
-     * illegal position within the tier results in undefined behavior.
-     *
-     * @note This function is OPTIONAL, but is required for the Position
-     * Symmetry Removal Optimization. If not implemented, the Optimization will
-     * be disabled.
-     */
-    Position (*GetCanonicalPosition)(TierPosition tier_position);
+    ////////////////////////////////////////////
+    /// Tier Symmetry Removal API (Optional) ///
+    ////////////////////////////////////////////
 
     /**
-     * @brief Returns the number of unique canonical child positions of
-     * \p tier_position. For games that do not support the Position Symmetry
-     * Removal Optimization, all unique child positions are included.
+     * @brief Returns the canonical tier symmetric to the given \p tier. Returns
+     * \p tier if itself is canonical.
      *
-     * @details The word unique is emphasized here because it is possible, in
-     * some games, that making different moves at the same position results in
-     * the same canonical child position.
+     * @details By convention, a canonical tier is one with the smallest hash
+     * value in a group of symmetrical tiers. For each tier T within the group
+     * including the canonical tier itself, calling
+     * \c TierSolverApi::GetCanonicalTier(T) returns the same canonical tier of
+     * the group.
      *
-     * @note Assumes \p tier_position is legal. Passing an invalid tier or an
-     * illegal position within the tier results in undefined behavior.
+     * @note Assumes \p tier is valid. Results in undefined behavior otherwise.
      *
-     * @note This function is OPTIONAL, but can be implemented as an
-     * optimization to first generating moves and then doing moves. If not
-     * implemented, the system will replace calls to this function with calls to
-     * \c TierSolverApi::GenerateMoves, \c TierSolverApi::DoMove, and
-     * \c TierSolverApi::GetCanonicalPosition.
+     * @note This function is OPTIONAL, but is required for the Tier Symmetry
+     * Removal Optimization. If not implemented, the Optimization will be
+     * disabled and all tiers will be treated as canonical.
      */
-    int (*GetNumberOfCanonicalChildPositions)(TierPosition tier_position);
-
-    /**
-     * @brief Stores an array of unique canonical child positions of
-     * \p tier_position into \p children and returns the size of the array. For
-     * games that do not support the Position Symmetry Removal Optimization, all
-     * unique child positions are included.
-     *
-     * @details The word unique is emphasized here because it is possible, in
-     * some games, that making different moves results in the same canonical
-     * child position.
-     *
-     * @note To game developers: the current version of Tier Solver does not
-     * support more than \c kTierSolverNumChildPositionsMax child positions to
-     * be generated. If you think your game may exceed this limit, please
-     * contact the author of this API.
-     *
-     * @note Assumes \p tier_position is legal and non-primitive. Passing an
-     * invalid tier or an illegal/primitive position within the tier results in
-     * undefined behavior.
-     *
-     * @note This function is OPTIONAL, but can be implemented as an
-     * optimization to first generating moves and then doing moves. If not
-     * implemented, the system will replace calls to this function with calls to
-     * \c TierSolverApi::GenerateMoves, \c TierSolverApi::DoMove, and
-     * \c TierSolverApi::GetCanonicalPosition.
-     */
-    int (*GetCanonicalChildPositions)(
-        TierPosition tier_position,
-        TierPosition children[static kTierSolverNumChildPositionsMax]);
-
-    /**
-     * @brief Stores an array of unique canonical parent positions of \p child
-     * that belong to tier \p parent_tier in \p parents. For games that do not
-     * support the Position Symmetry Removal Optimization, all unique parent
-     * positions within \p parent_tier are included.
-     *
-     * @details The word unique is emphasized here because it is possible in
-     * some games that a child position has two parent positions that are
-     * symmetric to each other.
-     *
-     * @note To game developers: the current version of Tier Solver does not
-     * support more than \c kTierSolverNumParentPositionsMax parent positions
-     * to be generated. If you think your game may exceed this limit, please
-     * contact the author of this API.
-     *
-     * @note Assumes \p parent_tier is a valid tier and \p child is a valid tier
-     * position. Passing an invalid \p child, an invalid \p parent_tier, or a
-     * \p parent_tier that is not actually a parent of the given \p child
-     * results in undefined behavior.
-     *
-     * @note This function is OPTIONAL, but is required for Retrograde Analysis.
-     * If not implemented, Retrograde Analysis will be disabled and a reverse
-     * position graph for all positions in the current solving tier and its
-     * child tiers will be built and stored in memory by calling
-     * \c TierSolverApi::GenerateMove and \c TierSolverApi::DoMove on all
-     * legal positions. This operation is known to be extremely memory-intensive
-     * for large games and is slow on multithreaded builds due to the use of
-     * mutex locks.
-     */
-    int (*GetCanonicalParentPositions)(
-        TierPosition child, Tier parent_tier,
-        Position parents[static kTierSolverNumParentPositionsMax]);
+    Tier (*GetCanonicalTier)(Tier tier);
 
     /**
      * @brief Returns the position symmetric to \p tier_position within the
-     * given \p symmetric tier.
+     * given \p symmetric tier. Returns \c tier_position.position if
+     * \p symmetric is the same as \c tier_position.tier . The position returned
+     * is not guaranteed to be canonical even if position symmetry is also
+     * implemented.
      *
      * @note Assumes \p tier_position is a valid tier position and \p symmetric
      * is a valid tier. Also assumes that the \p symmetric tier is symmetric to
@@ -277,62 +244,169 @@ typedef struct TierSolverApi {
     Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
                                            Tier symmetric);
 
-    /**
-     * @brief Stores an array of child tiers of the given \p tier in
-     * \p child_tiers and returns the size of the array.
-     *
-     * @details A child tier is a tier that has at least one position that can
-     * be reached by performing a single move from a position within its parent
-     * tier.
-     *
-     * @note To game developers: the current version of Tier Solver does not
-     * support more than \c kTierSolverNumChildTiersMax child tiers to be
-     * generated. If you think your game may exceed this limit, please contact
-     * the author of this API.
-     *
-     * @note Assumes \p tier is valid. Results in undefined behavior otherwise.
-     *
-     * @note This function is REQUIRED. The solver system will panic if this
-     * function is not implemented.
-     */
-    int (*GetChildTiers)(Tier tier,
-                         Tier child_tiers[static kTierSolverNumChildTiersMax]);
+    ////////////////////////////////////////////////
+    /// Position Symmetry Removal API (Optional) ///
+    ////////////////////////////////////////////////
 
     /**
-     * @brief Returns the type of \p tier.
+     * @brief Returns the canonical position that is symmetric to
+     * \p tier_position within the same tier. This function accepts tier
+     * positions that belong to non-canonical tiers if tier symmetry removal is
+     * also implemented.
+     *
+     * @details The Tier Solver currently does not support position symmetry
+     * removal across tiers. By convention, a canonical position is one with the
+     * smallest hash value in a group of symmetric positions that all belong to
+     * the same tier. For each position P within the group (including the
+     * canonical position itself), calling
+     * \c TierSolverApi::GetCanonicalPosition on P returns the same canonical
+     * position.
+     *
+     * @note Assumes \p tier_position is legal. Passing an invalid tier, or an
+     * illegal position within the tier results in undefined behavior.
+     *
+     * @note This function is OPTIONAL, but is required for the Position
+     * Symmetry Removal Optimization. If not implemented, the Optimization will
+     * be disabled.
+     */
+    Position (*GetCanonicalPosition)(TierPosition tier_position);
+
+    ///////////////////////////////////////////////////
+    /// Performance Optimizing Functions (Optional) ///
+    ///////////////////////////////////////////////////
+
+    /**
+     * @brief Returns the number of unique canonical child positions of
+     * \p tier_position . If tier symmetry is implemented, the actual child
+     * positions are first converted into positions in the canonical tier,
+     * deduplicated, and then counted. If position symmetry is implemented, the
+     * actual child positions are first converted into canonical positions
+     * within the same tier, deduplicated, and then counted. If both are
+     * implemented, tier symmetry is applied first. If neither is implemented,
+     * all unique child positions will be included.
+     *
+     * @note The word unique is emphasized here because it is possible, in
+     * some games, that making different moves at the same position results in
+     * the same canonical child position. Even if no symmetry removal is
+     * implemented, deduplication may still be necessary.
+     *
+     * @note Assumes \p tier_position is legal. Passing an invalid tier or an
+     * illegal or primitive position within the tier results in undefined
+     * behavior.
+     *
+     * @note This function is OPTIONAL, but can be implemented as an
+     * optimization to first generating moves and then doing moves. If not
+     * implemented, the system will replace calls to this function with calls to
+     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
+     * \c TierSolverApi::GetCanonicalTier ,
+     * \c TierSolverApi::GetPositionInSymmetricTier ,
+     * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
+     * will be used for deduplication regardless of whether duplicated child
+     * positions are possible.
+     */
+    int (*GetNumberOfCanonicalChildPositions)(TierPosition tier_position);
+
+    /**
+     * @brief Stores all unique canonical child positions of \p tier_position
+     * as an array in \p children and returns the size of the array. If tier
+     * symmetry is implemented, the actual child positions are first converted
+     * into positions in the canonical tier, deduplicated, and then stored. If
+     * position symmetry is implemented, the actual child positions are first
+     * converted into canonical positions within the same tier, deduplicated,
+     * and then stored. If both are implemented, tier symmetry is applied
+     * first. If neither is implemented, all unique child positions will be
+     * included.
+     *
+     * @note The word unique is emphasized here because it is possible, in
+     * some games, that making different moves results in the same canonical
+     * child position. Even if no symmetry removal is implemented, deduplication
+     * may still be necessary.
+     *
+     * @note The Tier Solver currently does not support generating more than
+     * \c kTierSolverNumChildPositionsMax child positions.
+     *
+     * @note Assumes \p tier_position is legal and non-primitive. Passing an
+     * invalid tier or an illegal or primitive position within the tier results
+     * in undefined behavior.
+     *
+     * @note This function is OPTIONAL, but can be implemented as an
+     * optimization to first generating moves and then doing moves. If not
+     * implemented, the system will replace calls to this function with calls to
+     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
+     * \c TierSolverApi::GetCanonicalTier ,
+     * \c TierSolverApi::GetPositionInSymmetricTier ,
+     * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
+     * will be used for deduplication regardless of whether duplicated child
+     * positions are possible.
+     */
+    int (*GetCanonicalChildPositions)(
+        TierPosition tier_position,
+        TierPosition children[static kTierSolverNumChildPositionsMax]);
+
+    /**
+     * @brief Stores all unique canonical parent positions of \p child that
+     * belong to tier \p parent_tier as an array in \p parents and returns the
+     * size of the array. If tier symmetry is implemented, the actual parent
+     * positions are first converted into positions in the canonical tier,
+     * deduplicated, and then stored. If position symmetry is implemented, the
+     * actual parent positions are first converted into canonical positions
+     * within the same tier, deduplicated, and then stored. If both are
+     * implemented, tier symmetry is applied first. If neither is implemented,
+     * all unique parent positions will be included.
+     *
+     * @note The word unique is emphasized here because it is possible in some
+     * games that a child position has two parent positions that are symmetric
+     * to each other. Even if no symmetry removal is implemented, deduplication
+     * may still be necessary.
+     *
+     * @note The Tier Solver currently does not support generating more than
+     * \c kTierSolverNumParentPositionsMax parent positions.
+     *
+     * @note Assumes \p parent_tier is a valid tier and \p child is a valid tier
+     * position. Passing an invalid \p child , an invalid \p parent_tier , or a
+     * \p parent_tier that is not actually a parent of the given \p child
+     * results in undefined behavior.
+     *
+     * @note To simplify game implementation, this function is allowed to
+     * generate illegal/primitive parent positions.
+     *
+     * @note This function is OPTIONAL, but is required for Retrograde Analysis.
+     * If not implemented, Retrograde Analysis will be disabled and a reverse
+     * position graph for all positions in the current solving tier and its
+     * child tiers will be built and stored in memory by calling
+     * \c TierSolverApi::GenerateMove and \c TierSolverApi::DoMove on all
+     * legal positions. This operation is known to be extremely memory-intensive
+     * for large games and is slow on multithreaded builds due to the use of
+     * mutex locks.
+     */
+    int (*GetCanonicalParentPositions)(
+        TierPosition child, Tier parent_tier,
+        Position parents[static kTierSolverNumParentPositionsMax]);
+
+    /**
+     * @brief Returns the type of \p tier . If tier symmetry is implemented,
+     * passing two different tiers that are symmetric to each other returns the
+     * same \c TierType.
      *
      * @note Refer to the documentation of \c TierType for the definition of
-     * each tier type in tier_solver.h.
+     * each tier type in src/core/types/base.h.
      *
      * @note This function is OPTIONAL. If not implemented, all tiers will be
      * treated as loopy.
      */
     TierType (*GetTierType)(Tier tier);
 
-    /**
-     * @brief Returns the canonical tier symmetric to the given \p tier. Returns
-     * \p tier if itself is canonical.
-     *
-     * @details By convention, a canonical tier is one with the smallest tier
-     * value in a set of symmetrical tiers. For each tier[i] within the set
-     * including the canonical tier itself, calling
-     * \c TierSolverApi::GetCanonicalTier(tier[i]) returns the canonical tier.
-     *
-     * @note Assumes \p tier is valid. Results in undefined behavior otherwise.
-     *
-     * @note This function is OPTIONAL, but is required for the Tier Symmetry
-     * Removal Optimization. If not implemented, the Optimization will be
-     * disabled and all tiers will be treated as canonical.
-     */
-    Tier (*GetCanonicalTier)(Tier tier);
+    //////////////////////////////////////////
+    /// Visualization/Debugging (Optional) ///
+    //////////////////////////////////////////
 
     /**
      * @brief Converts \p tier to its name, which is then used as the file name
-     * for the tier database. Writes the result to NAME, assuming it has enough
-     * space.
+     * for the tier database. Writes the result to \p name, assuming it has
+     * enough space.
      *
      * @note It is the game developer's responsibility to make sure that the
-     * name of any tier is not larger than \c kDbFileNameLengthMax bytes (not
+     * name of any tier is not longer than \c kDbFileNameLengthMax bytes (not
      * including the file extension.)
      *
      * @note This function is OPTIONAL. If set to \c NULL, the tier database
@@ -340,13 +414,31 @@ typedef struct TierSolverApi {
      *
      * @param tier Get name of this tier.
      * @param name Tier name output buffer.
-     * @return 0 on success, or
+     * @return \c kNoError on success, or
      * @return non-zero error code on failure.
      */
     int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax + 1]);
 
+    /**
+     * @brief Maximum length of a position string not including the
+     * NULL-terminating character ( \c '\0' ). This value is tied to
+     * \c TierSolverApi::TierPositionToString and is used as the buffer size.
+     *
+     * @details The gameplay system will try to allocate this amount of space
+     * plus one additional byte for the NULL-terminating character ( \c '\0' )
+     * as buffer for position strings. It is the game developer's responsibility
+     * to precalculate this value and make sure that enough space is provided.
+     */
     int position_string_length_max;
 
+    /**
+     * @brief Converts \p tier_position into a position string and stores it in
+     * \p buffer .
+     *
+     * @note Assumes that \p tier_position is valid and \p buffer has enough
+     * space to hold the position string. Results in undefined behavior
+     * otherwise.
+     */
     int (*TierPositionToString)(TierPosition tier_position, char *buffer);
 } TierSolverApi;
 
