@@ -569,19 +569,19 @@ static inline __m128i GetCanonicalBoard(__m128i board) {
     // 8 symmetries
     __m128i min_board = board;
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
 
     return min_board;
 }
@@ -617,7 +617,6 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
     }
     int ret = (int)dedup.size;
@@ -650,9 +649,7 @@ static int QuixoGetCanonicalChildPositions(
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetContains(&dedup, child)) continue;
-        TierPositionHashSetAdd(&dedup, child);
-        children[ret++] = child;
+        if (TierPositionHashSetAdd(&dedup, child)) children[ret++] = child;
     }
     TierPositionHashSetDestroy(&dedup);
 

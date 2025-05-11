@@ -542,6 +542,22 @@ static inline bool X86SimdTwoPieceHashBoardLessThan(__m128i a, __m128i b) {
 }
 
 /**
+ * @brief For boards with <= 7 rows only, returns min( \p a , \p b ).
+ *
+ * @param a Board A.
+ * @param b Board B.
+ * @return Either \p a or \p b , which ever is smaller.
+ */
+static inline __m128i X86SimdTwoPieceHashMinBoard(__m128i a, __m128i b) {
+    // 0xFF in each i8 if a < b, 0x0 otherwise.
+    __m128i mask = _mm_set1_epi8(-(int)X86SimdTwoPieceHashBoardLessThan(a, b));
+
+    // Selects the second parameter if mask is set to all 0xFF, in which case
+    // a is smaller than b.
+    return _mm_blendv_epi8(b, a, mask);
+}
+
+/**
  * @brief Returns true iff \p a < \p b with \p a and \p b treated as unsigned
  * 128-bit integers.
  *
