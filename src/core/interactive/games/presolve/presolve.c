@@ -154,7 +154,7 @@ static int64_t PromptForTestSize(int64_t default_size) {
 
 static int TestCurrentGameVariant(ReadOnlyString key) {
     (void)key;  // Unused.
-    int error;
+    int error = 0;
     if (InteractiveMatchGetCurrentGame()->solver == &kTierSolver) {
         long seed = PromptForSeed();
         int64_t test_size = PromptForTestSize(1000);
