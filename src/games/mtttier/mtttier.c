@@ -360,7 +360,8 @@ static TierType MtttierGetTierType(Tier tier) {
 
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
-    return sprintf(name, "%" PRITier "p", tier);
+    sprintf(name, "%" PRITier "p", tier);
+    return kNoError;
 }
 
 static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position) {
