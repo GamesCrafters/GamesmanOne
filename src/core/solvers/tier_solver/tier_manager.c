@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.5.0
- * @date 2025-03-30
+ * @version 1.5.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -51,6 +51,7 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/types/gamesman_types.h"
 
 #ifdef USE_MPI
@@ -930,6 +931,7 @@ static int TestTierGraph(long seed, int64_t test_size) {
            total_tiers, total_canonical_tiers, total_size,
            TierQueueSize(&pending_tiers));
 
+    TierWorkerTestStackBufferStat *stat = TierWorkerTestStackBufferStatCreate();
     char tier_name[kDbFileNameLengthMax + 1];
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -949,7 +951,7 @@ static int TestTierGraph(long seed, int64_t test_size) {
                tier_name, tier, api_internal->GetTierSize(tier));
         TierArray parent_tiers = GetParentTiers(tier);
         TierArrayAppend(&parent_tiers, tier);
-        error = TierWorkerTest(tier, &parent_tiers, seed, test_size);
+        error = TierWorkerTest(tier, &parent_tiers, seed, test_size, stat);
         TierArrayDestroy(&parent_tiers);
         if (error == kTierSolverTestNoError) {
             // Test passed.
@@ -964,6 +966,8 @@ static int TestTierGraph(long seed, int64_t test_size) {
         printf("PASSED. %" PRId64 " tiers ready in test queue\n",
                TierQueueSize(&pending_tiers));
     }
+    TierWorkerTestStackBufferStatPrint(stat);
+    TierWorkerTestStackBufferStatDestroy(stat);
     PrintTestResult(time_elapsed);
 
     return kTierSolverTestNoError;

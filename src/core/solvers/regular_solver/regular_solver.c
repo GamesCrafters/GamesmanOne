@@ -7,8 +7,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 2.1.0
- * @date 2025-04-07
+ * @version 2.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -47,6 +47,7 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/types/gamesman_types.h"
 
 // Solver API functions.
@@ -55,7 +56,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
 
-static int RegularSolverTest(long seed);
+static int RegularSolverTest(void *aux);
 static ReadOnlyString RegularSolverExplainTestError(int error);
 
 static int RegularSolverSolve(void *aux);
@@ -227,26 +228,21 @@ static int RegularSolverFinalize(void) {
     return kNoError;
 }
 
-static int RegularSolverTest(long seed) {
+static int RegularSolverTest(void *aux) {
+    RegularSolverTestOptions default_options = {
+        .seed = (long)time(NULL), .test_size = 1000000, .verbose = 1};
+    RegularSolverTestOptions *options = (RegularSolverTestOptions *)aux;
+    if (!options) options = &default_options;
+
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
     TierArray empty;
     TierArrayInit(&empty);
-    printf(
-        "Enter the maximum number of positions to test [Default: 1000000]: ");
-    char input[kInt64Base10StringLengthMax + 1];
-    int64_t test_size = 1000000;
-    if (fgets(input, sizeof(input), stdin) != NULL) {
-        // Check if the user pressed Enter without entering a number
-        if (input[0] != '\n') {
-            test_size = strtoll(input, NULL, 10);
-            if (test_size < 0) {
-                printf("Invalid input. Using default test size [1000000]\n");
-                test_size = 1000000;
-            }
-        }
-    }
-    int ret = TierWorkerTest(kDefaultTier, &empty, seed, test_size);
+    TierWorkerTestStackBufferStat *stat = TierWorkerTestStackBufferStatCreate();
+    int ret = TierWorkerTest(kDefaultTier, &empty, options->seed,
+                             options->test_size, stat);
     TierArrayDestroy(&empty);
+    TierWorkerTestStackBufferStatPrint(stat);
+    TierWorkerTestStackBufferStatDestroy(stat);
 
     return ret;
 }

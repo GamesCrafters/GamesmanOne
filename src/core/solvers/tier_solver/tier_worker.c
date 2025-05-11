@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.5.0
- * @date 2024-11-14
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -147,7 +147,7 @@ int TierWorkerMpiServe(void) {
 #endif  // USE_MPI
 
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
-                   int64_t test_size) {
+                   int64_t test_size, TierWorkerTestStackBufferStat *stat) {
     return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed,
-                                  test_size);
+                                  test_size, stat);
 }

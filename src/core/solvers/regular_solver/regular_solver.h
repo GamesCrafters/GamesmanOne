@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Regular Solver API.
- * @version 2.1.0
- * @date 2025-04-07
+ * @version 2.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -258,5 +258,11 @@ typedef struct RegularSolverAnalyzeOptions {
     bool force;        /**< Whether to force (re)analyze the game. */
     intptr_t memlimit; /**<  Approximate heap memory limit in bytes. */
 } RegularSolverAnalyzeOptions;
+
+typedef struct RegularSolverTestOptions {
+    long seed;         /**< Seed for PRNG for random testing. */
+    int64_t test_size; /**< Number of random positions to test. */
+    int verbose;       /**< Level of details to output. */
+} RegularSolverTestOptions;
 
 #endif  // GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_
