@@ -1,11 +1,11 @@
 /**
- * @file gamesman_headless.h
+ * @file htest.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief GAMESMAN headless mode.
- * @version 1.3.0
- * @date 2025-05-11
+ * @brief Game testing functionality of headless mode.
+ * @version 1.0.0
+ * @date 2025-05-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,19 +24,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GAMESMAN_HEADLESS_H_
-#define GAMESMANONE_CORE_GAMESMAN_HEADLESS_H_
+#ifndef GAMESMANONE_CORE_HEADLESS_HTEST_H_
+#define GAMESMANONE_CORE_HEADLESS_HTEST_H_
 
-/**
- * @brief The main entry point of the headless mode of GAMESMAN.
- *
- * @param argc Number of arguments passed in from the command line. Copied over
- * from the main function.
- * @param argv Array of arguments passed in from the command line. Copied over
- * from the main function.
- * @return 0 on successful exit, or
- * @return non-zero error code otherwise.
- */
-int GamesmanHeadlessMain(int argc, char **argv);
+#include "core/types/gamesman_types.h"
 
-#endif  // GAMESMANONE_CORE_GAMESMAN_HEADLESS_H_
+int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
+                 int verbose);
+
+#endif  // GAMESMANONE_CORE_HEADLESS_HTEST_H_

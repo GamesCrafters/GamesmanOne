@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the command line parsing module for headless mode.
- * @version 1.2.0
- * @date 2024-09-08
+ * @version 1.3.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,7 +39,7 @@
 
 static HeadlessArguments arguments;
 static ConstantReadOnlyString HeadlessCommands[] = {
-    "solve", "analyze", "query", "getstart", "getrandom",
+    "solve", "analyze", "test", "query", "getstart", "getrandom",
 };
 
 static const struct option kLongOptions[] = {
@@ -47,13 +47,19 @@ static const struct option kLongOptions[] = {
         .name = "data-path",
         .has_arg = required_argument,
         .flag = NULL,
-        .val = 'd',
+        .val = 0,
     },
     {
         .name = "memory",
         .has_arg = required_argument,
         .flag = NULL,
         .val = 'M',
+    },
+    {
+        .name = "seed",
+        .has_arg = required_argument,
+        .flag = NULL,
+        .val = 0,
     },
     {
         .name = "force",
@@ -113,11 +119,13 @@ static void ValidateArguments(int arg_num);
 static void PrintUsage(void);
 static void ParserError(const char *format, ...);
 
+// clang-format off
 static const char kDoc[] =
     "\nList of options:\n\n"
-    "\t-d, --data-path=PATH\tSpecify data path (default=\"data\")\n"
+    "\t--data-path=PATH\tSpecify data path (default=\"data\")\n"
     "\t-M, --memory=LIMIT\tSpecify heap memory limit in GiB (default=90%)"
     "\t-o, --output=PATH\tSpecify output file (default=stdout)\n"
+    "\t--seed=SEED\tSpecify seed for PRNGs\n"
     "\t-f, --force\t\tForce re-solve/re-analyze\n"
     "\t-q, --quiet\t\tProduce no output\n"
     "\t-v, --verbose\t\tProduce verbose output\n"
@@ -126,7 +134,8 @@ static const char kDoc[] =
     "\t-V, --version\t\tPrint program version\n"
     "\nGamesmanOne commands:\n"
     "\n"
-    "solve or analyze a game\n"
+    "test, solve, or analyze a game\n"
+    "    test\tgamesman test <game> [<variant>]\n"
     "    solve\tgamesman solve <game> [<variant>]\n"
     "    analyze\tgamesman analyze <game> [<variant>]\n"
     "\n"
@@ -134,6 +143,7 @@ static const char kDoc[] =
     "    query\tgamesman query <game> <variant> <position>\n"
     "    getstart\tgamesman getstart <game> [<variant>]\n"
     "    getrandom\tgamesman getrandom <game> [<variant>]\n";
+// clang-format on
 
 // -----------------------------------------------------------------------------
 
@@ -144,8 +154,7 @@ HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
         // NOLINTBEGIN(concurrency-mt-unsafe)
-        key =
-            getopt_long(argc, argv, "dM:f?o:qvV", kLongOptions, &option_index);
+        key = getopt_long(argc, argv, "M:f?o:qvV", kLongOptions, &option_index);
         // NOLINTEND(concurrency-mt-unsafe)
         /* Detect the end of the options. */
         if (key == -1) break;
@@ -170,17 +179,17 @@ static void PrintVersion(FILE *stream) {
 
 static void ParseOption(int key, int option_index) {
     switch (key) {
-        case 0:
-            /* If this option set a flag, do nothing else now. */
-            if (kLongOptions[option_index].flag != 0) break;
-            printf("option %s", kLongOptions[option_index].name);
-            if (optarg) printf(" with arg %s", optarg);
-            printf("\n");
+        case 0: {
+            const char *option_name = kLongOptions[option_index].name;
+            if (strcmp(option_name, "data-path") == 0) {
+                arguments.data_path = optarg;
+            } else if (strcmp(option_name, "seed") == 0) {
+                arguments.seed = optarg;
+            } else {
+                printf("unexpected unknown option %s\n", option_name);
+            }
             break;
-
-        case 'd':
-            arguments.data_path = optarg;
-            break;
+        }
 
         case 'M':
             arguments.memlimit = optarg;
@@ -256,6 +265,7 @@ static void ValidateArguments(int arg_num) {
     switch (arguments.action) {
         case kHeadlessSolve:
         case kHeadlessAnalyze:
+        case kHeadlessTest:
         case kHeadlessGetStart:
         case kHeadlessGetRandom:
             min_args = 2;

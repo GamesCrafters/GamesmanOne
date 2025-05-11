@@ -1,11 +1,12 @@
 #include "core/interactive/games/presolve/presolve.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // true
-#include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fprintf, stderr, scanf
-#include <stdlib.h>   // atoi
-#include <time.h>     // time
+#include <assert.h>    // assert
+#include <inttypes.h>  // PRId64, int64_t
+#include <stdbool.h>   // true
+#include <stddef.h>    // NULL
+#include <stdio.h>     // printf, fprintf, stderr, scanf
+#include <stdlib.h>    // atoi
+#include <time.h>      // time
 
 #include "core/constants.h"
 #include "core/game_manager.h"
@@ -15,8 +16,11 @@
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
 #include "core/interactive/games/presolve/savio/partition_select.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
+#include "core/misc.h"
 #include "core/savio/scriptgen.h"
+#include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
+#include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
 #ifndef USE_MPI
@@ -106,10 +110,9 @@ static int SolveAndStart(ReadOnlyString key) {
 }
 #endif  // USE_MPI
 
-static int TestCurrentGameVariant(ReadOnlyString key) {
-    (void)key;  // Unused.
+static long PromptForSeed(void) {
+    char input[64];
     long seed;
-    char input[100];
     printf(
         "Please enter a 64-bit integer as a seed, or leave blank to use a "
         "random seed based on current time: ");
@@ -123,8 +126,53 @@ static int TestCurrentGameVariant(ReadOnlyString key) {
         // In case fgets fails, fallback to using the current time as the seed
         seed = (long)time(NULL);
     }
-    printf("Testing with seed %ld\n", seed);
-    int error = SolverManagerTest(seed);
+
+    return seed;
+}
+
+static int64_t PromptForTestSize(int64_t default_size) {
+    char input[64];
+    printf(
+        "Enter the number of positions to test in each tier [Default: %" PRId64
+        "]: ",
+        default_size);
+    int64_t test_size = default_size;
+    if (fgets(input, sizeof(input), stdin) != NULL) {
+        // Check if the user pressed Enter without entering a number
+        if (input[0] != '\n') {
+            test_size = strtoll(input, NULL, 10);
+            if (test_size < 0) {
+                printf("Invalid input. Using default test size [%" PRId64 "]\n",
+                       default_size);
+                test_size = default_size;
+            }
+        }
+    }
+
+    return test_size;
+}
+
+static int TestCurrentGameVariant(ReadOnlyString key) {
+    (void)key;  // Unused.
+    int error;
+    if (InteractiveMatchGetCurrentGame()->solver == &kTierSolver) {
+        long seed = PromptForSeed();
+        int64_t test_size = PromptForTestSize(1000);
+        TierSolverTestOptions options = {
+            .seed = seed, .test_size = test_size, .verbose = 1};
+        printf("Testing with seed %ld\n", seed);
+        error = SolverManagerTest(&options);
+    } else if (InteractiveMatchGetCurrentGame()->solver == &kRegularSolver) {
+        long seed = PromptForSeed();
+        int64_t test_size = PromptForTestSize(1000000);
+        RegularSolverTestOptions options = {
+            .seed = seed, .test_size = test_size, .verbose = 1};
+        printf("Testing with seed %ld\n", seed);
+        error = SolverManagerTest(&options);
+    } else {
+        NotReached("TestCurrentGameVariant: unknown solver");
+    }
+
     if (error != 0) {
         printf("\nTestCurrentGameVariant: an error occurred. Explanation: %s\n",
                SolverManagerExplainTestError(error));
