@@ -605,9 +605,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&children, child)) {
-            TierPositionHashSetAdd(&children, child);
-        }
+        TierPositionHashSetAdd(&children, child);
     }
     int num_children = (int)children.size;
     TierPositionHashSetDestroy(&children);
@@ -627,8 +625,7 @@ static int DefaultGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
+        if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }

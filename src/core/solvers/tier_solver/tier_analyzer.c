@@ -327,9 +327,7 @@ static int GetChildPositions(
         TierPosition child = api_internal->DoMove(parent, moves[i]);
         children[ret++] = child;
         child.position = api_internal->GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
 
     // If the parent position is not a canonical position, then the number of

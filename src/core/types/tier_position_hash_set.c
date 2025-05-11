@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set implementation.
- * @version 1.1.0
- * @date 2025-03-13
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -44,11 +44,47 @@ void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
     set->max_load_factor = max_load_factor;
 }
 
+// This function is adapted from Google CityHash
+// Copyright (c) 2011 Google, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// CityHash, by Geoff Pike and Jyrki Alakuijala
+//
+// http://code.google.com/p/cityhash/
+static uint64_t Hash128to64(uint64_t lo, uint64_t hi) {
+    // Murmur-inspired hashing.
+    const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+    uint64_t a = (lo ^ hi) * kMul;
+    a ^= (a >> 47);
+    uint64_t b = (hi ^ a) * kMul;
+    b ^= (b >> 47);
+    b *= kMul;
+
+    return b;
+}
+
 static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
     int64_t a = (int64_t)key.tier;
     int64_t b = (int64_t)key.position;
-    uint64_t cantor_pairing = (a + b) * (a + b + 1) / 2 + a;
-    return (int64_t)(cantor_pairing % capacity);
+
+    return Hash128to64(a, b) % capacity;
 }
 
 static bool TierPositionHashSetExpand(TierPositionHashSet *set,
@@ -119,7 +155,7 @@ bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
     while (set->entries[index].used) {
         TierPosition this_key = set->entries[index].key;
         if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
+            return false;
         }
         index = (index + 1) % capacity;
     }

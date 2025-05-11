@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t hash set implementation.
- * @version 1.1.1
- * @date 2025-04-26
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -102,7 +102,7 @@ bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     int64_t capacity = set->capacity;
     int64_t index = Hash(key, capacity);
     while (set->entries[index].used) {
-        if (set->entries[index].key == key) return true;
+        if (set->entries[index].key == key) return false;
         index = NextIndex(index, capacity);
     }
     set->entries[index].key = key;

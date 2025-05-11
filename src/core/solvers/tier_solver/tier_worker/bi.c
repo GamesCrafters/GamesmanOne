@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.4
- * @date 2025-04-23
+ * @version 1.1.5
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -133,8 +133,7 @@ static void Step0_0SetupChildTiers(void) {
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = current_api.GetCanonicalTier(raw[i]);
-        if (!TierHashSetContains(&dedup, canonical)) {
-            TierHashSetAdd(&dedup, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
             child_tiers[num_child_tiers++] = canonical;
         }
     }

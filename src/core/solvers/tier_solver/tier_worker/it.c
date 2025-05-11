@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm implementation.
- * @version 1.1.2
- * @date 2025-04-23
+ * @version 1.1.3
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -77,12 +77,9 @@ static bool Step0_0SetupChildTiers(void) {
     TierArrayInit(&canonical_child_tiers);
     for (int i = 0; i < num_child_tiers; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(child_tiers[i]);
-
-        // Another child tier is symmetric to this one and was already added.
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        TierArrayAppend(&canonical_child_tiers, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
+            TierArrayAppend(&canonical_child_tiers, canonical);
+        }
     }
 
     // Sort the array of canonical child tiers in ascending size order.

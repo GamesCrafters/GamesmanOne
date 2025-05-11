@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -104,12 +104,9 @@ static bool Step0_0SetupChildTiers(void) {
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(raw[i]);
-
-        // Another child tier is symmetric to this one and was already added.
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        child_tiers[num_child_tiers++] = canonical;
+        if (TierHashSetAdd(&dedup, canonical)) {
+            child_tiers[num_child_tiers++] = canonical;
+        }
     }
     TierHashSetDestroy(&dedup);
 

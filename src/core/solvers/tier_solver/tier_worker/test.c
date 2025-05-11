@@ -202,9 +202,7 @@ static TierPositionHashSet ReferenceGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(tier_position, moves[i]);
         child.position = api_internal->GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&ret, child)) {
-            TierPositionHashSetAdd(&ret, child);
-        }
+        TierPositionHashSetAdd(&ret, child);
     }
 
     return ret;

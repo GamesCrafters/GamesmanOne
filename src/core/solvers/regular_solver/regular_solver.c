@@ -602,20 +602,18 @@ static Position DefaultGetCanonicalPosition(TierPosition tier_position) {
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position) {
     //
-    TierPositionHashSet children;
-    TierPositionHashSetInit(&children, 0.5);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
 
     Move moves[kRegularSolverNumMovesMax];
     int num_moves = current_api.GenerateMoves(tier_position, moves);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&children, child)) {
-            TierPositionHashSetAdd(&children, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
-    int num_children = (int)children.size;
-    TierPositionHashSetDestroy(&children);
+    int num_children = (int)dedup.size;
+    TierPositionHashSetDestroy(&dedup);
 
     return num_children;
 }
@@ -632,8 +630,7 @@ static int DefaultGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&deduplication_set, child)) {
-            TierPositionHashSetAdd(&deduplication_set, child);
+        if (TierPositionHashSetAdd(&deduplication_set, child)) {
             children[ret++] = child;
         }
     }

@@ -336,8 +336,7 @@ static int GetCanonicalChildTiers(
     int num_raw = api_internal->GetChildTiers(parent, raw);
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(raw[i]);
-        if (!TierHashSetContains(&dedup, canonical)) {
-            TierHashSetAdd(&dedup, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
             child_tiers[ret++] = canonical;
         }
     }
@@ -381,17 +380,13 @@ static int GetNumCanonicalChildTiers(
     TierHashSetInit(&canonical_dedup, 0.5);
     int i;
     for (i = 0; i < num_children; ++i) {  // For each child
-        if (TierHashSetContains(&dedup, children[i])) {
+        if (!TierHashSetAdd(&dedup, children[i])) {
             ret = -1;
             break;
         }
-        TierHashSetAdd(&dedup, children[i]);
 
         Tier canonical = api_internal->GetCanonicalTier(children[i]);
-        if (!TierHashSetContains(&canonical_dedup, canonical)) {
-            TierHashSetAdd(&canonical_dedup, canonical);
-            ++ret;
-        }
+        ret += TierHashSetAdd(&canonical_dedup, canonical);
     }
     TierHashSetDestroy(&dedup);
     TierHashSetDestroy(&canonical_dedup);
@@ -687,13 +682,12 @@ static bool SolveUpdateTierGraph(Tier solved_tier) {
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
         // Update canonical parent's number of unsolved children only.
         Tier canonical = api_internal->GetCanonicalTier(parent_tiers.array[i]);
-        if (TierHashSetContains(&canonical_parents, canonical)) {
+        if (!TierHashSetAdd(&canonical_parents, canonical)) {
             // It is possible that a child has two parents that are symmetrical
             // to each other. In this case, we should only decrement the child
             // counter once.
             continue;
         }
-        TierHashSetAdd(&canonical_parents, canonical);
         int num_unsolved_child_tiers = GetNumTiers(canonical);
         if (num_unsolved_child_tiers <= 0) {
             char name[kDbFileNameLengthMax + 1];
@@ -1002,11 +996,10 @@ static void PrintTierGraphAnalysis(void) {
         printf("[%s] (#%" PRITier "), ", name, children[i]);
         const Tier canonical = api_internal->GetCanonicalTier(children[i]);
         api_internal->GetTierName(canonical, name);
-        if (TierHashSetContains(&dedup, canonical)) {
+        if (!TierHashSetAdd(&dedup, canonical)) {
             printf("which is already loaded as [%s] (#%" PRITier ")\n", name,
                    canonical);
         } else {
-            TierHashSetAdd(&dedup, canonical);
             int64_t size = api_internal->GetTierSize(canonical);
             if (canonical == children[i]) {
                 printf("which is canonical and contains %" PRId64
