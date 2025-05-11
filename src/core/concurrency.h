@@ -6,8 +6,8 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.1.0
- * @date 2025-04-23
+ * @version 1.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -125,6 +125,18 @@ int ConcurrentIntLoad(const ConcurrentInt *ci);
  * @return The value to store.
  */
 void ConcurrentIntStore(ConcurrentInt *ci, int val);
+
+/**
+ * @brief Replaces the value pointed by \p ci with the maximum of its original
+ * value and \p val and returns the original value.
+ *
+ * @param ci Pointer to the ConcurrentInt variable to store the maximum value
+ * into.
+ * @param val Another value.
+ * @return The value pointed by \p ci immediately preceding the effects of this
+ * function.
+ */
+int ConcurrentIntMax(ConcurrentInt *ci, int val);
 
 /**
  * @brief Initializes the ConcurrentSizeType variable at \p cs to \p val.
