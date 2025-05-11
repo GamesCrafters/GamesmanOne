@@ -6,12 +6,12 @@
 #include "board_formats.h"
 #include "masks.h"
 
-static int kGridIdxToBoardIdx[NUM_BOARD_AND_PIECES_CHOICES][64];
+static int grid_idx_to_board_idx[NUM_BOARD_AND_PIECES_CHOICES][64];
 
 static void BuildGridIdxToBoardIdx(void) {
     for (int i = 0; i < NUM_BOARD_AND_PIECES_CHOICES; ++i) {
         for (int j = 0; j < kNumSlots[i]; ++j) {
-            kGridIdxToBoardIdx[i][kBoardIdxToGridIdx[i][j]] = j;
+            grid_idx_to_board_idx[i][kBoardIdxToGridIdx[i][j]] = j;
         }
     }
 }

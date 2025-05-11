@@ -17,9 +17,10 @@ Option 1: board and pieces
     h) 12 pieces each on a 25-slot Sesotho board (Sesotho Morabaraba)
 
 Option 2: flying rule
-    a) allowed when left with <= 3 pieces
-    b) not allowed
-    c) allowed at all times
+    a) not allowed
+    b) allowed when left with <= 3 pieces
+    c) allowed when left with <= 4 pieces
+    d) allowed at all times
 
 Option 3: Lasker rule (merge placement and moving phases)
     a) false
@@ -29,21 +30,21 @@ Option 4: removal rule
     a) standard: pieces in a mill can only be removed when all pieces are in a
        mill
     b) strict: if all pieces are in a mill, no piece is removed
-    c) lenient: anypiece may be removed
+    c) lenient: any piece may be removed
 
 Option 5: Misère (flip winning and losing conditions)
     a) false
     b) true
 
 Standard combinations of options:
-    (a) Five Men's Morris: [abaaa]
-    (b) Six Men's Morris: [bbaaa]
-    (c) Seven Men's Morris: [cbaaa]
-    (d) Nine Men's Morris: [daaaa], [daaba]
-    (e) Lasker Morris: [eabaa], [eabba]
-    (f) Eleven Men's Morris: [faaaa]
-    (g) Twelve Men's Morris/Morabaraba: [gaaaa]
-    (h) Sesotho Morabaraba: [haaaa]
+    (a) Five Men's Morris: [aaaaa] (currently variant 0)
+    (b) Six Men's Morris: [baaaa] (currently variant 48)
+    (c) Seven Men's Morris: [caaaa] (currently variant 96)
+    (d) Nine Men's Morris: [dbaaa], [dbaba] (currently variant 156 and 158)
+    (e) Lasker Morris: [ebbaa], [ebbba] (currently variant 210 and 212)
+    (f) Eleven Men's Morris: [fcaaa] (currently variant 264)
+    (g) Twelve Men's Morris/Morabaraba: [gaaaa] (currently variant 300)
+    (h) Sesotho Morabaraba: [haaaa] (currently variant 348)
 */
 
 static const char *const kMillsBoardAndPiecesChoices[] = {
@@ -51,7 +52,7 @@ static const char *const kMillsBoardAndPiecesChoices[] = {
     "6 pieces each on a 16-slot board (Six Men's Morris)",
     "7 pieces each on a 17-slot board (Seven Men's Morris)",
     "9 pieces each on a 24-slot board (Nine Men's Morris)",
-    "10 pieces each on a 24-slot board (Ten Men's Morris)",
+    "10 pieces each on a 24-slot board (Lasker Morris)",
     "11 pieces each on a 24-slot board with diagonals (Eleven Men's Morris)",
     "12 pieces each on a 24-slot board with diagonals (Morabaraba/Twelve Men's "
     "Morris)",
@@ -66,8 +67,9 @@ static const int8_t kPiecesPerPlayer[NUM_BOARD_AND_PIECES_CHOICES] = {
 };
 
 static const char *const kMillsFlyingRuleChoices[] = {
-    "Allowed with fewer than 3 pieces on board",
     "Not allowed",
+    "Allowed with fewer than 3 pieces on board",
+    "Allowed with fewer than 4 pieces on board",
     "Allowed always",
 };
 

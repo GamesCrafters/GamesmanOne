@@ -101,7 +101,7 @@ enum {
 
 // ============================= Variant Settings =============================
 
-union {
+static union {
     int array[6];
     struct {
         int board_and_pieces;
@@ -111,20 +111,15 @@ union {
         int misere;
         int zero_terminator;
     } unpacked;
-} variant_option_selections = {
-    .unpacked =
-        {
-            .board_and_pieces = 3,
-            .flying_rule = 0,
-            .lasker_rule = 0,
-            .removal_rule = 0,
-            .misere = 0,
-            .zero_terminator = 0,
-        },
-};
+} variant_option_selections;
 
 static int BoardId(void) {
     return variant_option_selections.unpacked.board_and_pieces;
+}
+
+static bool FillPossible(void) {
+    // Only possible in Twelve Men's Morris
+    return variant_option_selections.unpacked.board_and_pieces == 6;
 }
 
 static int Lasker(void) {
@@ -132,7 +127,8 @@ static int Lasker(void) {
 }
 
 static int FlyThreshold(void) {
-    static const int ret[3] = {3, 0, 64};
+    static const int ret[sizeof(kMillsFlyingRuleChoices) /
+                         sizeof(kMillsFlyingRuleChoices[0])] = {0, 3, 4, 64};
 
     return ret[variant_option_selections.unpacked.flying_rule];
 }
@@ -158,14 +154,18 @@ static GameVariant current_variant = {
 
 static MillsTier second_lasker_tier;
 
-static int kGridIdxToBoardIdx[NUM_BOARD_AND_PIECES_CHOICES][64];
+static int8_t grid_idx_to_board_idx[NUM_BOARD_AND_PIECES_CHOICES][64];
 
 static void BuildGridIdxToBoardIdx(void) {
     for (size_t i = 0; i < NUM_BOARD_AND_PIECES_CHOICES; ++i) {
-        for (int j = 0; j < kNumSlots[i]; ++j) {
-            kGridIdxToBoardIdx[i][kBoardIdxToGridIdx[i][j]] = j;
+        for (int8_t j = 0; j < kNumSlots[i]; ++j) {
+            grid_idx_to_board_idx[i][kBoardIdxToGridIdx[i][j]] = j;
         }
     }
+}
+
+static int8_t GetBoardIndex(int8_t grid_index) {
+    return grid_idx_to_board_idx[BoardId()][grid_index];
 }
 
 // ============================== kMillsSolverApi ==============================
@@ -189,8 +189,6 @@ static Position MillsGetInitialPosition(void) {
     // filled with all zeros.
     return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_si128());
 }
-
-static bool IsPlacementTier(MillsTier t) { return t.unpacked.remaining[1]; }
 
 static int GetTurnFromPlacementTier(MillsTier t) {
     // Assuming both players start with the same number of pieces.
@@ -434,6 +432,16 @@ static Value MillsPrimitive(TierPosition tier_position) {
     MillsTier t = {.hash = tier_position.tier};
     bool misere = Misere();
 
+    // Special case for variants in which it is possible to fill up the board
+    // during the placement phase.
+    if (FillPossible()) {
+        // The game is a tie if the board is filled during placement.
+        if (t.unpacked.on_board[0] + t.unpacked.on_board[1] ==
+            kNumSlots[BoardId()]) {
+            return kTie;
+        }
+    }
+
     // The current player loses if their remaining pieces has been reduced to 2.
     // It doesn't matter whose turn it is since it's not possible for players
     // to capture their own pieces.
@@ -524,19 +532,19 @@ static __m128i GetCanonicalBoardRotation(__m128i board) {
 
     // 8 symmetries
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
 
     return canonical;
 }
@@ -549,10 +557,8 @@ static __m128i GetCanonicalBoardRotationRingSwap(__m128i board) {
     if (kInnerRingMasks[BoardId()]) {
         __m128i swapped = SwapInnerOuterRings(board);
         __m128i ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
-        if (X86SimdTwoPieceHashBoardLessThan(ring_swapped_canonical,
-                                             canonical)) {
-            canonical = ring_swapped_canonical;
-        }
+        canonical =
+            X86SimdTwoPieceHashMinBoard(canonical, ring_swapped_canonical);
     }
 
     return canonical;
@@ -566,38 +572,10 @@ static Position MillsGetCanonicalPosition(TierPosition tier_position) {
     __m128i board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
     __m128i canonical = GetCanonicalBoardRotationRingSwap(board);
 
-    // If swapping colors results in a position within the same tier, apply that
-    // symmetry as well.
-    // if (t.unpacked.on_board[0] == t.unpacked.on_board[1] &&
-    //     t.unpacked.remaining[0] == t.unpacked.remaining[1] && not_fixed_turn)
-    //     {
-    //     __m128i swapped = X86SimdTwoPieceHashSwapPieces(board);
-    //     __m128i pieces_swapped_canonical =
-    //         GetCanonicalBoardRotationRingSwap(swapped);
-    //     if (X86SimdTwoPieceHashBoardLessThan(pieces_swapped_canonical,
-    //                                          canonical)) {
-    //         canonical = pieces_swapped_canonical;
-    //         turn = !turn;
-    //     }
-    // }
-
     // Hash
     if (not_fixed_turn) return X86SimdTwoPieceHashHash(canonical, turn);
     return X86SimdTwoPieceHashHashFixedTurn(canonical);
 }
-
-// static TierPosition GetCanonicalTierPosition(TierPosition tp) {
-//     TierPosition canonical;
-
-//     // Convert to the tier position inside the canonical tier.
-//     canonical.tier = MillsGetCanonicalTier(tp.tier);
-//     canonical.position = MillsGetPositionInSymmetricTier(tp, canonical.tier);
-
-//     // Find the canonical position inside the canonical tier.
-//     canonical.position = MillsGetCanonicalPosition(canonical);
-
-//     return canonical;
-// }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
@@ -617,10 +595,7 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
         child.position = MillsGetCanonicalPosition(child);
-        // child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
     int ret = (int)dedup.size;
     TierPositionHashSetDestroy(&dedup);
@@ -649,15 +624,62 @@ static int MillsGetCanonicalChildPositions(
         MillsMove m = {.hash = moves[i]};
         TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
         child.position = MillsGetCanonicalPosition(child);
-        // child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
+        if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
     TierPositionHashSetDestroy(&dedup);
 
     return ret;
+}
+
+static void FillChars(const char *fmt, int count, const char *chars,
+                      char *out_buf) {
+    const char *p = fmt;
+    char *out = out_buf;
+    int chars_used = 0;
+
+    while (*p) {
+        if (*p == '%' && *(p + 1) == 'c' && chars_used < count) {
+            *out++ = chars[chars_used++];
+            p += 2;
+        } else {
+            *out++ = *p++;
+        }
+    }
+
+    *out = '\0';
+}
+
+static void PatternsToStr(uint64_t patterns[2], char *buffer) {
+    int board_id = BoardId();
+    int num_slots = kNumSlots[board_id];
+    for (int i = 0; i < num_slots; ++i) {
+        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'X';
+        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+            buffer[i] = 'O';
+        } else {
+            buffer[i] = '-';
+        }
+    }
+}
+
+static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+    char board[25];
+    PatternsToStr(patterns, board);
+
+    char tmp[2048];
+    FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
+    sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
+            t.unpacked.remaining[1], t.unpacked.on_board[1]);
+    printf("it is %d's turn\n", turn);
+
+    return kNoError;
 }
 
 static void AddCanonicalParent(
@@ -867,45 +889,7 @@ static int MillsGetCanonicalParentPositions(
     return 0;
 }
 
-// static Position MillsGetPositionInSymmetricTier(TierPosition tier_position,
-//                                                 Tier symmetric) {
-//     if (tier_position.tier == symmetric) {
-//         return tier_position.position;
-//     }
-
-//     // Unhash
-//     MillsTier t;
-//     int turn;
-//     bool not_fixed_turn;
-//     __m128i board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
-
-//     // Swap colors
-//     board = X86SimdTwoPieceHashSwapPieces(board);
-
-//     // Hash
-//     if (not_fixed_turn) return X86SimdTwoPieceHashHash(board, !turn);
-//     return X86SimdTwoPieceHashHashFixedTurn(board);
-// }
-
-// static Tier MillsGetCanonicalTier(Tier tier) {
-//     MillsTier t = {.hash = tier};
-//     if (!Lasker()) {
-//         if (IsPlacementTier(t)) return tier;
-//     } else if (tier == second_lasker_tier.hash) {
-//         return tier;
-//     }
-
-//     // Swap colors
-//     MillsTier symmetric = t;
-//     int8_t tmp = symmetric.unpacked.remaining[0];
-//     symmetric.unpacked.remaining[0] = symmetric.unpacked.remaining[1];
-//     symmetric.unpacked.remaining[1] = tmp;
-//     tmp = symmetric.unpacked.on_board[0];
-//     symmetric.unpacked.on_board[0] = symmetric.unpacked.on_board[1];
-//     symmetric.unpacked.on_board[1] = tmp;
-
-//     return symmetric.hash < t.hash ? symmetric.hash : t.hash;
-// }
+static bool IsPlacementTier(MillsTier t) { return t.unpacked.remaining[1]; }
 
 static int GetChildTiersInternal(
     MillsTier t, Tier children[static kTierSolverNumChildTiersMax]) {
@@ -1026,55 +1010,6 @@ static int MillsGetTierName(Tier tier,
     return kNoError;
 }
 
-static void FillChars(const char *fmt, int count, const char *chars,
-                      char *out_buf) {
-    const char *p = fmt;
-    char *out = out_buf;
-    int chars_used = 0;
-
-    while (*p) {
-        if (*p == '%' && *(p + 1) == 'c' && chars_used < count) {
-            *out++ = chars[chars_used++];
-            p += 2;
-        } else {
-            *out++ = *p++;
-        }
-    }
-
-    *out = '\0';
-}
-
-static void PatternsToStr(uint64_t patterns[2], char *buffer) {
-    int board_id = BoardId();
-    int num_slots = kNumSlots[board_id];
-    for (int i = 0; i < num_slots; ++i) {
-        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'X';
-        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'O';
-        } else {
-            buffer[i] = '-';
-        }
-    }
-}
-
-static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
-    // Unhash
-    uint64_t patterns[2];
-    int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
-    char board[25];
-    PatternsToStr(patterns, board);
-
-    char tmp[2048];
-    FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
-    sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
-            t.unpacked.remaining[1], t.unpacked.on_board[1]);
-    printf("it is %d's turn\n", turn);
-
-    return kNoError;
-}
-
 static const TierSolverApi kMillsSolverApi = {
     .GetInitialTier = MillsGetInitialTier,
     .GetInitialPosition = MillsGetInitialPosition,
@@ -1089,9 +1024,6 @@ static const TierSolverApi kMillsSolverApi = {
         MillsGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
     .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
-
-    // .GetPositionInSymmetricTier = MillsGetPositionInSymmetricTier,
-    // .GetCanonicalTier = MillsGetCanonicalTier,
 
     .GetChildTiers = MillsGetChildTiers,
     .GetTierType = MillsGetTierType,
@@ -1113,10 +1045,6 @@ MoveArray MillsGenerateMovesGameplay(TierPosition tier_position) {
     }
 
     return ret;
-}
-
-static int GetBoardIndex(int8_t grid_index) {
-    return kGridIdxToBoardIdx[BoardId()][grid_index];
 }
 
 static int MillsMoveToString(Move move, char *buffer) {
@@ -1231,6 +1159,9 @@ static int MillsSetVariantOption(int option, int selection) {
         }
 
         case 1:  // Flying rule
+            if (selection >= 4) return kIllegalArgumentError;
+            break;
+
         case 3:  // Lasker rule
             if (selection >= 3) return kIllegalArgumentError;
             break;
@@ -1253,14 +1184,14 @@ static int MillsSetVariantOption(int option, int selection) {
 
 static int MillsInit(void *aux) {
     (void)aux;  // Unused.
+    BuildGridIdxToBoardIdx();
 
     // Initialize the default variant.
     for (int i = 1; i < 5; ++i) {
-        int ret = MillsSetVariantOption(i, 0);
+        int ret = MillsSetVariantOption(i, i == 1 ? 1 : 0);
         assert(ret == kNoError);
         (void)ret;
     }
-    BuildGridIdxToBoardIdx();
 
     return MillsSetVariantOption(0, 3);
 }
