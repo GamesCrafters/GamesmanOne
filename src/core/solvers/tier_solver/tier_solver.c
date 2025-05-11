@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the generic tier solver.
- * @version 2.1.0
- * @date 2025-03-31
+ * @version 2.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -55,7 +55,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path);
 static int TierSolverFinalize(void);
 
-static int TierSolverTest(long seed);
+static int TierSolverTest(void *aux);
 static ReadOnlyString TierSolverExplainTestError(int error);
 
 static int TierSolverSolve(void *aux);
@@ -214,24 +214,18 @@ static int TierSolverFinalize(void) {
     return kNoError;
 }
 
-static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
-    printf(
-        "Enter the number of positions to test in each tier [Default: 1000]: ");
-    char input[kInt64Base10StringLengthMax + 1];
-    int64_t test_size = 1000;
-    if (fgets(input, sizeof(input), stdin) != NULL) {
-        // Check if the user pressed Enter without entering a number
-        if (input[0] != '\n') {
-            test_size = strtoll(input, NULL, 10);
-            if (test_size < 0) {
-                printf("Invalid input. Using default test size [1000]\n");
-                test_size = 1000;
-            }
-        }
-    }
+static int TierSolverTest(void *aux) {
+    TierSolverTestOptions default_options = {
+        .seed = (long)time(NULL),
+        .test_size = 1000,
+        .verbose = 1,
+    };
+    TierSolverTestOptions *options = (TierSolverTestOptions *)aux;
+    if (!options) options = &default_options;
 
-    return TierManagerTest(&current_api, seed, test_size);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
+
+    return TierManagerTest(&current_api, options->seed, options->test_size);
 }
 
 static ReadOnlyString TierSolverExplainTestError(int error) {

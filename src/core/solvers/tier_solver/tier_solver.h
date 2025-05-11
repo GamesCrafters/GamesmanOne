@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic tier solver capable of handling loopy and loop-free tiers.
- * @version 2.1.0
- * @date 2025-03-31
+ * @version 2.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -277,13 +277,10 @@ typedef struct TierSolverApi {
 
     /**
      * @brief Returns the number of unique canonical child positions of
-     * \p tier_position . If tier symmetry is implemented, the actual child
-     * positions are first converted into positions in the canonical tier,
-     * deduplicated, and then counted. If position symmetry is implemented, the
-     * actual child positions are first converted into canonical positions
-     * within the same tier, deduplicated, and then counted. If both are
-     * implemented, tier symmetry is applied first. If neither is implemented,
-     * all unique child positions will be included.
+     * \p tier_position . If position symmetry is implemented, the actual child
+     * positions are first converted into canonical positions within the same
+     * tier, deduplicated, and then counted. Tier symmetry, however, is not
+     * applied to the positions returned.
      *
      * @note The word unique is emphasized here because it is possible, in
      * some games, that making different moves at the same position results in
@@ -298,8 +295,6 @@ typedef struct TierSolverApi {
      * optimization to first generating moves and then doing moves. If not
      * implemented, the system will replace calls to this function with calls to
      * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
-     * \c TierSolverApi::GetCanonicalTier ,
-     * \c TierSolverApi::GetPositionInSymmetricTier ,
      * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
      * will be used for deduplication regardless of whether duplicated child
      * positions are possible.
@@ -308,14 +303,11 @@ typedef struct TierSolverApi {
 
     /**
      * @brief Stores all unique canonical child positions of \p tier_position
-     * as an array in \p children and returns the size of the array. If tier
+     * as an array in \p children and returns the size of the array. If position
      * symmetry is implemented, the actual child positions are first converted
-     * into positions in the canonical tier, deduplicated, and then stored. If
-     * position symmetry is implemented, the actual child positions are first
-     * converted into canonical positions within the same tier, deduplicated,
-     * and then stored. If both are implemented, tier symmetry is applied
-     * first. If neither is implemented, all unique child positions will be
-     * included.
+     * into canonical positions within the same tier, deduplicated, and then
+     * stored. Tier symmetry, however, is not applied to the positions
+     * returned.
      *
      * @note The word unique is emphasized here because it is possible, in
      * some games, that making different moves results in the same canonical
@@ -333,8 +325,6 @@ typedef struct TierSolverApi {
      * optimization to first generating moves and then doing moves. If not
      * implemented, the system will replace calls to this function with calls to
      * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
-     * \c TierSolverApi::GetCanonicalTier ,
-     * \c TierSolverApi::GetPositionInSymmetricTier ,
      * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
      * will be used for deduplication regardless of whether duplicated child
      * positions are possible.
@@ -346,13 +336,10 @@ typedef struct TierSolverApi {
     /**
      * @brief Stores all unique canonical parent positions of \p child that
      * belong to tier \p parent_tier as an array in \p parents and returns the
-     * size of the array. If tier symmetry is implemented, the actual parent
-     * positions are first converted into positions in the canonical tier,
-     * deduplicated, and then stored. If position symmetry is implemented, the
-     * actual parent positions are first converted into canonical positions
-     * within the same tier, deduplicated, and then stored. If both are
-     * implemented, tier symmetry is applied first. If neither is implemented,
-     * all unique parent positions will be included.
+     * size of the array. If position symmetry is implemented, the actual parent
+     * positions are first converted into canonical positions within the same
+     * tier, deduplicated, and then stored. Tier symmetry, however, is not
+     * applied to the positions returned.
      *
      * @note The word unique is emphasized here because it is possible in some
      * games that a child position has two parent positions that are symmetric
@@ -375,7 +362,7 @@ typedef struct TierSolverApi {
      * position graph for all positions in the current solving tier and its
      * child tiers will be built and stored in memory by calling
      * \c TierSolverApi::GenerateMove and \c TierSolverApi::DoMove on all
-     * legal positions. This operation is known to be extremely memory-intensive
+     * legal positions. This operation is usually extremely memory-intensive
      * for large games and is slow on multithreaded builds due to the use of
      * mutex locks.
      */
@@ -488,6 +475,12 @@ typedef struct TierSolverAnalyzeOptions {
     bool force;        /**< Whether to force (re)analyze the game. */
     intptr_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverAnalyzeOptions;
+
+typedef struct TierSolverTestOptions {
+    long seed;         /**< Seed for PRNG for random testing. */
+    int64_t test_size; /**< Number of random positions to test in each tier. */
+    int verbose;       /**< Level of details to output. */
+} TierSolverTestOptions;
 
 typedef enum TierSolverSolveStatus {
     kTierSolverSolveStatusNotSolved, /**< Not fully solved. */
