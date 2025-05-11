@@ -532,19 +532,19 @@ static __m128i GetCanonicalBoardRotation(__m128i board) {
 
     // 8 symmetries
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
     board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    canonical = X86SimdTwoPieceHashMinBoard(canonical, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
 
     return canonical;
 }
@@ -557,8 +557,10 @@ static __m128i GetCanonicalBoardRotationRingSwap(__m128i board) {
     if (kInnerRingMasks[BoardId()]) {
         __m128i swapped = SwapInnerOuterRings(board);
         __m128i ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
-        canonical =
-            X86SimdTwoPieceHashMinBoard(canonical, ring_swapped_canonical);
+        if (X86SimdTwoPieceHashBoardLessThan(ring_swapped_canonical,
+                                             canonical)) {
+            canonical = ring_swapped_canonical;
+        }
     }
 
     return canonical;
