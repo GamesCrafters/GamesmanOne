@@ -5,6 +5,7 @@
 
 #include "core/types/gamesman_types.h"
 
+// clang-format off
 /*
 Option 1: board and pieces
     a) 5 pieces each on a 16-slot board (5mm)
@@ -23,8 +24,9 @@ Option 2: flying rule
     d) allowed at all times
 
 Option 3: Lasker rule (merge placement and moving phases)
-    a) false
-    b) true
+    a) no
+    b) yes, flying rule applies to total pieces remaining
+    c) yes, flying rule applies to pieces on board
 
 Option 4: removal rule
     a) standard: pieces in a mill can only be removed when all pieces are in a
@@ -38,14 +40,16 @@ Option 5: Misère (flip winning and losing conditions)
 
 Standard combinations of options:
     (a) Five Men's Morris: [aaaaa] (currently variant 0)
-    (b) Six Men's Morris: [baaaa] (currently variant 48)
-    (c) Seven Men's Morris: [caaaa] (currently variant 96)
-    (d) Nine Men's Morris: [dbaaa], [dbaba] (currently variant 156 and 158)
-    (e) Lasker Morris: [ebbaa], [ebbba] (currently variant 210 and 212)
-    (f) Eleven Men's Morris: [fcaaa] (currently variant 264)
-    (g) Twelve Men's Morris/Morabaraba: [gaaaa] (currently variant 300)
-    (h) Sesotho Morabaraba: [haaaa] (currently variant 348)
+    (b) Six Men's Morris: [baaaa] (currently variant 72)
+    (c) Seven Men's Morris: [caaaa] (currently variant 144)
+    (d) Nine Men's Morris: [dbaaa], [dbaba] (currently variant 234 and 236)
+    (e) Lasker Morris (on board): [ebcaa], [ebcba] (currently variant 318 and 320)
+    (f) Lasker Morris (remaining): [ebbaa], [ebbba] (currently variant 312 and 314)
+    (g) Eleven Men's Morris: [fcaaa] (currently variant 396)
+    (h) Twelve Men's Morris/Morabaraba: [gaaaa] (currently variant 450)
+    (i) Sesotho Morabaraba: [haaaa] (currently variant 522)
 */
+// clang-format on
 
 static const char *const kMillsBoardAndPiecesChoices[] = {
     "5 pieces each on a 16-slot board (Five Men's Morris)",
@@ -72,16 +76,28 @@ static const char *const kMillsFlyingRuleChoices[] = {
     "Allowed with fewer than 4 pieces on board",
     "Allowed always",
 };
+#define NUM_FLYING_RULE_CHOICES \
+    (sizeof(kMillsFlyingRuleChoices) / sizeof(kMillsFlyingRuleChoices[0]))
 
-static const char *const kBooleanChoices[] = {
-    "False",
-    "True",
+static const char *const kMillsLaskerRuleChoices[] = {
+    "No",
+    "Yes, flying rule applies to total pieces remaining",
+    "Yes, flying rule applies to pieces on board",
 };
+#define NUM_LASKER_RULE_CHOICES \
+    (sizeof(kMillsLaskerRuleChoices) / sizeof(kMillsLaskerRuleChoices[0]))
 
 static const char *const kMillsRemovalRuleChoices[] = {
     "Standard",
     "Strict",
     "Lenient",
+};
+#define NUM_REMOVAL_RULE_CHOICES \
+    (sizeof(kMillsRemovalRuleChoices) / sizeof(kMillsRemovalRuleChoices[0]))
+
+static const char *const kBooleanChoices[] = {
+    "False",
+    "True",
 };
 
 static const GameVariantOption mills_variant_options[6] = {
@@ -92,19 +108,17 @@ static const GameVariantOption mills_variant_options[6] = {
     },
     {
         .name = "Flying Rule",
-        .num_choices = sizeof(kMillsFlyingRuleChoices) /
-                       sizeof(kMillsFlyingRuleChoices[0]),
+        .num_choices = NUM_FLYING_RULE_CHOICES,
         .choices = kMillsFlyingRuleChoices,
     },
     {
         .name = "Lasker Rule",
-        .num_choices = 2,
-        .choices = kBooleanChoices,
+        .num_choices = NUM_LASKER_RULE_CHOICES,
+        .choices = kMillsLaskerRuleChoices,
     },
     {
         .name = "Removal Rule",
-        .num_choices = sizeof(kMillsRemovalRuleChoices) /
-                       sizeof(kMillsRemovalRuleChoices[0]),
+        .num_choices = NUM_REMOVAL_RULE_CHOICES,
         .choices = kMillsRemovalRuleChoices,
     },
     {

@@ -133,6 +133,17 @@ static int FlyThreshold(void) {
     return ret[variant_option_selections.unpacked.flying_rule];
 }
 
+static bool FlyingAllowed(MillsTier t, int turn) {
+    if (variant_option_selections.unpacked.lasker_rule == 1) {
+        // Flying rule applies to total pieces remaining.
+        return t.unpacked.on_board[turn] + t.unpacked.remaining[turn] <=
+               FlyThreshold();
+    }
+
+    // Flying rule applies to pieces on board.
+    return t.unpacked.on_board[turn] <= FlyThreshold();
+}
+
 static bool StrictRemoval(void) {
     return variant_option_selections.unpacked.removal_rule == 1;
 }
@@ -310,7 +321,7 @@ static void GeneratePlacingMoves(uint64_t patterns[2], int turn,
  */
 static uint64_t BuildDestMask(MillsTier t, int turn, int8_t src,
                               uint64_t blanks) {
-    if (t.unpacked.on_board[turn] <= FlyThreshold()) {
+    if (FlyingAllowed(t, turn)) {
         return blanks;
     }
 
@@ -1161,14 +1172,23 @@ static int MillsSetVariantOption(int option, int selection) {
         }
 
         case 1:  // Flying rule
-            if (selection >= 4) return kIllegalArgumentError;
+            if (selection >= (int)NUM_FLYING_RULE_CHOICES) {
+                return kIllegalArgumentError;
+            }
             break;
 
-        case 3:  // Lasker rule
-            if (selection >= 3) return kIllegalArgumentError;
+        case 2:  // Lasker rule
+            if (selection >= (int)NUM_LASKER_RULE_CHOICES) {
+                return kIllegalArgumentError;
+            }
             break;
 
-        case 2:  // Removal rule
+        case 3:  // Removal rule
+            if (selection >= (int)NUM_REMOVAL_RULE_CHOICES) {
+                return kIllegalArgumentError;
+            }
+            break;
+
         case 4:  // Misère
             if (selection >= 2) return kIllegalArgumentError;
             break;
