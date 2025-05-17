@@ -70,7 +70,7 @@ static int MakeSelection(ReadOnlyString key) {
                 error);
     }
 
-    return 0;
+    return 1;  // Go back one level
 }
 
 static void UpdateTitle(void) {
