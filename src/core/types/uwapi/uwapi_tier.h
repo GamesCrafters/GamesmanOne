@@ -118,7 +118,7 @@ typedef struct UwapiTier {
      *
      * @details A formal position is a human-editable (and hopefully
      * human-readable) string that uniquely defines a position. For example, a
-     * FEN notation string can be used as a formal position of a chess game.
+     * FEN string can be used as a formal position of a chess game.
      * @link https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
      *
      * @note IMPORTANT: The security of this function is crucial as
@@ -135,7 +135,7 @@ typedef struct UwapiTier {
      *
      * @details A formal position is a human-editable (and hopefully
      * human-readable) string that uniquely defines a position. For example, a
-     * FEN notation string can be used as a formal position of a chess game.
+     * FEN string can be used as a formal position of a chess game.
      */
     TierPosition (*FormalPositionToTierPosition)(
         ReadOnlyString formal_position);
@@ -150,7 +150,7 @@ typedef struct UwapiTier {
      *
      * @details A formal position is a human-editable (and hopefully
      * human-readable) string that uniquely defines a position. For example, a
-     * FEN notation string can be used as a formal position of a chess game.
+     * FEN string can be used as a formal position of a chess game.
      */
     CString (*TierPositionToFormalPosition)(TierPosition tier_position);
 
