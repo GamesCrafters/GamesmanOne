@@ -76,6 +76,8 @@ enum {
     kNumMovesPerDirMax = kSideLengthMax * 3 - 4,
 };
 
+static const QuixoTier kQuixoTierInit = {.hash = 0};
+
 static const QuixoMove kQuixoMoveInit = {.hash = 0};
 
 static const char kDirToChar[] = {'R', 'L', 'D', 'U'};
@@ -1037,18 +1039,19 @@ static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
 
     // Check if the board corresponds to a valid tier.
     ConstantReadOnlyString board = formal_position + 2;
-    int num_blanks = 0, num_x = 0, num_o = 0;
+    QuixoTier t = kQuixoTierInit;
+    int num_blanks = 0;
     for (int i = 0; i < board_size; ++i) {
         if (board[i] != '-' && board[i] != 'X' && board[i] != 'O') return false;
         num_blanks += (board[i] == '-');
-        num_x += (board[i] == 'X');
-        num_o += (board[i] == 'O');
+        t.unpacked[0] += (board[i] == 'X');
+        t.unpacked[1] += (board[i] == 'O');
     }
-    if (!IsValidPieceConfig(num_blanks, num_x, num_o)) return false;
+    if (!IsValidPieceConfig(num_blanks, t.unpacked[0], t.unpacked[1]))
+        return false;
 
     // Check if the board is a valid position.
     int turn = formal_position[0] - '1';
-    QuixoTier t = {.unpacked = {num_x, num_o}};
     TierPosition tier_position = {
         .tier = t.hash,
         .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
@@ -1063,13 +1066,12 @@ static TierPosition QuixoFormalPositionToTierPosition(
     //
     ConstantReadOnlyString board = formal_position + 2;
     int turn = formal_position[0] - '1';
-    int num_x = 0, num_o = 0;
+    QuixoTier t = kQuixoTierInit;
     for (int i = 0; i < board_size; ++i) {
-        num_x += (board[i] == 'X');
-        num_o += (board[i] == 'O');
+        t.unpacked[0] += (board[i] == 'X');
+        t.unpacked[1] += (board[i] == 'O');
     }
 
-    QuixoTier t = {.unpacked = {num_x, num_o}};
     TierPosition ret = {
         .tier = t.hash,
         .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
