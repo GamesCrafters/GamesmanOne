@@ -29,6 +29,18 @@
 
 #include "core/types/gamesman_types.h"
 
+/**
+ * @brief Tests the game of name \p game_name and variant index \p variant_id
+ * using \p seed as the seed for PRNGs if needed.
+ *
+ * @param game_name Name of the game used internally by GAMESMAN.
+ * @param variant_id Index of the variant to solve for. Pass a negative value to
+ * test the default variant.
+ * @param seed Seed for PRNGs.
+ * @param verbose Currently has no effect regardless of the value passed in.
+ * @return kNoError if all tests are passed,
+ * @return non-zero error code otherwise.
+ */
 int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
                  int verbose);
 

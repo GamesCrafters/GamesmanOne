@@ -58,7 +58,7 @@ static int TestOneVariant(ReadOnlyString game_name, int variant_id, long seed) {
 
     GameManagerFinalize();
 
-    return error;
+    return kGameTestFailureError;
 }
 
 static int GetNumVarinats(ReadOnlyString game_name, int *num_variants) {

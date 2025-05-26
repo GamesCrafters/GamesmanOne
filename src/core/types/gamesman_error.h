@@ -46,6 +46,7 @@ enum GamesmanError {
     kIllegalSolverOptionError,      /**< Illegal solver option encountered. */
     kIncompleteGameplayApiError,    /**< Gameplay API not fully implemented. */
     kGameInitFailureError,          /**< Game initialization failed. */
+    kGameTestFailureError,          /**< Game failed to pass solver tests. */
     kUseBeforeInitializationError,  /**< Module used before initialization. */
     kMpiError,                      /**< Error in MPI function. */
     kHeadlessError,                 /**< Headless command parsing error. */
