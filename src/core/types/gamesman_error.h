@@ -34,7 +34,7 @@ enum GamesmanError {
     kNotImplementedError,      /**< Feature not implemented. */
     kNotReachedError,          /**< Reaching a branch marked as unreached. */
     kIntegerOverflowError,     /**< Integer overflow. */
-    kMemoryOverflowError,      /**< Memory overflow. */
+    kBufferOverflowError,      /**< Buffer overflow. */
     kFileSystemError,          /**< A file system call returned error. */
     kIllegalArgumentError,     /**< Illegal argument passed into function. */
     kIllegalGameNameError,     /**< Illegal game name encountered. */
