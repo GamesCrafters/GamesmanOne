@@ -245,20 +245,21 @@ typedef struct RegularSolverApi {
         Position parents[static kRegularSolverNumParentPositionsMax]);
 } RegularSolverApi;
 
-/** @brief Solver options of the Regular Solver. */
+/** @brief Solver options for the Regular Solver. */
 typedef struct RegularSolverSolveOptions {
     int verbose;       /**< Level of details to output. */
     bool force;        /**< Whether to force (re)solve the game. */
     intptr_t memlimit; /**<  Approximate heap memory limit in bytes. */
 } RegularSolverSolveOptions;
 
-/** @brief Analyzer options of the Regular Solver. */
+/** @brief Analyzer options for the Regular Solver. */
 typedef struct RegularSolverAnalyzeOptions {
     int verbose;       /**< Level of details to output. */
     bool force;        /**< Whether to force (re)analyze the game. */
     intptr_t memlimit; /**<  Approximate heap memory limit in bytes. */
 } RegularSolverAnalyzeOptions;
 
+/** @brief Test options for the Regular Solver. */
 typedef struct RegularSolverTestOptions {
     long seed;         /**< Seed for PRNG for random testing. */
     int64_t test_size; /**< Number of random positions to test. */
