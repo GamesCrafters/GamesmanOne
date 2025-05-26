@@ -3,8 +3,8 @@
  * @author François Bonnet: original published version, arXiv:2007.15895v1
  * https://github.com/st34-satoshi/quixo-cpp/tree/master/others/multi-fb/codeFrancois_v7
  * @author Robert Shi (robertyishi@berkeley.edu): reimplemented with 64-bit
- * piece patterns using Intel SSE2 and BMI2 intrinsics; added support for
- * efficient board mirroring and rotation.
+ * piece patterns using Intel SSE2, SSE4.1 and BMI2 intrinsics; added support
+ * for efficient board mirroring and rotation.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Hash system for tier games with boards of size 32 or less and using no
@@ -12,10 +12,11 @@
  *
  * 1. The tier definition of the game must be based on the number of remaining
  * pieces each player. The hash functions provided in this library returns the
- * hash of positions within the corresponding tier with the above definition.
- * For example, when using this library to hash positions in Tic-Tac-Toe, the
- * tiers must be defined as [0X 0O], [1X 0O], [1X 1O], [2X 1O], [2X 2O], ...,
- * [5X 4O]. Subdivision or merging of tiers are currently unsupported.
+ * hash value of positions within the corresponding tier with the above
+ * definition. For example, when using this library to hash positions in
+ * Tic-Tac-Toe, the tiers must be defined as [0X 0O], [1X 0O], [1X 1O], [2X 1O],
+ * [2X 2O], ..., [5X 4O]. Subdivision or merging of tiers are currently
+ * unsupported.
  *
  * 2. There must exist a way to map the board onto a 8x8 grid. Examples of valid
  * game boards include all rectangular/square game boards with both dimensions
@@ -24,7 +25,7 @@
  *
  * @note This library only provides minimal safety checks on input values for
  * performance.
- * @note This library requires Intel SSE2 and BMI2 instruction sets.
+ * @note This library requires Intel SSE2, SSE4.1 and BMI2 instruction sets.
  * @details Usage guide: this hash system provides functions to convert board
  * representations to position hash values within each tier (hashing) and to
  * convert hash values back to boards (unhashing). The tiers are defined using
@@ -282,30 +283,56 @@ int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o);
 
 /**
  * @brief Returns the hash for the given position represented as 64-bit piece
- * patterns packed in a 128-bit XMM register \p board with the given \p turn.
+ * patterns packed in a 128-bit XMM register \p board with the given \p turn .
  * The \p board must be packed in the following way:
  *     board[63:0] := bit pattern of X
  *     board[127:64] := bit pattern of O
+ *
  * @param board Board to hash.
  * @param turn 0 if it is the first player's turn, 1 if it is the second
  * player's turn.
- * @return Hash of the given position.
+ * @return Hash value of the given position.
  */
 Position X86SimdTwoPieceHashHash(__m128i board, int turn);
 
+/**
+ * @brief Returns the hash for the given position represented as two 64-bit
+ * piece patterns packed in a uint64_t array \p patterns with the given \p turn
+ * . The \p patterns must be packed in the following way:
+ *     patterns[0] := bit pattern of X
+ *     patterns[1] := bit pattern of O
+ *
+ * @param patterns Board represented as bit patterns.
+ * @param turn 0 if it is the first player's turn, 1 if it is the second
+ * player's turn.
+ * @return Hash value of the given position.
+ */
 Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn);
 
 /**
  * @brief Returns the hash for the given position represented as 64-bit piece
  * patterns packed in a 128-bit XMM register \p board , assuming the given
  * position is from a tier in which all positions are one of the players' turn.
- * The \p board must be packed in the following way: board[63:0]
- * := bit pattern of X board[127:64] := bit pattern of O
+ * The \p board must be packed in the following way:
+ *     board[63:0] := bit pattern of X
+ *     board[127:64] := bit pattern of O
+ *
  * @param board Board to hash.
- * @return Hash of the given position.
+ * @return Hash value of the given position.
  */
 Position X86SimdTwoPieceHashHashFixedTurn(__m128i board);
 
+/**
+ * @brief Returns the hash for the given position represented as two 64-bit
+ * piece patterns packed in a uint64_t array \p patterns , assuming the given
+ * position is from a tier in which all positions are one of the players' turn.
+ * The \p patterns must be packed in the following way:
+ *     patterns[0] := bit pattern of X
+ *     patterns[1] := bit pattern of O
+ *
+ * @param board Board to hash.
+ * @return Hash value of the given position.
+ */
 Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t patterns[2]);
 
 /**
@@ -346,9 +373,9 @@ __m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x, int num_o);
 
 /**
  * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to the 128-bit space at \p patterns. This
+ * hash value is given by \p hash to the 128-bit space at \p patterns . This
  * function is equivalent to first calling X86SimdTwoPieceHashUnhash and then
- * storing the contents of the return value to \p patterns, but is more
+ * storing the contents of the return value to \p patterns , but is more
  * efficient.
  * @note X is the first player, and O is the second player.
  * @note Use X86SimdTwoPieceHashUnhash instead to unhash to a __m128i register.
@@ -363,11 +390,11 @@ void X86SimdTwoPieceHashUnhashMem(Position hash, int num_x, int num_o,
 
 /**
  * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to the 128-bit space at \p patterns, assuming
+ * hash value is given by \p hash to the 128-bit space at \p patterns , assuming
  * \p hash was previously obtained using X86SimdTwoPieceHashHashFixedTurn that
  * does not account for turns. This function is equivalent to first calling
  * X86SimdTwoPieceHashUnhashFixedTurn and then storing the contents of the
- * return value to \p patterns, but is more efficient.
+ * return value to \p patterns , but is more efficient.
  * @note X is the first player, and O is the second player.
  * @note Use X86SimdTwoPieceHashUnhashFixedTurn instead to unhash to a __m128i
  * register.
@@ -543,6 +570,15 @@ static inline bool X86SimdTwoPieceHashBoardLessThan(__m128i a, __m128i b) {
 
 /**
  * @brief For boards with <= 7 rows only, returns min( \p a , \p b ).
+ * @note Empirical data suggests that a branch-free solution for selecting the
+ * minimum board using this function does not outperform the solution using
+ * the replace-if-smaller logic on Alder Lake; that is, the following logic
+ * if (X86SimdTwoPieceHashBoardLessThan(next, min)) {
+ *     min = next;
+ * }
+ * may actually be faster in a hot loop even if branch mispredictions are
+ * possible. Benchmarking is therefore strongly recommended before picking a
+ * solution.
  *
  * @param a Board A.
  * @param b Board B.

@@ -3,15 +3,15 @@
  * @author François Bonnet: original published version, arXiv:2007.15895v1
  * https://github.com/st34-satoshi/quixo-cpp/tree/master/others/multi-fb/codeFrancois_v7
  * @author Robert Shi (robertyishi@berkeley.edu): reimplemented with 64-bit
- * piece patterns using Intel SSE2 and BMI2 intrinsics; added support for
- * efficient board mirroring and rotation.
+ * piece patterns using Intel SSE2, SSE4.1 and BMI2 intrinsics; added support
+ * for efficient board mirroring and rotation.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the x86 SIMD hash system for tier games with
  * rectangular boards of size 32 or less and using no more than two types of
  * pieces.
- * @version 1.0.1
- * @date 2025-03-30
+ * @version 2.0.0
+ * @date 2025-04-28
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -248,7 +248,6 @@ __m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
     __attribute__((aligned(16))) uint64_t s[2];
     X86SimdTwoPieceHashUnhashFixedTurnMem(hash, num_x, num_o, s);
 
-    // TODO: benchmark _mm_stream_load_si128
     return _mm_load_si128((const __m128i *)s);
 }
 

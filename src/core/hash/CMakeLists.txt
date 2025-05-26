@@ -1,12 +1,10 @@
 check_c_compiler_flag("-mbmi2" SUPPORTS_BMI2)
 
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/generic.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/two_piece.h)
+            ${CMAKE_CURRENT_SOURCE_DIR}/generic.h)
 
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/generic.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/two_piece.c)
+            ${CMAKE_CURRENT_SOURCE_DIR}/generic.c)
 
 set (BMI2_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/x86_simd_two_piece.h)
 
@@ -19,6 +17,7 @@ target_link_libraries(generic_hash PRIVATE misc)
 if(SUPPORTS_BMI2)
     target_compile_options(generic_hash PRIVATE "-mbmi2")
     target_compile_options(generic_hash PRIVATE "-msse2")
+    target_compile_options(generic_hash PRIVATE "-msse4.1")
     target_sources(generic_hash PRIVATE ${BMI2_HEADERS} ${BMI2_HEADERS})
     target_compile_definitions(generic_hash PRIVATE GAMESMAN_HAS_BMI2)
 endif()
