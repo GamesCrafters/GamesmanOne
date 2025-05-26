@@ -72,6 +72,9 @@ void TierWorkerTestStackBufferStatDestroy(TierWorkerTestStackBufferStat *stat);
  * @param parent_tiers Parent tiers of \p tier.
  * @param seed Seed for internal pseudorandom number generator.
  * @param test_size Maximum number of positions to test in the given \p tier.
+ * @param stat Pointer to a TierWorkerTestStackBufferStat object obtained from
+ * TierWorkerTestStackBufferStatCreate. This object is used to record the
+ * maximum usage of various stack buffers.
  * @return One of the values in the \c TierSolverTestErrors enum. See
  * \c tier_solver.h for details.
  */
