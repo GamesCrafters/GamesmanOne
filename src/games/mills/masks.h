@@ -1,3 +1,32 @@
+/**
+ * @file masks.h
+ * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee,
+ * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
+ * @author Cameron Cheung (cameroncheung@berkeley.edu): programmed the prototype
+ * version that was later converted to the bit-board format
+ * @author Robert Shi (robertyishi@berkeley.edu): x86 SIMD hash version
+ * @author GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Hardcoded masks for all Mills variants.
+ * @version 1.0.0
+ * @date 2025-04-27
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef GAMESMANONE_GAMES_MILLS_MASKS_H_
 #define GAMESMANONE_GAMES_MILLS_MASKS_H_
 
@@ -22,6 +51,10 @@ static const uint64_t kBoardMasks[NUM_BOARD_AND_PIECES_CHOICES] = {
     0x492a1c771c2a49, 0x492a1c771c2a49, 0x492a1c771c2a49, 0x492a1c7f1c2a49,
 };
 
+/**
+ * @brief Effective side lengths of the boards of each variant when mapped
+ * to the 8x8 grid.
+ */
 static const int8_t kPaddedSideLengths[NUM_BOARD_AND_PIECES_CHOICES] = {
     5, 5, 5, 7, 7, 7, 7, 7,
 };
@@ -368,36 +401,79 @@ static const uint64_t *kLineMasks[NUM_BOARD_AND_PIECES_CHOICES] = {
     kLineMasks24, kLineMasks24Plus, kLineMasks24Plus, kLineMasks25,
 };
 
+/**
+ * @brief Number of lines each slot of the 16 board participates in.
+ * kNumParticipatingLines16[i] gives the number of lines that slot i
+ * of the 16 board participates in.
+ */
 static const int8_t kNumParticipatingLines16[] = {
     2, 0, 1, 0, 2, 0, 0, 0, 0, 2, 1, 2, 0, 0, 0, 0, 1, 1, 0,
     1, 1, 0, 0, 0, 0, 2, 1, 2, 0, 0, 0, 0, 2, 0, 1, 0, 2,
 };
 
+/**
+ * @brief Number of lines each slot of the 17 board participates in.
+ * kNumParticipatingLines17[i] gives the number of lines that slot i
+ * of the 17 board participates in.
+ */
 static const int8_t kNumParticipatingLines17[] = {
     2, 0, 2, 0, 2, 0, 0, 0, 0, 2, 3, 2, 0, 0, 0, 0, 2, 3, 6,
     3, 2, 0, 0, 0, 0, 2, 3, 2, 0, 0, 0, 0, 2, 0, 2, 0, 2,
 };
 
+/**
+ * @brief Number of lines each slot of the 24 board participates in.
+ * kNumParticipatingLines24[i] gives the number of lines that slot i
+ * of the 24 board participates in.
+ */
 static const int8_t kNumParticipatingLines24[] = {
     2, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 2, 0, 0, 0, 0, 2,
     2, 2, 0, 0, 0, 2, 2, 2, 0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 0,
     0, 0, 0, 2, 0, 2, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0, 2,
 };
 
+/**
+ * @brief Number of lines each slot of the 24 board with diagonals participates
+ * in. kNumParticipatingLines24[i] gives the number of lines that slot i of the
+ * 24 board participates in.
+ */
 static const int8_t kNumParticipatingLines24Plus[] = {
     3, 0, 0, 2, 0, 0, 3, 0, 0, 3, 0, 2, 0, 3, 0, 0, 0, 0, 3,
     2, 3, 0, 0, 0, 2, 2, 2, 0, 2, 2, 2, 0, 0, 0, 3, 2, 3, 0,
     0, 0, 0, 3, 0, 2, 0, 3, 0, 0, 3, 0, 0, 2, 0, 0, 3,
 };
 
+/**
+ * @brief Number of lines each slot of the 25 board participates in.
+ * kNumParticipatingLines25[i] gives the number of lines that slot i
+ * of the 25 board participates in.
+ */
 static const int8_t kNumParticipatingLines25[] = {
     2, 0, 0, 2, 0, 0, 2, 0, 0, 2, 0, 3, 0, 2, 0, 0, 0, 0, 2,
     4, 2, 0, 0, 0, 2, 3, 4, 6, 4, 3, 2, 0, 0, 0, 2, 4, 2, 0,
     0, 0, 0, 2, 0, 3, 0, 2, 0, 0, 2, 0, 0, 2, 0, 0, 2,
 };
 
+/**
+ * @brief Number of lines each slot on each board variant participates in.
+ * kNumParticipatingLines[board_id][i] gives the number of lines that slot i
+ * on the board with index equal to board_id participates in.
+ */
+static const int8_t *kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES] = {
+    kNumParticipatingLines16,     kNumParticipatingLines16,
+    kNumParticipatingLines17,     kNumParticipatingLines24,
+    kNumParticipatingLines24,     kNumParticipatingLines24Plus,
+    kNumParticipatingLines24Plus, kNumParticipatingLines25,
+};
+
 // clang-format off
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on the 16 board. kParticipatingLines16[i] gives the array of
+ * masks for lines passing through the i-th slot. The length of 
+ * kParticipatingLines16[i] is given by kNumParticipatingLines16[i].
+ */
 static const uint64_t kParticipatingLines16[][6] = {
     { 0x14, 0x100010000, 0x0, 0x0, 0x0, 0x0, },
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, },
@@ -438,6 +514,12 @@ static const uint64_t kParticipatingLines16[][6] = {
     { 0x100010, 0x500000000, 0x0, 0x0, 0x0, 0x0, },
 };
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on the 17 board. kParticipatingLines17[i] gives the array of
+ * masks for lines passing through the i-th slot. The length of 
+ * kParticipatingLines17[i] is given by kNumParticipatingLines17[i].
+ */
 static const uint64_t kParticipatingLines17[][6] = {
     { 0x14, 0x100010000, 0x0, 0x0, 0x0, 0x0, },
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, },
@@ -478,6 +560,12 @@ static const uint64_t kParticipatingLines17[][6] = {
     { 0x100010, 0x500000000, 0x0, 0x0, 0x0, 0x0, },
 };
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on the 24 board. kParticipatingLines24[i] gives the array of
+ * masks for lines passing through the i-th slot. The length of 
+ * kParticipatingLines24[i] is given by kNumParticipatingLines24[i].
+ */
 static const uint64_t kParticipatingLines24[][6] = {
     { 0x48, 0x1000001000000, 0x0, 0x0, 0x0, 0x0, },
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, },
@@ -536,6 +624,12 @@ static const uint64_t kParticipatingLines24[][6] = {
     { 0x40000040, 0x9000000000000, 0x0, 0x0, 0x0, 0x0, },
 };
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on the 24 board with diagonals. kParticipatingLines24Plus[i]
+ * gives the array of masks for lines passing through the i-th slot. The length
+ * of kParticipatingLines24Plus[i] is given by kNumParticipatingLines24Plus[i].
+ */
 static const uint64_t kParticipatingLines24Plus[][6] = {
     { 0x48, 0x1000001000000, 0x40200, 0x0, 0x0, 0x0, },
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, },
@@ -594,6 +688,12 @@ static const uint64_t kParticipatingLines24Plus[][6] = {
     { 0x40000040, 0x9000000000000, 0x201000000000, 0x0, 0x0, 0x0, },
 };
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on the 25 board. kParticipatingLines25[i] gives the array of
+ * masks for lines passing through the i-th slot. The length of 
+ * kParticipatingLines25[i] is given by kNumParticipatingLines25[i].
+ */
 static const uint64_t kParticipatingLines25[][6] = {
     { 0x48, 0x1000001000000, 0x0, 0x0, 0x0, 0x0, },
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, },
@@ -654,18 +754,18 @@ static const uint64_t kParticipatingLines25[][6] = {
 
 // clang-format on
 
+/**
+ * @brief Masks with set bits corresponding to slots that form a line passing
+ * through a slot on each board variant. kParticipatingLines[board_id][i] gives
+ * the array of masks for lines passing through the i-th slot on the board with
+ * index equal to board_id. The length of kParticipatingLines[board_id][i] is
+ * given by kNumParticipatingLines[board_id].
+ */
 static const uint64_t (
     *kParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES])[6] = {
     kParticipatingLines16,     kParticipatingLines16, kParticipatingLines17,
     kParticipatingLines24,     kParticipatingLines24, kParticipatingLines24Plus,
     kParticipatingLines24Plus, kParticipatingLines25,
-};
-
-static const int8_t *kNumParticipatingLines[NUM_BOARD_AND_PIECES_CHOICES] = {
-    kNumParticipatingLines16,     kNumParticipatingLines16,
-    kNumParticipatingLines17,     kNumParticipatingLines24,
-    kNumParticipatingLines24,     kNumParticipatingLines24Plus,
-    kNumParticipatingLines24Plus, kNumParticipatingLines25,
 };
 
 /**

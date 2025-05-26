@@ -30,6 +30,7 @@
 #include "games/mills/mills.h"
 
 #include <assert.h>     // assert
+#include <ctype.h>      // toupper
 #include <stddef.h>     // NULL
 #include <stdint.h>     // int64_t, int8_t, uint64_t
 #include <stdio.h>      // sprintf
@@ -41,7 +42,7 @@
 #include "core/hash/x86_simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
-#include "games/mills/board_formats.h"
+#include "games/mills/boards.h"
 #include "games/mills/masks.h"
 #include "games/mills/variants.h"
 
@@ -61,6 +62,8 @@ typedef union {
     } unpacked;
     Tier hash;
 } MillsTier;
+
+static const MillsTier kMillsTierInit = {.hash = 0};
 
 typedef union {
     struct {
@@ -93,10 +96,15 @@ enum {
     kFromRemaining = 63,
 
     /**
-     * @brief Special value for MillsMoves removal index indicating no removal.
-     *
+     * @brief Special value for MillsMove removal index indicating no removal.
      */
     kNoRemoval = 63,
+
+    /**
+     * @brief Special value for MillsMove destination index indicating that this
+     * is a removal-only part move for AutoGUI only.
+     */
+    kNoDest = 63,
 };
 
 // ============================= Variant Settings =============================
@@ -119,7 +127,7 @@ static int BoardId(void) {
 
 static bool FillPossible(void) {
     // Only possible in Twelve Men's Morris
-    return variant_option_selections.unpacked.board_and_pieces == 6;
+    return BoardId() == 6;
 }
 
 static int Lasker(void) {
@@ -182,8 +190,7 @@ static int8_t GetBoardIndex(int8_t grid_index) {
 // ============================== kMillsSolverApi ==============================
 
 static Tier MillsGetInitialTier(void) {
-    int8_t pieces_per_player =
-        kPiecesPerPlayer[variant_option_selections.unpacked.board_and_pieces];
+    int8_t pieces_per_player = kPiecesPerPlayer[BoardId()];
     MillsTier t = {
         .unpacked =
             {
@@ -453,9 +460,9 @@ static Value MillsPrimitive(TierPosition tier_position) {
         }
     }
 
-    // The current player loses if their remaining pieces has been reduced to 2.
-    // It doesn't matter whose turn it is since it's not possible for players
-    // to capture their own pieces.
+    // The current player loses if the number of their remaining pieces has been
+    // reduced to 2. It doesn't matter whose turn it is since it's not possible
+    // for players to capture their own pieces.
     if (t.unpacked.remaining[0] + t.unpacked.on_board[0] == 2) {
         return misere ? kWin : kLose;
     } else if (t.unpacked.remaining[1] + t.unpacked.on_board[1] == 2) {
@@ -472,9 +479,8 @@ static Value MillsPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
-static TierPosition MillsDoMoveInternal(MillsTier t,
-                                        const uint64_t _patterns[2],
-                                        MillsMove m, int turn) {
+static TierPosition DoMoveInternal(MillsTier t, const uint64_t _patterns[2],
+                                   MillsMove m, int turn) {
     // Create a copy of the patterns
     uint64_t patterns[2] = {_patterns[0], _patterns[1]};
 
@@ -510,7 +516,7 @@ static TierPosition MillsDoMove(TierPosition tier_position, Move move) {
     MillsTier t = Unhash(tier_position, patterns, &turn);
     MillsMove m = {.hash = move};
 
-    return MillsDoMoveInternal(t, patterns, m, turn);
+    return DoMoveInternal(t, patterns, m, turn);
 }
 
 static bool MillsIsLegalPosition(TierPosition tier_position) {
@@ -606,7 +612,7 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     TierPositionHashSetReserve(&dedup, num_moves / 4);
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
-        TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        TierPosition child = DoMoveInternal(t, patterns, m, turn);
         child.position = MillsGetCanonicalPosition(child);
         TierPositionHashSetAdd(&dedup, child);
     }
@@ -635,7 +641,7 @@ static int MillsGetCanonicalChildPositions(
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
-        TierPosition child = MillsDoMoveInternal(t, patterns, m, turn);
+        TierPosition child = DoMoveInternal(t, patterns, m, turn);
         child.position = MillsGetCanonicalPosition(child);
         if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
@@ -664,14 +670,14 @@ static void FillChars(const char *fmt, int count, const char *chars,
     *out = '\0';
 }
 
-static void PatternsToStr(uint64_t patterns[2], char *buffer) {
+static void PatternsToStr(uint64_t patterns[2], char *buffer, char x, char o) {
     int board_id = BoardId();
     int num_slots = kNumSlots[board_id];
     for (int i = 0; i < num_slots; ++i) {
         if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'X';
+            buffer[i] = x;
         } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
-            buffer[i] = 'O';
+            buffer[i] = o;
         } else {
             buffer[i] = '-';
         }
@@ -684,7 +690,7 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
     int turn;
     MillsTier t = Unhash(tier_position, patterns, &turn);
     char board[25];
-    PatternsToStr(patterns, board);
+    PatternsToStr(patterns, board, 'X', 'O');
 
     char tmp[2048];
     FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
@@ -1226,6 +1232,301 @@ static int MillsFinalize(void) {
     return kNoError;
 }
 
+// ================================ kMillsUwapi ================================
+
+static int8_t ParseRemainingPiecesString(ReadOnlyString str,
+                                         size_t num_digits) {
+    char tmp[3] = {0};
+    memcpy(tmp, str, num_digits);
+
+    return (int8_t)atoi(tmp);
+}
+
+static int NumPieceCounterDigits(void) {
+    return 1 + (kPiecesPerPlayer[BoardId()] >= 10);
+}
+
+static void ParseRemainingPieces(ReadOnlyString formal_position, int8_t *x_rem,
+                                 int8_t *o_rem) {
+    size_t piece_counter_digits = NumPieceCounterDigits();
+    const char *cur = formal_position + 2 + kNumSlots[BoardId()];
+    *x_rem = ParseRemainingPiecesString(cur, piece_counter_digits);
+    *o_rem = ParseRemainingPiecesString(cur + piece_counter_digits,
+                                        piece_counter_digits);
+}
+
+// Formal position format:
+// """
+// <turn>_<board (kNumSlots[BoardId()]x)>
+//     <white_remaining (1-2x)><black_remaining (1-2x)>
+// """
+static bool MillsIsLegalFormalPosition(ReadOnlyString formal_position) {
+    int board_id = BoardId();
+    int8_t pieces_per_player = kPiecesPerPlayer[board_id];
+    size_t piece_counter_digits = 1 + (pieces_per_player >= 10);
+    size_t expected_length = 2 + kNumSlots[board_id] + piece_counter_digits * 2;
+    if (strlen(formal_position) != expected_length) return false;
+
+    if (formal_position[0] != '1' && formal_position[0] != '2') return false;
+    if (formal_position[1] != '_') return false;
+
+    // Count the number of each type of piece
+    int8_t x_board = 0, o_board = 0;
+    for (int i = 2; i < 2 + kNumSlots[board_id]; ++i) {
+        char c = toupper(formal_position[i]);
+        if (c == 'W') {
+            ++x_board;
+        } else if (c == 'B') {
+            ++o_board;
+        } else if (c != '-') {  // Illegal character detected.
+            return false;
+        }
+    }
+    int8_t x_rem, o_rem;
+    ParseRemainingPieces(formal_position, &x_rem, &o_rem);
+
+    if (x_board + x_rem > pieces_per_player) return false;
+    if (o_board + o_rem > pieces_per_player) return false;
+    if (!Lasker() && (x_rem != o_rem && x_rem + 1 != o_rem)) return false;
+
+    return true;
+}
+
+static void ParseBoardString(ReadOnlyString board, uint64_t patterns[2],
+                             int8_t *num_x, int8_t *num_o) {
+    patterns[0] = patterns[1] = 0ULL;
+    int board_id = BoardId();
+    for (int8_t i = 0; i < kNumSlots[board_id]; ++i) {
+        char c = toupper(board[i]);
+        if (c == 'W') {
+            patterns[0] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
+            ++(*num_x);
+        } else if (c == 'B') {
+            patterns[1] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
+            ++(*num_o);
+        }
+    }
+}
+
+static TierPosition MillsFormalPositionToTierPosition(
+    ReadOnlyString formal_position) {
+    //
+    uint64_t patterns[2];
+    MillsTier t = kMillsTierInit;
+    ParseBoardString(formal_position + 2, patterns, &t.unpacked.on_board[0],
+                     &t.unpacked.on_board[1]);
+    ParseRemainingPieces(formal_position, &t.unpacked.remaining[0],
+                         &t.unpacked.remaining[1]);
+
+    TierPosition ret = {.tier = t.hash};
+    int turn = formal_position[0] - '1';
+    if (GetTurnFromTier(t) >= 0) {
+        ret.position = X86SimdTwoPieceHashHashFixedTurnMem(patterns);
+    } else {
+        ret.position = X86SimdTwoPieceHashHashMem(patterns, turn);
+    }
+
+    return ret;
+}
+
+static CString MillsTierPositionToFormalPosition(TierPosition tier_position) {
+    // Unhash
+    uint64_t patterns[2];
+    int turn;
+    MillsTier t = Unhash(tier_position, patterns, &turn);
+    char entities[25 + 4];  // max board size is 25, plus 4 counter digits
+    PatternsToStr(patterns, entities, 'W', 'B');
+    int cur = kNumSlots[BoardId()];
+    int num_digits = NumPieceCounterDigits();
+    if (t.unpacked.remaining[0] || t.unpacked.remaining[1]) {
+        // There still are remaining pieces
+        if (num_digits == 1) {
+            entities[cur++] = '0' + t.unpacked.remaining[0];
+            entities[cur++] = '0' + t.unpacked.remaining[1];
+        } else {
+            entities[cur++] = '0' + t.unpacked.remaining[0] / 10;
+            entities[cur++] = '0' + t.unpacked.remaining[0] % 10;
+            entities[cur++] = '0' + t.unpacked.remaining[1] / 10;
+            entities[cur++] = '0' + t.unpacked.remaining[1] % 10;
+        }
+    } else {
+        // All pieces have been placed
+        for (int i = 0; i < num_digits * 2; ++i) {
+            entities[cur++] = '-';
+        }
+    }
+    entities[cur] = '\0';
+
+    return AutoGuiMakePosition(turn, entities);
+}
+
+static CString MillsTierPositionToAutoGuiPosition(TierPosition tier_position) {
+    return MillsTierPositionToFormalPosition(tier_position);
+}
+
+static const char *GetFormalBoardSlotStr(int8_t slot) {
+    return kBoardIdxToFormal[BoardId()][GetBoardIndex(slot)];
+}
+
+// This function works for both part-moves and full-moves.
+// There are 5 possible types of moves:
+// 1. Placement only (part/full)
+// 2. Placement + removal (full)
+// 3. Slide only (part/full)
+// 4. Slide + removal (full)
+// 5. Removal only (part)
+static CString MillsMoveToFormalMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused.
+    MillsMove m = {.hash = move};
+    char buffer[9];
+    if (m.unpacked.dest == kNoDest) {  // Removal only part-move
+        sprintf(buffer, "R%s", GetFormalBoardSlotStr(m.unpacked.remove));
+    } else if (m.unpacked.src == kFromRemaining) {
+        if (m.unpacked.remove == kNoRemoval) {  // Place without removal
+            sprintf(buffer, "%s", GetFormalBoardSlotStr(m.unpacked.dest));
+        } else {  // Place and remove
+            sprintf(buffer, "%sR%s", GetFormalBoardSlotStr(m.unpacked.dest),
+                    GetFormalBoardSlotStr(m.unpacked.remove));
+        }
+    } else {
+        if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
+            sprintf(buffer, "%s-%s", GetFormalBoardSlotStr(m.unpacked.src),
+                    GetFormalBoardSlotStr(m.unpacked.dest));
+        } else {  // Slide and remove
+            sprintf(buffer, "%s-%sR%s", GetFormalBoardSlotStr(m.unpacked.src),
+                    GetFormalBoardSlotStr(m.unpacked.dest),
+                    GetFormalBoardSlotStr(m.unpacked.remove));
+        }
+    }
+    CString ret;
+    CStringInitCopyCharArray(&ret, buffer);
+
+    return ret;
+}
+
+static CString MillsMoveToAutoGuiMove(TierPosition tier_position, Move move) {
+    (void)tier_position;  // Unused.
+    static const char kPlaceSoundChar = 'x';
+    static const char kSlideSoundChar = 'y';
+    static const char kRemovalToken = 'z', kRemovalSoundChar = 'z';
+    MillsMove m = {.hash = move};
+    if (m.unpacked.dest == kNoDest) {  // Removal only part-move
+        return AutoGuiMakeMoveA(kRemovalToken, GetBoardIndex(m.unpacked.remove),
+                                kRemovalSoundChar);
+    } else if (m.unpacked.src == kFromRemaining) {
+        if (m.unpacked.remove == kNoRemoval) {  // Place without removal
+            return AutoGuiMakeMoveA('-', GetBoardIndex(m.unpacked.dest),
+                                    kPlaceSoundChar);
+        } else {  // Place and remove
+            // A full multipart move does not have an AutoGUI string.
+            return kNullCString;
+        }
+    } else {
+        if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
+            return AutoGuiMakeMoveM(GetBoardIndex(m.unpacked.src),
+                                    GetBoardIndex(m.unpacked.dest),
+                                    kSlideSoundChar);
+        } else {  // Slide and remove
+            // A full multipart move does not have an AutoGUI string.
+            return kNullCString;
+        }
+    }
+
+    return kNullCString;  // Not reached.
+}
+
+static void FlipAutoGuiPositionTurn(CString *pos) {
+    if (pos->str[0] == '1') {
+        pos->str[0] = '2';
+    } else {
+        pos->str[0] = '1';
+    }
+}
+
+static CString AppendPlacementSlidePartMove(TierPosition parent,
+                                            MillsMove place_slide,
+                                            PartmoveArray *pa) {
+    CString autogui_move = MillsMoveToAutoGuiMove(parent, place_slide.hash);
+    CString formal_move = MillsMoveToFormalMove(parent, place_slide.hash);
+
+    // Perform the part move and generate the intermediate board string
+    TierPosition intermediate = MillsDoMove(parent, place_slide.hash);
+    CString to = MillsTierPositionToAutoGuiPosition(intermediate);
+    FlipAutoGuiPositionTurn(&to);  // Revert the turn change by DoMove.
+
+    // Make a copy of the intermediate AutoGUI position string before
+    // transferring ownership.
+    CString to_copy;
+    CStringInitCopy(&to_copy, &to);
+
+    PartmoveArrayEmplaceBack(pa, &autogui_move, &formal_move, NULL, &to, NULL);
+
+    return to_copy;
+}
+
+static void AppendRemovalPartMove(TierPosition parent, CString *intermediate,
+                                  MillsMove full_move, MillsMove removal,
+                                  PartmoveArray *pa) {
+    CString autogui_move = MillsMoveToAutoGuiMove(parent, removal.hash);
+    CString formal_move = MillsMoveToFormalMove(parent, removal.hash);
+    CString full = MillsMoveToFormalMove(parent, full_move.hash);
+    PartmoveArrayEmplaceBack(pa, &autogui_move, &formal_move, intermediate,
+                             NULL, &full);
+}
+
+static void MaybeSplitMultipartMoveAndAppendToArray(TierPosition parent,
+                                                    Move move,
+                                                    PartmoveArray *pa) {
+    MillsMove m = {.hash = move};
+
+    // The move is guaranteed to be a single-part full-move if there's no
+    // removal. In this case, the move should be skipped.
+    if (m.unpacked.remove == kNoRemoval) return;
+
+    // Split the move into two parts: placement/slide and removal
+    MillsMove place_slide = m, removal = m;
+    place_slide.unpacked.remove = kNoRemoval;
+    removal.unpacked.dest = kNoDest;
+
+    // Process each part
+    CString intermediate =
+        AppendPlacementSlidePartMove(parent, place_slide, pa);
+    AppendRemovalPartMove(parent, &intermediate, m, removal, pa);
+}
+
+static PartmoveArray MillsGeneratePartmoves(TierPosition tier_position) {
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = MillsGenerateMoves(tier_position, moves);
+    PartmoveArray ret;
+    PartmoveArrayInit(&ret);
+    for (int i = 0; i < num_moves; ++i) {
+        MaybeSplitMultipartMoveAndAppendToArray(tier_position, moves[i], &ret);
+    }
+
+    return ret;
+}
+
+static const UwapiTier kMillsUwapiTier = {
+    .GetInitialTier = MillsGetInitialTier,
+    .GetInitialPosition = MillsGetInitialPosition,
+    .GetRandomLegalTierPosition = NULL,
+
+    .GenerateMoves = MillsGenerateMovesGameplay,
+    .DoMove = MillsDoMove,
+    .Primitive = MillsPrimitive,
+
+    .IsLegalFormalPosition = MillsIsLegalFormalPosition,
+    .FormalPositionToTierPosition = MillsFormalPositionToTierPosition,
+    .TierPositionToFormalPosition = MillsTierPositionToFormalPosition,
+    .TierPositionToAutoGuiPosition = MillsTierPositionToAutoGuiPosition,
+    .MoveToFormalMove = MillsMoveToFormalMove,
+    .MoveToAutoGuiMove = MillsMoveToAutoGuiMove,
+
+    .GeneratePartmoves = MillsGeneratePartmoves,
+};
+
+static const Uwapi kMillsUwapi = {.tier = &kMillsUwapiTier};
+
 // ================================== kMills ==================================
 
 const Game kMills = {
@@ -1234,7 +1535,7 @@ const Game kMills = {
     .solver = &kTierSolver,
     .solver_api = &kMillsSolverApi,
     .gameplay_api = &kMillsGameplayApi,
-    .uwapi = NULL,  // TODO
+    .uwapi = &kMillsUwapi,
 
     .Init = MillsInit,
     .Finalize = MillsFinalize,

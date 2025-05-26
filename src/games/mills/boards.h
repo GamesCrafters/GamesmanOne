@@ -1,3 +1,33 @@
+/**
+ * @file boards.h
+ * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee,
+ * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
+ * @author Cameron Cheung (cameroncheung@berkeley.edu): designed and coded board
+ * strings.
+ * @author Robert Shi (robertyishi@berkeley.edu): grouped board formats into an
+ * array indexed by board variants.
+ * @author GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Board string formats and slot mappings for all Mills variants.
+ * @version 1.0.0
+ * @date 2025-05-25
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
 #define GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
 
@@ -150,15 +180,61 @@ static const char *const kFormat25BoardOnly =
 
 // clang-format on
 
-static const char *const kFormats[8] = {
+static const char *const kFormats[] = {
     kFormat16, kFormat16,     kFormat17,     kFormat24,
     kFormat24, kFormat24Plus, kFormat24Plus, kFormat25,
 };
 
-static const char *const kBoardOnlyFormats[8] = {
+static const char *const kBoardOnlyFormats[] = {
     kFormat16BoardOnly,     kFormat16BoardOnly, kFormat17BoardOnly,
     kFormat24BoardOnly,     kFormat24BoardOnly, kFormat24PlusBoardOnly,
     kFormat24PlusBoardOnly, kFormat25BoardOnly,
+};
+
+// clang-format off
+
+static const char *const kBoardIdxToFormal16[16] = {
+    "a5", "c5", "e5",
+    "b4", "c4", "d4",
+    "a3", "b3", "d3", "e3",
+    "b2", "c2", "d2",
+    "a1", "c1", "e1",
+};
+
+static const char *const kBoardIdxToFormal17[17] = {
+    "a5", "c5", "e5",
+    "b4", "c4", "d4",
+    "a3", "b3", "c3", "d3", "e3",
+    "b2", "c2", "d2",
+    "a1", "c1", "e1",
+};
+
+static const char *const kBoardIdxToFormal24[24] = {
+    "a7", "d7", "g7",
+    "b6", "d6", "f6",
+    "c5", "d5", "e5",
+    "a4", "b4", "c4", "e4", "f4", "g4"
+    "c3", "d3", "e3",
+    "b2", "d2", "f2",
+    "a1", "d1", "g1",
+};
+
+static const char *const kBoardIdxToFormal25[25] = {
+    "a7", "d7", "g7",
+    "b6", "d6", "f6",
+    "c5", "d5", "e5",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4"
+    "c3", "d3", "e3",
+    "b2", "d2", "f2",
+    "a1", "d1", "g1",
+};
+
+// clang-format on
+
+static const char *const *const kBoardIdxToFormal[] = {
+    kBoardIdxToFormal16, kBoardIdxToFormal16, kBoardIdxToFormal17,
+    kBoardIdxToFormal24, kBoardIdxToFormal24, kBoardIdxToFormal24,
+    kBoardIdxToFormal24, kBoardIdxToFormal25,
 };
 
 #endif  // GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
