@@ -193,7 +193,7 @@ static const char *const kBoardOnlyFormats[] = {
 
 // clang-format off
 
-static const char *const kBoardIdxToFormal16[16] = {
+static const char *const kBoardIdxToFormal16[] = {
     "a5", "c5", "e5",
     "b4", "c4", "d4",
     "a3", "b3", "d3", "e3",
@@ -201,7 +201,7 @@ static const char *const kBoardIdxToFormal16[16] = {
     "a1", "c1", "e1",
 };
 
-static const char *const kBoardIdxToFormal17[17] = {
+static const char *const kBoardIdxToFormal17[] = {
     "a5", "c5", "e5",
     "b4", "c4", "d4",
     "a3", "b3", "c3", "d3", "e3",
@@ -209,21 +209,21 @@ static const char *const kBoardIdxToFormal17[17] = {
     "a1", "c1", "e1",
 };
 
-static const char *const kBoardIdxToFormal24[24] = {
+static const char *const kBoardIdxToFormal24[] = {
     "a7", "d7", "g7",
     "b6", "d6", "f6",
     "c5", "d5", "e5",
-    "a4", "b4", "c4", "e4", "f4", "g4"
+    "a4", "b4", "c4", "e4", "f4", "g4",
     "c3", "d3", "e3",
     "b2", "d2", "f2",
     "a1", "d1", "g1",
 };
 
-static const char *const kBoardIdxToFormal25[25] = {
+static const char *const kBoardIdxToFormal25[] = {
     "a7", "d7", "g7",
     "b6", "d6", "f6",
     "c5", "d5", "e5",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4"
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4",
     "c3", "d3", "e3",
     "b2", "d2", "f2",
     "a1", "d1", "g1",

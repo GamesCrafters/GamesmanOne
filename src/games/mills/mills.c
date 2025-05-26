@@ -1357,7 +1357,7 @@ static CString MillsTierPositionToFormalPosition(TierPosition tier_position) {
     }
     entities[cur] = '\0';
 
-    return AutoGuiMakePosition(turn, entities);
+    return AutoGuiMakePosition(turn + 1, entities);
 }
 
 static CString MillsTierPositionToAutoGuiPosition(TierPosition tier_position) {
