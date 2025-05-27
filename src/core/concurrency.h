@@ -7,7 +7,7 @@
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
  * @version 1.2.0
- * @date 2025-05-11
+ * @date 2025-05-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,10 +39,12 @@
 #define PRAGMA(X) _Pragma(#X)
 
 #define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
+#define PRAGMA_OMP_PARALLEL_IF(cond) PRAGMA(omp parallel if (cond))
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
 #define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k) PRAGMA(omp for schedule(monotonic:dynamic, k))
 
 #define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
+#define PRAGMA_OMP_PARALLEL_FOR_IF(cond) PRAGMA(omp parallel for if(cond))
 #define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
 
 #define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
@@ -56,10 +58,12 @@ typedef atomic_size_t ConcurrentSizeType;
 // The following macros do nothing.
 
 #define PRAGMA_OMP_PARALLEL
+#define PRAGMA_OMP_PARALLEL_IF(cond)
 #define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
 #define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k)
 
 #define PRAGMA_OMP_PARALLEL_FOR
+#define PRAGMA_OMP_PARALLEL_FOR_IF(cond)
 #define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
 
 #define PRAGMA_OMP_CRITICAL(name)

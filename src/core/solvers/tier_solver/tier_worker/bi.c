@@ -9,7 +9,7 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
  * @version 1.1.5
- * @date 2025-05-11
+ * @date 2025-05-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,6 +39,7 @@
 
 #include "core/concurrency.h"
 #include "core/constants.h"
+#include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -96,6 +97,12 @@ static ReverseGraph reverse_graph;
 static bool use_reverse_graph = false;
 
 static int num_threads;  // Number of threads available.
+
+// Condition to prevent potential false sharing when parallelizing operations on
+// every single position in the current tier.
+#define PARALLELIZE_CURRENT_TIER \
+    (this_tier_size >=           \
+     (int64_t)num_threads * GM_CACHE_LINE_SIZE / kArrayDbRecordSize)
 
 // ------------------------------ Step0Initialize ------------------------------
 
@@ -231,7 +238,7 @@ static bool Step1_0LoadTierHelper(int child_index) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(child_tier_size > current_db_chunk_size) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
@@ -339,7 +346,7 @@ static bool Step3ScanTier(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(PARALLELIZE_CURRENT_TIER) {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(128)
         for (Position position = 0; position < this_tier_size; ++position) {
@@ -449,7 +456,7 @@ static bool PushFrontierHelper(
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(frontier_offsets[num_threads] > 16) {
         int frontier_id = 0, child_index = 0;
         PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
@@ -642,7 +649,7 @@ static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
 }
 
 static void Step5MarkDrawPositions(void) {
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP_PARALLEL_FOR_IF(PARALLELIZE_CURRENT_TIER)
     for (Position position = 0; position < this_tier_size; ++position) {
         if (GetNumUndecidedChildren(position) > 0) {
             // A position is drawing if it still has undecided children.
