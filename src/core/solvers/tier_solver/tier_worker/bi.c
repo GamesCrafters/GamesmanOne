@@ -67,8 +67,10 @@ static int64_t current_db_chunk_size;
 // A frontier array will be created for each possible remoteness.
 static const int kFrontierSize = kRemotenessMax + 1;
 
-static Tier this_tier;          // The tier being solved.
-static int64_t this_tier_size;  // Size of the tier being solved.
+static Tier this_tier;                // The tier being solved.
+static int64_t this_tier_size;        // Size of the tier being solved.
+static bool parallel_scan_this_tier;  // Whether the current tier should be
+                                      // scanned in parallel.
 
 // Array of child tiers with this_tier appended to the back.
 static Tier child_tiers[kTierSolverNumChildTiersMax];
@@ -97,12 +99,6 @@ static ReverseGraph reverse_graph;
 static bool use_reverse_graph = false;
 
 static int num_threads;  // Number of threads available.
-
-// Condition to prevent potential false sharing when parallelizing operations on
-// every single position in the current tier.
-#define PARALLELIZE_CURRENT_TIER \
-    (this_tier_size >=           \
-     (int64_t)num_threads * GM_CACHE_LINE_SIZE / kArrayDbRecordSize)
 
 // ------------------------------ Step0Initialize ------------------------------
 
@@ -188,6 +184,12 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
 
     // Initialize frontiers with size to hold all child tiers and this tier.
     if (!Step0_1InitFrontiers(num_child_tiers)) return false;
+
+    // Make sure each thread gets at least one cache line of records when
+    // performing a scan of the current tier to prevent false sharing.
+    parallel_scan_this_tier =
+        this_tier_size >=
+        (int64_t)num_threads * GM_CACHE_LINE_SIZE / kArrayDbRecordSize;
 
     return true;
 }
@@ -346,7 +348,7 @@ static bool Step3ScanTier(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL_IF(PARALLELIZE_CURRENT_TIER) {
+    PRAGMA_OMP_PARALLEL_IF(parallel_scan_this_tier) {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(128)
         for (Position position = 0; position < this_tier_size; ++position) {
@@ -649,7 +651,7 @@ static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
 }
 
 static void Step5MarkDrawPositions(void) {
-    PRAGMA_OMP_PARALLEL_FOR_IF(PARALLELIZE_CURRENT_TIER)
+    PRAGMA_OMP_PARALLEL_FOR_IF(parallel_scan_this_tier)
     for (Position position = 0; position < this_tier_size; ++position) {
         if (GetNumUndecidedChildren(position) > 0) {
             // A position is drawing if it still has undecided children.
@@ -730,6 +732,7 @@ _bailout:
 static void Step7Cleanup(void) {
     this_tier = kIllegalTier;
     this_tier_size = kIllegalSize;
+    parallel_scan_this_tier = false;
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
     DestroyFrontiers();
