@@ -3,8 +3,85 @@
 #include <iostream>
 #include <string>
 
-#include "board_formats.h"
 #include "masks.h"
+
+static const char *const kFormat16BoardOnly =
+"\n"
+"          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
+"          |       |       |    |       |       |\n"
+"          |   3 - 4 - 5   |    |   %c - %c - %c   |\n"
+"          |   |       |   |    |   |       |   |\n"
+"LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c\n"
+"          |   |       |   |    |   |       |   |\n"
+"          |  10 - 11- 12  |    |   %c - %c - %c   |\n"
+"          |       |       |    |       |       |\n"
+"          13 ---- 14 ---- 15   %c ----- %c ----- %c\n\n";
+
+static const char *const kFormat17BoardOnly =
+    "\n"
+    "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
+    "          |       |       |    |       |       |\n"
+    "          |   3 - 4 - 5   |    |   %c - %c - %c   |\n"
+    "          |   |   |   |   |    |   |   |   |   |\n"
+    "LEGEND:   6 - 7 - 8 - 9 - 10   %c - %c - %c - %c - %c\n"
+    "          |   |   |   |   |    |   |   |   |   |\n"
+    "          |  11 - 12- 13  |    |   %c - %c - %c   |\n"
+    "          |       |       |    |       |       |\n"
+    "          14 ---- 15 ---- 16   %c ----- %c ----- %c\n\n";
+
+static const char *const kFormat24BoardOnly =
+    "\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
+    "        |           |           |       |           |           |\n"
+    "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
+    "        |   |       |       |   |       |   |       |       |   |\n"
+    "        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+    "LEGEND: 9 - 10- 11      12- 13- 14      %c - %c - %c       %c - %c - %c\n"
+    "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+    "        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   |       |       |   |       |   |       |       |   |\n"
+    "        |   18 ---- 19 ---- 20  |       |   %c ----- %c ----- %c   |\n"
+    "        |           |           |       |           |           |\n"
+    "        21 -------- 22 -------- 23      %c --------- %c --------- %c\n\n";
+
+static const char *const kFormat24PlusBoardOnly =
+    "\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
+    "        | \\         |         / |       | \\         |         / |\n"
+    "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
+    "        |   | \\     |     / |   |       |   | \\     |     / |   |\n"
+    "        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+    "LEGEND: 9 - 10- 11      12- 13- 14      %c - %c - %c       %c - %c - %c\n"
+    "        |   |   |       |   |   |       |   |   |       |   |   |\n"
+    "        |   |   15- 16- 17  |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   | /     |     \\ |   |       |   | /     |     \\ |   |\n"
+    "        |   18 ---- 19 ---- 20  |       |   %c ----- %c ----- %c   |\n"
+    "        | /         |         \\ |       | /         |         \\ |\n"
+    "        21 -------- 22 -------- 23      %c --------- %c --------- %c\n\n";
+
+static const char *const kFormat25BoardOnly =
+    "\n"
+    "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
+    "        | \\         |         / |       | \\         |         / |\n"
+    "        |   3 ----- 4 ----- 5   |       |   %c ----- %c ----- %c   |\n"
+    "        |   |       |       |   |       |   |       |       |   |\n"
+    "        |   |   6 - 7 - 8   |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   |   |   |   |   |   |       |   |   |   |   |   |   |\n"
+    "LEGEND: 9 - 10- 11 -12- 13- 14- 15      %c - %c - %c - %c - %c - %c - %c\n"
+    "        |   |   |   |   |   |   |       |   |   |   |   |   |   |\n"
+    "        |   |   16- 17- 18  |   |       |   |   %c - %c - %c   |   |\n"
+    "        |   |       |       |   |       |   |       |       |   |\n"
+    "        |   19 ---- 20 ---- 21  |       |   %c ----- %c ----- %c   |\n"
+    "        | /         |         \\ |       | /         |         \\ |\n"
+    "        22 -------- 23 -------- 24      %c --------- %c --------- %c\n\n";
+
+static const char *const kBoardOnlyFormats[] = {
+    kFormat16BoardOnly,     kFormat16BoardOnly, kFormat17BoardOnly,
+    kFormat24BoardOnly,     kFormat24BoardOnly, kFormat24PlusBoardOnly,
+    kFormat24PlusBoardOnly, kFormat25BoardOnly,
+};
 
 static int grid_idx_to_board_idx[NUM_BOARD_AND_PIECES_CHOICES][64];
 
