@@ -12,8 +12,8 @@
  * simultaneously. As a result, no more than one solver or database can be
  * loaded at the same time. This module handles the loading and deallocation
  * of THE ONE solver used by the current GAMESMAN instance.
- * @version 1.2.0
- * @date 2024-03-21
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -54,12 +54,12 @@ int SolverManagerInit(ReadOnlyString data_path);
  * @note Assumes a game together with its solver have been loaded using the
  * SolverManagerInit() function. Results in undefined behavior otherwise.
  *
- * @param seed Seed for random number generation if needed.
+ * @param aux Auxiliary parameter.
  * @return Error code defined by the current solver. Use
  * SolverManagerExplainTestError to get an explanation string for the error code
  * returned.
  */
-int SolverManagerTest(long seed);
+int SolverManagerTest(void *aux);
 
 /**
  * @brief Returns an explanation string for the given ERROR code as defined by

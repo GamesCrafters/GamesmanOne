@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 2.0.0
- * @date 2025-04-23
+ * @version 2.0.1
+ * @date 2025-05-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -322,14 +322,12 @@ static int GetChildPositions(
 
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, kTierSolverNumChildPositionsMax);
+    TierPositionHashSetReserve(&dedup, num_moves / 2);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(parent, moves[i]);
         children[ret++] = child;
         child.position = api_internal->GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
 
     // If the parent position is not a canonical position, then the number of

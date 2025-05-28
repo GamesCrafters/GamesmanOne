@@ -1,11 +1,11 @@
 /**
- * @file position_hash_set.c
+ * @file htest.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing Position hash set implementation.
- * @version 2.0.0
- * @date 2025-05-11
+ * @brief Game testing functionality of headless mode.
+ * @version 1.0.0
+ * @date 2025-05-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,25 +24,24 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/types/position_hash_set.h"
+#ifndef GAMESMANONE_CORE_HEADLESS_HTEST_H_
+#define GAMESMANONE_CORE_HEADLESS_HTEST_H_
 
-#include "core/data_structures/int64_hash_set.h"
-#include "core/types/base.h"
+#include "core/types/gamesman_types.h"
 
-void PositionHashSetInit(PositionHashSet *set, double max_load_factor) {
-    Int64HashSetInit(set, max_load_factor);
-}
+/**
+ * @brief Tests the game of name \p game_name and variant index \p variant_id
+ * using \p seed as the seed for PRNGs if needed.
+ *
+ * @param game_name Name of the game used internally by GAMESMAN.
+ * @param variant_id Index of the variant to solve for. Pass a negative value to
+ * test the default variant.
+ * @param seed Seed for PRNGs.
+ * @param verbose Currently has no effect regardless of the value passed in.
+ * @return kNoError if all tests are passed,
+ * @return non-zero error code otherwise.
+ */
+int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
+                 int verbose);
 
-bool PositionHashSetReserve(PositionHashSet *set, int64_t size) {
-    return Int64HashSetReserve(set, size);
-}
-
-void PositionHashSetDestroy(PositionHashSet *set) { Int64HashSetDestroy(set); }
-
-bool PositionHashSetContains(PositionHashSet *set, Position position) {
-    return Int64HashSetContains(set, position);
-}
-
-bool PositionHashSetAdd(PositionHashSet *set, Position position) {
-    return Int64HashSetAdd(set, position);
-}
+#endif  // GAMESMANONE_CORE_HEADLESS_HTEST_H_
