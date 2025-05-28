@@ -571,19 +571,19 @@ static inline __m128i GetCanonicalBoard(__m128i board) {
     // 8 symmetries
     __m128i min_board = board;
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipDiag(board);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
     board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    min_board = X86SimdTwoPieceHashMinBoard(min_board, board);
+    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
 
     return min_board;
 }
