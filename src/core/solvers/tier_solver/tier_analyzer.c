@@ -118,7 +118,7 @@ static int GetCanonicalChildTiers(
     return ret;
 }
 
-static bool Step0_0CheckMem(int num_threads) {
+static bool Step0_0CheckMem(void) {
     size_t fringe_container_size =
         2 * num_threads * sizeof(PaddedPositionArray);
     size_t bitset_fringe_size = 2 * ConcurrentBitsetMemRequired(this_tier_size);
@@ -184,7 +184,7 @@ static bool Step0Initialize(Analysis *dest) {
     num_threads = ConcurrencyGetOmpNumThreads();
     this_tier_size = api_internal->GetTierSize(this_tier);
     num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
-    if (!Step0_0CheckMem(num_threads)) return false;
+    if (!Step0_0CheckMem()) return false;
     Step0_1InitFringesAndExpanded();
     Step0_2InitChildTiersReverseLookupMap();
     Step0_3InitAnalysis(dest);
@@ -399,14 +399,14 @@ static void SwapFringeBitsets(void) {
 }
 
 /**
- * @brief Expands the given \p parent position and collect information into \p
- * dest. Assumes that \p parent has not been expanded and will only be expanded
- * once by the calling thread.
+ * @brief Expands the given \p parent position and collect information into
+ * \p dest . Assumes that \p parent has not been expanded and will be expanded
+ * only once by the calling thread.
  *
  * @param parent Position to expand as parent.
  * @param dest Destination Analysis object.
  * @param tid ID of the calling thread.
- * @param use_array If set to \p true, the function will begin by collecting
+ * @param use_array If set to \p true , the function will begin by collecting
  * child positions into the array fringe. Otherwise, the function begins by
  * collecting child positions into the bitset fringe.
  * @return \p true if \c true was passed to \p use_array and the function did
@@ -415,7 +415,7 @@ static void SwapFringeBitsets(void) {
  * fringe with no error), or
  * @return \p false otherwise. There are two cases where this function may
  * return false:
- *  1. \c false was passed to \p use_array;
+ *  1. \c false was passed to \p use_array ;
  *  2. \p use_array was true but the function encountered OOM while trying to
  * push the child positions into the array fringe.
  */
@@ -454,7 +454,6 @@ static bool Expand(TierPosition parent, Analysis *dest, int tid,
 //   - array discovered remains empty initialized
 //   - bitset fringe remains unmodified
 //   - bitset discovered contains all discoverable positions from bitset fringe
-//
 static void DiscoverFromBitsetToBitset(Analysis *dest) {
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (parts == NULL) {
