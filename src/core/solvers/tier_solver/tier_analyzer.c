@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 2.0.1
- * @date 2025-05-26
+ * @version 2.0.2
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -51,6 +51,9 @@
 // An internal reference to the API.
 static const TierSolverApi *api_internal;
 
+// Whether to explore the canonical graph only
+static bool explore_canonical;
+
 // Size-tracking memory allocator
 static GamesmanAllocator *allocator;
 
@@ -81,6 +84,7 @@ static ConcurrentBitset *bs_fringe, *bs_discovered;
 
 bool TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit) {
     api_internal = api;
+    explore_canonical = (api->GetNumberOfSymmetries != NULL);
     GamesmanAllocatorOptions options;
     GamesmanAllocatorOptionsSetDefaults(&options);
     options.pool_size =
@@ -311,7 +315,7 @@ static int GetChildPositions(
     TierPosition children[static kTierSolverNumChildPositionsMax],
     Analysis *dest) {
     //
-    int ret = 0;
+    int num_children = 0;
     Move moves[kTierSolverNumMovesMax];
     int num_moves = api_internal->GenerateMoves(parent, moves);
 
@@ -320,7 +324,7 @@ static int GetChildPositions(
     TierPositionHashSetReserve(&dedup, num_moves / 2);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(parent, moves[i]);
-        children[ret++] = child;
+        children[num_children++] = child;
         child.position = api_internal->GetCanonicalPosition(child);
         TierPositionHashSetAdd(&dedup, child);
     }
@@ -331,7 +335,25 @@ static int GetChildPositions(
     TierPositionHashSetDestroy(&dedup);
     AnalysisDiscoverMoves(dest, parent, num_moves, num_canonical_moves);
 
-    return ret;
+    return num_children;
+}
+
+static int GetCanonicalChildPositions(
+    TierPosition parent,
+    TierPosition children[static kTierSolverNumChildPositionsMax],
+    Analysis *dest) {
+    // Generate moves just to find out how many moves there are
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = api_internal->GenerateMoves(parent, moves);
+
+    // Generate canonical child positions
+    int num_canonical_children =
+        api_internal->GetCanonicalChildPositions(parent, children);
+    int num_symmetries = api_internal->GetNumberOfSymmetries(parent);
+    AnalysisDiscoverMovesGroup(dest, parent, num_symmetries, num_moves,
+                               num_canonical_children);
+
+    return num_canonical_children;
 }
 
 static bool DiscoverProcessThisTierArray(Position child, int tid) {
@@ -421,15 +443,21 @@ static bool Expand(TierPosition parent, Analysis *dest, int tid,
     if (IsPrimitive(parent)) return true;
 
     TierPosition children[kTierSolverNumChildPositionsMax];
-    int num_children = GetChildPositions(parent, children, dest);
-    for (int64_t j = 0; j < num_children; ++j) {
-        if (children[j].tier != this_tier) {
-            DiscoverProcessChildTier(children[j]);
+    int num_children;
+    if (explore_canonical) {
+        num_children = GetCanonicalChildPositions(parent, children, dest);
+    } else {
+        num_children = GetChildPositions(parent, children, dest);
+    }
+
+    for (int64_t i = 0; i < num_children; ++i) {
+        if (children[i].tier != this_tier) {
+            DiscoverProcessChildTier(children[i]);
         } else if (use_array) {
-            use_array = DiscoverProcessThisTierArray(children[j].position, tid);
-            j -= (!use_array);  // Reprocess the j-th child if failed.
+            use_array = DiscoverProcessThisTierArray(children[i].position, tid);
+            i -= (!use_array);  // Reprocess the i-th child if failed.
         } else {                // Already OOM, expand to bitset discovered
-            DiscoverProcessThisTierBitset(children[j].position);
+            DiscoverProcessThisTierBitset(children[i].position);
         }
     }
 
@@ -644,18 +672,28 @@ static bool Step4Analyze(Analysis *dest) {
                 continue;
             }
 
-            TierPosition tier_position = {.tier = this_tier, .position = i};
-            Position canonical =
-                api_internal->GetCanonicalPosition(tier_position);
-
-            // Must probe canonical positions. Original might not be solved.
-            Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
-            int remoteness =
-                DbManagerGetRemotenessFromLoaded(this_tier, canonical);
-            bool is_canonical = (tier_position.position == canonical);
-            int error = AnalysisCount(&parts[tid].data, tier_position, value,
-                                      remoteness, is_canonical);
-            if (error != 0) ConcurrentBoolStore(&success, false);
+            TierPosition tp = {.tier = this_tier, .position = i};
+            if (explore_canonical) {
+                Value value =
+                    DbManagerGetValueFromLoaded(this_tier, tp.position);
+                int remoteness =
+                    DbManagerGetRemotenessFromLoaded(this_tier, tp.position);
+                int num_symmetries = api_internal->GetNumberOfSymmetries(tp);
+                int error = AnalysisCountGroup(
+                    &parts[tid].data, tp, num_symmetries, value, remoteness);
+                if (error != 0) ConcurrentBoolStore(&success, false);
+            } else {
+                // Must probe canonical positions as the original might not be
+                // solved.
+                Position canonical = api_internal->GetCanonicalPosition(tp);
+                Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
+                int remoteness =
+                    DbManagerGetRemotenessFromLoaded(this_tier, canonical);
+                bool is_canonical = (tp.position == canonical);
+                int error = AnalysisCount(&parts[tid].data, tp, value,
+                                          remoteness, is_canonical);
+                if (error != 0) ConcurrentBoolStore(&success, false);
+            }
         }
     }
     MergePartialAnalysisCounts(dest, parts);

@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic tier solver capable of handling loopy and loop-free tiers.
- * @version 2.1.1
- * @date 2025-05-11
+ * @version 2.2.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -369,6 +369,23 @@ typedef struct TierSolverApi {
     int (*GetCanonicalParentPositions)(
         TierPosition child, Tier parent_tier,
         Position parents[static kTierSolverNumParentPositionsMax]);
+
+    /**
+     * @brief Returns the number of unique positions that are symmetric to \p
+     * tier_position and are in the same tier as \p tier_position . If position
+     * symmetry is not implemented, returns 1.
+     *
+     * @note This function is OPTIONAL and serves as an optimization for
+     * analysis only. If both position symmetry this function is implemented,
+     * the analyzer can skip the exploration of non-canonical positions while
+     * still counting them and their moves. If position symmetry is implemented
+     * without this function, the analyzer has no other way but to walk the
+     * entire game graph to count all positions and moves.
+     *
+     * @note Do NOT implement this function if position symmetry is not
+     * implemented. Otherwise it may hurt performance.
+     */
+    int (*GetNumberOfSymmetries)(TierPosition tier_position);
 
     /**
      * @brief Returns the type of \p tier . If tier symmetry is implemented,

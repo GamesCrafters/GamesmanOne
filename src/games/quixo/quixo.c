@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 2.1.0
- * @date 2025-03-15
+ * @version 2.2.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -752,6 +752,36 @@ static int QuixoGetCanonicalParentPositions(
     return ret;
 }
 
+#define X86_M128I_HASH_SET_SIZE 32
+#include "core/data_structures/x86_m128i_hash_set.h"
+static int QuixoGetNumberOfSymmetries(TierPosition tp) {
+    // Unhash
+    QuixoTier t = {.hash = tp.tier};
+    __m128i board =
+        X86SimdTwoPieceHashUnhash(tp.position, t.unpacked[0], t.unpacked[1]);
+
+    // Find unique boards from all 8 symmetries
+    X86M128iHashSet dedup;
+    X86M128iHashSetInit(&dedup);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+
+    return dedup.size;
+}
+
 static int8_t GetNumBlanks(QuixoTier t) {
     return board_size - t.unpacked[0] - t.unpacked[1];
 }
@@ -795,6 +825,7 @@ static const TierSolverApi kQuixoSolverApi = {
         QuixoGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = QuixoGetCanonicalChildPositions,
     .GetCanonicalParentPositions = QuixoGetCanonicalParentPositions,
+    .GetNumberOfSymmetries = QuixoGetNumberOfSymmetries,
 
     .GetChildTiers = QuixoGetChildTiers,
     .GetTierName = QuixoGetTierName,
@@ -1162,7 +1193,7 @@ const Game kQuixo = {
     .solver = &kTierSolver,
     .solver_api = &kQuixoSolverApi,
     .gameplay_api = &kQuixoGameplayApi,
-    .uwapi = &kQuixoUwapi,  // TODO
+    .uwapi = &kQuixoUwapi,
 
     .Init = QuixoInit,
     .Finalize = QuixoFinalize,
