@@ -908,6 +908,49 @@ static int MillsGetCanonicalParentPositions(
     return 0;
 }
 
+#define X86_M128I_HASH_SET_SIZE 64ULL
+#include "core/data_structures/x86_m128i_hash_set.h"
+
+static void CollectRotationSymmetries(X86M128iHashSet *dedup, __m128i board) {
+    // Rotations 8x
+    X86M128iHashSetAdd(dedup, board);
+    int8_t padded_side_length = PaddedSideLength();
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    X86M128iHashSetAdd(dedup, board);
+}
+
+static int MillsGetNumberOfSymmetries(TierPosition tp) {
+    // Unhash
+    MillsTier t;
+    int turn;
+    bool not_fixed_turn;
+    __m128i board = UnhashSimd(tp, &t, &turn, &not_fixed_turn);
+
+    X86M128iHashSet dedup;
+    X86M128iHashSetInit(&dedup);
+    CollectRotationSymmetries(&dedup, board);
+
+    // Ring swap symmetries 2x are present in certain board variants
+    if (kInnerRingMasks[BoardId()]) {
+        __m128i swapped = SwapInnerOuterRings(board);
+        CollectRotationSymmetries(&dedup, swapped);
+    }
+
+    return dedup.size;
+}
+
 static bool IsPlacementTier(MillsTier t) { return t.unpacked.remaining[1]; }
 
 static int GetChildTiersInternal(
@@ -1043,6 +1086,7 @@ static const TierSolverApi kMillsSolverApi = {
         MillsGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = MillsGetCanonicalChildPositions,
     .GetCanonicalParentPositions = MillsGetCanonicalParentPositions,
+    .GetNumberOfSymmetries = MillsGetNumberOfSymmetries,
 
     .GetChildTiers = MillsGetChildTiers,
     .GetTierType = MillsGetTierType,
