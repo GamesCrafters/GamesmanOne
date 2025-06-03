@@ -32,10 +32,11 @@
 #include "core/hash/x86_simd_two_piece.h"
 
 #include <assert.h>     // assert
+#include <immintrin.h>  // __m128i, _mm_*, _pdep_u64, _pext_u64
+#include <stdalign.h>   // alignas
 #include <stdbool.h>    // bool, true, false
 #include <stdint.h>     // intptr_t, int64_t, uint64_t, uint32_t
 #include <stdio.h>      // fprintf, stderr
-#include <x86intrin.h>  // __m128i
 
 #include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
@@ -214,7 +215,7 @@ Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn) {
 
 Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
     // Extract the two 64-bit patterns to 16-byte-aligned stack memory
-    __attribute__((aligned(16))) uint64_t s[2];
+    alignas(16) uint64_t s[2];
     _mm_store_si128((__m128i *)s, board);
 
     return X86SimdTwoPieceHashHashFixedTurnMem(s);
@@ -245,7 +246,7 @@ __m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {
 
 __m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
                                            int num_o) {
-    __attribute__((aligned(16))) uint64_t s[2];
+    alignas(16) uint64_t s[2];
     X86SimdTwoPieceHashUnhashFixedTurnMem(hash, num_x, num_o, s);
 
     return _mm_load_si128((const __m128i *)s);

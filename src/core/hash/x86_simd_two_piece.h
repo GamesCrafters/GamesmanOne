@@ -209,9 +209,10 @@
 #ifndef GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 #define GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 
+#include <immintrin.h>  // __m128i, _mm_*
+#include <stdalign.h>   // alignas
 #include <stdbool.h>    // bool
 #include <stdint.h>     // intptr_t, int64_t, uint64_t
-#include <x86intrin.h>  // __m128i, _mm_*
 
 #include "core/types/gamesman_types.h"
 
@@ -478,7 +479,7 @@ static inline __m128i X86SimdTwoPieceHashFlipDiag(__m128i board) {
  */
 static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
     // Extract the two 64-bit patterns to 16-byte-aligned stack memory
-    __attribute__((aligned(16))) uint64_t s[2];
+    alignas(16) uint64_t s[2];
     _mm_store_si128((__m128i *)s, board);
 
     // Byte swap flips the board vertically

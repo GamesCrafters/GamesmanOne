@@ -32,11 +32,12 @@
 #include "games/quixo/quixo.h"
 
 #include <assert.h>     // assert
+#include <immintrin.h>  // __m128i, _mm_*
+#include <stdalign.h>   // alignas
 #include <stddef.h>     // NULL
 #include <stdio.h>      // sprintf
 #include <stdlib.h>     // atoi
 #include <string.h>     // strtok_r, strlen, strcpy
-#include <x86intrin.h>  // __m128i
 
 #include "core/constants.h"
 #include "core/hash/x86_simd_two_piece.h"
@@ -539,7 +540,7 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
     QuixoMove m = {.hash = move};
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     return DoMoveInternal(t, board, patterns, turn, m);
@@ -604,7 +605,7 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     // Generate all moves
@@ -635,7 +636,7 @@ static int QuixoGetCanonicalChildPositions(
     __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     // Generate all moves
@@ -681,7 +682,7 @@ static int QuixoGetCanonicalParentPositions(
 
     __m128i board = X86SimdTwoPieceHashUnhash(
         tier_position.position, child_t.unpacked[0], child_t.unpacked[1]);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
     int opp_turn = !turn;
     uint64_t shift, src;

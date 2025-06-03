@@ -31,12 +31,13 @@
 
 #include <assert.h>     // assert
 #include <ctype.h>      // toupper
+#include <immintrin.h>  // __m128i, _mm_*, _tzcnt_u64, _blsr_u64, _blsi_u64
+#include <stdalign.h>   // alignas
 #include <stddef.h>     // NULL
 #include <stdint.h>     // int64_t, int8_t, uint64_t
 #include <stdio.h>      // sprintf
 #include <stdlib.h>     // atoi
 #include <string.h>     // strtok_r, strlen, strcpy
-#include <x86intrin.h>  // __m128i
 
 #include "core/constants.h"
 #include "core/hash/x86_simd_two_piece.h"
@@ -532,7 +533,7 @@ static uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
 }
 
 static __m128i SwapInnerOuterRings(__m128i board) {
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
     int board_id = BoardId();
     patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_id],
