@@ -8,8 +8,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.4
- * @date 2025-04-23
+ * @version 1.1.5
+ * @date 2025-05-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,6 +39,7 @@
 
 #include "core/concurrency.h"
 #include "core/constants.h"
+#include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -66,8 +67,10 @@ static int64_t current_db_chunk_size;
 // A frontier array will be created for each possible remoteness.
 static const int kFrontierSize = kRemotenessMax + 1;
 
-static Tier this_tier;          // The tier being solved.
-static int64_t this_tier_size;  // Size of the tier being solved.
+static Tier this_tier;                // The tier being solved.
+static int64_t this_tier_size;        // Size of the tier being solved.
+static bool parallel_scan_this_tier;  // Whether the current tier should be
+                                      // scanned in parallel.
 
 // Array of child tiers with this_tier appended to the back.
 static Tier child_tiers[kTierSolverNumChildTiersMax];
@@ -133,8 +136,7 @@ static void Step0_0SetupChildTiers(void) {
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = current_api.GetCanonicalTier(raw[i]);
-        if (!TierHashSetContains(&dedup, canonical)) {
-            TierHashSetAdd(&dedup, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
             child_tiers[num_child_tiers++] = canonical;
         }
     }
@@ -182,6 +184,12 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
 
     // Initialize frontiers with size to hold all child tiers and this tier.
     if (!Step0_1InitFrontiers(num_child_tiers)) return false;
+
+    // Make sure each thread gets at least one cache line of records when
+    // performing a scan of the current tier to prevent false sharing.
+    parallel_scan_this_tier =
+        this_tier_size >=
+        (int64_t)num_threads * GM_CACHE_LINE_SIZE / kArrayDbRecordSize;
 
     return true;
 }
@@ -232,7 +240,7 @@ static bool Step1_0LoadTierHelper(int child_index) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(child_tier_size > current_db_chunk_size) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
@@ -340,7 +348,7 @@ static bool Step3ScanTier(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(parallel_scan_this_tier) {
         int tid = GetThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(128)
         for (Position position = 0; position < this_tier_size; ++position) {
@@ -450,7 +458,7 @@ static bool PushFrontierHelper(
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP_PARALLEL_IF(frontier_offsets[num_threads] > 16) {
         int frontier_id = 0, child_index = 0;
         PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(16)
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
@@ -643,7 +651,7 @@ static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
 }
 
 static void Step5MarkDrawPositions(void) {
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP_PARALLEL_FOR_IF(parallel_scan_this_tier)
     for (Position position = 0; position < this_tier_size; ++position) {
         if (GetNumUndecidedChildren(position) > 0) {
             // A position is drawing if it still has undecided children.
@@ -724,6 +732,7 @@ _bailout:
 static void Step7Cleanup(void) {
     this_tier = kIllegalTier;
     this_tier_size = kIllegalSize;
+    parallel_scan_this_tier = false;
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
     DestroyFrontiers();

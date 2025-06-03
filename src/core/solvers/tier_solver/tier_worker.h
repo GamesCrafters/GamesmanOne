@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Worker module for the Loopy Tier Solver.
- * @version 1.5.0
- * @date 2024-11-14
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,6 +35,7 @@
 #include <stdbool.h>  // bool
 
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/types/gamesman_types.h"
 
 /**
@@ -158,10 +159,11 @@ int TierWorkerMpiServe(void);
  * @param parent_tiers Array of parent tiers of TIER.
  * @param seed Seed for psuedorandom number generator.
  * @param test_size Maximum number of positions to test in the given TIER.
+ * @param stat Statistics on stack buffer usage.
  * @return 0 on success or one of the error codes enumerated in
  * TierSolverTestErrors otherwise.
  */
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
-                   int64_t test_size);
+                   int64_t test_size, TierWorkerTestStackBufferStat *stat);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_

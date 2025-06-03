@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of GAMESMAN headless mode.
- * @version 1.2.1
- * @date 2025-03-31
+ * @version 1.3.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,15 +37,15 @@
 #include "core/headless/hparser.h"
 #include "core/headless/hquery.h"
 #include "core/headless/hsolve.h"
+#include "core/headless/htest.h"
 #include "core/headless/hutils.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
 
 /**
  * @brief Convert the input memory limit string \p str, which is in GiB, into
  * an integer memory limit, which is in bytes.
  */
-static intptr_t ParseMemLimit(ReadOnlyString str) {
+static intptr_t ParseMemLimit(const char *str) {
     if (str == NULL || *str == '\0') return 0;
     int gigabytes = atoi(str);
     if (gigabytes < 0) return 0;
@@ -77,8 +77,8 @@ int GamesmanHeadlessMain(int argc, char **argv) {
     bool force = arguments.force;
     char *position = arguments.position;
     int verbose = HeadlessGetVerbosity(arguments.verbose, arguments.quiet);
-    int variant_id =
-        arguments.variant_id != NULL ? atoi(arguments.variant_id) : -1;
+    int variant_id = arguments.variant_id ? atoi(arguments.variant_id) : -1;
+    long seed = arguments.seed ? atol(arguments.seed) : (long)time(NULL);
 
     int error = HeadlessRedirectOutput(arguments.output);
     if (error != 0) return error;
@@ -91,6 +91,9 @@ int GamesmanHeadlessMain(int argc, char **argv) {
         case kHeadlessAnalyze:
             error = HeadlessAnalyze(game, variant_id, data_path, force, verbose,
                                     memlimit);
+            break;
+        case kHeadlessTest:
+            error = HeadlessTest(game, variant_id, seed, verbose);
             break;
         case kHeadlessQuery:
             error = HeadlessQuery(game, variant_id, data_path, position);

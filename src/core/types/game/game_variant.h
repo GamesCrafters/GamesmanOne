@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic GameVariant type.
- * @version 1.0.1
- * @date 2024-12-10
+ * @version 1.1.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -62,6 +62,15 @@ typedef struct GameVariant {
      */
     const int *selections;
 } GameVariant;
+
+/**
+ * @brief Returns the total number of variants that can be created given the
+ * options in \p variant .
+ *
+ * @param variant A game variant that belongs to some game.
+ * @return Total number of variants that can be created.
+ */
+int GameVariantGetNumVariants(const GameVariant *variant);
 
 /**
  * @brief Returns the index of the given game VARIANT according to its option
