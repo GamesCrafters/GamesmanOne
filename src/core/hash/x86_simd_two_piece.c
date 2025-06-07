@@ -85,7 +85,7 @@ static void MakeTriangle(void) {
 static uint64_t BuildRectangularHashMask(int rows, int cols) {
     uint64_t mask = 0;
     for (int i = 0; i < rows; ++i) {
-        mask |= ((1ULL << cols) - 1) << (i * 8);
+        mask |= ((1ULL << cols) - 1ULL) << (i * 8);
     }
 
     return mask;
@@ -93,8 +93,8 @@ static uint64_t BuildRectangularHashMask(int rows, int cols) {
 
 static int InitTables(void) {
     // Allocate space
-    pattern_to_order =
-        (int32_t *)GamesmanCallocWhole((1 << curr_board_size), sizeof(int32_t));
+    pattern_to_order = (int32_t *)GamesmanCallocWhole((1ULL << curr_board_size),
+                                                      sizeof(int32_t));
     pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
         (curr_board_size + 1), sizeof(uint32_t *));
     if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;

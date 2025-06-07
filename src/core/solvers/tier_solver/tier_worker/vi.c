@@ -116,7 +116,7 @@ static bool Step0_0SetupChildTiers(void) {
 // Typically returns an overestimated result.
 static double GetCheckpointSaveCostEstimate(void) {
     static const double kOverhead = 1;
-    static const double kTypicalHDDSpeed = 200 << 20;  // 200 MiB/s
+    static const double kTypicalHDDSpeed = (double)(200 << 20);  // 200 MiB/s
 
     return kOverhead +
            (double)DbManagerTierMemUsage(this_tier, this_tier_size) /

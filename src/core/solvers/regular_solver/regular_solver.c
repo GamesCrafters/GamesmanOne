@@ -105,7 +105,7 @@ static const SolverOption kUseRetrograde = {
 // Size of each uncompressed XZ block for ArrayDb compression. Smaller block
 // sizes allows faster read of random tier positions at the cost of lower
 // compression ratio.
-static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+static const int64_t kArrayDbBlockSize = 1LL << 20;  // 1 MiB.
 
 // Number of ArrayDb records in each uncompressed XZ block. This should be
 // treated as a constant, although its value is calculated at runtime.

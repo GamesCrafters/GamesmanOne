@@ -36,7 +36,7 @@
 static const int kRecordBits = sizeof(Record) * kBitsPerByte;
 static const int kValueBits = 4;
 static const int kRemotenessBits = kRecordBits - kValueBits;
-static const uint16_t kRemotenessMask = (1 << kRemotenessBits) - 1;
+static const uint16_t kRemotenessMask = (1U << kRemotenessBits) - 1;
 
 void RecordSetValue(Record *rec, Value val) {
     assert(val >= 0 && val < (1 << kValueBits));
