@@ -62,6 +62,7 @@
 // because we need to create/modify some of the functions.
 static TierSolverApi current_api;
 
+// Number of positions in each database compression block.
 static int64_t current_db_chunk_size;
 
 // A frontier array will be created for each possible remoteness.
@@ -81,10 +82,10 @@ static Frontier *win_frontiers;   // Winning frontiers for each thread.
 static Frontier *lose_frontiers;  // Losing frontiers for each thread.
 static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 
+typedef int16_t ChildPosCounterType;
 // Number of undecided child positions array (malloc'ed and owned by the
 // TierWorkerSolve function). Note that we are assuming the number of children
 // of ANY position is no more than 32767.
-typedef int16_t ChildPosCounterType;
 #ifdef _OPENMP
 typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
 static AtomicChildPosCounterType *num_undecided_children = NULL;
