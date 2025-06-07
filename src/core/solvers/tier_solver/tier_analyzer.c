@@ -27,8 +27,8 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
 #include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, intptr_t
+#include <stddef.h>   // NULL, size_t
+#include <stdint.h>   // int64_t
 #include <string.h>   // memset
 
 #include "core/analysis/analysis.h"
@@ -82,13 +82,12 @@ static ConcurrentBitset *bs_fringe, *bs_discovered;
 
 // ============================= TierAnalyzerInit =============================
 
-bool TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit) {
+bool TierAnalyzerInit(const TierSolverApi *api, size_t memlimit) {
     api_internal = api;
     explore_canonical = (api->GetNumberOfSymmetries != NULL);
     GamesmanAllocatorOptions options;
     GamesmanAllocatorOptionsSetDefaults(&options);
-    options.pool_size =
-        memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
+    options.pool_size = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
     allocator = GamesmanAllocatorCreate(&options);
 
     return allocator != NULL;

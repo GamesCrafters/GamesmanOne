@@ -29,7 +29,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, intptr_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/gamesman_types.h"
 
@@ -218,7 +218,7 @@ int DbManagerCheckpointRemove(Tier tier);
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage.
  */
-intptr_t DbManagerTierMemUsage(Tier tier, int64_t size);
+size_t DbManagerTierMemUsage(Tier tier, int64_t size);
 
 /**
  * @brief Loads the given \p tier of \p size positions into memory.

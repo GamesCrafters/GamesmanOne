@@ -33,6 +33,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
@@ -47,7 +48,7 @@
  * the tier worker.
  */
 void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    intptr_t memlimit);
+                    size_t memlimit);
 
 /** @brief Solving methods for \c TierWorkerSolve. */
 enum TierWorkerSolveMethod {

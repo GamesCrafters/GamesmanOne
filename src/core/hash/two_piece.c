@@ -70,13 +70,13 @@ static uint32_t **pop_order_to_pattern;
 static int curr_num_symmetries;
 static uint32_t **pattern_symmetries;  // [symm][pattern]
 
-intptr_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
-    intptr_t ret = (1 << board_size) * sizeof(int32_t);
+size_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
+    size_t ret = (1ULL << board_size) * sizeof(int32_t);
     ret += (board_size + 1) * sizeof(uint32_t *);
-    ret += (1 << board_size) * sizeof(int32_t);  // Binomial theorem
+    ret += (1ULL << board_size) * sizeof(int32_t);  // Binomial theorem
 
     if (num_symmetries > 1) {
-        ret += num_symmetries * (1 << board_size) * sizeof(uint32_t);
+        ret += num_symmetries * (1ULL << board_size) * sizeof(uint32_t);
     }
 
     return ret;

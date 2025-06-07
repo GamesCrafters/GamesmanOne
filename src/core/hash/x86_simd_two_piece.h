@@ -212,7 +212,8 @@
 #include <immintrin.h>  // __m128i, _mm_*
 #include <stdalign.h>   // alignas
 #include <stdbool.h>    // bool
-#include <stdint.h>     // intptr_t, int64_t, uint64_t
+#include <stddef.h>     // size_t
+#include <stdint.h>     // int64_t, uint64_t
 
 #include "core/types/gamesman_types.h"
 
@@ -227,7 +228,7 @@
  * columns.
  * @return Amount of memory required to initialize the hash system.
  */
-intptr_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots);
+size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots);
 
 /**
  * @brief Initializes the hash system, setting effective board rows to \p rows

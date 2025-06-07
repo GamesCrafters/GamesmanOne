@@ -34,7 +34,7 @@
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // intptr_t, uint64_t, int64_t
+#include <stdint.h>   // uint64_t, int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // strcpy
 
@@ -75,7 +75,7 @@ static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
                                  size_t status_size);
 static int ArrayDbCheckpointRemove(Tier tier);
 
-static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size);
+static size_t ArrayDbTierMemUsage(Tier tier, int64_t size);
 static int ArrayDbLoadTier(Tier tier, int64_t size);
 static int ArrayDbUnloadTier(Tier tier);
 static bool ArrayDbIsTierLoaded(Tier tier);
@@ -496,9 +496,9 @@ static int ArrayDbCheckpointRemove(Tier tier) {
     return kNoError;
 }
 
-static intptr_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
+static size_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
     (void)tier;
-    return size * 2;
+    return (size_t)size * 2;
 }
 
 static int GetFirstUnusedRecordArrayIndex(void) {

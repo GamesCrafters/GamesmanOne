@@ -30,8 +30,8 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 
 #include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t, intptr_t
+#include <stddef.h>  // NULL, size_t
+#include <stdint.h>  // int64_t
 #include <stdio.h>   // fprintf, stderr
 #include <stdlib.h>  // strtoll
 #include <string.h>  // memset, memcpy, strncmp

@@ -28,7 +28,8 @@
 #define GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t, intptr_t
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/gamesman_types.h"
 
@@ -247,16 +248,16 @@ typedef struct RegularSolverApi {
 
 /** @brief Solver options for the Regular Solver. */
 typedef struct RegularSolverSolveOptions {
-    int verbose;       /**< Level of details to output. */
-    bool force;        /**< Whether to force (re)solve the game. */
-    intptr_t memlimit; /**<  Approximate heap memory limit in bytes. */
+    int verbose;     /**< Level of details to output. */
+    bool force;      /**< Whether to force (re)solve the game. */
+    size_t memlimit; /**<  Approximate heap memory limit in bytes. */
 } RegularSolverSolveOptions;
 
 /** @brief Analyzer options for the Regular Solver. */
 typedef struct RegularSolverAnalyzeOptions {
-    int verbose;       /**< Level of details to output. */
-    bool force;        /**< Whether to force (re)analyze the game. */
-    intptr_t memlimit; /**<  Approximate heap memory limit in bytes. */
+    int verbose;     /**< Level of details to output. */
+    bool force;      /**< Whether to force (re)analyze the game. */
+    size_t memlimit; /**<  Approximate heap memory limit in bytes. */
 } RegularSolverAnalyzeOptions;
 
 /** @brief Test options for the Regular Solver. */

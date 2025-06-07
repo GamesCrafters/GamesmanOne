@@ -32,7 +32,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, intptr_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
@@ -247,7 +247,7 @@ typedef struct Database {
      * @param size Size of \p tier in number of positions.
      * @return An upper bound on memory usage.
      */
-    intptr_t (*TierMemUsage)(Tier tier, int64_t size);
+    size_t (*TierMemUsage)(Tier tier, int64_t size);
 
     /**
      * @brief Loads the given \p tier of \p size positions into memory.

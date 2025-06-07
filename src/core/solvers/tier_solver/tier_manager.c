@@ -159,7 +159,7 @@ static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
-static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit);
+static int DiscoverTierGraph(bool force, int verbose, size_t memlimit);
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
@@ -197,7 +197,7 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
 }
 
 int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
-                       intptr_t memlimit) {
+                       size_t memlimit) {
     api_internal = api;
     int error = InitGlobalVariables(kTierAnalyzing);
     if (error != 0) {
@@ -822,7 +822,7 @@ static bool IsCanonicalTier(Tier tier) {
     return api_internal->GetCanonicalTier(tier) == tier;
 }
 
-static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit) {
+static int DiscoverTierGraph(bool force, int verbose, size_t memlimit) {
     TierAnalyzerInit(api_internal, memlimit);
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);

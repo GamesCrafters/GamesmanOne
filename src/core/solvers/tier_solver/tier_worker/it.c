@@ -28,7 +28,8 @@
 
 #include <assert.h>   // static_assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // intptr_t, int64_t
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // printf, fprintf, stderr
 
 #include "core/concurrency.h"
@@ -53,7 +54,7 @@
 // Reference to the set of tier solver API functions for the current game.
 static const TierSolverApi *api_internal;
 
-static intptr_t mem;            // Heap memory remaining for loading tiers.
+static size_t mem;              // Heap memory remaining for loading tiers.
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
 
@@ -90,9 +91,9 @@ static bool Step0_0SetupChildTiers(void) {
 }
 
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
-                            intptr_t memlimit) {
+                            size_t memlimit) {
     api_internal = api;
-    mem = memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
+    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 
@@ -109,7 +110,7 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier,
         Tier largest_child_tier =
             canonical_child_tiers.array[canonical_child_tiers.size - 1];
         int64_t size = api_internal->GetTierSize(largest_child_tier);
-        intptr_t largest_child_mem =
+        size_t largest_child_mem =
             DbManagerTierMemUsage(largest_child_tier, size);
         if (largest_child_mem > mem) return false;
     }
@@ -128,7 +129,7 @@ static bool Step1_0LoadChildTiers(BitStream *processed) {
         // Check if the tier can be loaded.
         Tier child_tier = canonical_child_tiers.array[i];
         int64_t size = api_internal->GetTierSize(child_tier);
-        intptr_t required =
+        size_t required =
             DbManagerTierMemUsage(canonical_child_tiers.array[i], size);
         if (required > mem) continue;  // Not enough memory to load this tier.
 
@@ -385,7 +386,7 @@ static void Step3Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              intptr_t memlimit,
+                              size_t memlimit,
                               const TierWorkerSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;

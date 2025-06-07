@@ -28,7 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // intptr_t, int64_t
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -153,7 +153,7 @@ int DbManagerCheckpointRemove(Tier tier) {
     return current_db->CheckpointRemove(tier);
 }
 
-intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
     return current_db->TierMemUsage(tier, size);
 }
 

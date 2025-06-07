@@ -27,7 +27,7 @@
 #include "core/gamesman_headless.h"
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // intptr_t,
+#include <stddef.h>   // size_t
 #include <stdlib.h>   // atoi
 #ifdef USE_MPI
 #include <mpi.h>
@@ -45,12 +45,12 @@
  * @brief Convert the input memory limit string \p str, which is in GiB, into
  * an integer memory limit, which is in bytes.
  */
-static intptr_t ParseMemLimit(const char *str) {
+static size_t ParseMemLimit(const char *str) {
     if (str == NULL || *str == '\0') return 0;
     int gigabytes = atoi(str);
     if (gigabytes < 0) return 0;
 
-    return (intptr_t)gigabytes << 30;
+    return (size_t)gigabytes << 30;
 }
 
 int GamesmanHeadlessMain(int argc, char **argv) {
@@ -73,7 +73,7 @@ int GamesmanHeadlessMain(int argc, char **argv) {
     HeadlessArguments arguments = HeadlessParseArguments(argc, argv);
     char *game = arguments.game;
     char *data_path = arguments.data_path;
-    intptr_t memlimit = ParseMemLimit(arguments.memlimit);
+    size_t memlimit = ParseMemLimit(arguments.memlimit);
     bool force = arguments.force;
     char *position = arguments.position;
     int verbose = HeadlessGetVerbosity(arguments.verbose, arguments.quiet);

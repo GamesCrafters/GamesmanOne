@@ -35,7 +35,8 @@
 #include <immintrin.h>  // __m128i, _mm_*, _pdep_u64, _pext_u64
 #include <stdalign.h>   // alignas
 #include <stdbool.h>    // bool, true, false
-#include <stdint.h>     // intptr_t, int64_t, uint64_t, uint32_t
+#include <stddef.h>     // size_t
+#include <stdint.h>     // int64_t, uint64_t, uint32_t
 #include <stdio.h>      // fprintf, stderr
 
 #include "core/gamesman_memory.h"
@@ -62,10 +63,10 @@ static uint64_t hash_mask;
 static int32_t *pattern_to_order;
 static uint32_t **pop_order_to_pattern;
 
-intptr_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots) {
-    intptr_t ret = (1LL << num_slots) * sizeof(int32_t);
+size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots) {
+    size_t ret = (1ULL << num_slots) * sizeof(int32_t);
     ret += (num_slots + 1) * sizeof(uint32_t *);
-    ret += (1LL << num_slots) * sizeof(int32_t);  // Binomial theorem
+    ret += (1ULL << num_slots) * sizeof(int32_t);  // Binomial theorem
 
     return ret;
 }

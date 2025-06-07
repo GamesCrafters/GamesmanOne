@@ -33,7 +33,8 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t, intptr_t
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t
 
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -45,7 +46,7 @@
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
-static intptr_t mem;
+static size_t mem;
 
 #ifdef USE_MPI
 #include <unistd.h>  // sleep
@@ -56,7 +57,7 @@ static intptr_t mem;
 // ============================== TierWorkerInit ==============================
 
 void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    intptr_t memlimit) {
+                    size_t memlimit) {
     assert(db_chunk_size > 0);
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
