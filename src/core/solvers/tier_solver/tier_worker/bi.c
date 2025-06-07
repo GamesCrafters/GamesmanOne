@@ -444,9 +444,10 @@ static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
  * function UpdateFrontierAndChildTierIds to figure out which frontier and which
  * child tier a position was from. The helper function is designed to take in
  * the old values of frontier_id and child_index as hints on where to begin
- * searching. This allows us to not start the search at index 0 for every
- * position. However, it also means that we are assuming an order of processing
- * within each tier. If the order is random, the hints will not work correctly.
+ * searching. This allows us not to start the search at index 0 for every
+ * position. However, it also means that we are assuming positions are processed
+ * in strictly increasing order as they appear in the frontier. Otherwise, the
+ * hints will not work and the solve will be incorrect.
  */
 static bool PushFrontierHelper(
     Frontier *frontiers, int remoteness,
