@@ -365,8 +365,7 @@ static bool Step3ScanTier(void) {
             Value value = current_api.Primitive(tier_position);
             if (value != kUndecided) {  // If tier_position is primitive...
                 // Set its value immediately and push it into the frontier.
-                DbManagerSetValue(position, value);
-                DbManagerSetRemoteness(position, 0);
+                DbManagerSetValueRemoteness(position, value, 0);
                 int this_tier_index = num_child_tiers - 1;
                 if (!CheckAndLoadFrontier(this_tier_index, position, value, 0,
                                           tid)) {
@@ -511,8 +510,7 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
         if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
-        DbManagerSetValue(parents[i], value);
-        DbManagerSetRemoteness(parents[i], remoteness + 1);
+        DbManagerSetValueRemoteness(parents[i], value, remoteness + 1);
         int this_tier_index = num_child_tiers - 1;
         bool success =
             FrontierAdd(frontier, parents[i], remoteness + 1, this_tier_index);
@@ -580,8 +578,7 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
         if (child_remaining == 1) {
-            DbManagerSetValue(parents[i], kLose);
-            DbManagerSetRemoteness(parents[i], remoteness + 1);
+            DbManagerSetValueRemoteness(parents[i], kLose, remoteness + 1);
             int this_tier_index = num_child_tiers - 1;
             bool success = FrontierAdd(&lose_frontiers[tid], parents[i],
                                        remoteness + 1, this_tier_index);

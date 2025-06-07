@@ -111,7 +111,8 @@ typedef struct Database {
      * @param tier Tier to be solved and stored in memory.
      * @param size Size of the TIER in number of Positions.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*CreateSolvingTier)(Tier tier, int64_t size);
 
@@ -121,7 +122,8 @@ typedef struct Database {
      *
      * @param aux Auxiliary parameter.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FlushSolvingTier)(void *aux);
 
@@ -130,7 +132,8 @@ typedef struct Database {
      * been created.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FreeSolvingTier)(void);
 
@@ -146,7 +149,8 @@ typedef struct Database {
      * @brief Sets the value of POSITION to VALUE.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetValue)(Position position, Value value);
 
@@ -154,9 +158,19 @@ typedef struct Database {
      * @brief Sets the remoteness of POSITION to REMOTENESS.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetRemoteness)(Position position, int remoteness);
+
+    /**
+     * @brief Sets the \p value and \p remoteness of \p position .
+     * @note This function is part of the Solving API.
+     *
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
+     */
+    int (*SetValueRemoteness)(Position position, Value value, int remoteness);
 
     /**
      * @brief Returns the value of the given \p position from in-memory DB.
@@ -290,14 +304,16 @@ typedef struct Database {
     /**
      * @brief Initializes the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeInit)(DbProbe *probe);
 
     /**
      * @brief Frees the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeDestroy)(DbProbe *probe);
 

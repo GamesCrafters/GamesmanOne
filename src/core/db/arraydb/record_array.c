@@ -59,6 +59,12 @@ void RecordArraySetRemoteness(RecordArray *array, Position position,
     RecordSetRemoteness(&array->records[position], remoteness);
 }
 
+void RecordArraySetValueRemoteness(RecordArray *array, Position position,
+                                   Value val, int remoteness) {
+    assert(position >= 0 && position < array->size);
+    RecordSetValueRemoteness(&array->records[position], val, remoteness);
+}
+
 Value RecordArrayGetValue(const RecordArray *array, Position position) {
     return RecordGetValue(&array->records[position]);
 }

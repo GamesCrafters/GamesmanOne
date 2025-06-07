@@ -52,6 +52,16 @@ void RecordSetValue(Record *rec, Value val);
 void RecordSetRemoteness(Record *rec, int remoteness);
 
 /**
+ * @brief Sets the value and remoteness fields of record \p rec to \p val and
+ * \p remoteness , respectively.
+ *
+ * @param rec Target record.
+ * @param val New value.
+ * @param remoteness New remoteness.
+ */
+void RecordSetValueRemoteness(Record *rec, Value val, int remoteness);
+
+/**
  * @brief Returns the value field of record \p rec.
  *
  * @param rec Source record.

@@ -226,8 +226,8 @@ static void MaximizeParent(Position parent, Value child_value,
         OutcomeCompare(parent_value, parent_remoteness, parent_new_value,
                        parent_new_remoteness) < 0) {
         // Maximize parent outcome.
-        DbManagerSetValue(parent, parent_new_value);
-        DbManagerSetRemoteness(parent, parent_new_remoteness);
+        DbManagerSetValueRemoteness(parent, parent_new_value,
+                                    parent_new_remoteness);
     }
 }
 
@@ -248,8 +248,7 @@ static bool Step1_1IterateOnePass(void) {
         Value primitive_value = api_internal->Primitive(tier_position);
         if (primitive_value != kUndecided) {  // If primitive...
             // Set value immediately and continue to the next position.
-            DbManagerSetValue(pos, primitive_value);
-            DbManagerSetRemoteness(pos, 0);
+            DbManagerSetValueRemoteness(pos, primitive_value, 0);
             continue;
         }
 

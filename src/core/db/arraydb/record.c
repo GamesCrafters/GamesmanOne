@@ -50,6 +50,12 @@ void RecordSetRemoteness(Record *rec, int remoteness) {
     *rec = (val << kRemotenessBits) | (uint16_t)remoteness;
 }
 
+void RecordSetValueRemoteness(Record *rec, Value val, int remoteness) {
+    assert(val >= 0 && val < (1 << kValueBits));
+    assert(remoteness >= 0 && remoteness < (1 << kRemotenessBits));
+    *rec = (val << kRemotenessBits) | remoteness;
+}
+
 Value RecordGetValue(const Record *rec) { return (*rec) >> kRemotenessBits; }
 
 int RecordGetRemoteness(const Record *rec) { return (*rec) & kRemotenessMask; }

@@ -133,6 +133,15 @@ int DbManagerSetValue(Position position, Value value);
 int DbManagerSetRemoteness(Position position, int remoteness);
 
 /**
+ * @brief Sets the \p value and \p remoteness of \p position in the solving
+ * tier.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
+int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
+
+/**
  * @brief Returns the value of POSITION in the solving tier.
  *
  * @note Assumes the solving tier has been created. Results in undefined

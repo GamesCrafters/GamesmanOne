@@ -81,6 +81,19 @@ void RecordArraySetRemoteness(RecordArray *array, Position position,
                               int remoteness);
 
 /**
+ * @brief Sets the value and remoteness of \p position in \p array to
+ * \p val and \p remoteness , respectively. Assumes \p position is greater than
+ * or equal to 0 and smaller than the size of \p array.
+ *
+ * @param array Target array.
+ * @param position Position.
+ * @param val New value for the \p position.
+ * @param remoteness New remoteness for the \p position.
+ */
+void RecordArraySetValueRemoteness(RecordArray *array, Position position,
+                                   Value val, int remoteness);
+
+/**
  * @brief Returns the \c Value of \p position in the given \p array, assumes
  * \p position is greater than or equal to 0 and smaller than the size of
  * \p array.

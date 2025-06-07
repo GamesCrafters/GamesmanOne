@@ -123,6 +123,11 @@ int DbManagerSetRemoteness(Position position, int remoteness) {
     return current_db->SetRemoteness(position, remoteness);
 }
 
+int DbManagerSetValueRemoteness(Position position, Value value,
+                                int remoteness) {
+    return current_db->SetValueRemoteness(position, value, remoteness);
+}
+
 Value DbManagerGetValue(Position position) {
     return current_db->GetValue(position);
 }

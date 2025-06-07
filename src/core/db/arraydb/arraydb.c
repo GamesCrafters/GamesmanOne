@@ -65,6 +65,8 @@ static int ArrayDbFreeSolvingTier(void);
 static int ArrayDbSetGameSolved(void);
 static int ArrayDbSetValue(Position position, Value value);
 static int ArrayDbSetRemoteness(Position position, int remoteness);
+static int ArrayDbSetValueRemoteness(Position position, Value value,
+                                     int remoteness);
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 static bool ArrayDbCheckpointExists(Tier tier);
@@ -102,6 +104,7 @@ const Database kArrayDb = {
     .SetGameSolved = ArrayDbSetGameSolved,
     .SetValue = ArrayDbSetValue,
     .SetRemoteness = ArrayDbSetRemoteness,
+    .SetValueRemoteness = ArrayDbSetValueRemoteness,
     .GetValue = ArrayDbGetValue,
     .GetRemoteness = ArrayDbGetRemoteness,
     .CheckpointExists = ArrayDbCheckpointExists,
@@ -372,6 +375,14 @@ static int ArrayDbSetValue(Position position, Value value) {
 
 static int ArrayDbSetRemoteness(Position position, int remoteness) {
     RecordArraySetRemoteness(&loaded_records[0], position, remoteness);
+
+    return kNoError;
+}
+
+static int ArrayDbSetValueRemoteness(Position position, Value value,
+                                     int remoteness) {
+    RecordArraySetValueRemoteness(&loaded_records[0], position, value,
+                                  remoteness);
 
     return kNoError;
 }

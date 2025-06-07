@@ -222,8 +222,7 @@ static void Step3ScanTier(void) {
         Value value = api_internal->Primitive(tier_position);
         if (value != kUndecided) {  // If tier_position is primitive...
             // Set its value immediately.
-            DbManagerSetValue(pos, value);
-            DbManagerSetRemoteness(pos, 0);
+            DbManagerSetValueRemoteness(pos, value, 0);
         }  // Otherwise, do nothing.
     }
     if (verbose > 1) puts("done");
@@ -263,8 +262,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
             case kLose:
                 all_children_winning = false;
                 if (child_remoteness == iteration - 1) {
-                    DbManagerSetValue(pos, kWin);
-                    DbManagerSetRemoteness(pos, iteration);
+                    DbManagerSetValueRemoteness(pos, kWin, iteration);
                     *updated = true;
                     return true;
                 }
@@ -283,8 +281,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     }
 
     if (all_children_winning && largest_win + 1 == iteration) {
-        DbManagerSetValue(pos, kLose);
-        DbManagerSetRemoteness(pos, iteration);
+        DbManagerSetValueRemoteness(pos, kLose, iteration);
         *updated = true;
     }
 
@@ -371,8 +368,7 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
                 child_tier_position.tier, child_tier_position.position);
         }
         if (child_value == kTie && child_remoteness == iteration - 1) {
-            DbManagerSetValue(pos, kTie);
-            DbManagerSetRemoteness(pos, iteration);
+            DbManagerSetValueRemoteness(pos, kTie, iteration);
             *updated = true;
             break;
         }
