@@ -219,8 +219,8 @@ int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
 
 // ============================= XzraCompressMem ==============================
 
-static bool CompressMemHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
-                              FILE *outfile) {
+static bool CompressMemHelper(lzma_stream *strm, const uint8_t *in,
+                              size_t in_size, FILE *outfile) {
     uint8_t outbuf[BUFSIZ];
     strm->next_in = in;
     strm->avail_in = in_size;
@@ -252,7 +252,7 @@ static bool CompressMemHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
 }
 
 int64_t XzraCompressMem(const char *ofname, uint64_t block_size, uint32_t level,
-                        bool extreme, int num_threads, uint8_t *in,
+                        bool extreme, int num_threads, const uint8_t *in,
                         size_t in_size) {
     FILE *outfile = fopen(ofname, "wb");
     if (outfile == NULL) {
@@ -315,7 +315,8 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
 
 // ============================= XzraOutStreamRun ==============================
 
-int64_t XzraOutStreamRun(XzraOutStream *stream, uint8_t *in, size_t in_size) {
+int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                         size_t in_size) {
     stream->strm.next_in = in;
     stream->strm.avail_in = in_size;
     while (stream->strm.avail_in) {

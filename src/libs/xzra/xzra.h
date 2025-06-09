@@ -122,7 +122,7 @@ int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
  * @return -3 if compression failed.
  */
 int64_t XzraCompressMem(const char *ofname, uint64_t block_size, uint32_t level,
-                        bool extreme, int num_threads, uint8_t *in,
+                        bool extreme, int num_threads, const uint8_t *in,
                         size_t in_size);
 
 // =============================== Streaming API ===============================
@@ -162,7 +162,8 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
  * \p stream on success, or
  * @return -3 on failure.
  */
-int64_t XzraOutStreamRun(XzraOutStream *stream, uint8_t *in, size_t in_size);
+int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                         size_t in_size);
 
 /**
  * @brief Closes the output stream \p stream , finalizing the output file by
