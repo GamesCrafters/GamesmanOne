@@ -1,9 +1,12 @@
 [submodule "lib/json-c"]
 	path = lib/json-c
 	url = https://github.com/json-c/json-c.git
+	branch = master
 [submodule "lib/xz"]
 	path = lib/xz
 	url = https://github.com/tukaani-project/xz.git
+	branch = master
 [submodule "lib/lz4"]
 	path = lib/lz4
 	url = https://github.com/lz4/lz4.git
+	branch = release
