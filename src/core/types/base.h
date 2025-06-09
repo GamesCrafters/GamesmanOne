@@ -66,10 +66,10 @@ typedef struct TierPosition {
 typedef enum Value {
     kErrorValue = -1, /**< This illegal value indicates an error. */
     kUndecided = 0,   /**< Value has not been decided. */
-    kLose,            /**< Current player is losing in a perfect play. */
+    kLose,            /**< Current player is losing in perfect play. */
     kDraw,            /**< Players are in a draw assuming perfect play. */
     kTie,             /**< The game will end in a tie assuming perfect play. */
-    kWin,             /**< Current player is winning in a perfect play. */
+    kWin,             /**< Current player is winning in perfect play. */
     kNumValues,       /**< Number of possible legal values. */
 } Value;
 
