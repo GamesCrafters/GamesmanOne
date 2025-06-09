@@ -78,8 +78,8 @@ typedef enum Value {
  */
 typedef enum TierType {
     /**
-     * @brief A tier T is of this type if, for all positions P in T, the child
-     * positions of P is not in T. This also implies that T is loop-free.
+     * @brief A tier T is of this type if for all positions P in T, none of the
+     * child positions of P are in T. This also implies that T is loop-free.
      */
     kTierTypeImmediateTransition,
 
@@ -90,7 +90,7 @@ typedef enum TierType {
     kTierTypeLoopFree,
 
     /**
-     * @brief A tier T is of this type if it is loopy, or if its loopiness is
+     * @brief A tier T is of this type if it is loopy or if its loopiness is
      * unclear.
      *
      * @note The loopy algorithm also works on loop-free tiers. Hence, this
