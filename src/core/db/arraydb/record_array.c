@@ -81,6 +81,6 @@ void *RecordArrayGetData(RecordArray *array) { return (void *)array->records; }
 
 int64_t RecordArrayGetSize(const RecordArray *array) { return array->size; }
 
-int64_t RecordArrayGetRawSize(const RecordArray *array) {
-    return array->size * (int64_t)sizeof(Record);
+size_t RecordArrayGetRawSize(const RecordArray *array) {
+    return array->size * sizeof(Record);
 }

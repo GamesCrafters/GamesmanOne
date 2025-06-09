@@ -24,9 +24,10 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_DB_BPDB_RECORD_ARRAY_H_
-#define GAMESMANONE_CORE_DB_BPDB_RECORD_ARRAY_H_
+#ifndef GAMESMANONE_CORE_DB_ARRAYDB_RECORD_ARRAY_H_
+#define GAMESMANONE_CORE_DB_ARRAYDB_RECORD_ARRAY_H_
 
+#include <stddef.h>  // size_t
 #include <stdint.h>  // int64_t
 
 #include "core/db/arraydb/record.h"
@@ -147,6 +148,6 @@ int64_t RecordArrayGetSize(const RecordArray *array);
  * @param array Target array.
  * @return Size of \p array in bytes.
  */
-int64_t RecordArrayGetRawSize(const RecordArray *array);
+size_t RecordArrayGetRawSize(const RecordArray *array);
 
-#endif  // GAMESMANONE_CORE_DB_BPDB_RECORD_ARRAY_H_
+#endif  // GAMESMANONE_CORE_DB_ARRAYDB_RECORD_ARRAY_H_
