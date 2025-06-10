@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Separate chaining Position hash set.
+ * @brief Separate chaining Tier to int64_t hash map.
  * @version 1.0.1
  * @date 2024-12-10
  *
