@@ -59,10 +59,12 @@ typedef struct Int64HashSetEntry {
  */
 typedef struct Int64HashSet {
     Int64HashSetEntry *entries; /**< Dynamic array of buckets. */
-    int64_t capacity;           /**< Current capacity of the hash set. */
     int64_t size;               /**< Number of entries in the hash set. */
     double max_load_factor;     /**< Hash set will automatically expand if
                                 (double)size/capacity is greater than this value. */
+
+    /** Number of buckets - 1, for fast bucket indexing. */
+    int64_t capacity_mask;
 } Int64HashSet;
 
 /**

@@ -33,77 +33,93 @@
 #include <stdint.h>   // int64_t, uint64_t
 
 #include "core/gamesman_memory.h"
-#include "core/misc.h"  // NextPrime
 
-static int64_t Hash(int64_t key, int64_t capacity) {
-    return (int64_t)(((uint64_t)key) % capacity);
+static int64_t Hash(int64_t key, int64_t capacity_mask) {
+    uint64_t x = (uint64_t)key;  // sign-extend → cast
+    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
+    return (x ^ (x >> 31)) & capacity_mask;
 }
 
-static int64_t NextIndex(int64_t index, int64_t capacity) {
-    return (index + 1) % capacity;
+static int64_t NextIndex(int64_t index, int64_t capacity_mask) {
+    return (index + 1) & capacity_mask;
 }
 
 void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     set->entries = NULL;
-    set->capacity = 0;
     set->size = 0;
     if (max_load_factor > 0.75) max_load_factor = 0.75;
     if (max_load_factor < 0.25) max_load_factor = 0.25;
     set->max_load_factor = max_load_factor;
+    set->capacity_mask = -1;
 }
 
-static bool Expand(Int64HashSet *set, int64_t new_capacity) {
+static bool Expand(Int64HashSet *set, int64_t new_mask) {
     Int64HashSetEntry *new_entries = (Int64HashSetEntry *)GamesmanCallocWhole(
-        new_capacity, sizeof(Int64HashSetEntry));
+        new_mask + 1, sizeof(Int64HashSetEntry));
     if (new_entries == NULL) return false;
 
-    for (int64_t i = 0; i < set->capacity; ++i) {
+    for (int64_t i = 0; i < set->capacity_mask + 1; ++i) {
         if (set->entries[i].used) {
-            int64_t new_index = Hash(set->entries[i].key, new_capacity);
+            int64_t new_index = Hash(set->entries[i].key, new_mask);
             while (new_entries[new_index].used) {
-                new_index = NextIndex(new_index, new_capacity);
+                new_index = NextIndex(new_index, new_mask);
             }
             new_entries[new_index] = set->entries[i];
         }
     }
     GamesmanFree(set->entries);
     set->entries = new_entries;
-    set->capacity = new_capacity;
+    set->capacity_mask = new_mask;
 
     return true;
 }
 
-bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
-    int64_t target_capacity =
-        NextPrime((int64_t)((double)size / set->max_load_factor));
-    if (target_capacity <= set->capacity) return true;
+static int64_t MinCapacityMask(int64_t capacity) {
+    if (capacity <= 0) return -1;
 
-    return Expand(set, target_capacity);
+    capacity--;
+    capacity |= capacity >> 1;
+    capacity |= capacity >> 2;
+    capacity |= capacity >> 4;
+    capacity |= capacity >> 8;
+    capacity |= capacity >> 16;
+    capacity |= capacity >> 32;
+
+    return capacity;
+}
+
+bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
+    int64_t target_capacity_mask =
+        MinCapacityMask((int64_t)((double)size / set->max_load_factor));
+    if (target_capacity_mask <= set->capacity_mask) return true;
+
+    return Expand(set, target_capacity_mask);
 }
 
 void Int64HashSetDestroy(Int64HashSet *set) {
     GamesmanFree(set->entries);
     set->entries = NULL;
-    set->capacity = 0;
     set->size = 0;
+    set->max_load_factor = 0.0;
+    set->capacity_mask = -1;
 }
 
 bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     // Check if resizing is needed.
-    double load_factor = (set->capacity == 0)
-                             ? INFINITY
-                             : (double)(set->size + 1) / (double)set->capacity;
-    if (set->capacity == 0 || load_factor > set->max_load_factor) {
-        int64_t new_capacity = NextPrime(set->capacity * 2);
-        if (!Expand(set, new_capacity)) return false;
+    if (set->capacity_mask < 0) {
+        if (!Expand(set, 1)) return false;
+    } else if ((double)(set->size + 1) >
+               (double)(set->capacity_mask + 1) * set->max_load_factor) {
+        int64_t new_capacity_mask = (set->capacity_mask << 1) | 1;
+        if (!Expand(set, new_capacity_mask)) return false;
     }
 
     // Set value at key.
-    int64_t capacity = set->capacity;
-    int64_t index = Hash(key, capacity);
+    int64_t index = Hash(key, set->capacity_mask);
     while (set->entries[index].used) {
         if (set->entries[index].key == key) return false;
-        index = NextIndex(index, capacity);
+        index = NextIndex(index, set->capacity_mask);
     }
     set->entries[index].key = key;
     set->entries[index].used = true;
@@ -113,14 +129,13 @@ bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
 }
 
 bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
-    int64_t capacity = set->capacity;
     // Edge case: return false if set is empty.
-    if (capacity == 0) return false;
+    if (set->capacity_mask < 0) return false;
 
-    int64_t index = Hash(key, capacity);
+    int64_t index = Hash(key, set->capacity_mask);
     while (set->entries[index].used) {
         if (set->entries[index].key == key) return true;
-        index = NextIndex(index, capacity);
+        index = NextIndex(index, set->capacity_mask);
     }
 
     return false;

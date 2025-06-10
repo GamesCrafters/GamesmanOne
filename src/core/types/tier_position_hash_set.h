@@ -41,9 +41,11 @@ typedef struct TierPositionHashSetEntry {
 /** @brief Linear-probing TierPosition hash set. */
 typedef struct TierPositionHashSet {
     TierPositionHashSetEntry *entries; /**< Array of buckets. */
-    int64_t capacity;                  /**< Number of buckets allocated. */
     int64_t size;           /**< Number of items stored in the set. */
     double max_load_factor; /**< Maximum load factor of the set. */
+    
+    /** Number of buckets - 1, for fast bucket indexing. */
+    int64_t capacity_mask;
 } TierPositionHashSet;
 
 /**
