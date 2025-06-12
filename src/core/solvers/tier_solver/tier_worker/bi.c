@@ -509,7 +509,7 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
             num_undecided_children[parents[i]];
         num_undecided_children[parents[i]] = 0;
 #endif                                       // _OPENMP
-        if (child_remaining == 0) continue;  // Parent already solved.
+        if (child_remaining <= 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
         DbManagerSetValueRemoteness(parents[i], value, remoteness + 1);
@@ -526,40 +526,6 @@ static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
     return ProcessLoseOrTiePosition(remoteness, tier_position, true);
 }
 
-#ifdef _OPENMP
-/**
- * @brief Atomically decrements the content of OBJ, which is of type
- * ChildPosCounterType, if and only if it was greater than 0, and returns the
- * original value. If multiple threads call this function on the same OBJ at the
- * same time, the value returned is guaranteed to be unique for each thread if
- * no threads are performing other operations on OBJ.
- *
- * @note This is a helper function that is only used by ProcessWinPosition.
- *
- * @param obj Atomic ChildPosCounterType object to be decremented.
- * @return Original value of OBJ.
- */
-static ChildPosCounterType DecrementIfNonZero(AtomicChildPosCounterType *obj) {
-    ChildPosCounterType current_value =
-        atomic_load_explicit(obj, memory_order_relaxed);
-    while (current_value != 0) {
-        // This function will set OBJ to current_value - 1 if OBJ is still equal
-        // to current_value. Otherwise, it updates current_value to the new
-        // value of OBJ and returns false.
-        bool success = atomic_compare_exchange_weak_explicit(
-            obj, &current_value, (ChildPosCounterType)(current_value - 1),
-            memory_order_relaxed, memory_order_relaxed);
-        // If decrement was successful, quit and return the original value of
-        // OBJ that was swapped out.
-        if (success) return current_value;
-        // Otherwise, we keep looping until either a decrement was successfully
-        // completed, or OBJ is decremented to zero by some other thread.
-    }
-
-    return 0;
-}
-#endif  // _OPENMP
-
 // This function is called within a OpenMP parallel region.
 static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     Position parents[kTierSolverNumParentPositionsMax];
@@ -568,12 +534,9 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     int tid = GetThreadId();
     for (int i = 0; i < num_parents; ++i) {
 #ifdef _OPENMP
-        ChildPosCounterType child_remaining =
-            DecrementIfNonZero(&num_undecided_children[parents[i]]);
+        ChildPosCounterType child_remaining = atomic_fetch_sub_explicit(
+            &num_undecided_children[parents[i]], 1, memory_order_relaxed);
 #else   // _OPENMP not defined
-        // If this parent has been solved already, skip it.
-        if (num_undecided_children[parents[i]] == 0) continue;
-        // Must perform the above check before decrementing to prevent overflow.
         ChildPosCounterType child_remaining =
             num_undecided_children[parents[i]]--;
 #endif  // _OPENMP
