@@ -32,18 +32,8 @@
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
 
+#include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
-
-static int64_t Hash(int64_t key, int64_t capacity_mask) {
-    uint64_t x = (uint64_t)key;  // sign-extend → cast
-    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
-    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
-    return (x ^ (x >> 31)) & capacity_mask;
-}
-
-static int64_t NextIndex(int64_t index, int64_t capacity_mask) {
-    return (index + 1) & capacity_mask;
-}
 
 void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     set->entries = NULL;
@@ -52,6 +42,14 @@ void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     if (max_load_factor < 0.25) max_load_factor = 0.25;
     set->max_load_factor = max_load_factor;
     set->capacity_mask = -1;
+}
+
+static int64_t Hash(int64_t key, int64_t capacity_mask) {
+    return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
+}
+
+static int64_t NextIndex(int64_t index, int64_t capacity_mask) {
+    return (index + 1) & capacity_mask;
 }
 
 static bool Expand(Int64HashSet *set, int64_t new_mask) {

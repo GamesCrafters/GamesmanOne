@@ -28,25 +28,30 @@
 #include "core/db/arraydb/record_array.h"
 
 #include <assert.h>  // assert
-#include <stddef.h>  // NULL
+#include <stddef.h>  // NULL, size_t
 #include <stdint.h>  // int64_t
-#include <stdlib.h>  // calloc, free
+#include <string.h>  // memset
 
 #include "core/db/arraydb/record.h"
+#include "core/gamesman_memory.h"
 
-int RecordArrayInit(RecordArray *array, int64_t size) {
-    array->records = (Record *)calloc(size, sizeof(Record));
-    if (array->records == NULL) return kMallocFailureError;
-    array->size = size;
+struct RecordArray {
+    int64_t size;
+    Record records[];
+};
 
-    return kNoError;
+RecordArray *RecordArrayCreate(int64_t size) {
+    RecordArray *ret =
+        (RecordArray *)GamesmanMalloc(sizeof(int64_t) + size * sizeof(Record));
+    if (ret == NULL) return NULL;
+
+    ret->size = size;
+    memset(ret->records, 0, size * sizeof(Record));
+
+    return ret;
 }
 
-void RecordArrayDestroy(RecordArray *array) {
-    free(array->records);
-    array->records = NULL;
-    array->size = 0;
-}
+void RecordArrayDestroy(RecordArray *array) { GamesmanFree(array); }
 
 void RecordArraySetValue(RecordArray *array, Position position, Value val) {
     assert(position >= 0 && position < array->size);

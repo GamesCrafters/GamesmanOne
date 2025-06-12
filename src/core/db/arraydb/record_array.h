@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Fixed-length \c Record array for the Array Database.
- * @version 1.0.1
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-06-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,27 +32,20 @@
 
 #include "core/db/arraydb/record.h"
 
-/** @brief Fixed-length \c Record array. */
-typedef struct RecordArray {
-    Record *records;
-    int64_t size;
-} RecordArray;
+/** @brief Opaque fixed-length \c Record array. */
+typedef struct RecordArray RecordArray;
 
 /**
- * @brief Initializes \p array to \p size elements.
- * @note Assumes \p array is uninitialized. Results in undefined behavior if
- * \p array has been initialized with a prior call to the same function.
+ * @brief Creates a new RecordArray of \p size elements.
  *
- * @param array Array to be initialized.
- * @param size Size of the new array in number of \c Records.
- * @return \c kNoError on success, or
- * @return \c kMallocFailureError if malloc fails to allocate enough space for
- * \p size records.
+ * @param size Size of the new array in number of \c Records .
+ * @return Pointer to the new RecordArray on success,
+ * @return \c NULL on malloc failure.
  */
-int RecordArrayInit(RecordArray *array, int64_t size);
+RecordArray *RecordArrayCreate(int64_t size);
 
 /**
- * @brief Deallocates the \p array.
+ * @brief Deallocates the \p array .
  *
  * @param array Array to deallocate.
  */
@@ -60,8 +53,8 @@ void RecordArrayDestroy(RecordArray *array);
 
 /**
  * @brief Sets the value of position \p position in \p array to \p val. Assumes
- * \p position is greater than or equal to 0 and smaller than the size of \p
- * array.
+ * \p position is greater than or equal to 0 and smaller than the size of
+ * \p array .
  *
  * @param array Target array.
  * @param position Position.
@@ -95,13 +88,13 @@ void RecordArraySetValueRemoteness(RecordArray *array, Position position,
                                    Value val, int remoteness);
 
 /**
- * @brief Returns the \c Value of \p position in the given \p array, assumes
+ * @brief Returns the value of \p position in the given \p array, assumes
  * \p position is greater than or equal to 0 and smaller than the size of
  * \p array.
  *
  * @param array Source array.
  * @param position Position.
- * @return \c Value of \p position.
+ * @return Value of \p position.
  */
 Value RecordArrayGetValue(const RecordArray *array, Position position);
 
@@ -126,8 +119,8 @@ int RecordArrayGetRemoteness(const RecordArray *array, Position position);
 const void *RecordArrayGetReadOnlyData(const RecordArray *array);
 
 /**
- * @brief Returns a R/W direct pointer to the memory array used internally
- * by the \c RecordArray to store its elements.
+ * @brief Returns a read-write direct pointer to the memory array used
+ * internally by the \c RecordArray to store its elements.
  *
  * @param array Source array.
  * @return Direct pointer to the memory array.

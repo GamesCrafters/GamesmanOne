@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.4
- * @date 2025-04-26
+ * @version 1.2.5
+ * @date 2025-06-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -113,7 +113,6 @@ typedef struct NaiveDbEntry {
     int remoteness;
 } NaiveDbEntry;
 
-enum { kNaiveDbNumLoadedTiersMax = 256 };
 // Probe buffer size, fixed at 1 MiB.
 static const int kBufferSize = (1 << 17) * sizeof(NaiveDbEntry);
 
@@ -124,8 +123,7 @@ static char *sandbox_path;
 static Tier current_tier;
 static int64_t current_tier_size;
 static NaiveDbEntry *records;
-static TierHashMapSC loaded_tier_to_index;
-static NaiveDbEntry *loaded_records[kNaiveDbNumLoadedTiersMax];
+static TierToPtrChainedHashMap loaded_tiers;
 
 /**
  * @brief Returns the full path to the DB file for the given tier. The user is
@@ -220,8 +218,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
     assert(records == NULL);
-    TierHashMapSCInit(&loaded_tier_to_index, 0.5);
-    memset(&loaded_records, 0, sizeof(loaded_records));
+    TierToPtrChainedHashMapInit(&loaded_tiers, 0.5);
 
     return kNoError;
 }
@@ -229,18 +226,18 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
 static void NaiveDbFinalize(void) {
     GamesmanFree(sandbox_path);
     sandbox_path = NULL;
-    GamesmanFree(records);
-    records = NULL;
-    TierHashMapSCDestroy(&loaded_tier_to_index);
-    for (int i = 0; i < kNaiveDbNumLoadedTiersMax; ++i) {
-        GamesmanFree(loaded_records[i]);
+
+    // Free all loaded records, including the solving tier.
+    TierToPtrChainedHashMapIterator it =
+        TierToPtrChainedHashMapBegin(&loaded_tiers);
+    while (TierToPtrChainedHashMapIteratorIsValid(&it)) {
+        GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
     }
+    TierToPtrChainedHashMapDestroy(&loaded_tiers);
+    records = NULL;
 }
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
-    current_tier = tier;
-    current_tier_size = size;
-
     GamesmanFree(records);
     records = (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
     if (records == NULL) {
@@ -248,6 +245,14 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
         return kMallocFailureError;
     }
+    if (!TierToPtrChainedHashMapSet(&loaded_tiers, tier, records)) {
+        GamesmanFree(records);
+        records = NULL;
+        return kMallocFailureError;
+    }
+    current_tier = tier;
+    current_tier_size = size;
+
     return kNoError;
 }
 
@@ -282,8 +287,10 @@ static int NaiveDbFlushSolvingTier(void *aux) {
 static int NaiveDbFreeSolvingTier(void) {
     GamesmanFree(records);
     records = NULL;
+    TierToPtrChainedHashMapRemove(&loaded_tiers, current_tier);
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
+
     return kNoError;
 }
 
@@ -319,90 +326,74 @@ static int NaiveDbGetRemoteness(Position position) {
 }
 
 static int NaiveDbLoadTier(Tier tier, int64_t size) {
-    // Find the first unused slot in the loaded records array.
-    int i;
-    for (i = 0; i < kNaiveDbNumLoadedTiersMax; ++i) {
-        if (loaded_records[i] == NULL) break;
-    }
-    if (i == kNaiveDbNumLoadedTiersMax) {
-        fprintf(stderr,
-                "NaiveDbLoadTier: cannot load more than %d tiers at the same "
-                "time\n",
-                kNaiveDbNumLoadedTiersMax);
-        return kRuntimeError;
-    }
-
-    loaded_records[i] =
-        (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
-    if (loaded_records[i] == NULL) {
-        return kMallocFailureError;
-    }
-
     char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
-    if (full_path == NULL) {
-        GamesmanFree(loaded_records[i]);
-        loaded_records[i] = NULL;
-        return kMallocFailureError;
-    }
-
-    if (!TierHashMapSCSet(&loaded_tier_to_index, tier, i)) {
-        GamesmanFree(loaded_records[i]);
-        loaded_records[i] = NULL;
+    NaiveDbEntry *load =
+        (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
+    if (full_path == NULL || load == NULL) {
         GamesmanFree(full_path);
+        GamesmanFree(load);
         return kMallocFailureError;
     }
 
+    // Open db file
     FILE *db_file = fopen(full_path, "rb");
     GamesmanFree(full_path);
     if (db_file == NULL) {
-        GamesmanFree(loaded_records[i]);
-        loaded_records[i] = NULL;
+        GamesmanFree(load);
         return kFileSystemError;
     }
 
-    size_t n = fread(loaded_records[i], sizeof(NaiveDbEntry), size, db_file);
+    // Read db file into "load"
+    size_t n = fread(load, sizeof(NaiveDbEntry), size, db_file);
     fclose(db_file);
+
+    // Set loaded tier in map
+    if (!TierToPtrChainedHashMapSet(&loaded_tiers, tier, load)) {
+        GamesmanFree(load);
+        load = NULL;
+        return kMallocFailureError;
+    }
 
     return n == (size_t)size ? kNoError : kFileSystemError;
 }
 
-static int GetLoadedTierIndex(Tier tier) {
-    int64_t index;
-    if (!TierHashMapSCGet(&loaded_tier_to_index, tier, &index)) return -1;
-
-    return (int)index;
-}
-
 static int NaiveDbUnloadTier(Tier tier) {
-    int index = GetLoadedTierIndex(tier);
-    if (index >= 0) {
-        GamesmanFree(loaded_records[index]);
-        loaded_records[index] = NULL;
-        TierHashMapSCRemove(&loaded_tier_to_index, tier);
+    TierToPtrChainedHashMapIterator it =
+        TierToPtrChainedHashMapGet(&loaded_tiers, tier);
+    if (TierToPtrChainedHashMapIteratorIsValid(&it)) {
+        GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
+        TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
     }
 
     return kNoError;
 }
 
 static bool NaiveDbIsTierLoaded(Tier tier) {
-    int index = GetLoadedTierIndex(tier);
-    if (index < 0) return false;
+    TierToPtrChainedHashMapIterator it =
+        TierToPtrChainedHashMapGet(&loaded_tiers, tier);
 
-    return loaded_records[index] != NULL;
+    return TierToPtrChainedHashMapIteratorIsValid(&it);
+}
+
+static NaiveDbEntry GetEntryFromLoaded(Tier tier, Position position) {
+    TierToPtrChainedHashMapIterator it =
+        TierToPtrChainedHashMapGet(&loaded_tiers, tier);
+    if (!TierToPtrChainedHashMapIteratorIsValid(&it)) {
+        return (NaiveDbEntry){.value = kErrorValue, .remoteness = -1};
+    }
+
+    NaiveDbEntry *records =
+        (NaiveDbEntry *)TierToPtrChainedHashMapIteratorValue(&it);
+
+    return records[position];
 }
 
 static Value NaiveDbGetValueFromLoaded(Tier tier, Position position) {
-    int index = GetLoadedTierIndex(tier);
-    if (index < 0) return kErrorValue;
-
-    return loaded_records[index][position].value;
+    return GetEntryFromLoaded(tier, position).value;
 }
 
 static int NaiveDbGetRemotenessFromLoaded(Tier tier, Position position) {
-    int index = GetLoadedTierIndex(tier);
-    if (index < 0) return -1;
-
-    return loaded_records[index][position].remoteness;
+    return GetEntryFromLoaded(tier, position).remoteness;
 }
 
 static int NaiveDbProbeInit(DbProbe *probe) {
