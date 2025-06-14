@@ -107,6 +107,10 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
     return current_db->CreateSolvingTier(tier, size);
 }
 
+int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size) {
+    return current_db->CreateConcurrentSolvingTier(tier, size);
+}
+
 int DbManagerFlushSolvingTier(void *aux) {
     return current_db->FlushSolvingTier(aux);
 }

@@ -104,11 +104,7 @@ static int num_threads;  // Number of threads available.
 // ------------------------------ Step0Initialize ------------------------------
 
 static bool Step0_1InitFrontiers(int dividers_size) {
-#ifdef _OPENMP
-    num_threads = omp_get_max_threads();
-#else   // _OPENMP not defined.
-    num_threads = 1;
-#endif  // _OPENMP
+    num_threads = ConcurrencyGetOmpNumThreads();
     win_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
     lose_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
     tie_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
@@ -197,14 +193,6 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
 
 // ----------------------------- Step1LoadChildren -----------------------------
 
-static int GetThreadId(void) {
-#ifdef _OPENMP
-    return omp_get_thread_num();
-#else   // _OPENMP not defined, thread 0 is the only available thread.
-    return 0;
-#endif  // _OPENMP
-}
-
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
                                  int remoteness, int tid) {
     if (remoteness < 0) return false;  // Error probing remoteness.
@@ -245,7 +233,7 @@ static bool Step1_0LoadTierHelper(int child_index) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
-        int tid = GetThreadId();
+        int tid = ConcurrencyGetOmpThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(current_db_chunk_size)
         for (Position position = 0; position < child_tier_size; ++position) {
             child_tier_position.position = position;
@@ -350,7 +338,7 @@ static bool Step3ScanTier(void) {
     ConcurrentBoolInit(&success, true);
 
     PRAGMA_OMP_PARALLEL_IF(parallel_scan_this_tier) {
-        int tid = GetThreadId();
+        int tid = ConcurrencyGetOmpThreadId();
         PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(128)
         for (Position position = 0; position < this_tier_size; ++position) {
             TierPosition tier_position = {.tier = this_tier,
@@ -494,7 +482,7 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents = current_api.GetCanonicalParentPositions(
         tier_position, this_tier, parents);
-    int tid = GetThreadId();
+    int tid = ConcurrencyGetOmpThreadId();
     Value value = processing_lose ? kWin : kTie;
     Frontier *frontier =
         processing_lose ? &win_frontiers[tid] : &tie_frontiers[tid];
@@ -531,7 +519,7 @@ static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents = current_api.GetCanonicalParentPositions(
         tier_position, this_tier, parents);
-    int tid = GetThreadId();
+    int tid = ConcurrencyGetOmpThreadId();
     for (int i = 0; i < num_parents; ++i) {
 #ifdef _OPENMP
         ChildPosCounterType child_remaining = atomic_fetch_sub_explicit(

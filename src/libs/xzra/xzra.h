@@ -167,7 +167,8 @@ int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
 
 /**
  * @brief Closes the output stream \p stream , finalizing the output file by
- * flushing all buffered compressed bytes to disk.
+ * flushing all buffered compressed bytes to disk. Does nothing and returns
+ * success if \p stream is \c NULL .
  *
  * @param stream Output stream to close.
  * @return Number of compressed bytes generated in total since the creation of

@@ -41,9 +41,9 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif  // _OPENMP
-
 #include "core/concurrency.h"
 #include "core/constants.h"
+#include "core/db/arraydb/atomic_record_array.h"  // TODO: move this
 #include "core/db/arraydb/record.h"
 #include "core/db/arraydb/record_array.h"
 #include "core/gamesman_memory.h"
@@ -168,6 +168,8 @@ static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
 static Tier current_tier;
 static RecordArray *records;
+static bool concurrent_solve;
+static AtomicRecordArray *atomic_records;
 static TierToPtrChainedHashMap loaded_tiers;
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
@@ -191,7 +193,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     current_variant = variant;
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
-    TierToPtrChainedHashMapInit(&loaded_tiers, 0.5);
+    TierToPtrChainedHashMapInit(&loaded_tiers, 0.75);
 
     return kNoError;
 }
@@ -200,7 +202,10 @@ static void ArrayDbFinalize(void) {
     GamesmanFree(sandbox_path);
     sandbox_path = NULL;
 
-    // Free all loaded records, including the solving tier.
+    // Free the current solving tier, if exists.
+    ArrayDbFreeSolvingTier();
+
+    // Free all other loaded records.
     TierToPtrChainedHashMapIterator it =
         TierToPtrChainedHashMapBegin(&loaded_tiers);
     while (TierToPtrChainedHashMapIteratorIsValid(&it)) {
@@ -208,16 +213,23 @@ static void ArrayDbFinalize(void) {
             (RecordArray *)TierToPtrChainedHashMapIteratorValue(&it));
     }
     TierToPtrChainedHashMapDestroy(&loaded_tiers);
-    records = NULL;
+}
+
+static int CheckExistingSolvingTier(const char *caller) {
+    if (current_tier != kIllegalTier) {
+        fprintf(stderr,
+                "%s: failed to create solving tier due "
+                "to an existing solving tier\n",
+                caller);
+        return kRuntimeError;
+    }
+
+    return kNoError;
 }
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
-    if (current_tier != kIllegalTier) {
-        fprintf(stderr,
-                "ArrayDbCreateSolvingTier: failed to create solving tier due "
-                "to an existing solving tier\n");
-        return kRuntimeError;
-    }
+    int error = CheckExistingSolvingTier("ArrayDbCreateSolvingTier");
+    if (error) return error;
 
     // Initialize the solving tier's record array.
     records = RecordArrayCreate(size);
@@ -228,13 +240,27 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
     current_tier = tier;
+    concurrent_solve = false;
 
     return kNoError;
 }
 
 static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
 #ifdef _OPENMP
+    int error = CheckExistingSolvingTier("ArrayDbCreateConcurrentSolvingTier");
+    if (error) return error;
 
+    atomic_records = AtomicRecordArrayCreate(size);
+    if (atomic_records == NULL) return kMallocFailureError;
+    if (!TierToPtrChainedHashMapSet(&loaded_tiers, tier, atomic_records)) {
+        AtomicRecordArrayDestroy(atomic_records);
+        atomic_records = NULL;
+        return kMallocFailureError;
+    }
+    current_tier = tier;
+    concurrent_solve = true;
+
+    return kNoError;
 #else
     return ArrayDbCreateSolvingTier(tier, size);
 #endif
@@ -314,9 +340,60 @@ static char *GetFullPathToFinishFlag(void) {
     return full_path;
 }
 
-static int ArrayDbFlushSolvingTier(void *aux) {
-    (void)aux;  // Unused.
+static int FlushSolvingTierConcurrent(void) {
+    // Allocate memory and create db file.
+    int error = kNoError;
+    char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
+    char *tmp_full_path =
+        GetFullPathToTempFile(current_tier, CurrentGetTierName);
+    XzraOutStream *xout = XzraOutStreamCreate(
+        tmp_full_path, block_size, lzma_level, enable_extreme_compression,
+        ConcurrencyGetOmpNumThreads());
+    static const size_t kBufSize = 1ULL << 20;
+    void *buf = GamesmanMalloc(kBufSize);
+    if (full_path == NULL || tmp_full_path == NULL || xout == NULL ||
+        buf == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
+    }
 
+    // First compress to a temp file using streaming.
+    size_t total = 0;
+    size_t serialized = AtomicRecordArraySerializeStreaming(atomic_records, 0,
+                                                            buf, sizeof(buf));
+    while (serialized) {
+        int64_t compressed = XzraOutStreamRun(xout, buf, serialized);
+        if (compressed < 0) {
+            error = kRuntimeError;
+            goto _bailout;
+        }
+        total += serialized;
+        serialized = AtomicRecordArraySerializeStreaming(atomic_records, total,
+                                                         buf, sizeof(buf));
+    }
+    if (XzraOutStreamClose(xout) < 0) {
+        error = kRuntimeError;
+        goto _bailout;
+    }
+    xout = NULL;
+
+    // If successful, rename the temp file into the desired tier DB name.
+    int rename_error = GuardedRename(tmp_full_path, full_path);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    GamesmanFree(full_path);
+    GamesmanFree(tmp_full_path);
+    XzraOutStreamClose(xout);
+    GamesmanFree(buf);
+
+    return error;
+}
+
+static int FlushSolvingTierNormal(void) {
     // Create db file.
     int error = kNoError;
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
@@ -355,9 +432,23 @@ _bailout:
     return error;
 }
 
+static int ArrayDbFlushSolvingTier(void *aux) {
+    (void)aux;  // Unused.
+    if (concurrent_solve) return FlushSolvingTierConcurrent();
+
+    return FlushSolvingTierNormal();
+}
+
 static int ArrayDbFreeSolvingTier(void) {
-    RecordArrayDestroy(records);
-    records = NULL;
+    if (current_tier == kIllegalTier) return kNoError;
+
+    if (concurrent_solve) {
+        AtomicRecordArrayDestroy(atomic_records);
+        atomic_records = NULL;
+    } else {
+        RecordArrayDestroy(records);
+        records = NULL;
+    }
     TierToPtrChainedHashMapRemove(&loaded_tiers, current_tier);
     current_tier = kIllegalTier;
 
@@ -379,20 +470,33 @@ static int ArrayDbSetGameSolved(void) {
 }
 
 static int ArrayDbSetValue(Position position, Value value) {
-    RecordArraySetValue(records, position, value);
+    if (concurrent_solve) {
+        AtomicRecordArraySetValue(atomic_records, position, value);
+    } else {
+        RecordArraySetValue(records, position, value);
+    }
 
     return kNoError;
 }
 
 static int ArrayDbSetRemoteness(Position position, int remoteness) {
-    RecordArraySetRemoteness(records, position, remoteness);
+    if (concurrent_solve) {
+        AtomicRecordArraySetRemoteness(atomic_records, position, remoteness);
+    } else {
+        RecordArraySetRemoteness(records, position, remoteness);
+    }
 
     return kNoError;
 }
 
 static int ArrayDbSetValueRemoteness(Position position, Value value,
                                      int remoteness) {
-    RecordArraySetValueRemoteness(records, position, value, remoteness);
+    if (concurrent_solve) {
+        AtomicRecordArraySetValueRemoteness(atomic_records, position, value,
+                                            remoteness);
+    } else {
+        RecordArraySetValueRemoteness(records, position, value, remoteness);
+    }
 
     return kNoError;
 }
@@ -401,15 +505,29 @@ static int ArrayDbMaximizeValueRemoteness(Position position, Value value,
                                           int remoteness,
                                           int (*compare)(Value v1, int r1,
                                                          Value v2, int r2)) {
-    // TODO
-    ;
+    if (concurrent_solve) {
+        AtomicRecordArrayMaximize(atomic_records, position, value, remoteness,
+                                  compare);
+    } else {
+        RecordArrayMaximize(records, position, value, remoteness, compare);
+    }
+
+    return kNoError;
 }
 
 static Value ArrayDbGetValue(Position position) {
+    if (concurrent_solve) {
+        return AtomicRecordArrayGetValue(atomic_records, position);
+    }
+
     return RecordArrayGetValue(records, position);
 }
 
 static int ArrayDbGetRemoteness(Position position) {
+    if (concurrent_solve) {
+        return AtomicRecordArrayGetRemoteness(atomic_records, position);
+    }
+
     return RecordArrayGetRemoteness(records, position);
 }
 
@@ -513,7 +631,7 @@ static int ArrayDbCheckpointRemove(Tier tier) {
 
 static size_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
     (void)tier;
-    return (size_t)size * 2;
+    return (size_t)size * sizeof(Record);
 }
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {
@@ -576,6 +694,10 @@ static RecordArray *GetRecordsFromLoaded(Tier tier) {
 }
 
 static Value ArrayDbGetValueFromLoaded(Tier tier, Position position) {
+    if (tier == current_tier && concurrent_solve) {
+        return AtomicRecordArrayGetValue(atomic_records, position);
+    }
+
     RecordArray *loaded = GetRecordsFromLoaded(tier);
     if (loaded == NULL) return kErrorValue;
 
@@ -583,6 +705,10 @@ static Value ArrayDbGetValueFromLoaded(Tier tier, Position position) {
 }
 
 static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position) {
+    if (tier == current_tier && concurrent_solve) {
+        return AtomicRecordArrayGetRemoteness(atomic_records, position);
+    }
+
     RecordArray *loaded = GetRecordsFromLoaded(tier);
     if (loaded == NULL) return kErrorValue;
 

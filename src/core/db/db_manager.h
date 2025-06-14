@@ -86,6 +86,17 @@ void DbManagerFinalizeRefDb(void);
 int DbManagerCreateSolvingTier(Tier tier, int64_t size);
 
 /**
+ * @brief Creates a new solving \p tier of size \p size positions that allows
+ * concurrent read and write access to records.
+ *
+ * @param tier Tier to create.
+ * @param size Number of positions in \p tier.
+ * @return kNoError on success,
+ * @return non-zero error code otherwise.
+ */
+int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
+
+/**
  * @brief Flushes the solving tier in memory to disk.
  *
  * @note Assumes the solving tier has been created. Results in undefined

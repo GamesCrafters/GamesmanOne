@@ -205,7 +205,7 @@ typedef struct Database {
      * @brief Replaces the value and remoteness of \p position with the maximum
      * of its original value-remoteness pair and the one provided by \p value
      * and \p remoteness . The order of value-remoteness pairs are
-     * provided by the \p compare function.
+     * determined by the \p compare function.
      *
      * @param position Position to update.
      * @param value Candidate value.
