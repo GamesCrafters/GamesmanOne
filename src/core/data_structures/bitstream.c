@@ -63,7 +63,7 @@ static int SetTo(BitStream *stream, int64_t i, uint8_t value) {
     uint8_t *byte_address = stream->stream + byte_offset;
 
     int64_t local_bit_offset = GetLocalBitOffset(i);
-    uint8_t mask = 1 << local_bit_offset;
+    uint8_t mask = 1U << local_bit_offset;
 
     stream->count += value - (bool)((*byte_address) & mask);
     *byte_address = (*byte_address & (~mask)) | (value << local_bit_offset);
@@ -82,7 +82,7 @@ bool BitStreamGet(const BitStream *stream, int64_t i) {
     const uint8_t *byte_address = stream->stream + byte_offset;
 
     int64_t local_bit_offset = GetLocalBitOffset(i);
-    uint8_t mask = 1 << local_bit_offset;
+    uint8_t mask = 1U << local_bit_offset;
 
     return (*byte_address) & mask;
 }

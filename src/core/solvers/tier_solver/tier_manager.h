@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.5.0
- * @date 2025-03-30
+ * @version 1.5.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,6 +37,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -68,7 +69,7 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
  * @return 0 on success, non-zero error code otherwise.
  */
 int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
-                       intptr_t memlimit);
+                       size_t memlimit);
 
 /**
  * @brief Tests the given tier solver API implementation using the given SEED

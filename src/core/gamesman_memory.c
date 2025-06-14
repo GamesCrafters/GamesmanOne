@@ -36,7 +36,6 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#include <stdatomic.h>
 #endif  // _OPENMP
 
 #include "core/concurrency.h"

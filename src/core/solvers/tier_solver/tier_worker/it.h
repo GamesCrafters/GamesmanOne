@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm.
- * @version 1.1.2
- * @date 2025-04-23
+ * @version 1.1.5
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_IT_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
@@ -48,7 +49,7 @@
  * @return non-zero error code otherwise.
  */
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              intptr_t memlimit,
+                              size_t memlimit,
                               const TierWorkerSolveOptions *options,
                               bool *solved);
 

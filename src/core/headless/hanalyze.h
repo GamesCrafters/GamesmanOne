@@ -28,7 +28,7 @@
 #define GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 
 #include <stdbool.h>  // bool
-#include <stdint.h>   // intptr_t
+#include <stddef.h>   // size_t
 
 #include "core/types/gamesman_types.h"
 
@@ -50,6 +50,6 @@
  */
 int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
                     ReadOnlyString data_path, bool force, int verbose,
-                    intptr_t memlimit);
+                    size_t memlimit);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HANALYZE_H_

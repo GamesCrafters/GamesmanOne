@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -104,12 +104,9 @@ static bool Step0_0SetupChildTiers(void) {
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(raw[i]);
-
-        // Another child tier is symmetric to this one and was already added.
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        child_tiers[num_child_tiers++] = canonical;
+        if (TierHashSetAdd(&dedup, canonical)) {
+            child_tiers[num_child_tiers++] = canonical;
+        }
     }
     TierHashSetDestroy(&dedup);
 
@@ -119,7 +116,7 @@ static bool Step0_0SetupChildTiers(void) {
 // Typically returns an overestimated result.
 static double GetCheckpointSaveCostEstimate(void) {
     static const double kOverhead = 1;
-    static const double kTypicalHDDSpeed = 200 << 20;  // 200 MiB/s
+    static const double kTypicalHDDSpeed = (double)(200 << 20);  // 200 MiB/s
 
     return kOverhead +
            (double)DbManagerTierMemUsage(this_tier, this_tier_size) /
@@ -225,8 +222,7 @@ static void Step3ScanTier(void) {
         Value value = api_internal->Primitive(tier_position);
         if (value != kUndecided) {  // If tier_position is primitive...
             // Set its value immediately.
-            DbManagerSetValue(pos, value);
-            DbManagerSetRemoteness(pos, 0);
+            DbManagerSetValueRemoteness(pos, value, 0);
         }  // Otherwise, do nothing.
     }
     if (verbose > 1) puts("done");
@@ -266,8 +262,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
             case kLose:
                 all_children_winning = false;
                 if (child_remoteness == iteration - 1) {
-                    DbManagerSetValue(pos, kWin);
-                    DbManagerSetRemoteness(pos, iteration);
+                    DbManagerSetValueRemoteness(pos, kWin, iteration);
                     *updated = true;
                     return true;
                 }
@@ -286,8 +281,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     }
 
     if (all_children_winning && largest_win + 1 == iteration) {
-        DbManagerSetValue(pos, kLose);
-        DbManagerSetRemoteness(pos, iteration);
+        DbManagerSetValueRemoteness(pos, kLose, iteration);
         *updated = true;
     }
 
@@ -374,8 +368,7 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
                 child_tier_position.tier, child_tier_position.position);
         }
         if (child_value == kTie && child_remoteness == iteration - 1) {
-            DbManagerSetValue(pos, kTie);
-            DbManagerSetRemoteness(pos, iteration);
+            DbManagerSetValueRemoteness(pos, kTie, iteration);
             *updated = true;
             break;
         }

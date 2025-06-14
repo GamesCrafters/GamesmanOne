@@ -29,7 +29,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, intptr_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/gamesman_types.h"
 
@@ -86,6 +86,17 @@ void DbManagerFinalizeRefDb(void);
 int DbManagerCreateSolvingTier(Tier tier, int64_t size);
 
 /**
+ * @brief Creates a new solving \p tier of size \p size positions that allows
+ * concurrent read and write access to records.
+ *
+ * @param tier Tier to create.
+ * @param size Number of positions in \p tier.
+ * @return kNoError on success,
+ * @return non-zero error code otherwise.
+ */
+int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
+
+/**
  * @brief Flushes the solving tier in memory to disk.
  *
  * @note Assumes the solving tier has been created. Results in undefined
@@ -131,6 +142,15 @@ int DbManagerSetValue(Position position, Value value);
  * @return int 0 on success, non-zero otherwise.
  */
 int DbManagerSetRemoteness(Position position, int remoteness);
+
+/**
+ * @brief Sets the \p value and \p remoteness of \p position in the solving
+ * tier.
+ *
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
+int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
 
 /**
  * @brief Returns the value of POSITION in the solving tier.
@@ -209,7 +229,7 @@ int DbManagerCheckpointRemove(Tier tier);
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage.
  */
-intptr_t DbManagerTierMemUsage(Tier tier, int64_t size);
+size_t DbManagerTierMemUsage(Tier tier, int64_t size);
 
 /**
  * @brief Loads the given \p tier of \p size positions into memory.

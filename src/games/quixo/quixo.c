@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 2.1.0
- * @date 2025-03-15
+ * @version 2.2.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,11 +32,12 @@
 #include "games/quixo/quixo.h"
 
 #include <assert.h>     // assert
+#include <immintrin.h>  // __m128i, _mm_*
+#include <stdalign.h>   // alignas
 #include <stddef.h>     // NULL
 #include <stdio.h>      // sprintf
 #include <stdlib.h>     // atoi
 #include <string.h>     // strtok_r, strlen, strcpy
-#include <x86intrin.h>  // __m128i
 
 #include "core/constants.h"
 #include "core/hash/x86_simd_two_piece.h"
@@ -75,6 +76,8 @@ enum {
     kNumLinesMax = kSideLengthMax * 2 + 2,
     kNumMovesPerDirMax = kSideLengthMax * 3 - 4,
 };
+
+static const QuixoTier kQuixoTierInit = {.hash = 0};
 
 static const QuixoMove kQuixoMoveInit = {.hash = 0};
 
@@ -537,7 +540,7 @@ static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
     QuixoMove m = {.hash = move};
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     return DoMoveInternal(t, board, patterns, turn, m);
@@ -602,7 +605,7 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     // Generate all moves
@@ -617,7 +620,6 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetContains(&dedup, child)) continue;
         TierPositionHashSetAdd(&dedup, child);
     }
     int ret = (int)dedup.size;
@@ -634,7 +636,7 @@ static int QuixoGetCanonicalChildPositions(
     __m128i board = X86SimdTwoPieceHashUnhash(tier_position.position,
                                               t.unpacked[0], t.unpacked[1]);
     int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
 
     // Generate all moves
@@ -650,9 +652,7 @@ static int QuixoGetCanonicalChildPositions(
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, patterns, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetContains(&dedup, child)) continue;
-        TierPositionHashSetAdd(&dedup, child);
-        children[ret++] = child;
+        if (TierPositionHashSetAdd(&dedup, child)) children[ret++] = child;
     }
     TierPositionHashSetDestroy(&dedup);
 
@@ -682,7 +682,7 @@ static int QuixoGetCanonicalParentPositions(
 
     __m128i board = X86SimdTwoPieceHashUnhash(
         tier_position.position, child_t.unpacked[0], child_t.unpacked[1]);
-    __attribute__((aligned(16))) uint64_t patterns[2];
+    alignas(16) uint64_t patterns[2];
     _mm_store_si128((__m128i *)patterns, board);
     int opp_turn = !turn;
     uint64_t shift, src;
@@ -753,6 +753,36 @@ static int QuixoGetCanonicalParentPositions(
     return ret;
 }
 
+#define X86_M128I_HASH_SET_SIZE 32
+#include "core/data_structures/x86_m128i_hash_set.h"
+static int QuixoGetNumberOfSymmetries(TierPosition tp) {
+    // Unhash
+    QuixoTier t = {.hash = tp.tier};
+    __m128i board =
+        X86SimdTwoPieceHashUnhash(tp.position, t.unpacked[0], t.unpacked[1]);
+
+    // Find unique boards from all 8 symmetries
+    X86M128iHashSet dedup;
+    X86M128iHashSetInit(&dedup);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipDiag(board);
+    X86M128iHashSetAdd(&dedup, board);
+    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    X86M128iHashSetAdd(&dedup, board);
+
+    return dedup.size;
+}
+
 static int8_t GetNumBlanks(QuixoTier t) {
     return board_size - t.unpacked[0] - t.unpacked[1];
 }
@@ -796,6 +826,7 @@ static const TierSolverApi kQuixoSolverApi = {
         QuixoGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = QuixoGetCanonicalChildPositions,
     .GetCanonicalParentPositions = QuixoGetCanonicalParentPositions,
+    .GetNumberOfSymmetries = QuixoGetNumberOfSymmetries,
 
     .GetChildTiers = QuixoGetChildTiers,
     .GetTierName = QuixoGetTierName,
@@ -1040,18 +1071,19 @@ static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
 
     // Check if the board corresponds to a valid tier.
     ConstantReadOnlyString board = formal_position + 2;
-    int num_blanks = 0, num_x = 0, num_o = 0;
+    QuixoTier t = kQuixoTierInit;
+    int num_blanks = 0;
     for (int i = 0; i < board_size; ++i) {
         if (board[i] != '-' && board[i] != 'X' && board[i] != 'O') return false;
         num_blanks += (board[i] == '-');
-        num_x += (board[i] == 'X');
-        num_o += (board[i] == 'O');
+        t.unpacked[0] += (board[i] == 'X');
+        t.unpacked[1] += (board[i] == 'O');
     }
-    if (!IsValidPieceConfig(num_blanks, num_x, num_o)) return false;
+    if (!IsValidPieceConfig(num_blanks, t.unpacked[0], t.unpacked[1]))
+        return false;
 
     // Check if the board is a valid position.
     int turn = formal_position[0] - '1';
-    QuixoTier t = {.unpacked = {num_x, num_o}};
     TierPosition tier_position = {
         .tier = t.hash,
         .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
@@ -1066,13 +1098,12 @@ static TierPosition QuixoFormalPositionToTierPosition(
     //
     ConstantReadOnlyString board = formal_position + 2;
     int turn = formal_position[0] - '1';
-    int num_x = 0, num_o = 0;
+    QuixoTier t = kQuixoTierInit;
     for (int i = 0; i < board_size; ++i) {
-        num_x += (board[i] == 'X');
-        num_o += (board[i] == 'O');
+        t.unpacked[0] += (board[i] == 'X');
+        t.unpacked[1] += (board[i] == 'O');
     }
 
-    QuixoTier t = {.unpacked = {num_x, num_o}};
     TierPosition ret = {
         .tier = t.hash,
         .position = X86SimdTwoPieceHashHash(StrToBoard(board), turn),
@@ -1163,7 +1194,7 @@ const Game kQuixo = {
     .solver = &kTierSolver,
     .solver_api = &kQuixoSolverApi,
     .gameplay_api = &kQuixoGameplayApi,
-    .uwapi = &kQuixoUwapi,  // TODO
+    .uwapi = &kQuixoUwapi,
 
     .Init = QuixoInit,
     .Finalize = QuixoFinalize,
