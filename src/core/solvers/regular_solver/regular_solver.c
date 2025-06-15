@@ -234,7 +234,7 @@ static int RegularSolverTest(void *aux) {
     RegularSolverTestOptions *options = (RegularSolverTestOptions *)aux;
     if (!options) options = &default_options;
 
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     TierArray empty;
     TierArrayInit(&empty);
     TierWorkerTestStackBufferStat *stat = TierWorkerTestStackBufferStatCreate();
@@ -297,9 +297,10 @@ static int RegularSolverSolve(void *aux) {
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
     if (options == NULL) options = &default_options;
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
     TierWorkerSolveOptions tier_worker_options = {
+        .memlimit = options->memlimit,
         .compare = false,
         .force = options->force,
         .verbose = options->verbose,

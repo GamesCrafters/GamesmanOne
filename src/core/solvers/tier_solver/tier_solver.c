@@ -223,7 +223,7 @@ static int TierSolverTest(void *aux) {
     TierSolverTestOptions *options = (TierSolverTestOptions *)aux;
     if (!options) options = &default_options;
 
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
     return TierManagerTest(&current_api, options->seed, options->test_size);
 }
@@ -311,7 +311,7 @@ static int TierSolverSolve(void *aux) {
         return kNoError;
     }
 #ifndef USE_MPI  // If not using MPI
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerSolve(&current_api, options->force, options->verbose);
 #else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
@@ -321,16 +321,14 @@ static int TierSolverSolve(void *aux) {
     if (cluster_size < 1) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
-        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
-                       options->memlimit);
+        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
         return TierManagerSolve(&current_api, options->force, options->verbose);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
-            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
-                           options->memlimit);
+            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
             return TierWorkerMpiServe();
         }
     }

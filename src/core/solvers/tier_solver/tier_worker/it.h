@@ -39,7 +39,6 @@
  *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to solve.
- * @param memlimit Maximum amount of heap memory that can be used in bytes.
  * @param options Pointer to a \c TierWorkerSolveOptions object which contains
  * the options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
@@ -49,7 +48,6 @@
  * @return non-zero error code otherwise.
  */
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              size_t memlimit,
                               const TierWorkerSolveOptions *options,
                               bool *solved);
 

@@ -46,7 +46,6 @@
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
-static size_t mem;
 
 #ifdef USE_MPI
 #include <unistd.h>  // sleep
@@ -56,12 +55,10 @@ static size_t mem;
 
 // ============================== TierWorkerInit ==============================
 
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    size_t memlimit) {
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
     assert(db_chunk_size > 0);
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
-    mem = memlimit;
 }
 
 // =========================== GetMethodForTierType ===========================
@@ -85,6 +82,7 @@ int GetMethodForTierType(TierType type) {
 // ============================== TierWorkerSolve ==============================
 
 const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions = {
+    .memlimit = 0,
     .compare = false,
     .force = false,
     .verbose = 1,
@@ -95,7 +93,7 @@ int TierWorkerSolve(int method, Tier tier,
     if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            return TierWorkerSolveITInternal(api_internal, tier, mem, options,
+            return TierWorkerSolveITInternal(api_internal, tier, options,
                                              solved);
         case kTierWorkerSolveMethodBackwardInduction:
             return TierWorkerSolveBIInternal(

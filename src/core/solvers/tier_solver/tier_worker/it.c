@@ -386,7 +386,6 @@ static void Step3Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              size_t memlimit,
                               const TierWorkerSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
@@ -396,7 +395,7 @@ int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
     }
 
     /* Immediate transition main algorithm. */
-    if (!Step0Initialize(api, tier, memlimit)) goto _bailout;
+    if (!Step0Initialize(api, tier, options->memlimit)) goto _bailout;
     if (!Step1Iterate()) goto _bailout;
     Step2FlushDb();
     if (options->compare && !CompareDb()) goto _bailout;

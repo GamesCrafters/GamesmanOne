@@ -44,11 +44,8 @@
  *
  * @param api Game-specific implementation of the Tier Solver API functions.
  * @param db_chunk_size Number of positions in each database compression block.
- * @param memlimit Approximate maximum amount of heap memory that can be used by
- * the tier worker.
  */
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    size_t memlimit);
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
 
 /** @brief Solving methods for \c TierWorkerSolve. */
 enum TierWorkerSolveMethod {
@@ -121,6 +118,7 @@ enum TierWorkerSolveMethod {
 int GetMethodForTierType(TierType type);
 
 typedef struct TierWorkerSolveOptions {
+    size_t memlimit;
     int verbose;
     bool force;
     bool compare;
