@@ -60,15 +60,15 @@ enum TierWorkerSolveMethod {
      *
      * @details For each pass, loads as many child tiers of the solving tier as
      * possible into memory and scan the solving tier to update the values using
-     * minimax. In the best case, assuming enough memory to load all child tiers
-     * at once, the solver finishes in one pass.
+     * minimax. With enough memory to load all child tiers at once, the solver
+     * finishes in one pass.
      *
      * Worst case runtime: O(N * (V + E)), where N is the number of child tiers
      * of the tier being solved, V is the number of vertices in the position
      * graph of the tier being solved, and E is the number of edges in the said
      * graph. Note that this only happens when there is not enough memory to
-     * load more than one child tier at a time. Assuming unlimited memory, the
-     * runtime becomes O(V + E).
+     * load more than one child tier at a time. The runtime is O(V + E) when
+     * memory is abundant.
      *
      * Worst case memory: O(V).
      */
