@@ -490,9 +490,9 @@ static bool DiscoverFromBitsetToArray(Analysis *dest) {
         goto _bailout;
     }
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(dynamic, 1024))
         for (int64_t i = 0; i < this_tier_size; ++i) {
             // Skip positions that are not in the fringe
             if (!ConcurrentBitsetTest(bs_fringe, i, memory_order_relaxed)) {
@@ -543,10 +543,10 @@ static bool DiscoverFromArrayToArray(Analysis *dest) {
         goto _bailout;
     }
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
         int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(monotonic:dynamic, 1024))
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
@@ -592,9 +592,9 @@ static void MergeDiscoveredToBitsetFringe(void) {
         NotReached("Terminating...\n");
     }
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(monotonic:dynamic, 1024))
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
@@ -660,9 +660,9 @@ static bool Step4Analyze(Analysis *dest) {
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(dynamic, 1024))
         for (int64_t i = 0; i < this_tier_size; ++i) {
             if (!ConcurrentBoolLoad(&success)) continue;  // fail fast.
 

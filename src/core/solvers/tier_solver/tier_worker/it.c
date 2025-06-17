@@ -235,7 +235,7 @@ static void MaximizeParent(Position parent, Value child_value,
 static bool Step1_1IterateOnePass(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    PRAGMA_OMP(parallel for schedule(dynamic, 1024))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         if (!success) continue;  // Fail fast.
         TierPosition tier_position = {.tier = this_tier, .position = pos};

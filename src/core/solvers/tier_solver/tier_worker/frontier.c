@@ -160,7 +160,7 @@ bool FrontierAdd(Frontier *frontier, Position position, int remoteness,
 }
 
 void FrontierAccumulateDividers(Frontier *frontier) {
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int remoteness = 0; remoteness < frontier->f.size; ++remoteness) {
         // This for-loop must be executed sequentially.
         for (int i = 1; i < frontier->f.dividers_size; ++i) {

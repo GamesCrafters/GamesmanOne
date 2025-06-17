@@ -473,7 +473,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
     ConcurrentIntInit(&error, kTierSolverTestNoError);
     TierHashSet child_tiers = GetChildTiersSet(api, tier, stat);
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
+    PRAGMA_OMP(parallel for schedule(dynamic, 16))
     for (int64_t i = 0; i < test_size; ++i) {
         if (ConcurrentIntLoad(&error) != kTierSolverTestNoError) {
             continue;  // Fail fast.
@@ -482,7 +482,7 @@ int TierWorkerTestInternal(const TierSolverApi *api, Tier tier,
         Position position = i;
         if (!random_test) {
             long long next_rand64;
-            PRAGMA_OMP_CRITICAL(mt19937) { next_rand64 = genrand64_int63(); }
+            PRAGMA_OMP(critical(mt19937)) { next_rand64 = genrand64_int63(); }
             position = next_rand64 % tier_size;
         }
 

@@ -148,7 +148,7 @@ static bool Step1LoadChildren(void) {
         if (error != kNoError) return false;
 
         // Scan for largest remotenesses
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
+        PRAGMA_OMP(parallel for schedule(dynamic, 16))
         for (Position pos = 0; pos < size; ++pos) {
             Value val = DbManagerGetValueFromLoaded(child_tier, pos);
             switch (val) {
@@ -208,7 +208,7 @@ static bool IsCanonicalPosition(Position position) {
 
 static void Step3ScanTier(void) {
     if (verbose > 1) PrintfAndFlush("Value iteration: scanning tier... ");
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    PRAGMA_OMP(parallel for schedule(dynamic, 256))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         TierPosition tier_position = {.tier = this_tier, .position = pos};
         if (!api_internal->IsLegalPosition(tier_position) ||
@@ -329,7 +329,7 @@ static bool Step4_0IterateWinLose(int initial_remoteness) {
         }
 
         ConcurrentBoolStore(&updated, false);
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(128)
+        PRAGMA_OMP(parallel for schedule(dynamic, 128))
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
@@ -401,7 +401,7 @@ static bool Step4_1IterateTie(int initial_remoteness) {
         }
 
         ConcurrentBoolStore(&updated, false);
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+        PRAGMA_OMP(parallel for schedule(dynamic, 256))
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
@@ -452,7 +452,7 @@ static bool Step5MarkDrawPositions(void) {
         PrintfAndFlush("Value iteration: begin marking D positions... ");
     }
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    PRAGMA_OMP(parallel for schedule(dynamic, 256))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         Value val = DbManagerGetValue(pos);
         if (val == kUndecided) {

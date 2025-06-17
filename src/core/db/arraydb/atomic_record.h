@@ -141,15 +141,18 @@ static inline void AtomicRecordSetValueRemoteness(AtomicRecord *ar, Value val,
  * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
  * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
  * (v2, r2), or zero if they are equal.
+ * @return \c true if the provided \p value - \p remoteness pair is greater than
+ * the original value-remoteness pair and the old pair is replaced;
+ * @return \c false otherwise.
  */
-static inline void AtomicRecordMaximize(AtomicRecord *ar, Value val,
+static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
                                         int remoteness,
                                         int (*compare)(Value v1, int r1,
                                                        Value v2, int r2)) {
     Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
     Value old_val = RecordGetValue(&old_rec);
     int old_rmt = RecordGetRemoteness(&old_rec);
-    if (compare(old_val, old_rmt, val, remoteness) >= 0) return;
+    if (compare(old_val, old_rmt, val, remoteness) >= 0) return false;
 
     Record new_rec;
     RecordSetValueRemoteness(&new_rec, val, remoteness);
@@ -157,11 +160,13 @@ static inline void AtomicRecordMaximize(AtomicRecord *ar, Value val,
         if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
                                                   memory_order_relaxed,
                                                   memory_order_relaxed)) {
-            return;
+            return true;
         }
         old_val = RecordGetValue(&old_rec);
         old_rmt = RecordGetRemoteness(&old_rec);
     } while (compare(old_val, old_rmt, val, remoteness) < 0);
+
+    return false;
 }
 
 static inline Record AtomicRecordLoad(const AtomicRecord *ar) {

@@ -133,12 +133,16 @@ static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
  * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
  * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
  * (v2, r2), or zero if they are equal.
+ * @return \c true if the provided \p val - \p remoteness pair is greater than
+ * the original value-remoteness pair and the old pair is replaced;
+ * @return \c false otherwise.
  */
-static inline void AtomicRecordArrayMaximize(
+static inline bool AtomicRecordArrayMaximize(
     AtomicRecordArray *array, Position position, Value val, int remoteness,
     int (*compare)(Value v1, int r1, Value v2, int r2)) {
     assert(position >= 0 && position < array->size);
-    AtomicRecordMaximize(&array->records[position], val, remoteness, compare);
+    return AtomicRecordMaximize(&array->records[position], val, remoteness,
+                                compare);
 }
 
 /**

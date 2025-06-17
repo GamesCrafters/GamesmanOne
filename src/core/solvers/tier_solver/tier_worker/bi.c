@@ -228,12 +228,12 @@ static bool Step1_0LoadTierHelper(int child_index) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL_IF(child_tier_size > current_db_chunk_size) {
+    PRAGMA_OMP(parallel if (child_tier_size > current_db_chunk_size)) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child_tier_position = {.tier = child_tier};
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(current_db_chunk_size)
+        PRAGMA_OMP(for schedule(dynamic, current_db_chunk_size))
         for (Position position = 0; position < child_tier_size; ++position) {
             child_tier_position.position = position;
             Value value = DbManagerProbeValue(&probe, child_tier_position);
@@ -336,9 +336,9 @@ static bool Step3ScanTier(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
 
-    PRAGMA_OMP_PARALLEL_IF(parallel_scan_this_tier) {
+    PRAGMA_OMP(parallel if (parallel_scan_this_tier)) {
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(128)
+        PRAGMA_OMP(for schedule(dynamic, 128))
         for (Position position = 0; position < this_tier_size; ++position) {
             TierPosition tier_position = {.tier = this_tier,
                                           .position = position};
@@ -444,9 +444,9 @@ static bool PushFrontierHelper(
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL_IF(frontier_offsets[num_threads] > 16) {
+    PRAGMA_OMP(parallel if (frontier_offsets[num_threads] > 16)) {
         int frontier_id = 0, child_index = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(16)
+        PRAGMA_OMP(for schedule(monotonic:dynamic, 16))
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
                                           &child_index, remoteness,
@@ -598,7 +598,7 @@ static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
 }
 
 static void Step5MarkDrawPositions(void) {
-    PRAGMA_OMP_PARALLEL_FOR_IF(parallel_scan_this_tier)
+    PRAGMA_OMP(parallel for if(parallel_scan_this_tier))
     for (Position position = 0; position < this_tier_size; ++position) {
         // A position is drawing if it still has undecided children.
         if (GetNumUndecidedChildren(position) > 0) {

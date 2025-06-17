@@ -214,14 +214,14 @@ typedef struct Database {
      * that takes in two value-remoteness pairs (v1, r1) and (v2, r2) and
      * returns a negative integer if (v1, r1) < (v2, r2), a positive integer if
      * (v1, r1) > (v2, r2), or zero if they are equal.
-     *
-     * @return \c kNoError on success,
-     * @return non-zero error code otherwise.
+     * @return \c true if the provided \p value - \p remoteness pair is greater
+     * than the original value-remoteness pair and the old pair is replaced;
+     * @return \c false otherwise.
      */
-    int (*MaximizeValueRemoteness)(Position position, Value value,
-                                   int remoteness,
-                                   int (*compare)(Value v1, int r1, Value v2,
-                                                  int r2));
+    bool (*MaximizeValueRemoteness)(Position position, Value value,
+                                    int remoteness,
+                                    int (*compare)(Value v1, int r1, Value v2,
+                                                   int r2));
 
     /**
      * @brief Returns the value of the given \p position from in-memory DB.

@@ -69,10 +69,10 @@ static int ArrayDbSetValue(Position position, Value value);
 static int ArrayDbSetRemoteness(Position position, int remoteness);
 static int ArrayDbSetValueRemoteness(Position position, Value value,
                                      int remoteness);
-static int ArrayDbMaximizeValueRemoteness(Position position, Value value,
-                                          int remoteness,
-                                          int (*compare)(Value v1, int r1,
-                                                         Value v2, int r2));
+static bool ArrayDbMaximizeValueRemoteness(Position position, Value value,
+                                           int remoteness,
+                                           int (*compare)(Value v1, int r1,
+                                                          Value v2, int r2));
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 static bool ArrayDbCheckpointExists(Tier tier);
@@ -501,18 +501,16 @@ static int ArrayDbSetValueRemoteness(Position position, Value value,
     return kNoError;
 }
 
-static int ArrayDbMaximizeValueRemoteness(Position position, Value value,
-                                          int remoteness,
-                                          int (*compare)(Value v1, int r1,
-                                                         Value v2, int r2)) {
+static bool ArrayDbMaximizeValueRemoteness(Position position, Value value,
+                                           int remoteness,
+                                           int (*compare)(Value v1, int r1,
+                                                          Value v2, int r2)) {
     if (concurrent_solve) {
-        AtomicRecordArrayMaximize(atomic_records, position, value, remoteness,
-                                  compare);
-    } else {
-        RecordArrayMaximize(records, position, value, remoteness, compare);
+        return AtomicRecordArrayMaximize(atomic_records, position, value,
+                                         remoteness, compare);
     }
 
-    return kNoError;
+    return RecordArrayMaximize(records, position, value, remoteness, compare);
 }
 
 static Value ArrayDbGetValue(Position position) {

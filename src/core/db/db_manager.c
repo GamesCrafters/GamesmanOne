@@ -132,6 +132,14 @@ int DbManagerSetValueRemoteness(Position position, Value value,
     return current_db->SetValueRemoteness(position, value, remoteness);
 }
 
+bool DbManagerMaximizeValueRemoteness(Position position, Value value,
+                                      int remoteness,
+                                      int (*compare)(Value v1, int r1, Value v2,
+                                                     int r2)) {
+    return current_db->MaximizeValueRemoteness(position, value, remoteness,
+                                               compare);
+}
+
 Value DbManagerGetValue(Position position) {
     return current_db->GetValue(position);
 }

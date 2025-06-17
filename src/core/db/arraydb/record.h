@@ -28,8 +28,9 @@
 #ifndef GAMESMANONE_CORE_DB_BPDB_RECORD_H_
 #define GAMESMANONE_CORE_DB_BPDB_RECORD_H_
 
-#include <assert.h>  // assert
-#include <stdint.h>  // uint16_t
+#include <assert.h>   // assert
+#include <stdbool.h>  // bool, true, false
+#include <stdint.h>   // uint16_t
 
 #include "core/constants.h"
 #include "core/types/gamesman_types.h"
@@ -122,15 +123,21 @@ static inline void RecordSetValueRemoteness(Record *rec, Value val,
  * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
  * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
  * (v2, r2), or zero if they are equal.
+ * @return \c true if the provided \p value - \p remoteness pair is greater than
+ * the original value-remoteness pair and the old pair is replaced;
+ * @return \c false otherwise.
  */
-static inline void RecordMaximize(Record *rec, Value val, int remoteness,
+static inline bool RecordMaximize(Record *rec, Value val, int remoteness,
                                   int (*compare)(Value v1, int r1, Value v2,
                                                  int r2)) {
     Value old_val = RecordGetValue(rec);
     int old_rmt = RecordGetRemoteness(rec);
     if (compare(old_val, old_rmt, val, remoteness) < 0) {
         RecordSetValueRemoteness(rec, val, remoteness);
+        return true;
     }
+
+    return false;
 }
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_RECORD_H_

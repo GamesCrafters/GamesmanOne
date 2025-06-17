@@ -153,6 +153,28 @@ int DbManagerSetRemoteness(Position position, int remoteness);
 int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
 
 /**
+ * @brief Replaces the value and remoteness of \p position in the solving tier
+ * with the maximum of its original value-remoteness pair and the one provided
+ * by \p val and \p remoteness . The order of value-remoteness pairs are
+ * determined by the \p compare function.
+ *
+ * @param position Target position.
+ * @param val Candidate value.
+ * @param remoteness Candidate remoteness.
+ * @param compare Pointer to a value-remoteness pair comparison function that
+ * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
+ * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
+ * (v2, r2), or zero if they are equal.
+ * @return \c true if the provided \p value - \p remoteness pair is greater than
+ * the original value-remoteness pair and the old pair is replaced;
+ * @return \c false otherwise.
+ */
+bool DbManagerMaximizeValueRemoteness(Position position, Value value,
+                                      int remoteness,
+                                      int (*compare)(Value v1, int r1, Value v2,
+                                                     int r2));
+
+/**
  * @brief Returns the value of POSITION in the solving tier.
  *
  * @note Assumes the solving tier has been created. Results in undefined
