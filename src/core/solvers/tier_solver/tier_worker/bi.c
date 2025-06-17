@@ -600,10 +600,9 @@ static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
 static void Step5MarkDrawPositions(void) {
     PRAGMA_OMP_PARALLEL_FOR_IF(parallel_scan_this_tier)
     for (Position position = 0; position < this_tier_size; ++position) {
+        // A position is drawing if it still has undecided children.
         if (GetNumUndecidedChildren(position) > 0) {
-            // A position is drawing if it still has undecided children.
             DbManagerSetValue(position, kDraw);
-            continue;
         }
     }
     GamesmanFree(num_undecided_children);
