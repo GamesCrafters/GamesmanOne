@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief XZ utilities with random access.
- * @version 1.0.2
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-06-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -58,20 +58,18 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
  *
  * @details The input file is first divided into blocks each of \p block_size
  * bytes, and then compressed in parallel using \p num_threads threads. Blocks
- * are independent of each other, thus allowing random access to the compresses
- * stream if \p block_size is a sufficiently small constant. The compression of
- * each block uses a dictionary of size equal to the size of the block to
- * minimize compressed size. Since the purpose of this library is to provide
- * fast random access to XZ files, using a large dictionary should be okay as we
- * are assuming \p block_size is small. Note that the setting of \p block_size
- * also affects compression ratio. In general, compression ratio deteriorates as
+ * are independent of each other, thus allowing random access to the compressed
+ * stream if \p block_size is sufficiently small. The compression of each block
+ * uses a dictionary of size equal to the size of the block to minimize
+ * compressed size. Since the purpose of this library is to provide fast random
+ * access to XZ files, using a large dictionary should be okay as we are
+ * assuming \p block_size is small. Note that the setting of \p block_size also
+ * affects compression ratio. In general, compression ratio deteriorates as
  * \p block_size decreases. XZ Utils enforces a minimum block size of 4 KiB and
  * recommends a minimum block size of 1 MiB for a reasonably good compression
  * ratio.
  *
  * @param ofname Output file name.
- * @param append The compressed XZ stream will be appened to the end of the
- * output file if this parameter is set to \c true.
  * @param block_size Size of each uncompressed block.
  * @param level Compression level from 0 (store) to 9 (ultra).
  * @param extreme Extreme compression mode will be enabled if this parameter is
@@ -86,31 +84,29 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
  * @return -2 if the output file cannot be created or opened;
  * @return -3 if compression failed.
  */
-int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
+int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
                          uint32_t level, bool extreme, int num_threads,
                          const char *ifname);
 
 /**
- * @brief Compresses input stream \p in of size \p in_size bytes using a single
- * LZMA2 filter and stores the output XZ stream in output file of name
- * \p ofname.
+ * @brief Compresses a single consecutive chunk of memory of size \p in_size
+ * bytes pointed by \p in using a single LZMA2 filter and stores the output XZ
+ * stream in a single output file of name \p ofname.
  *
- * @details The input stream is first divided into blocks each of \p block_size
- * bytes, and then compressed in parallel using \p num_threads threads. Blocks
- * are independent of each other, thus allowing random access to the compresses
- * stream if \p block_size is a sufficiently small constant. The compression of
- * each block uses a dictionary of size equal to the size of the block to
- * minimize compressed size. Since the purpose of this library is to provide
- * fast random access to XZ files, using a large dictionary should be okay as we
- * are assuming \p block_size is small. Note that the setting of \p block_size
+ * @details The input is first divided into blocks each of \p block_size bytes,
+ * and then compressed in parallel using \p num_threads threads. Blocks are
+ * independent of each other, thus allowing random access to the compressed
+ * stream if \p block_size is sufficiently small. The compression of each block
+ * uses a dictionary of size equal to the size of the block to minimize
+ * compressed size. Since the purpose of this library is to provide fast random
+ * access to XZ files, using a large dictionary should be okay as we are
+ * assuming \p block_size to be small. Note that the setting of \p block_size
  * also affects compression ratio. In general, compression ratio deteriorates as
  * \p block_size decreases. XZ Utils enforces a minimum block size of 4 KiB and
  * recommends a minimum block size of 1 MiB for a reasonably good compression
  * ratio.
  *
  * @param ofname Output file name.
- * @param append The compressed XZ stream will be appened to the end of the
- * output file if this parameter is set to \c true.
  * @param block_size Size of each uncompressed block.
  * @param level Compression level from 0 (store) to 9 (ultra).
  * @param extreme Extreme compression mode will be enabled if this parameter is
@@ -125,9 +121,61 @@ int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
  * @return -2 if the output file cannot be created or opened;
  * @return -3 if compression failed.
  */
-int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
-                           uint32_t level, bool extreme, int num_threads,
-                           uint8_t *in, size_t in_size);
+int64_t XzraCompressMem(const char *ofname, uint64_t block_size, uint32_t level,
+                        bool extreme, int num_threads, const uint8_t *in,
+                        size_t in_size);
+
+// =============================== Streaming API ===============================
+
+/**
+ * @brief Opaque object for data passing when streaming to an XZRA file.
+ */
+typedef struct XzraOutStream XzraOutStream;
+
+/**
+ * @brief Creates a new XZRA output stream.
+ *
+ * @param ofname Output file name.
+ * @param block_size Size of each uncompressed block.
+ * @param level Compression level from 0 (store) to 9 (ultra).
+ * @param extreme Extreme compression mode will be enabled if this parameter is
+ * set to \c true. Enabling extreme compression slightly improves compression
+ * ratio at the cost of increased compression time.
+ * @param num_threads Number of threads to use for multithreaded compression.
+ * The function will automatically detect and use the number of physical threads
+ * available if this parameter is set to 0.
+ * @return Pointer to the new XZRA output stream on success, or
+ * @return \c NULL on failure.
+ */
+XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
+                                   uint32_t level, bool extreme,
+                                   int num_threads);
+
+/**
+ * @brief Runs compression to consume \p in_size bytes of data from \p in using
+ * \p stream as output stream.
+ *
+ * @param stream Output stream.
+ * @param in Pointer to the input buffer.
+ * @param in_size Number of bytes to consume from the input buffer.
+ * @return Number of compressed bytes generated in total since the creation of
+ * \p stream on success, or
+ * @return -3 on failure.
+ */
+int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                         size_t in_size);
+
+/**
+ * @brief Closes the output stream \p stream , finalizing the output file by
+ * flushing all buffered compressed bytes to disk. Does nothing and returns
+ * success if \p stream is \c NULL .
+ *
+ * @param stream Output stream to close.
+ * @return Number of compressed bytes generated in total since the creation of
+ * \p stream on success, or
+ * @return -3 on failure.
+ */
+int64_t XzraOutStreamClose(XzraOutStream *stream);
 
 // ============================= Decompression API =============================
 
@@ -191,7 +239,7 @@ uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
 int64_t XzraDecompressFile(uint8_t *dest, size_t size, int num_threads,
                            uint64_t memlimit, const char *filename);
 
-/** @brief Read-only XZ file with random access ability. */
+/** @brief Read-only XZ file with random access. */
 typedef struct XzraFile XzraFile;
 
 /** @brief Options for the third parameter of XzraFileSeek. */

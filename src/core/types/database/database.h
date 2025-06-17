@@ -32,7 +32,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, intptr_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
@@ -104,16 +104,46 @@ typedef struct Database {
     // Solving API
 
     /**
-     * @brief Creates an in-memory DB for solving of the given TIER of SIZE
-     * positions.
+     * @brief Creates an in-memory DB for solving the given \p tier of size
+     * \p size positions.
+     *
+     * @note This function is part of the Solving API.
+     *
+     * @note In-memory databases created using this function are not thread-safe
+     * and the following functions, when called on the same position, must be
+     * synchronized externally:
+     *
+     *     - SetValue
+     *
+     *     - SetRemoteness
+     *
+     *     - SetValueRemoteness
+     *
+     *     - GetValue
+     *
+     *     - GetRemoteness
+     *
+     * @param tier Tier to be solved and stored in memory.
+     * @param size Size of \p tier in number of positions.
+     *
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
+     */
+    int (*CreateSolvingTier)(Tier tier, int64_t size);
+
+    /**
+     * @brief Creates a multi-reader multi-writer concurrent in-memory DB for
+     * solving the given \p tier of size \p size positions.
+     *
      * @note This function is part of the Solving API.
      *
      * @param tier Tier to be solved and stored in memory.
-     * @param size Size of the TIER in number of Positions.
+     * @param size Size of \p tier in number of positions.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
-    int (*CreateSolvingTier)(Tier tier, int64_t size);
+    int (*CreateConcurrentSolvingTier)(Tier tier, int64_t size);
 
     /**
      * @brief Flushes the in-memory DB to disk.
@@ -121,7 +151,8 @@ typedef struct Database {
      *
      * @param aux Auxiliary parameter.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FlushSolvingTier)(void *aux);
 
@@ -130,7 +161,8 @@ typedef struct Database {
      * been created.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FreeSolvingTier)(void);
 
@@ -146,7 +178,8 @@ typedef struct Database {
      * @brief Sets the value of POSITION to VALUE.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetValue)(Position position, Value value);
 
@@ -154,9 +187,41 @@ typedef struct Database {
      * @brief Sets the remoteness of POSITION to REMOTENESS.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetRemoteness)(Position position, int remoteness);
+
+    /**
+     * @brief Sets the \p value and \p remoteness of \p position .
+     * @note This function is part of the Solving API.
+     *
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
+     */
+    int (*SetValueRemoteness)(Position position, Value value, int remoteness);
+
+    /**
+     * @brief Replaces the value and remoteness of \p position with the maximum
+     * of its original value-remoteness pair and the one provided by \p value
+     * and \p remoteness . The order of value-remoteness pairs are
+     * determined by the \p compare function.
+     *
+     * @param position Position to update.
+     * @param value Candidate value.
+     * @param remoteness Candidate remoteness.
+     * @param compare Pointer to a value-remoteness pair comparison function
+     * that takes in two value-remoteness pairs (v1, r1) and (v2, r2) and
+     * returns a negative integer if (v1, r1) < (v2, r2), a positive integer if
+     * (v1, r1) > (v2, r2), or zero if they are equal.
+     * @return \c true if the provided \p value - \p remoteness pair is greater
+     * than the original value-remoteness pair and the old pair is replaced;
+     * @return \c false otherwise.
+     */
+    bool (*MaximizeValueRemoteness)(Position position, Value value,
+                                    int remoteness,
+                                    int (*compare)(Value v1, int r1, Value v2,
+                                                   int r2));
 
     /**
      * @brief Returns the value of the given \p position from in-memory DB.
@@ -233,7 +298,7 @@ typedef struct Database {
      * @param size Size of \p tier in number of positions.
      * @return An upper bound on memory usage.
      */
-    intptr_t (*TierMemUsage)(Tier tier, int64_t size);
+    size_t (*TierMemUsage)(Tier tier, int64_t size);
 
     /**
      * @brief Loads the given \p tier of \p size positions into memory.
@@ -246,24 +311,34 @@ typedef struct Database {
     int (*LoadTier)(Tier tier, int64_t size);
 
     /**
-     * @brief Unloads the given \p tier from memory if it was previously loaded.
+     * @brief Unloads the given \p tier from memory if it was previously loaded
+     * via Database::LoadTier.
      *
-     * @return \c kNoError on success, or
-     * @return non-zero error code otherwise.
+     * @note \c kIllegalArgumentError will be returned if this function is used
+     * to unload the solving tier.
+     *
+     * @return \c kNoError on success,
+     * @return \c kIllegalArgumentError if \p tier is the solving tier, which
+     * can only be unloaded using Database::FreeSolvingTier, or
+     * @return any other non-zero error code otherwise.
      */
     int (*UnloadTier)(Tier tier);
 
     /**
-     * @brief Returns whether the given \p tier has been loaded.
+     * @brief Returns \c true if \p tier has been loaded via Database::LoadTier
+     * or if \p tier is the solving tier and has been created via
+     * Database::CreateSolvingTier, Database::CreateConcurrentSolvingTier, or
+     * Database::CheckpointLoad. Returns \c false otherwise.
      *
-     * @return \c kNoError on success, or
-     * @return non-zero error code otherwise.
+     * @return \c true if \p tier has been loaded,
+     * @return \c false otherwise.
      */
     bool (*IsTierLoaded)(Tier tier);
 
     /**
      * @brief Returns the value of position \p position in tier \p tier if
-     * \p tier has been loaded. Returns \c kErrorValue otherwise.
+     * \p tier has been created as the solving tier or if \p tier has been
+     * loaded via Database::LoadTier. Returns \c kErrorValue otherwise.
      *
      * @param tier A loaded tier.
      * @param position Query the value of this position.
@@ -275,7 +350,8 @@ typedef struct Database {
 
     /**
      * @brief Returns the remoteness of position \p position in tier \p tier if
-     * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
+     * \p tier has been created as the solving tier or if \p tier has been
+     * loaded via Database::LoadTier. Returns \c kErrorRemoteness otherwise.
      *
      * @param tier A loaded tier.
      * @param position Query the remoteness of this position.
@@ -290,14 +366,16 @@ typedef struct Database {
     /**
      * @brief Initializes the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeInit)(DbProbe *probe);
 
     /**
      * @brief Frees the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeDestroy)(DbProbe *probe);
 

@@ -7,8 +7,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the generic tier solver.
- * @version 2.1.0
- * @date 2025-03-31
+ * @version 2.2.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,8 +30,8 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 
 #include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t, intptr_t
+#include <stddef.h>  // NULL, size_t
+#include <stdint.h>  // int64_t
 #include <stdio.h>   // fprintf, stderr
 #include <stdlib.h>  // strtoll
 #include <string.h>  // memset, memcpy, strncmp
@@ -55,7 +55,7 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
                           const void *solver_api, ReadOnlyString data_path);
 static int TierSolverFinalize(void);
 
-static int TierSolverTest(long seed);
+static int TierSolverTest(void *aux);
 static ReadOnlyString TierSolverExplainTestError(int error);
 
 static int TierSolverSolve(void *aux);
@@ -91,7 +91,7 @@ const Solver kTierSolver = {
 // Size of each uncompressed XZ block for ArrayDb compression. Smaller block
 // sizes allows faster read of random tier positions at the cost of lower
 // compression ratio.
-static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+static const int64_t kArrayDbBlockSize = 1LL << 20;  // 1 MiB.
 
 // Number of ArrayDb records in each uncompressed XZ block. This should be
 // treated as a constant, although its value is calculated at runtime.
@@ -214,24 +214,18 @@ static int TierSolverFinalize(void) {
     return kNoError;
 }
 
-static int TierSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
-    printf(
-        "Enter the number of positions to test in each tier [Default: 1000]: ");
-    char input[kInt64Base10StringLengthMax + 1];
-    int64_t test_size = 1000;
-    if (fgets(input, sizeof(input), stdin) != NULL) {
-        // Check if the user pressed Enter without entering a number
-        if (input[0] != '\n') {
-            test_size = strtoll(input, NULL, 10);
-            if (test_size < 0) {
-                printf("Invalid input. Using default test size [1000]\n");
-                test_size = 1000;
-            }
-        }
-    }
+static int TierSolverTest(void *aux) {
+    TierSolverTestOptions default_options = {
+        .seed = (long)time(NULL),
+        .test_size = 1000,
+        .verbose = 1,
+    };
+    TierSolverTestOptions *options = (TierSolverTestOptions *)aux;
+    if (!options) options = &default_options;
 
-    return TierManagerTest(&current_api, seed, test_size);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
+
+    return TierManagerTest(&current_api, options->seed, options->test_size);
 }
 
 static ReadOnlyString TierSolverExplainTestError(int error) {
@@ -317,7 +311,7 @@ static int TierSolverSolve(void *aux) {
         return kNoError;
     }
 #ifndef USE_MPI  // If not using MPI
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     return TierManagerSolve(&current_api, options->force, options->verbose);
 #else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
@@ -327,16 +321,14 @@ static int TierSolverSolve(void *aux) {
     if (cluster_size < 1) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
-        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
-                       options->memlimit);
+        TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
         return TierManagerSolve(&current_api, options->force, options->verbose);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
             return TierManagerSolve(&current_api, options->force,
                                     options->verbose);
         } else {  // This is a worker node.
-            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock,
-                           options->memlimit);
+            TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
             return TierWorkerMpiServe();
         }
     }
@@ -611,9 +603,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&children, child)) {
-            TierPositionHashSetAdd(&children, child);
-        }
+        TierPositionHashSetAdd(&children, child);
     }
     int num_children = (int)children.size;
     TierPositionHashSetDestroy(&children);
@@ -633,8 +623,7 @@ static int DefaultGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child = GetCanonicalTierPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
+        if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
