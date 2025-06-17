@@ -34,7 +34,7 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
+#include <stdio.h>    // printf, fprintf, stderr
 #include <string.h>   // memcpy
 
 #include "core/concurrency.h"
@@ -103,6 +103,21 @@ static int num_threads;  // Number of threads available.
 
 // ------------------------------ Step0Initialize ------------------------------
 
+static void Step0_0SetupChildTiers(void) {
+    Tier raw[kTierSolverNumChildTiersMax];
+    int num_raw = current_api.GetChildTiers(this_tier, raw);
+    TierHashSet dedup;
+    TierHashSetInit(&dedup, 0.5);
+    num_child_tiers = 0;
+    for (int i = 0; i < num_raw; ++i) {
+        Tier canonical = current_api.GetCanonicalTier(raw[i]);
+        if (TierHashSetAdd(&dedup, canonical)) {
+            child_tiers[num_child_tiers++] = canonical;
+        }
+    }
+    TierHashSetDestroy(&dedup);
+}
+
 static bool Step0_1InitFrontiers(int dividers_size) {
     num_threads = ConcurrencyGetOmpNumThreads();
     win_frontiers = (Frontier *)GamesmanMalloc(num_threads * sizeof(Frontier));
@@ -123,21 +138,6 @@ static bool Step0_1InitFrontiers(int dividers_size) {
     }
 
     return success;
-}
-
-static void Step0_0SetupChildTiers(void) {
-    Tier raw[kTierSolverNumChildTiersMax];
-    int num_raw = current_api.GetChildTiers(this_tier, raw);
-    TierHashSet dedup;
-    TierHashSetInit(&dedup, 0.5);
-    num_child_tiers = 0;
-    for (int i = 0; i < num_raw; ++i) {
-        Tier canonical = current_api.GetCanonicalTier(raw[i]);
-        if (TierHashSetAdd(&dedup, canonical)) {
-            child_tiers[num_child_tiers++] = canonical;
-        }
-    }
-    TierHashSetDestroy(&dedup);
 }
 
 static int TierGetCanonicalParentPositionsFromReverseGraph(
@@ -196,7 +196,6 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
 static bool CheckAndLoadFrontier(int child_index, int64_t position, Value value,
                                  int remoteness, int tid) {
     if (remoteness < 0) return false;  // Error probing remoteness.
-    if (value == kUndecided || value == kDraw) return true;
     Frontier *dest = NULL;
     switch (value) {
         case kUndecided:
@@ -347,7 +346,6 @@ static bool Step3ScanTier(void) {
             // Skip illegal positions and non-canonical positions.
             if (!current_api.IsLegalPosition(tier_position) ||
                 !IsCanonicalPosition(position)) {
-                SetNumUndecidedChildren(position, 0);
                 continue;
             }
 
@@ -360,7 +358,6 @@ static bool Step3ScanTier(void) {
                                           tid)) {
                     ConcurrentBoolStore(&success, false);
                 }
-                SetNumUndecidedChildren(position, 0);
                 continue;
             }  // Execute the following lines if tier_position is not primitive.
             ChildPosCounterType num_children = Step3_0CountChildren(position);
