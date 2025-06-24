@@ -82,6 +82,7 @@ static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
 static int ArrayDbCheckpointRemove(Tier tier);
 
 static size_t ArrayDbTierMemUsage(Tier tier, int64_t size);
+static size_t ArrayDbConcurrentTierMemUsage(Tier tier, int64_t size);
 static int ArrayDbLoadTier(Tier tier, int64_t size);
 static int ArrayDbUnloadTier(Tier tier);
 static bool ArrayDbIsTierLoaded(Tier tier);
@@ -121,6 +122,7 @@ const Database kArrayDb = {
 
     // Loading
     .TierMemUsage = ArrayDbTierMemUsage,
+    .ConcurrentTierMemUsage = ArrayDbConcurrentTierMemUsage,
     .LoadTier = ArrayDbLoadTier,
     .UnloadTier = ArrayDbUnloadTier,
     .IsTierLoaded = ArrayDbIsTierLoaded,
@@ -629,7 +631,12 @@ static int ArrayDbCheckpointRemove(Tier tier) {
 
 static size_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
     (void)tier;
-    return (size_t)size * sizeof(Record);
+    return sizeof(Record) * size;
+}
+
+static size_t ArrayDbConcurrentTierMemUsage(Tier tier, int64_t size) {
+    (void)tier;
+    return sizeof(AtomicRecord) * size;
 }
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {

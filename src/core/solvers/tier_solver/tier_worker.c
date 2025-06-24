@@ -96,7 +96,7 @@ int TierWorkerSolve(int method, Tier tier,
             return TierWorkerSolveITInternal(api_internal, tier, options,
                                              solved);
         case kTierWorkerSolveMethodBackwardInduction:
-            return TierWorkerSolveBIInternal(
+            return TierWorkerBackwardInduction(
                 api_internal, current_db_chunk_size, tier, options, solved);
         case kTierWorkerSolveMethodValueIteration:
             return TierWorkerSolveVIInternal(api_internal, tier, options,

@@ -296,9 +296,20 @@ typedef struct Database {
      *
      * @param tier Tier to be loaded.
      * @param size Size of \p tier in number of positions.
-     * @return An upper bound on memory usage.
+     * @return An upper bound on memory usage in bytes.
      */
     size_t (*TierMemUsage)(Tier tier, int64_t size);
+
+    /**
+     * @brief Returns an upper bound, in bytes, on the amount of memory that
+     * will be used to store the a concurrent solving tier \p tier of \p size
+     * positions.
+     *
+     * @param tier Concurrent solving tier to create in memory.
+     * @param size Size of \p tier in number of positions.
+     * @return An upper bound on memory usage in bytes.
+     */
+    size_t (*ConcurrentTierMemUsage)(Tier tier, int64_t size);
 
     /**
      * @brief Loads the given \p tier of \p size positions into memory.

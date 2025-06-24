@@ -30,6 +30,8 @@
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
+#include "core/gamesman_memory.h"
+
 /**
  * @brief Entry object of an \c Int64HashMap. This struct is not meant to be
  * used by the user of this library. Always use accessor and mutator functions
@@ -61,11 +63,12 @@ typedef struct Int64HashMapEntry {
  * Int64HashMapDestroy(&mymap);
  */
 typedef struct Int64HashMap {
-    Int64HashMapEntry *entries; /**< Dynamic array of buckets. */
-    int64_t capacity;           /**< Current capacity of the hash map. */
-    int64_t size;               /**< Number of entries in the hash map. */
-    double max_load_factor;     /**< Hash map will automatically expand if
-                                (double)size/capacity is greater than this value. */
+    GamesmanAllocator *allocator; /**< Allocator in use. */
+    Int64HashMapEntry *entries;   /**< Dynamic array of buckets. */
+    int64_t capacity_mask;        /**< Number of buckets - 1. */
+    int64_t size;                 /**< Number of entries in the hash map. */
+    double max_load_factor;       /**< Hash map will automatically expand if
+                                  (double)size/capacity is greater than this value. */
 } Int64HashMap;
 
 /**
@@ -99,6 +102,24 @@ typedef struct Int64HashMapIterator {
  * user-specified value.
  */
 void Int64HashMapInit(Int64HashMap *map, double max_load_factor);
+
+/**
+ * @brief Initializes the given \p map using the given memory \p allocator .
+ *
+ * @param map Map to initialize.
+ * @param max_load_factor Set maximum load factor of MAP to this value. The hash
+ * map will automatically expand its capacity if (double)size/capacity is
+ * greater than the max_load_factor. A small max_load_factor trades memory for
+ * speed whereas a large max_load_factor trades speed for memory. This value is
+ * restricted to be in the range [0.25, 0.75]. If the user passes a
+ * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
+ * value will be set to 0.25 and 0.75, respectively, regardless of the
+ * user-specified value.
+ * @param allocator Memory allocator to use. If \c NULL is passed, the effect is
+ * equivalent to calling Int64HashMapInit.
+ */
+void Int64HashMapInitAllocator(Int64HashMap *map, double max_load_factor,
+                               GamesmanAllocator *allocator);
 
 /** @brief Deallocates the given MAP. */
 void Int64HashMapDestroy(Int64HashMap *map);

@@ -57,7 +57,7 @@ static bool Expand(Int64HashSet *set, int64_t new_mask) {
         new_mask + 1, sizeof(Int64HashSetEntry));
     if (new_entries == NULL) return false;
 
-    for (int64_t i = 0; i < set->capacity_mask + 1; ++i) {
+    for (int64_t i = 0; i <= set->capacity_mask; ++i) {
         if (set->entries[i].used) {
             int64_t new_index = Hash(set->entries[i].key, new_mask);
             while (new_entries[new_index].used) {

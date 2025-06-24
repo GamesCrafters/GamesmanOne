@@ -29,7 +29,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "core/solvers/tier_solver/tier_worker/reverse_graph.h"
+#include "core/solvers/tier_solver/tier_worker/backward_induction/reverse_graph.h"
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
@@ -46,8 +46,9 @@
 
 static bool InitOffsetMap(ReverseGraph *graph, const Tier *child_tiers,
                           int num_child_tiers, Tier this_tier,
-                          int64_t (*GetTierSize)(Tier tier)) {
-    TierHashMapInit(&graph->offset_map, 0.5);
+                          int64_t (*GetTierSize)(Tier tier),
+                          GamesmanAllocator *allocator) {
+    TierHashMapInitAllocator(&graph->offset_map, 0.5, allocator);
     graph->size = 0;
 
     // Map all child tiers.
@@ -72,25 +73,28 @@ static bool InitOffsetMap(ReverseGraph *graph, const Tier *child_tiers,
     return true;
 }
 
-static bool InitParentPositionArrays(ReverseGraph *graph) {
+static bool InitParentPositionArrays(ReverseGraph *graph,
+                                     GamesmanAllocator *allocator) {
     // Assumes graph->size has been set.
-    graph->parents_of =
-        (PositionArray *)GamesmanMalloc(graph->size * sizeof(PositionArray));
+    graph->parents_of = (PositionArray *)GamesmanAllocatorAllocate(
+        allocator, graph->size * sizeof(PositionArray));
     if (graph->parents_of == NULL) return false;
     for (int64_t i = 0; i < graph->size; ++i) {
         PositionArrayInit(&graph->parents_of[i]);
     }
+
     return true;
 }
 
 #ifdef _OPENMP
-static bool InitLocks(ReverseGraph *graph) {
-    graph->locks =
-        (omp_lock_t *)GamesmanMalloc(graph->size * sizeof(omp_lock_t));
+static bool InitLocks(ReverseGraph *graph, GamesmanAllocator *allocator) {
+    graph->locks = (omp_lock_t *)GamesmanAllocatorAllocate(
+        allocator, graph->size * sizeof(omp_lock_t));
     if (graph->locks == NULL) return false;
     for (int64_t i = 0; i < graph->size; ++i) {
         omp_init_lock(&graph->locks[i]);
     }
+
     return true;
 }
 #endif  // _OPENMP
@@ -98,23 +102,28 @@ static bool InitLocks(ReverseGraph *graph) {
 // Assumes GetTierSize() has been set up correctly.
 bool ReverseGraphInit(ReverseGraph *graph, const Tier *child_tiers,
                       int num_child_tiers, Tier this_tier,
-                      int64_t (*GetTierSize)(Tier tier)) {
+                      int64_t (*GetTierSize)(Tier tier),
+                      GamesmanAllocator *allocator) {
     if (!InitOffsetMap(graph, child_tiers, num_child_tiers, this_tier,
-                       GetTierSize)) {
+                       GetTierSize, allocator)) {
         return false;
     }
-    if (!InitParentPositionArrays(graph)) {
+    if (!InitParentPositionArrays(graph, allocator)) {
         TierHashMapDestroy(&graph->offset_map);
         return false;
     }
 #ifdef _OPENMP
-    if (!InitLocks(graph)) {
-        GamesmanFree(graph->parents_of);
+    if (!InitLocks(graph, allocator)) {
+        GamesmanAllocatorDeallocate(allocator, graph->parents_of);
         graph->parents_of = NULL;
         TierHashMapDestroy(&graph->offset_map);
         return false;
     }
 #endif  // _OPENMP
+
+    // All memory allocations successfully completed.
+    graph->allocator = GamesmanAllocatorAddRef(allocator);
+
     return true;
 }
 
@@ -126,9 +135,9 @@ void ReverseGraphDestroy(ReverseGraph *graph) {
             omp_destroy_lock(&graph->locks[i]);
 #endif  // _OPENMP
         }
-        GamesmanFree(graph->parents_of);
+        GamesmanAllocatorDeallocate(graph->allocator, graph->parents_of);
 #ifdef _OPENMP
-        GamesmanFree(graph->locks);
+        GamesmanAllocatorDeallocate(graph->allocator, graph->locks);
 #endif  // _OPENMP
     }
     graph->parents_of = NULL;
@@ -137,6 +146,8 @@ void ReverseGraphDestroy(ReverseGraph *graph) {
 #endif  // _OPENMP
     graph->size = 0;
     TierHashMapDestroy(&graph->offset_map);
+    GamesmanAllocatorRelease(graph->allocator);
+    graph->allocator = NULL;
 }
 
 /**

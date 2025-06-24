@@ -1,14 +1,14 @@
 /**
- * @file bi.h
- * @author Max Delgadillo: designed and implemented the original version
- * of the backward induction algorithm (solveretrograde.c in GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): Implemented multiple memory
- * saving strategies and added multithreading support.
+ * @file frontierless.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Backward induction tier worker algorithm.
- * @version 1.1.5
- * @date 2025-05-27
+ * @brief Frontierless strategy of the backward induction tier worker solving
+ * algorithm. Uses retrograde analysis with frontier queues optimized out at the
+ * cost of scanning the transposition table at each remoteness to rediscover the
+ * positions that were solved on the previous level.
+ * @version 1.0.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,18 +27,18 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BI_H_
-#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BI_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIERLESS_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIERLESS_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stddef.h>  // size_t
+#include <stdint.h>  // int64_t
 
-#include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
 
 /**
- * @brief Solves \p tier using the backward induction algorithm given \p api.
+ * @brief Solves the given \p tier using the frontierless strategy of the
+ * backward induction algorithm.
  *
  * @param api Game-specific tier solver API functions.
  * @param db_chunk_size Number of positions in each database compression block.
@@ -53,9 +53,19 @@
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
-int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
-                                Tier tier,
-                                const TierWorkerSolveOptions *options,
-                                bool *solved);
+int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
+                             Tier tier, const TierWorkerSolveOptions *options,
+                             bool *solved);
 
-#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BI_H_
+/**
+ * @brief Returns the minimum amount of memory in bytes required to solve the
+ * given \p tier of \p size positions using the frontierless strategy of the
+ * backward induction tier worker solving algorithm.
+ *
+ * @param tier Tier to solve.
+ * @param size Number of positions in the given \p tier .
+ * @return Amount of memory in bytes required to use the frontierless strategy.
+ */
+size_t TierWorkerBIFrontierlessMemReq(Tier tier, int64_t size);
+
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIERLESS_H_

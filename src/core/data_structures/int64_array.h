@@ -51,10 +51,10 @@
  * Int64ArrayDestroy(&array);
  */
 typedef struct Int64Array {
+    GamesmanAllocator *allocator; /**< Allocator to use. */
     int64_t *array;               /**< The actual array. */
     int64_t size;                 /**< Number of items in the array. */
     int64_t capacity;             /**< Current capacity of the array. */
-    GamesmanAllocator *allocator; /**< Allocator to use. */
 } Int64Array;
 
 /**

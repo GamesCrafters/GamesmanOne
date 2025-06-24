@@ -169,6 +169,10 @@ size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
     return current_db->TierMemUsage(tier, size);
 }
 
+size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
+    return current_db->ConcurrentTierMemUsage(tier, size);
+}
+
 int DbManagerLoadTier(Tier tier, int64_t size) {
     return current_db->LoadTier(tier, size);
 }

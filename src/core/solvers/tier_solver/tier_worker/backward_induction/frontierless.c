@@ -1,15 +1,12 @@
 /**
- * @file bi.c
- * @author Max Delgadillo: designed and implemented the original version
- * of the backward induction algorithm (solveretrograde.c in GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
- * solving of a single tier into its own module, implemented multithreading
- * using OpenMP, and reformatted functions for readability.
+ * @file frontierless.c
+ * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Backward induction tier worker algorithm implementation.
- * @version 1.1.5
- * @date 2025-05-27
+ * @brief Implementation of the frontierless strategy of the backward induction
+ * tier worker solving algorithm.
+ * @version 1.0.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "core/solvers/tier_solver/tier_worker/backward_induction/frontierless.h"
+
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
@@ -41,7 +40,6 @@
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/solvers/tier_solver/tier_worker/bi.h"
 #include "core/types/gamesman_types.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
@@ -57,7 +55,7 @@
 
 // Copy of the API functions from tier_manager. Cannot use a reference here
 // because we need to create/modify some of the functions.
-static TierSolverApi current_api;
+static const TierSolverApi *api_internal;
 
 // Number of positions in each database compression block.
 static int64_t current_db_chunk_size;
@@ -90,7 +88,7 @@ static int num_threads;  // Number of threads available.
 
 static bool Step0_0SetupSolverArrays(void) {
     int error = DbManagerCreateConcurrentSolvingTier(
-        this_tier, current_api.GetTierSize(this_tier));
+        this_tier, api_internal->GetTierSize(this_tier));
     if (error != 0) return false;
 
 #ifdef _OPENMP
@@ -111,12 +109,12 @@ static bool Step0_0SetupSolverArrays(void) {
 
 static void Step0_1SetupChildTiers(void) {
     Tier raw[kTierSolverNumChildTiersMax];
-    int num_raw = current_api.GetChildTiers(this_tier, raw);
+    int num_raw = api_internal->GetChildTiers(this_tier, raw);
     TierHashSet dedup;
     TierHashSetInit(&dedup, 0.5);
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
-        Tier canonical = current_api.GetCanonicalTier(raw[i]);
+        Tier canonical = api_internal->GetCanonicalTier(raw[i]);
         if (TierHashSetAdd(&dedup, canonical)) {
             child_tiers[num_child_tiers++] = canonical;
         }
@@ -126,14 +124,14 @@ static void Step0_1SetupChildTiers(void) {
 
 static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
                             Tier tier) {
-    // Copy solver API function pointers and set db chunk size.
-    memcpy(&current_api, api, sizeof(current_api));
+    // Set API and db chunk size.
+    api_internal = api;
     current_db_chunk_size = db_chunk_size;
     num_threads = ConcurrencyGetOmpNumThreads();
 
     // Initialize child tier array.
     this_tier = tier;
-    this_tier_size = current_api.GetTierSize(tier);
+    this_tier_size = api_internal->GetTierSize(tier);
     if (!Step0_0SetupSolverArrays()) return false;
     Step0_1SetupChildTiers();
 
@@ -194,46 +192,53 @@ static void DeduceParentsChildTierPosition(TierPosition child, Value value,
 
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents =
-        current_api.GetCanonicalParentPositions(child, this_tier, parents);
+        api_internal->GetCanonicalParentPositions(child, this_tier, parents);
     for (int i = 0; i < num_parents; ++i) {
         DbManagerMaximizeValueRemoteness(parents[i], value, remoteness,
                                          OutcomeCompare);
     }
 }
 
-static void UpdateMaxRemotenesses(Value val, int remoteness,
-                                  ConcurrentInt *max_wl,
-                                  ConcurrentInt *max_tie) {
+static void UpdateMaxRemotenesses(Value val, int remoteness) {
     switch (val) {
         case kLose:
         case kWin:
-            ConcurrentIntMax(max_wl, remoteness);
+            if (max_win_lose_remoteness < remoteness) {
+                max_win_lose_remoteness = remoteness;
+            }
             break;
+
         case kTie:
-            ConcurrentIntMax(max_tie, remoteness);
+            if (max_tie_remoteness < remoteness) {
+                max_tie_remoteness = remoteness;
+            }
             break;
+
         default:
             return;
     }
 }
 
-static void ProcessChildTier(int child_index, ConcurrentInt *max_wl,
-                             ConcurrentInt *max_tie) {
+static void ProcessChildTier(int child_index) {
     Tier child_tier = child_tiers[child_index];
 
     // Scan child tier maximize their parents' values.
-    int64_t child_tier_size = current_api.GetTierSize(child_tier);
+    int64_t child_tier_size = api_internal->GetTierSize(child_tier);
     PRAGMA_OMP(parallel if (child_tier_size > current_db_chunk_size)) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child = {.tier = child_tier};
-        PRAGMA_OMP(for schedule(dynamic, current_db_chunk_size))
+        PRAGMA_OMP(
+            for schedule(dynamic, current_db_chunk_size) 
+                reduction(max : max_win_lose_remoteness, 
+                                max_tie_remoteness)
+        )
         for (Position position = 0; position < child_tier_size; ++position) {
             child.position = position;
             Value value = DbManagerProbeValue(&probe, child);
             if (value == kUndecided) continue;
             int remoteness = DbManagerProbeRemoteness(&probe, child);
-            UpdateMaxRemotenesses(value, remoteness, max_wl, max_tie);
+            UpdateMaxRemotenesses(value, remoteness);
             DeduceParentsChildTierPosition(child, value, remoteness);
         }
         DbManagerProbeDestroy(&probe);
@@ -244,26 +249,18 @@ static void ProcessChildTier(int child_index, ConcurrentInt *max_wl,
  * @brief Load all non-drawing positions from all child tiers into frontier.
  */
 static void Step1ProcessChildTiers(void) {
-    ConcurrentInt concurrent_max_win_lose_rmt, concurrent_max_tie_rmt;
-    ConcurrentIntInit(&concurrent_max_win_lose_rmt, 0);
-    ConcurrentIntInit(&concurrent_max_tie_rmt, 0);
-
     // -1 because this_tier is the last element in child_tiers.
     for (int child_index = 0; child_index < num_child_tiers - 1;
          ++child_index) {
         // Load child tier from disk.
-        ProcessChildTier(child_index, &concurrent_max_win_lose_rmt,
-                         &concurrent_max_tie_rmt);
+        ProcessChildTier(child_index);
     }
-
-    max_win_lose_remoteness = ConcurrentIntLoad(&concurrent_max_win_lose_rmt);
-    max_tie_remoteness = ConcurrentIntLoad(&concurrent_max_tie_rmt);
 }
 
 // ------------------------------- Step2ScanTier -------------------------------
 
 static bool IsCanonicalPosition(TierPosition tp) {
-    return current_api.GetCanonicalPosition(tp) == tp.position;
+    return api_internal->GetCanonicalPosition(tp) == tp.position;
 }
 
 static void SetNumUndecidedChildren(Position pos, ChildPosCounterType value) {
@@ -278,7 +275,7 @@ static void SetNumUndecidedChildren(Position pos, ChildPosCounterType value) {
 static ChildPosCounterType GetNumberOfCanonicalChildPositionsInThisTier(
     TierPosition tp) {
     TierPosition children[kTierSolverNumChildPositionsMax];
-    int num_children = current_api.GetCanonicalChildPositions(tp, children);
+    int num_children = api_internal->GetCanonicalChildPositions(tp, children);
     ChildPosCounterType ret = 0;
     for (int i = 0; i < num_children; ++i) {
         ret += (children[i].tier == this_tier);
@@ -298,11 +295,12 @@ static void Step2ScanTier(void) {
             TierPosition tp = {.tier = this_tier, .position = position};
 
             // Skip illegal positions and non-canonical positions.
-            if (!current_api.IsLegalPosition(tp) || !IsCanonicalPosition(tp)) {
+            if (!api_internal->IsLegalPosition(tp) ||
+                !IsCanonicalPosition(tp)) {
                 continue;
             }
 
-            Value value = current_api.Primitive(tp);
+            Value value = api_internal->Primitive(tp);
             if (value != kUndecided) {  // tp is a primitive position
                 DbManagerSetValueRemoteness(position, value, 0);
             } else {  // tp is not a primitive position
@@ -319,7 +317,7 @@ static bool DeduceParentsFromWinningChild(Position pos, int child_rmt) {
     TierPosition tp = {.tier = this_tier, .position = pos};
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents =
-        current_api.GetCanonicalParentPositions(tp, this_tier, parents);
+        api_internal->GetCanonicalParentPositions(tp, this_tier, parents);
     bool advance = false;
     for (int i = 0; i < num_parents; ++i) {
 #ifdef _OPENMP
@@ -346,7 +344,7 @@ static bool DeduceParentsFromLosingOrTyingChild(Position pos, int child_rmt,
     TierPosition tp = {.tier = this_tier, .position = pos};
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents =
-        current_api.GetCanonicalParentPositions(tp, this_tier, parents);
+        api_internal->GetCanonicalParentPositions(tp, this_tier, parents);
     bool advance = false;
     for (int i = 0; i < num_parents; ++i) {
 #ifdef _OPENMP
@@ -385,7 +383,7 @@ static bool Step3_0PushWinLose(int child_rmt) {
 
     // Scan the current tier for positions that are solved in the previous scan.
     PRAGMA_OMP(parallel if (parallel_scan_this_tier)) {
-        PRAGMA_OMP(for schedule(dynamic, 128) reduction(||:advance))
+        PRAGMA_OMP(for schedule(dynamic, 128) reduction(|| : advance))
         for (Position position = 0; position < this_tier_size; ++position) {
             Value value = DbManagerGetValue(position);
             if (value != kWin && value != kLose) continue;
@@ -414,7 +412,7 @@ static bool Step3_1PushTie(int child_rmt) {
 
     // Scan the current tier for positions that are solved in the previous scan.
     PRAGMA_OMP(parallel if (parallel_scan_this_tier)) {
-        PRAGMA_OMP(for schedule(dynamic, 128) reduction(||:advance))
+        PRAGMA_OMP(for schedule(dynamic, 128) reduction(|| : advance))
         for (Position position = 0; position < this_tier_size; ++position) {
             Value value = DbManagerGetValue(position);
             if (value != kTie) continue;
@@ -546,31 +544,46 @@ static void Step6Cleanup(void) {
 }
 
 // -----------------------------------------------------------------------------
-// ------------------------- TierWorkerSolveBIInternal -------------------------
+// ------------------------- TierWorkerBIFrontierless --------------------------
 // -----------------------------------------------------------------------------
 
-int TierWorkerSolveBIInternal(const TierSolverApi *api, int64_t db_chunk_size,
-                              Tier tier, const TierWorkerSolveOptions *options,
-                              bool *solved) {
-    if (solved != NULL) *solved = false;
-    int ret = kRuntimeError;
-    if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
-        ret = kNoError;  // Success.
-        goto _bailout;
-    }
-
-    /* Solver main algorithm. */
+int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
+                             Tier tier, const TierWorkerSolveOptions *options,
+                             bool *solved) {
+    int ret = kMallocFailureError;
     if (!Step0Initialize(api, db_chunk_size, tier)) goto _bailout;
     Step1ProcessChildTiers();
     Step2ScanTier();
     Step3PushFrontierUp();
     Step4MarkDrawPositions();
     Step5SaveValues();
-    if (options->compare && !CompareDb()) goto _bailout;
+    if (options->compare && !CompareDb()) {
+        ret = kRuntimeError;
+        goto _bailout;
+    }
+
+    // Success
     if (solved != NULL) *solved = true;
-    ret = kNoError;  // Success.
+    ret = kNoError;
 
 _bailout:
     Step6Cleanup();
     return ret;
+}
+
+// -----------------------------------------------------------------------------
+// ---------------------- TierWorkerBIFrontierlessMemReq -----------------------
+// -----------------------------------------------------------------------------
+
+size_t TierWorkerBIFrontierlessMemReq(Tier tier, int64_t size) {
+    size_t db = DbManagerConcurrentTierMemUsage(tier, size);
+
+#ifdef _OPENMP
+    size_t undecided_children_counters =
+        size * sizeof(AtomicChildPosCounterType);
+#else   // _OPENMP not defined
+    size_t undecided_children_counters = size * sizeof(ChildPosCounterType);
+#endif  // _OPENMP
+
+    return db + undecided_children_counters;
 }
