@@ -119,9 +119,17 @@ typedef struct Database {
      *
      *     - SetValueRemoteness
      *
+     *     - MaximizeValueRemoteness
+     *
+     *     - DecrementNumUndecidedChildren
+     *
+     *     - ClearNumUndecidedChildren
+     *
      *     - GetValue
      *
      *     - GetRemoteness
+     *
+     *     - GetNumUndecidedChildren
      *
      * @param tier Tier to be solved and stored in memory.
      * @param size Size of \p tier in number of positions.
@@ -224,6 +232,39 @@ typedef struct Database {
                                                    int r2));
 
     /**
+     * @brief Subtracts one from the number of undecided children of \p position
+     * and returns the value immediately preceding the operation if the value of
+     * the position is \c kUndecided and its number of undecided children is at
+     * least one. Does nothing otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children immediately preceding the
+     * subtraction, or
+     * @return 0 if the operation is not performed.
+     */
+    int (*DecrementNumUndecidedChildren)(Position position);
+
+    /**
+     * @brief Sets the number of undecided children of \p position to zero and
+     * returns the value immediately preceding the operation if the value of the
+     * position is \c kUndecided . Does nothing otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children immediately preceding the
+     * operation, or
+     * @return 0 if the operation is not performed.
+     */
+    int (*ClearNumUndecidedChildren)(Position position);
+
+    /**
      * @brief Returns the value of the given \p position from in-memory DB.
      * @note This function is part of the Solving API.
      *
@@ -240,6 +281,21 @@ typedef struct Database {
      * @return \c kErrorRemoteness otherwise.
      */
     int (*GetRemoteness)(Position position);
+
+    /**
+     * @brief Returns the number of undecided children of \p position if its
+     * value is \c kUndecided . Returns 0 otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children of \p position if its value is
+     * \c kUndecided , or
+     * @return 0 otherwise.
+     */
+    int (*GetNumUndecidedChildren)(Position position);
 
     /**
      * @brief Returns whether there exists a checkpoint for \p tier. A

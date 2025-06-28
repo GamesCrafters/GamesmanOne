@@ -146,6 +146,52 @@ static inline bool AtomicRecordArrayMaximize(
 }
 
 /**
+ * @brief Atomically subtracts one from the number of undecided children of
+ * position \p position in \p array and returns the number of undecided children
+ * immediately preceding the subtraction if the value field of \p position is
+ * set to \c kUndecided and the number of undecided children is at least one.
+ * Does nothing if the value field of \p position is not \c kUndecided and
+ * returns 0.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param array Target array.
+ * @param position Position.
+ * @return Number of undecided children immediately preceding the subtraction,
+ * or
+ * @return 0 if the subtraction is not performed.
+ */
+static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
+    AtomicRecordArray *array, Position position) {
+    assert(position >= 0 && position < array->size);
+    return AtomicRecordDecrementNumUndecidedChildren(&array->records[position]);
+}
+
+/**
+ * @brief Atomically sets the number of undecided children of position
+ * \p position in \p array to zero if the value field of \p position is set to
+ * \c kUndecided , and returns the number of undecided children immediately
+ * preceding the operation. Does nothing if the value field of \p position is
+ * not \c kUndecided and returns 0.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param array Target array.
+ * @param position Position.
+ * @return Number of undecided children immediately preceding the operation, or
+ * @return 0 if the operation is not performed.
+ */
+static inline int AtomicRecordArrayClearNumUndecidedChildren(
+    AtomicRecordArray *array, Position position) {
+    assert(position >= 0 && position < array->size);
+    return AtomicRecordClearNumUndecidedChildren(&array->records[position]);
+}
+
+/**
  * @brief Returns the value of \p position in the given \p array, assumes
  * \p position is greater than or equal to 0 and smaller than the size of
  * \p array.
@@ -171,6 +217,27 @@ static inline Value AtomicRecordArrayGetValue(const AtomicRecordArray *array,
 static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
                                                  Position position) {
     return AtomicRecordGetRemoteness(&array->records[position]);
+}
+
+/**
+ * @brief Returns the number of undecided children of position \p position in
+ * \p array if the value field of \p position is set to \c kUndecided . Returns
+ * 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param array Source array.
+ * @param position Position.
+ * @return Number of undecided children of \p position if its value is
+ * \c kUndecided , or
+ * @return 0 otherwise.
+ */
+static inline int AtomicRecordArrayGetNumUndecidedChildren(
+    const AtomicRecordArray *array, Position position) {
+    assert(position >= 0 && position < array->size);
+    return AtomicRecordGetNumUndecidedChildren(&array->records[position]);
 }
 
 /**

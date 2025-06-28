@@ -79,6 +79,8 @@ void DbManagerFinalizeRefDb(void);
  * @brief Creates a new TIER of size SIZE (measured in positions) for solving in
  * memory.
  *
+ * @note This function is not thread-safe.
+ *
  * @param tier Tier to create.
  * @param size Number of positions in TIER.
  * @return int 0 on success, non-zero otherwise.
@@ -88,6 +90,8 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
 /**
  * @brief Creates a new solving \p tier of size \p size positions that allows
  * concurrent read and write access to records.
+ *
+ * @note This function is not thread-safe.
  *
  * @param tier Tier to create.
  * @param size Number of positions in \p tier.
@@ -102,6 +106,8 @@ int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
  *
+ * @note This function is not thread-safe.
+ *
  * @param aux Auxiliary parameter.
  * @return int 0 on success, non-zero otherwise.
  */
@@ -111,12 +117,16 @@ int DbManagerFlushSolvingTier(void *aux);
  * @brief Frees the solving tier in memory. Does nothing if the solving tier has
  * not been initialized.
  *
+ * @note This function is not thread-safe.
+ *
  * @return int 0 on success, non-zero otherwise.
  */
 int DbManagerFreeSolvingTier(void);
 
 /**
  * @brief Sets the current game as solved.
+ *
+ * @note This function is not thread-safe.
  *
  * @return \c kNoError on success, or
  * @return non-zero error code otherwise.
@@ -129,6 +139,9 @@ int DbManagerSetGameSolved(void);
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
  *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
+ *
  * @return int 0 on success, non-zero otherwise.
  */
 int DbManagerSetValue(Position position, Value value);
@@ -139,6 +152,9 @@ int DbManagerSetValue(Position position, Value value);
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
  *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
+ *
  * @return int 0 on success, non-zero otherwise.
  */
 int DbManagerSetRemoteness(Position position, int remoteness);
@@ -146,6 +162,9 @@ int DbManagerSetRemoteness(Position position, int remoteness);
 /**
  * @brief Sets the \p value and \p remoteness of \p position in the solving
  * tier.
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
  *
  * @return \c kNoError on success, or
  * @return non-zero error code otherwise.
@@ -157,6 +176,9 @@ int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
  * with the maximum of its original value-remoteness pair and the one provided
  * by \p val and \p remoteness . The order of value-remoteness pairs are
  * determined by the \p compare function.
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
  *
  * @param position Target position.
  * @param val Candidate value.
@@ -175,10 +197,52 @@ bool DbManagerMaximizeValueRemoteness(Position position, Value value,
                                                      int r2));
 
 /**
+ * @brief Subtracts one from the number of undecided children of \p position and
+ * returns the value immediately preceding the operation if the value of the
+ * position is \c kUndecided and its number of undecided children is at least
+ * one. Does nothing otherwise.
+ *
+ * @note By convention, we overload the remoteness field of a record as the
+ * counter for the number of undecided children of that position when its value
+ * is \c kUndecided .
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
+ *
+ * @param position Target position.
+ * @return The number of undecided children immediately preceding the
+ * subtraction, or
+ * @return 0 if the operation is not performed.
+ */
+int DbManagerDecrementNumUndecidedChildren(Position position);
+
+/**
+ * @brief Sets the number of undecided children of \p position to zero and
+ * returns the value immediately preceding the operation if the value of the
+ * position is \c kUndecided . Does nothing otherwise.
+ *
+ * @note By convention, we overload the remoteness field of a record as the
+ * counter for the number of undecided children of that position when its value
+ * is \c kUndecided .
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
+ *
+ * @param position Target position.
+ * @return The number of undecided children immediately preceding the operation,
+ * or
+ * @return 0 if the operation is not performed.
+ */
+int DbManagerClearNumUndecidedChildren(Position position);
+
+/**
  * @brief Returns the value of POSITION in the solving tier.
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
  */
 Value DbManagerGetValue(Position position);
 
@@ -187,12 +251,35 @@ Value DbManagerGetValue(Position position);
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
  */
 int DbManagerGetRemoteness(Position position);
 
 /**
+ * @brief Returns the number of undecided children of \p position if its value
+ * is \c kUndecided . Returns 0 otherwise.
+ *
+ * @note By convention, we overload the remoteness field of a record as the
+ * counter for the number of undecided children of that position when its value
+ * is \c kUndecided .
+ *
+ * @note This function is thread-safe if the solving tier is created via
+ * DbManagerCreateConcurrentSolvingTier.
+ *
+ * @param position Target position.
+ * @return The number of undecided children of \p position if its value is
+ * \c kUndecided , or
+ * @return 0 otherwise.
+ */
+int DbManagerGetNumUndecidedChildren(Position position);
+
+/**
  * @brief Returns whether there exists a checkpoint for \p tier. A
  * checkpoint can be used to restore the solving progress of a tier.
+ *
+ * @note This function is not thread-safe.
  *
  * @param tier Check for any existing checkpoints for this tier.
  * @return \c true if there exists a checkpoint for \p tier, or
@@ -203,6 +290,8 @@ bool DbManagerCheckpointExists(Tier tier);
 /**
  * @brief Saves a checkpoint for the current solving tier, including the
  * current solving \p status, overwriting any existing checkpoint.
+ *
+ * @note This function is not thread-safe.
  *
  * @param status Pointer to data that stores the current solving status.
  * @param status_size Size of \p status in bytes.
@@ -216,6 +305,8 @@ int DbManagerCheckpointSave(const void *status, size_t status_size);
  * @brief Creates an in-memory DB for solving of the given \p tier of size
  * \p size by loading its checkpoint and previous solving status. Does nothing
  * and returns an error if a checkpoint cannot be found for \p tier.
+ *
+ * @note This function is not thread-safe.
  *
  * @param tier Tier to be initialized and loaded.
  * @param size Size of \p tier in number of positions.
@@ -234,6 +325,8 @@ int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
 /**
  * @brief Removes the checkpoint for \p tier if exists.
  *
+ * @note This function is not thread-safe.
+ *
  * @param tier Remove the checkpoint for this tier.
  * @return \c kNoError on success,
  * @return \c kFileSystemError if no checkpoint is found for \p tier, or
@@ -247,6 +340,8 @@ int DbManagerCheckpointRemove(Tier tier);
  * @brief Returns an upper bound, in bytes, on the amount of memory that
  * will be used to load \p tier of \p size positions.
  *
+ * @note This function is thread-safe.
+ *
  * @param tier Tier to be loaded.
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage in bytes.
@@ -257,6 +352,8 @@ size_t DbManagerTierMemUsage(Tier tier, int64_t size);
  * @brief Returns an upper bound, in bytes, on the amount of memory that
  * will be used to store a concurrent solving tier \p tier of \p size positions.
  *
+ * @note This function is thread-safe.
+ *
  * @param tier Concurrent solving tier to be created in memory.
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage in bytes.
@@ -265,6 +362,9 @@ size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size);
 
 /**
  * @brief Loads the given \p tier of \p size positions into memory.
+ *
+ * @note This function is not thread-safe.
+ *
  * @param tier Tier to be loaded.
  * @param size Size of \p tier in number of positions.
  *
@@ -276,6 +376,8 @@ int DbManagerLoadTier(Tier tier, int64_t size);
 /**
  * @brief Unloads the given \p tier from memory if it was previously loaded.
  *
+ * @note This function is not thread-safe.
+ *
  * @return \c kNoError on success, or
  * @return non-zero error code otherwise.
  */
@@ -283,6 +385,8 @@ int DbManagerUnloadTier(Tier tier);
 
 /**
  * @brief Returns whether the given \p tier has been loaded.
+ *
+ * @note This function is thread-safe.
  *
  * @return \c kNoError on success, or
  * @return non-zero error code otherwise.
@@ -292,6 +396,8 @@ bool DbManagerIsTierLoaded(Tier tier);
 /**
  * @brief Returns the value of position \p position in tier \p tier if
  * \p tier has been loaded. Returns \c kErrorValue otherwise.
+ *
+ * @note This function is thread-safe.
  *
  * @param tier A loaded tier.
  * @param position Query the value of this position.
@@ -305,6 +411,8 @@ Value DbManagerGetValueFromLoaded(Tier tier, Position position);
  * @brief Returns the remoteness of position \p position in tier \p tier if
  * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
  *
+ * @note This function is thread-safe.
+ *
  * @param tier A loaded tier.
  * @param position Query the remoteness of this position.
  *
@@ -317,11 +425,15 @@ int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
 
 /**
  * @brief Initializes PROBE using the method provided by the current database.
+ *
+ * @note This function is not thread-safe.
  */
 int DbManagerProbeInit(DbProbe *probe);
 
 /**
  * @brief Destroys PROBE using the method provided by the current database.
+ *
+ * @note This function is not thread-safe.
  */
 int DbManagerProbeDestroy(DbProbe *probe);
 
@@ -330,6 +442,8 @@ int DbManagerProbeDestroy(DbProbe *probe);
  * using the given initialized PROBE and returns it.
  *
  * @note Results in undefined behavior if PROBE has not been initialized.
+ *
+ * @note This function is not thread-safe.
  *
  * @param probe Initialized database probe.
  * @param tier_position TierPosition to read.
@@ -345,6 +459,8 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
  *
  * @note Results in undefined behavior if PROBE has not been initialized.
  *
+ * @note This function is not thread-safe.
+ *
  * @param probe Initialized database probe.
  * @param tier_position TierPosition to read.
  * @return Remoteness of the given TIER_POSITION in database; a negative value
@@ -356,22 +472,26 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 /**
  * @brief Returns the status of TIER.
  *
+ * @note This function is not thread-safe.
+ *
  * @param tier Tier to check.
- * @return kDbTierStatusSolved if solved,
- * @return kDbTierStatusCorrupted if corrupted,
- * @return kDbTierStatusMissing if not solved, or
- * @return kDbTierStatusCheckError if an error occurred when checking the status
- * of TIER.
+ * @return \c kDbTierStatusSolved if solved,
+ * @return \c kDbTierStatusCorrupted if corrupted,
+ * @return \c kDbTierStatusMissing if not solved, or
+ * @return \c kDbTierStatusCheckError if an error occurred when checking the
+ * status of TIER.
  */
 int DbManagerTierStatus(Tier tier);
 
 /**
  * @brief Returns the solving status of the current game.
  *
- * @return kDbGameStatusSolved if solved,
- * @return kDbGameStatusIncomplete if not fully solved, or
- * @return kDbGameStatusCheckError if an error occurred when checking the status
- * of the current game.
+ * @note This function is not thread-safe.
+ *
+ * @return \c kDbGameStatusSolved if solved,
+ * @return \c kDbGameStatusIncomplete if not fully solved, or
+ * @return \c kDbGameStatusCheckError if an error occurred when checking the
+ * status of the current game.
  */
 int DbManagerGameStatus(void);
 

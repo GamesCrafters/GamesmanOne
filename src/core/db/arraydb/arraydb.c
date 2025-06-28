@@ -73,8 +73,11 @@ static bool ArrayDbMaximizeValueRemoteness(Position position, Value value,
                                            int remoteness,
                                            int (*compare)(Value v1, int r1,
                                                           Value v2, int r2));
+static int ArrayDbDecrementNumUndecidedChildren(Position position);
+static int ArrayDbClearNumUndecidedChildren(Position position);
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
+static int ArrayDbGetNumUndecidedChildren(Position position);
 static bool ArrayDbCheckpointExists(Tier tier);
 static int ArrayDbCheckpointSave(const void *status, size_t status_size);
 static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
@@ -114,8 +117,11 @@ const Database kArrayDb = {
     .SetRemoteness = ArrayDbSetRemoteness,
     .SetValueRemoteness = ArrayDbSetValueRemoteness,
     .MaximizeValueRemoteness = ArrayDbMaximizeValueRemoteness,
+    .DecrementNumUndecidedChildren = ArrayDbDecrementNumUndecidedChildren,
+    .ClearNumUndecidedChildren = ArrayDbClearNumUndecidedChildren,
     .GetValue = ArrayDbGetValue,
     .GetRemoteness = ArrayDbGetRemoteness,
+    .GetNumUndecidedChildren = ArrayDbGetNumUndecidedChildren,
     .CheckpointExists = ArrayDbCheckpointExists,
     .CheckpointSave = ArrayDbCheckpointSave,
     .CheckpointLoad = ArrayDbCheckpointLoad,
@@ -515,6 +521,24 @@ static bool ArrayDbMaximizeValueRemoteness(Position position, Value value,
     return RecordArrayMaximize(records, position, value, remoteness, compare);
 }
 
+static int ArrayDbDecrementNumUndecidedChildren(Position position) {
+    if (concurrent_solve) {
+        return AtomicRecordArrayDecrementNumUndecidedChildren(atomic_records,
+                                                              position);
+    }
+
+    return RecordArrayDecrementNumUndecidedChildren(records, position);
+}
+
+static int ArrayDbClearNumUndecidedChildren(Position position) {
+    if (concurrent_solve) {
+        return AtomicRecordArrayClearNumUndecidedChildren(atomic_records,
+                                                          position);
+    }
+
+    return RecordArrayClearNumUndecidedChildren(records, position);
+}
+
 static Value ArrayDbGetValue(Position position) {
     if (concurrent_solve) {
         return AtomicRecordArrayGetValue(atomic_records, position);
@@ -529,6 +553,15 @@ static int ArrayDbGetRemoteness(Position position) {
     }
 
     return RecordArrayGetRemoteness(records, position);
+}
+
+static int ArrayDbGetNumUndecidedChildren(Position position) {
+    if (concurrent_solve) {
+        return AtomicRecordArrayGetNumUndecidedChildren(atomic_records,
+                                                        position);
+    }
+
+    return RecordArrayGetNumUndecidedChildren(records, position);
 }
 
 bool ArrayDbCheckpointExists(Tier tier) {

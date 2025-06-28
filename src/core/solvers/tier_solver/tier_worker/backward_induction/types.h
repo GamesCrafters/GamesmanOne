@@ -34,19 +34,6 @@
 #include "core/types/gamesman_types.h"
 
 /**
- * @brief Integer type for storing the number of undecided child positions.
- *
- * @note The current definition assumes the number of children of any position
- * is no more than 32767.
- *
- * @todo Check if this can be optimized out.
- */
-typedef int16_t ChildPosCounterType;
-#ifdef _OPENMP
-typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
-#endif  // _OPENMP
-
-/**
  * @brief Backward induction loopy solve strategies.
  */
 typedef enum {

@@ -75,6 +75,24 @@ static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
 }
 
 /**
+ * @brief Returns the number of undecided children of record \p ar , if exists.
+ * Returns 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param ar Source record.
+ * @return The number of undecided children of record \p ar , if exists.
+ * @return 0 otherwise.
+ */
+static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
+    Record rec = atomic_load_explicit(ar, memory_order_relaxed);
+
+    return RecordGetNumUndecidedChildren(&rec);
+}
+
+/**
  * @brief Atomically sets the value field of record \p ar to \p val .
  *
  * @param ar Target record.
@@ -169,6 +187,73 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
     return false;
 }
 
+/**
+ * @brief Atomically subtracts one from the number of undecided children of
+ * record \p ar and returns the value immediately preceding the subtraction
+ * if the value field of \p ar is set to \c kUndecided and the number of
+ * undecided children is at least one. Does nothing and returns 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param ar Target record.
+ * @return Number of undecided children immediately preceding the subtraction,
+ * or
+ * @return 0 if the subtraction is not performed.
+ */
+static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
+    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    int num_undecided;
+    while ((num_undecided = RecordGetNumUndecidedChildren(&old_rec)) > 0) {
+        Record new_rec = old_rec;
+        RecordDecrementNumUndecidedChildren(&new_rec);
+        if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
+                                                  memory_order_relaxed,
+                                                  memory_order_relaxed)) {
+            break;
+        }
+    }
+
+    return num_undecided;
+}
+
+/**
+ * @brief Atomically sets the number of undecided children of record \p ar to
+ * zero and returns the value immediately preceding the operation if the value
+ * field of \p ar is set to \c kUndecided . Does nothing and returns 0
+ * otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param ar Target record.
+ * @return Number of undecided children immediately preceding the operation, or
+ * @return 0 if the operation is not performed.
+ */
+static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {
+    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    int num_undecided;
+    while ((num_undecided = RecordGetNumUndecidedChildren(&old_rec)) > 0) {
+        Record new_rec = old_rec;
+        RecordClearNumUndecidedChildren(&new_rec);
+        if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
+                                                  memory_order_relaxed,
+                                                  memory_order_relaxed)) {
+            break;
+        }
+    }
+
+    return num_undecided;
+}
+
+/**
+ * @brief Retrieves the raw Record value from \p ar .
+ *
+ * @param ar Source record.
+ * @return Raw Record value stored in \p ar .
+ */
 static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
     return atomic_load_explicit(ar, memory_order_relaxed);
 }

@@ -72,6 +72,24 @@ static inline int RecordGetRemoteness(const Record *rec) {
 }
 
 /**
+ * @brief Returns the number of undecided children of record \p rec , if exists.
+ * Returns 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param rec Source record.
+ * @return The number of undecided children of record \p rec , if exists.
+ * @return 0 otherwise.
+ */
+static inline int RecordGetNumUndecidedChildren(const Record *rec) {
+    if (RecordGetValue(rec) != kUndecided) return 0;
+
+    return RecordGetRemoteness(rec);
+}
+
+/**
  * @brief Sets the value field of record \p rec to \p val.
  *
  * @param rec Target record.
@@ -138,6 +156,56 @@ static inline bool RecordMaximize(Record *rec, Value val, int remoteness,
     }
 
     return false;
+}
+
+/**
+ * @brief Subtracts one from the number of undecided children of record \p rec
+ * and returns the value immediately preceding the subtraction if the value
+ * field of \p rec is set to \c kUndecided and the number of undecided children
+ * is at least one. Does nothing and returns 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param rec Target record.
+ * @return Number of undecided children immediately preceding the subtraction,
+ * or
+ * @return 0 if the subtraction is not performed.
+ */
+static inline int RecordDecrementNumUndecidedChildren(Record *rec) {
+    if (RecordGetValue(rec) != kUndecided) return 0;
+
+    int num_undecided = RecordGetRemoteness(rec);
+    if (num_undecided == 0) return 0;
+
+    RecordSetRemoteness(rec, num_undecided - 1);
+
+    return num_undecided;
+}
+
+/**
+ * @brief Sets the number of undecided children of record \p rec to zero and
+ * returns the value immediately preceding the operation if the value field of
+ * \p rec is set to \c kUndecided . Does nothing and returns 0 otherwise.
+ *
+ * @note The remoteness field of a record is overloaded as the counter for the
+ * number of undecided children of that position when its value is \c kUndecided
+ * .
+ *
+ * @param rec Target record.
+ * @return Number of undecided children immediately preceding the operation, or
+ * @return 0 if the operation is not performed.
+ */
+static inline int RecordClearNumUndecidedChildren(Record *rec) {
+    if (RecordGetValue(rec) != kUndecided) return 0;
+
+    int num_undecided = RecordGetRemoteness(rec);
+    if (num_undecided == 0) return 0;
+
+    RecordSetRemoteness(rec, 0);
+
+    return num_undecided;
 }
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_RECORD_H_

@@ -45,9 +45,7 @@
 #include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontier.h"
-#include "core/solvers/tier_solver/tier_worker/backward_induction/frontierless.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/reverse_graph.h"
-#include "core/solvers/tier_solver/tier_worker/backward_induction/types.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
 #include "core/types/gamesman_types.h"
 
@@ -88,13 +86,6 @@ static Frontier *win_frontiers;   // Winning frontiers for each thread.
 static Frontier *lose_frontiers;  // Losing frontiers for each thread.
 static Frontier *tie_frontiers;   // Tying frontiers for each thread.
 
-// Number of undecided child positions of each position in the solving tier.
-#ifdef _OPENMP
-static AtomicChildPosCounterType *num_undecided_children = NULL;
-#else   // _OPENMP not defined
-static ChildPosCounterType *num_undecided_children = NULL;
-#endif  // _OPENMP
-
 // Cached reverse position graph of the current tier. This is only initialized
 // if the game does not implement Retrograde Analysis.
 static ReverseGraph reverse_graph;
@@ -110,7 +101,7 @@ static bool Step0_0CreateAllocator(size_t memlimit) {
     if (memlimit == 0) memlimit = GetPhysicalMemory() / 10 * 9;
 
     // Check if the given memory limit satisfies the minimum requirement.
-    size_t min_mem = TierWorkerBIFrontierlessMemReq(this_tier, this_tier_size);
+    size_t min_mem = DbManagerConcurrentTierMemUsage(this_tier, this_tier_size);
     if (memlimit < min_mem) return false;
 
     // Subtract the amount of memory required.
@@ -296,32 +287,14 @@ static bool Step1LoadChildren(void) {
     return true;
 }
 
-// -------------------------- Step2SetupSolverArrays --------------------------
+// --------------------------- Step2SetupSolverArray ---------------------------
 
 /**
  * @brief Initializes database and number of undecided children array.
  */
-static bool Step2SetupSolverArrays(void) {
-    int error = DbManagerCreateSolvingTier(this_tier,
-                                           current_api.GetTierSize(this_tier));
-    if (error != 0) return false;
-
-#ifdef _OPENMP
-    num_undecided_children = (AtomicChildPosCounterType *)GamesmanMalloc(
-        this_tier_size * sizeof(AtomicChildPosCounterType));
-    if (num_undecided_children == NULL) return false;
-
-    for (int64_t i = 0; i < this_tier_size; ++i) {
-        atomic_init(&num_undecided_children[i], 0);
-    }
-#else   // _OPENMP not defined
-    size_t size = this_tier_size * sizeof(ChildPosCounterType);
-    num_undecided_children = (ChildPosCounterType *)GamesmanMalloc(size);
-    if (num_undecided_children == NULL) return false;
-    memset(num_undecided_children, 0, size);
-#endif  // _OPENMP
-
-    return true;
+static bool Step2SetupSolverArray(void) {
+    return DbManagerCreateConcurrentSolvingTier(this_tier, this_tier_size) ==
+           kNoError;
 }
 
 // ------------------------------- Step3ScanTier -------------------------------
@@ -331,11 +304,10 @@ static bool IsCanonicalPosition(Position position) {
     return current_api.GetCanonicalPosition(tier_position) == position;
 }
 
-static ChildPosCounterType Step3_0CountChildren(Position position) {
+static int Step3_0CountChildren(Position position) {
     TierPosition tier_position = {.tier = this_tier, .position = position};
     if (!use_reverse_graph) {
-        return (ChildPosCounterType)
-            current_api.GetNumberOfCanonicalChildPositions(tier_position);
+        return current_api.GetNumberOfCanonicalChildPositions(tier_position);
     }
     // Else, count children manually and add position as their parent in the
     // reverse graph.
@@ -348,16 +320,7 @@ static ChildPosCounterType Step3_0CountChildren(Position position) {
         }
     }
 
-    return (ChildPosCounterType)num_children;
-}
-
-static void SetNumUndecidedChildren(Position pos, ChildPosCounterType value) {
-#ifdef _OPENMP
-    atomic_store_explicit(&num_undecided_children[pos], value,
-                          memory_order_relaxed);
-#else   // _OPENMP not defined
-    num_undecided_children[pos] = value;
-#endif  // _OPENMP
+    return num_children;
 }
 
 /**
@@ -391,13 +354,15 @@ static bool Step3ScanTier(void) {
                     ConcurrentBoolStore(&success, false);
                 }
                 continue;
-            }  // Execute the following lines if tier_position is not primitive.
-            ChildPosCounterType num_children = Step3_0CountChildren(position);
-            if (num_children <= 0) {
-                // Either OOM or no children.
+            }
+
+            // If tier_position is not primitive, count and set its number of
+            // undecided children.
+            int num_children = Step3_0CountChildren(position);
+            if (num_children <= 0 ||
+                DbManagerSetRemoteness(position, num_children) != kNoError) {
                 ConcurrentBoolStore(&success, false);
             }
-            SetNumUndecidedChildren(position, num_children);
         }
     }
 
@@ -469,7 +434,8 @@ static void UpdateFrontierAndChildTierIds(int64_t i, const Frontier *frontiers,
  */
 static bool PushFrontierHelper(
     Frontier *frontiers, int remoteness,
-    bool (*ProcessPosition)(int remoteness, TierPosition tier_position)) {
+    bool (*ProcessPosition)(int remoteness, TierPosition tier_position,
+                            int tid)) {
     //
     int64_t *frontier_offsets = MakeFrontierOffsets(frontiers, remoteness);
     if (!frontier_offsets) return false;
@@ -477,7 +443,7 @@ static bool PushFrontierHelper(
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
     PRAGMA_OMP(parallel if (frontier_offsets[num_threads] > 16)) {
-        int frontier_id = 0, child_index = 0;
+        int frontier_id = 0, child_index = 0, tid = ConcurrencyGetOmpThreadId();
         PRAGMA_OMP(for schedule(monotonic:dynamic, 16))
         for (int64_t i = 0; i < frontier_offsets[num_threads]; ++i) {
             UpdateFrontierAndChildTierIds(i, frontiers, &frontier_id,
@@ -489,7 +455,7 @@ static bool PushFrontierHelper(
                 .position = FrontierGetPosition(&frontiers[frontier_id],
                                                 remoteness, index_in_frontier),
             };
-            if (!ProcessPosition(remoteness, tier_position)) {
+            if (!ProcessPosition(remoteness, tier_position, tid)) {
                 ConcurrentBoolStore(&success, false);
             }
         }
@@ -505,28 +471,18 @@ static bool PushFrontierHelper(
     return ConcurrentBoolLoad(&success);
 }
 
-// This function is called within a OpenMP parallel region.
+// This function is called within an OpenMP parallel region.
 static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
-                                     bool processing_lose) {
+                                     bool processing_lose, int tid) {
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents = current_api.GetCanonicalParentPositions(
         tier_position, this_tier, parents);
-    int tid = ConcurrencyGetOmpThreadId();
     Value value = processing_lose ? kWin : kTie;
     Frontier *frontier =
         processing_lose ? &win_frontiers[tid] : &tie_frontiers[tid];
     for (int i = 0; i < num_parents; ++i) {
-#ifdef _OPENMP
-        // Atomically fetch num_undecided_children[parents[i]] into
-        // child_remaining and set it to zero.
-        ChildPosCounterType child_remaining = atomic_exchange_explicit(
-            &num_undecided_children[parents[i]], 0, memory_order_relaxed);
-#else                                        // _OPENMP not defined
-        ChildPosCounterType child_remaining =
-            num_undecided_children[parents[i]];
-        num_undecided_children[parents[i]] = 0;
-#endif                                       // _OPENMP
-        if (child_remaining <= 0) continue;  // Parent already solved.
+        int child_remaining = DbManagerClearNumUndecidedChildren(parents[i]);
+        if (child_remaining == 0) continue;  // Parent already solved.
 
         // All parents are win/tie in (remoteness + 1) positions.
         DbManagerSetValueRemoteness(parents[i], value, remoteness + 1);
@@ -539,40 +495,37 @@ static bool ProcessLoseOrTiePosition(int remoteness, TierPosition tier_position,
     return true;
 }
 
-static bool ProcessLosePosition(int remoteness, TierPosition tier_position) {
-    return ProcessLoseOrTiePosition(remoteness, tier_position, true);
+static bool ProcessLosePosition(int remoteness, TierPosition tier_position,
+                                int tid) {
+    return ProcessLoseOrTiePosition(remoteness, tier_position, true, tid);
 }
 
-// This function is called within a OpenMP parallel region.
-static bool ProcessWinPosition(int remoteness, TierPosition tier_position) {
+// This function is called within an OpenMP parallel region.
+static bool ProcessWinPosition(int remoteness, TierPosition tier_position,
+                               int tid) {
     Position parents[kTierSolverNumParentPositionsMax];
     int num_parents = current_api.GetCanonicalParentPositions(
         tier_position, this_tier, parents);
-    int tid = ConcurrencyGetOmpThreadId();
     for (int i = 0; i < num_parents; ++i) {
-#ifdef _OPENMP
-        ChildPosCounterType child_remaining = atomic_fetch_sub_explicit(
-            &num_undecided_children[parents[i]], 1, memory_order_relaxed);
-#else   // _OPENMP not defined
-        ChildPosCounterType child_remaining =
-            num_undecided_children[parents[i]]--;
-#endif  // _OPENMP
+        int child_remaining =
+            DbManagerDecrementNumUndecidedChildren(parents[i]);
+        if (child_remaining != 1) continue;
+
         // If this child position is the last undecided child of parent
         // position, mark parent as lose in (childRmt + 1).
-        if (child_remaining == 1) {
-            DbManagerSetValueRemoteness(parents[i], kLose, remoteness + 1);
-            int this_tier_index = num_child_tiers - 1;
-            bool success = FrontierAdd(&lose_frontiers[tid], parents[i],
-                                       remoteness + 1, this_tier_index);
-            if (!success) return false;  // OOM.
-        }
+        DbManagerSetValueRemoteness(parents[i], kLose, remoteness + 1);
+        int this_tier_index = num_child_tiers - 1;
+        bool success = FrontierAdd(&lose_frontiers[tid], parents[i],
+                                   remoteness + 1, this_tier_index);
+        if (!success) return false;  // OOM.
     }
 
     return true;
 }
 
-static bool ProcessTiePosition(int remoteness, TierPosition tier_position) {
-    return ProcessLoseOrTiePosition(remoteness, tier_position, false);
+static bool ProcessTiePosition(int remoteness, TierPosition tier_position,
+                               int tid) {
+    return ProcessLoseOrTiePosition(remoteness, tier_position, false, tid);
 }
 
 static void DestroyFrontiers(void) {
@@ -620,25 +573,14 @@ static bool Step4PushFrontierUp(void) {
 
 // -------------------------- Step5MarkDrawPositions --------------------------
 
-static ChildPosCounterType GetNumUndecidedChildren(Position pos) {
-#ifdef _OPENMP
-    return atomic_load_explicit(&num_undecided_children[pos],
-                                memory_order_relaxed);
-#else   // _OPENMP not defined
-    return num_undecided_children[pos];
-#endif  // _OPENMP
-}
-
 static void Step5MarkDrawPositions(void) {
     PRAGMA_OMP(parallel for if(parallel_scan_this_tier))
     for (Position position = 0; position < this_tier_size; ++position) {
         // A position is drawing if it still has undecided children.
-        if (GetNumUndecidedChildren(position) > 0) {
-            DbManagerSetValue(position, kDraw);
+        if (DbManagerGetNumUndecidedChildren(position) > 0) {
+            DbManagerSetValueRemoteness(position, kDraw, 0);
         }
     }
-    GamesmanFree(num_undecided_children);
-    num_undecided_children = NULL;
 }
 
 // ------------------------------ Step6SaveValues ------------------------------
@@ -714,8 +656,6 @@ static void Step7Cleanup(void) {
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
     DestroyFrontiers();
-    GamesmanFree(num_undecided_children);
-    num_undecided_children = NULL;
     if (use_reverse_graph) ReverseGraphDestroy(&reverse_graph);
     GamesmanAllocatorRelease(allocator);
     allocator = NULL;
@@ -735,7 +675,7 @@ int TierWorkerBIFrontierPercolation(const TierSolverApi *api,
         goto _bailout;
     }
     if (!Step1LoadChildren()) goto _bailout;
-    if (!Step2SetupSolverArrays()) goto _bailout;
+    if (!Step2SetupSolverArray()) goto _bailout;
     if (!Step3ScanTier()) goto _bailout;
     if (!Step4PushFrontierUp()) goto _bailout;
     Step5MarkDrawPositions();

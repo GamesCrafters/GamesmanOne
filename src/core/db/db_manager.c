@@ -140,12 +140,24 @@ bool DbManagerMaximizeValueRemoteness(Position position, Value value,
                                                compare);
 }
 
+int DbManagerDecrementNumUndecidedChildren(Position position) {
+    return current_db->DecrementNumUndecidedChildren(position);
+}
+
+int DbManagerClearNumUndecidedChildren(Position position) {
+    return current_db->ClearNumUndecidedChildren(position);
+}
+
 Value DbManagerGetValue(Position position) {
     return current_db->GetValue(position);
 }
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+int DbManagerGetNumUndecidedChildren(Position position) {
+    return current_db->GetNumUndecidedChildren(position);
 }
 
 bool DbManagerCheckpointExists(Tier tier) {

@@ -53,6 +53,17 @@
 //   "ConcurrentBoolStore(&success, condition);". The former creates a race
 //   condition whereas the latter may overwrite an already failing result.
 
+/**
+ * @brief Integer type for storing the number of undecided child positions.
+ *
+ * @note The current definition assumes the number of children of any position
+ * is no more than 32767.
+ */
+typedef int16_t ChildPosCounterType;
+#ifdef _OPENMP
+typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
+#endif  // _OPENMP
+
 // Copy of the API functions from tier_manager. Cannot use a reference here
 // because we need to create/modify some of the functions.
 static const TierSolverApi *api_internal;
@@ -65,24 +76,18 @@ static int64_t this_tier_size;        // Size of the tier being solved.
 static bool parallel_scan_this_tier;  // Whether the current tier should be
                                       // scanned in parallel.
 
-// Array of child tiers with this_tier appended to the back.
-static Tier child_tiers[kTierSolverNumChildTiersMax];
-static int num_child_tiers;  // Size of child_tiers.
-static int max_win_lose_remoteness;
-static int max_tie_remoteness;
-
-typedef int16_t ChildPosCounterType;
-// Number of undecided child positions array (malloc'ed and owned by the
-// TierWorkerSolve function). Note that we are assuming the number of children
-// of ANY position is no more than 32767.
 #ifdef _OPENMP
-typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
 static AtomicChildPosCounterType *num_undecided_children = NULL;
 #else   // _OPENMP not defined
 static ChildPosCounterType *num_undecided_children = NULL;
 #endif  // _OPENMP
 
-static int num_threads;  // Number of threads available.
+// Array of child tiers with this_tier appended to the back.
+static Tier child_tiers[kTierSolverNumChildTiersMax];
+static int num_child_tiers;          // Size of child_tiers.
+static int max_win_lose_remoteness;  // Max win/loss remoteness discovered
+static int max_tie_remoteness;       // Max tie remoteness discovered
+static int num_threads;              // Number of threads available.
 
 // ------------------------------ Step0Initialize ------------------------------
 
