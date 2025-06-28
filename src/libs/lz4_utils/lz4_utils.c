@@ -260,7 +260,7 @@ int64_t Lz4UtilsCompressFile(const char *ifname, int level,
 
 // LZ4F_decompress has a somewhat confusing API. The 3rd
 // (dstSizePtr) and the 5th (srcSizePtr) parameters are used as
-// input and output parameters at the same time. The initially hold
+// input and output parameters at the same time. They initially hold
 // the CAPACITIES of the buffers and are set to the number of
 // ACTUALLY CONSUMED bytes after the function call.
 static int64_t DecompressFileInternal(FILE *f_in, void **out,
