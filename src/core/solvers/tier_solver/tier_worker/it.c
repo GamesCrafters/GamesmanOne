@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm implementation.
- * @version 1.1.2
- * @date 2025-04-23
+ * @version 1.1.3
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,7 +28,8 @@
 
 #include <assert.h>   // static_assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // intptr_t, int64_t
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // printf, fprintf, stderr
 
 #include "core/concurrency.h"
@@ -53,7 +54,7 @@
 // Reference to the set of tier solver API functions for the current game.
 static const TierSolverApi *api_internal;
 
-static intptr_t mem;            // Heap memory remaining for loading tiers.
+static size_t mem;              // Heap memory remaining for loading tiers.
 static Tier this_tier;          // The tier being solved.
 static int64_t this_tier_size;  // Size of the tier being solved.
 
@@ -77,12 +78,9 @@ static bool Step0_0SetupChildTiers(void) {
     TierArrayInit(&canonical_child_tiers);
     for (int i = 0; i < num_child_tiers; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(child_tiers[i]);
-
-        // Another child tier is symmetric to this one and was already added.
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        TierArrayAppend(&canonical_child_tiers, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
+            TierArrayAppend(&canonical_child_tiers, canonical);
+        }
     }
 
     // Sort the array of canonical child tiers in ascending size order.
@@ -93,9 +91,9 @@ static bool Step0_0SetupChildTiers(void) {
 }
 
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
-                            intptr_t memlimit) {
+                            size_t memlimit) {
     api_internal = api;
-    mem = memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
+    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 
@@ -112,7 +110,7 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier,
         Tier largest_child_tier =
             canonical_child_tiers.array[canonical_child_tiers.size - 1];
         int64_t size = api_internal->GetTierSize(largest_child_tier);
-        intptr_t largest_child_mem =
+        size_t largest_child_mem =
             DbManagerTierMemUsage(largest_child_tier, size);
         if (largest_child_mem > mem) return false;
     }
@@ -131,7 +129,7 @@ static bool Step1_0LoadChildTiers(BitStream *processed) {
         // Check if the tier can be loaded.
         Tier child_tier = canonical_child_tiers.array[i];
         int64_t size = api_internal->GetTierSize(child_tier);
-        intptr_t required =
+        size_t required =
             DbManagerTierMemUsage(canonical_child_tiers.array[i], size);
         if (required > mem) continue;  // Not enough memory to load this tier.
 
@@ -229,15 +227,15 @@ static void MaximizeParent(Position parent, Value child_value,
         OutcomeCompare(parent_value, parent_remoteness, parent_new_value,
                        parent_new_remoteness) < 0) {
         // Maximize parent outcome.
-        DbManagerSetValue(parent, parent_new_value);
-        DbManagerSetRemoteness(parent, parent_new_remoteness);
+        DbManagerSetValueRemoteness(parent, parent_new_value,
+                                    parent_new_remoteness);
     }
 }
 
 static bool Step1_1IterateOnePass(void) {
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(1024)
+    PRAGMA_OMP(parallel for schedule(dynamic, 1024))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         if (!success) continue;  // Fail fast.
         TierPosition tier_position = {.tier = this_tier, .position = pos};
@@ -251,8 +249,7 @@ static bool Step1_1IterateOnePass(void) {
         Value primitive_value = api_internal->Primitive(tier_position);
         if (primitive_value != kUndecided) {  // If primitive...
             // Set value immediately and continue to the next position.
-            DbManagerSetValue(pos, primitive_value);
-            DbManagerSetRemoteness(pos, 0);
+            DbManagerSetValueRemoteness(pos, primitive_value, 0);
             continue;
         }
 
@@ -389,7 +386,6 @@ static void Step3Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              intptr_t memlimit,
                               const TierWorkerSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
@@ -399,7 +395,7 @@ int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
     }
 
     /* Immediate transition main algorithm. */
-    if (!Step0Initialize(api, tier, memlimit)) goto _bailout;
+    if (!Step0Initialize(api, tier, options->memlimit)) goto _bailout;
     if (!Step1Iterate()) goto _bailout;
     Step2FlushDb();
     if (options->compare && !CompareDb()) goto _bailout;

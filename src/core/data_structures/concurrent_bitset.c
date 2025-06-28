@@ -106,7 +106,7 @@ ConcurrentBitset *ConcurrentBitsetCreateAllocator(
 
     // Initialize all blocks to 0.
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         atomic_init(&ret->data[i], 0);
     }
@@ -128,7 +128,7 @@ ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
 
     // Copy all blocks from other.
     int64_t num_blocks = NumBitsToNumBlocks(other->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         BlockType block =
             atomic_load_explicit(&other->data[i], memory_order_relaxed);
@@ -190,7 +190,7 @@ void ConcurrentBitsetResetAll(ConcurrentBitset *s) {
     if (s == NULL) return;
 
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         atomic_store_explicit(&s->data[i], 0, memory_order_relaxed);
     }
@@ -216,7 +216,7 @@ size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s) {
 void ConcurrentBitsetSerialize(const ConcurrentBitset *s, void *buf) {
     BlockType *out = (BlockType *)buf;
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         out[i] = atomic_load_explicit(&s->data[i], memory_order_relaxed);
     }
@@ -225,7 +225,7 @@ void ConcurrentBitsetSerialize(const ConcurrentBitset *s, void *buf) {
 void ConcurrentBitsetDeserialize(ConcurrentBitset *s, const void *buf) {
     const BlockType *in = (const BlockType *)buf;
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         atomic_store_explicit(&s->data[i], in[i], memory_order_relaxed);
     }

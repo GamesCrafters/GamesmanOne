@@ -29,12 +29,13 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
-#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_REVERSE_GRAPH_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_REVERSE_GRAPH_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
 
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_types.h"
 
 #ifdef _OPENMP
@@ -55,6 +56,9 @@
  * positions of a given position.
  */
 typedef struct ReverseGraph {
+    /** Allocator in use. */
+    GamesmanAllocator *allocator;
+
     /** 2-dimensional Position array where each array stores the parents of the
      * Position of hash equal to its index minus its tier offset. */
     PositionArray *parents_of;
@@ -94,12 +98,14 @@ typedef struct ReverseGraph {
  * @param num_child_tiers Number of child tiers in CHILD_TIERS.
  * @param this_tier Current solving tier.
  * @param GetTierSize Method to get the size of a tier in number of positions.
+ * @param allocator Memory allocator to use.
  * @return true on success,
  * @return false otherwise.
  */
 bool ReverseGraphInit(ReverseGraph *graph, const Tier *child_tiers,
                       int num_child_tiers, Tier this_tier,
-                      int64_t (*GetTierSize)(Tier tier));
+                      int64_t (*GetTierSize)(Tier tier),
+                      GamesmanAllocator *allocator);
 
 /** @brief Destroys the reverse GRAPH, freeing all allocated memory. */
 void ReverseGraphDestroy(ReverseGraph *graph);
@@ -123,4 +129,4 @@ PositionArray ReverseGraphPopParentsOf(ReverseGraph *graph,
  */
 bool ReverseGraphAdd(ReverseGraph *graph, TierPosition child, Position parent);
 
-#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_GRAPH_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_REVERSE_GRAPH_H_

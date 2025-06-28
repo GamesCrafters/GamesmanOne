@@ -66,10 +66,10 @@ typedef struct TierPosition {
 typedef enum Value {
     kErrorValue = -1, /**< This illegal value indicates an error. */
     kUndecided = 0,   /**< Value has not been decided. */
-    kLose,            /**< Current player is losing in a perfect play. */
+    kLose,            /**< Current player is losing in perfect play. */
     kDraw,            /**< Players are in a draw assuming perfect play. */
     kTie,             /**< The game will end in a tie assuming perfect play. */
-    kWin,             /**< Current player is winning in a perfect play. */
+    kWin,             /**< Current player is winning in perfect play. */
     kNumValues,       /**< Number of possible legal values. */
 } Value;
 
@@ -78,8 +78,8 @@ typedef enum Value {
  */
 typedef enum TierType {
     /**
-     * @brief A tier T is of this type if, for all positions P in T, the child
-     * positions of P is not in T. This also implies that T is loop-free.
+     * @brief A tier T is of this type if for all positions P in T, none of the
+     * child positions of P are in T. This also implies that T is loop-free.
      */
     kTierTypeImmediateTransition,
 
@@ -90,7 +90,7 @@ typedef enum TierType {
     kTierTypeLoopFree,
 
     /**
-     * @brief A tier T is of this type if it is loopy, or if its loopiness is
+     * @brief A tier T is of this type if it is loopy or if its loopiness is
      * unclear.
      *
      * @note The loopy algorithm also works on loop-free tiers. Hence, this

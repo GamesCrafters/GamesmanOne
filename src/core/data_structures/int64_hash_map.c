@@ -31,21 +31,28 @@
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL
 #include <stdint.h>   // int64_t, uint64_t
+#include <string.h>   // memset
 
+#include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"  // NextPrime
 
-static int64_t Hash(int64_t key, int64_t capacity) {
-    return (int64_t)(((uint64_t)key) % capacity);
+static int64_t Hash(int64_t key, int64_t capacity_mask) {
+    return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
 }
 
-static int64_t NextIndex(int64_t index, int64_t capacity) {
-    return (index + 1) % capacity;
+static int64_t NextIndex(int64_t index, int64_t capacity_mask) {
+    return (index + 1) & capacity_mask;
 }
 
 void Int64HashMapInit(Int64HashMap *map, double max_load_factor) {
+    Int64HashMapInitAllocator(map, max_load_factor, NULL);
+}
+
+void Int64HashMapInitAllocator(Int64HashMap *map, double max_load_factor,
+                               GamesmanAllocator *allocator) {
+    map->allocator = GamesmanAllocatorAddRef(allocator);
     map->entries = NULL;
-    map->capacity = 0;
+    map->capacity_mask = -1;
     map->size = 0;
     if (max_load_factor > 0.75) max_load_factor = 0.75;
     if (max_load_factor < 0.25) max_load_factor = 0.25;
@@ -53,9 +60,11 @@ void Int64HashMapInit(Int64HashMap *map, double max_load_factor) {
 }
 
 void Int64HashMapDestroy(Int64HashMap *map) {
-    GamesmanFree(map->entries);
+    GamesmanAllocatorDeallocate(map->allocator, map->entries);
+    GamesmanAllocatorRelease(map->allocator);
+    map->allocator = NULL;
     map->entries = NULL;
-    map->capacity = 0;
+    map->capacity_mask = -1;
     map->size = 0;
 }
 
@@ -68,62 +77,68 @@ static Int64HashMapIterator NewIterator(const Int64HashMap *map,
 }
 
 Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
-    int64_t capacity = map->capacity;
     // Edge case: return invalid iterator if map is empty.
-    if (capacity == 0) return NewIterator(map, capacity);
-    int64_t index = Hash(key, capacity);
+    if (map->capacity_mask < 0) return NewIterator(map, -1);
+
+    int64_t index = Hash(key, map->capacity_mask);
     while (map->entries[index].used) {
         if (map->entries[index].key == key) {
             return NewIterator(map, index);
         }
-        index = NextIndex(index, capacity);
+        index = NextIndex(index, map->capacity_mask);
     }
-    return NewIterator(map, capacity);
+
+    return NewIterator(map, map->capacity_mask + 1);
 }
 
-static bool Expand(Int64HashMap *map) {
-    int64_t new_capacity = NextPrime(map->capacity * 2);
-    Int64HashMapEntry *new_entries = (Int64HashMapEntry *)GamesmanCallocWhole(
-        new_capacity, sizeof(Int64HashMapEntry));
+static bool Expand(Int64HashMap *map, int64_t new_mask) {
+    size_t alloc_size = (new_mask + 1) * sizeof(Int64HashMapEntry);
+    Int64HashMapEntry *new_entries =
+        (Int64HashMapEntry *)GamesmanAllocatorAllocate(map->allocator,
+                                                       alloc_size);
     if (new_entries == NULL) return false;
-    for (int64_t i = 0; i < map->capacity; ++i) {
+    memset(new_entries, 0, alloc_size);
+
+    for (int64_t i = 0; i <= map->capacity_mask; ++i) {
         if (map->entries[i].used) {
-            int64_t new_index = Hash(map->entries[i].key, new_capacity);
+            int64_t new_index = Hash(map->entries[i].key, new_mask);
             while (new_entries[new_index].used) {
-                new_index = NextIndex(new_index, new_capacity);
+                new_index = NextIndex(new_index, new_mask);
             }
             new_entries[new_index] = map->entries[i];
         }
     }
-    GamesmanFree(map->entries);
+    GamesmanAllocatorDeallocate(map->allocator, map->entries);
     map->entries = new_entries;
-    map->capacity = new_capacity;
+    map->capacity_mask = new_mask;
+
     return true;
 }
 
 bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value) {
     // Check if resizing is needed.
-    double load_factor = (map->capacity == 0)
-                             ? INFINITY
-                             : (double)(map->size + 1) / (double)map->capacity;
-    if (map->capacity == 0 || load_factor > map->max_load_factor) {
-        if (!Expand(map)) return false;
+    if (map->capacity_mask < 0) {
+        if (!Expand(map, 1)) return false;
+    } else if ((double)(map->size + 1) >
+               (double)(map->capacity_mask + 1) * map->max_load_factor) {
+        int64_t new_capacity_mask = (map->capacity_mask << 1) | 1;
+        if (!Expand(map, new_capacity_mask)) return false;
     }
 
     // Set value at key.
-    int64_t capacity = map->capacity;
-    int64_t index = Hash(key, capacity);
+    int64_t index = Hash(key, map->capacity_mask);
     while (map->entries[index].used) {
         if (map->entries[index].key == key) {
             map->entries[index].value = value;
             return true;
         }
-        index = NextIndex(index, capacity);
+        index = NextIndex(index, map->capacity_mask);
     }
     map->entries[index].key = key;
     map->entries[index].value = value;
     map->entries[index].used = true;
     ++map->size;
+
     return true;
 }
 
@@ -145,20 +160,19 @@ int64_t Int64HashMapIteratorValue(const Int64HashMapIterator *it) {
 }
 
 bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it) {
-    return it->index >= 0 && it->index < it->map->capacity;
+    return it->index >= 0 && it->index <= it->map->capacity_mask;
 }
 
 bool Int64HashMapIteratorNext(Int64HashMapIterator *it, int64_t *key,
                               int64_t *value) {
     const Int64HashMap *map = it->map;
-    for (int64_t i = it->index + 1; i < map->capacity; ++i) {
-        if (map->entries[i].used) {
-            it->index = i;
-            if (key) *key = map->entries[i].key;
-            if (value) *value = map->entries[i].value;
+    while (++it->index <= map->capacity_mask) {
+        if (map->entries[it->index].used) {
+            if (key) *key = map->entries[it->index].key;
+            if (value) *value = map->entries[it->index].value;
             return true;
         }
     }
-    it->index = map->capacity;
+
     return false;
 }

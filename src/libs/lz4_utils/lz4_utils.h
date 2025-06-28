@@ -86,23 +86,6 @@ int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
 
 /**
  * @brief Decompresses the input file of name \p ifname, which is assumed to
- * contain exactly one LZ4 frame, and stores the uncompresses data in \p out of
- * size \p out_size.
- *
- * @param ifname Input compressed file name.
- * @param out (Output parameter) output buffer.
- * @param out_size Size of the output buffer.
- * @return Number of bytes of uncompressed data written to \p out;
- * @return -1 if failed to open input file;
- * @return -2 if failed to allocate memory;
- * @return -3 if input file is corrupt or an error occurred when reading the
- * input file;
- * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity.
- */
-
-/**
- * @brief Decompresses the input file of name \p ifname, which is assumed to
  * contain exactly one LZ4 frame compressed from \p n input buffers of sizes
  * specified by \p out_sizes, and stores the uncompresses streams in \p out.
  *

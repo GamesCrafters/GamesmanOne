@@ -4,9 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Enumeration of errors.
- *
- * @version 1.0.1
- * @date 2024-02-02
+ * @version 2.0.0
+ * @date 2025-05-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,7 +33,7 @@ enum GamesmanError {
     kNotImplementedError,      /**< Feature not implemented. */
     kNotReachedError,          /**< Reaching a branch marked as unreached. */
     kIntegerOverflowError,     /**< Integer overflow. */
-    kMemoryOverflowError,      /**< Memory overflow. */
+    kBufferOverflowError,      /**< Buffer overflow. */
     kFileSystemError,          /**< A file system call returned error. */
     kIllegalArgumentError,     /**< Illegal argument passed into function. */
     kIllegalGameNameError,     /**< Illegal game name encountered. */
@@ -46,6 +45,7 @@ enum GamesmanError {
     kIllegalSolverOptionError,      /**< Illegal solver option encountered. */
     kIncompleteGameplayApiError,    /**< Gameplay API not fully implemented. */
     kGameInitFailureError,          /**< Game initialization failed. */
+    kGameTestFailureError,          /**< Game failed to pass solver tests. */
     kUseBeforeInitializationError,  /**< Module used before initialization. */
     kMpiError,                      /**< Error in MPI function. */
     kHeadlessError,                 /**< Headless command parsing error. */

@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief XZ utilities with random access.
- * @version 1.0.2
- * @date 2024-12-22
+ * @version 2.0.0
+ * @date 2025-06-08
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -185,16 +185,15 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
     }
 }
 
-int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
+int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
                          uint32_t level, bool extreme, int num_threads,
                          const char *ifname) {
-    const char *outfile_mode = append ? "ab" : "wb";
     FILE *infile = fopen(ifname, "rb");
     if (infile == NULL) {
         fprintf(stderr, "XzraCompressFile: failed to open input file\n");
         return -1;
     }
-    FILE *outfile = fopen(ofname, outfile_mode);
+    FILE *outfile = fopen(ofname, "wb");
     if (outfile == NULL) {
         fprintf(stderr, "XzraCompressFile: failed to open output file\n");
         fclose(infile);
@@ -218,10 +217,10 @@ int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
     return ret;
 }
 
-// ============================ XzraCompressStream =============================
+// ============================= XzraCompressMem ==============================
 
-static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
-                                 FILE *outfile) {
+static bool CompressMemHelper(lzma_stream *strm, const uint8_t *in,
+                              size_t in_size, FILE *outfile) {
     uint8_t outbuf[BUFSIZ];
     strm->next_in = in;
     strm->avail_in = in_size;
@@ -234,8 +233,7 @@ static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
                 strm->next_out = NULL;
                 strerror_r(errno, (char *)outbuf, sizeof(outbuf));
-                fprintf(stderr, "XzraCompressStream: Write error: %s\n",
-                        outbuf);
+                fprintf(stderr, "XzraCompressMem: Write error: %s\n", outbuf);
                 return false;
             }
             strm->next_out = outbuf;
@@ -246,20 +244,19 @@ static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
             if (ret == LZMA_STREAM_END) return true;
             const char *msg = LzmaCompressRetDesc(ret);
             fprintf(stderr,
-                    "XzraCompressStream: Encoder error: %s (error code %u)\n",
-                    msg, ret);
+                    "XzraCompressMem: Encoder error: %s (error code %u)\n", msg,
+                    ret);
             return false;
         }
     }
 }
 
-int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
-                           uint32_t level, bool extreme, int num_threads,
-                           uint8_t *in, size_t in_size) {
-    const char *outfile_mode = append ? "ab" : "wb";
-    FILE *outfile = fopen(ofname, outfile_mode);
+int64_t XzraCompressMem(const char *ofname, uint64_t block_size, uint32_t level,
+                        bool extreme, int num_threads, const uint8_t *in,
+                        size_t in_size) {
+    FILE *outfile = fopen(ofname, "wb");
     if (outfile == NULL) {
-        fprintf(stderr, "XzraCompressStream: failed to open output file %s\n",
+        fprintf(stderr, "XzraCompressMem: failed to open output file %s\n",
                 ofname);
         return -2;
     }
@@ -267,15 +264,131 @@ int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
     lzma_stream strm = LZMA_STREAM_INIT;
     bool success =
         InitEncoder(&strm, block_size, level, extreme, num_threads) &&
-        CompressStreamHelper(&strm, in, in_size, outfile);
+        CompressMemHelper(&strm, in, in_size, outfile);
     int64_t ret = success ? (int64_t)strm.total_out : -3;
     lzma_end(&strm);
     if (fclose(outfile)) {
         char buf[BUFSIZ];
         strerror_r(errno, buf, sizeof(buf));
-        fprintf(stderr, "XzraCompressStream: write error: %s\n", buf);
+        fprintf(stderr, "XzraCompressMem: write error: %s\n", buf);
         ret = -3;
     }
+
+    return ret;
+}
+
+// ============================== XzraOutStream ===============================
+
+struct XzraOutStream {
+    uint8_t outbuf[BUFSIZ]; /**< Buffer for output. */
+    FILE *outfile;          /**< Output file. */
+    lzma_stream strm;       /**< LZMA internal stream. */
+};
+
+// =========================== XzraOutStreamCreate ============================
+
+XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
+                                   uint32_t level, bool extreme,
+                                   int num_threads) {
+    XzraOutStream *ret = (XzraOutStream *)malloc(sizeof(XzraOutStream));
+    if (ret == NULL) return NULL;
+
+    ret->outfile = fopen(ofname, "wb");
+    if (ret->outfile == NULL) {
+        fprintf(stderr, "XzraOutStreamCreate: failed to open output file %s\n",
+                ofname);
+        free(ret);
+        return NULL;
+    }
+
+    ret->strm = (lzma_stream)LZMA_STREAM_INIT;
+    if (!InitEncoder(&ret->strm, block_size, level, extreme, num_threads)) {
+        free(ret);
+        return NULL;
+    }
+
+    ret->strm.next_out = ret->outbuf;
+    ret->strm.avail_out = sizeof(ret->outbuf);
+
+    return ret;
+}
+
+// ============================= XzraOutStreamRun ==============================
+
+int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                         size_t in_size) {
+    stream->strm.next_in = in;
+    stream->strm.avail_in = in_size;
+    while (stream->strm.avail_in) {
+        lzma_ret ret = lzma_code(&stream->strm, LZMA_RUN);
+        if (stream->strm.avail_out == 0) {
+            size_t write_size = sizeof(stream->outbuf);
+            if (fwrite(stream->outbuf, 1, write_size, stream->outfile) !=
+                write_size) {
+                strerror_r(errno, (char *)stream->outbuf,
+                           sizeof(stream->outbuf));
+                fprintf(stderr, "XzraOutStreamRun: write error: %s\n",
+                        stream->outbuf);
+                return -3;
+            }
+            stream->strm.next_out = stream->outbuf;
+            stream->strm.avail_out = sizeof(stream->outbuf);
+        }
+        if (ret != LZMA_OK) {
+            const char *msg = LzmaCompressRetDesc(ret);
+            fprintf(stderr,
+                    "XzraOutStreamClose: encoder error: %s (error code %u)\n",
+                    msg, ret);
+            return -3;
+        }
+    }
+
+    return (int64_t)stream->strm.total_out;
+}
+
+// ============================ XzraOutStreamClose =============================
+
+int64_t XzraOutStreamClose(XzraOutStream *stream) {
+    if (stream == NULL) return 0;
+
+    stream->strm.next_in = NULL;
+    stream->strm.avail_in = 0;
+    while (true) {
+        lzma_ret l_ret = lzma_code(&stream->strm, LZMA_FINISH);
+        if (stream->strm.avail_out == 0 || l_ret == LZMA_STREAM_END) {
+            size_t write_size = sizeof(stream->outbuf) - stream->strm.avail_out;
+            if (fwrite(stream->outbuf, 1, write_size, stream->outfile) !=
+                write_size) {
+                strerror_r(errno, (char *)stream->outbuf,
+                           sizeof(stream->outbuf));
+                fprintf(stderr, "XzraOutStreamClose: write error: %s\n",
+                        stream->outbuf);
+                free(stream);
+                return -3;
+            }
+            stream->strm.next_out = stream->outbuf;
+            stream->strm.avail_out = sizeof(stream->outbuf);
+        }
+        if (l_ret != LZMA_OK) {
+            if (l_ret == LZMA_STREAM_END) break;
+
+            const char *msg = LzmaCompressRetDesc(l_ret);
+            fprintf(stderr,
+                    "XzraOutStreamClose: encoder error: %s (error code %u)\n",
+                    msg, l_ret);
+            free(stream);
+            return -3;
+        }
+    }
+    int64_t ret = (int64_t)stream->strm.total_out;
+    lzma_end(&stream->strm);
+    if (fclose(stream->outfile)) {
+        strerror_r(errno, (char *)stream->outbuf, sizeof(stream->outbuf));
+        fprintf(stderr, "XzraOutStreamClose: write error: %s\n",
+                stream->outbuf);
+        ret = -3;
+    }
+    free(stream);
 
     return ret;
 }

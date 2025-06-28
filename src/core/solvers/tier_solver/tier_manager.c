@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.5.0
- * @date 2025-03-30
+ * @version 1.5.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -51,6 +51,7 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/types/gamesman_types.h"
 
 #ifdef USE_MPI
@@ -158,7 +159,7 @@ static bool IncrementNumParentTiers(Tier tier);
 
 static bool IsCanonicalTier(Tier tier);
 
-static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit);
+static int DiscoverTierGraph(bool force, int verbose, size_t memlimit);
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose);
 static void AnalyzeUpdateTierGraph(Tier analyzed_tier);
 static void PrintAnalyzerResult(void);
@@ -196,7 +197,7 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
 }
 
 int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
-                       intptr_t memlimit) {
+                       size_t memlimit) {
     api_internal = api;
     int error = InitGlobalVariables(kTierAnalyzing);
     if (error != 0) {
@@ -274,13 +275,14 @@ static void DestroyGlobalVariables(void) {
  *
  * @details Iterative topological sort using DFS and node coloring (status
  * marking). Algorithm by Ctrl, stackoverflow.com.
- * @link https://stackoverflow.com/a/73210346
+ * https://stackoverflow.com/a/73210346
  */
 static int BuildTierGraph(int type) {
     int ret = 1;
     TierStack fringe;
     TierStackInit(&fringe);
     Tier initial_tier = api_internal->GetInitialTier();
+    initial_tier = api_internal->GetCanonicalTier(initial_tier);
     if (!TierStackPush(&fringe, initial_tier)) goto _bailout;
     if (!TierGraphSetInitial(initial_tier)) goto _bailout;
 
@@ -321,8 +323,8 @@ _bailout:
 
 /**
  * @brief Returns an array of unique canonical child tiers of tier \p parent.
- * Uniqueness enforced through deduplication of child tiers that are symmetric
- * to each other.
+ * Uniqueness is enforced through deduplication of child tiers that are
+ * symmetric to each other.
  */
 static int GetCanonicalChildTiers(
     Tier parent, Tier child_tiers[static kTierSolverNumChildTiersMax]) {
@@ -334,14 +336,33 @@ static int GetCanonicalChildTiers(
     int num_raw = api_internal->GetChildTiers(parent, raw);
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(raw[i]);
-        if (!TierHashSetContains(&dedup, canonical)) {
-            TierHashSetAdd(&dedup, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
             child_tiers[ret++] = canonical;
         }
     }
     TierHashSetDestroy(&dedup);
 
     return ret;
+}
+
+static void PrintDuplicateError(
+    Tier parent, const Tier children[static kTierSolverNumChildTiersMax],
+    int num_children, int i) {
+    //
+    char name[kDbFileNameLengthMax + 1];
+    api_internal->GetTierName(parent, name);
+    printf("ERROR: tier [%s] (#%" PRITier
+           ") contains duplicate tier children\n",
+           name, parent);
+    api_internal->GetTierName(children[i], name);
+    printf("The duplicated child tier is [%s] (#%" PRITier ")\n", name,
+           children[i]);
+    printf("List of all child tiers:\n");
+    for (int j = 0; j < num_children; ++j) {
+        api_internal->GetTierName(children[j], name);
+        printf("[%s] (#%" PRITier ")\n", name, children[j]);
+    }
+    printf("\n");
 }
 
 /**
@@ -359,37 +380,17 @@ static int GetNumCanonicalChildTiers(
     TierHashSetInit(&canonical_dedup, 0.5);
     int i;
     for (i = 0; i < num_children; ++i) {  // For each child
-        if (TierHashSetContains(&dedup, children[i])) {
+        if (!TierHashSetAdd(&dedup, children[i])) {
             ret = -1;
             break;
         }
-        TierHashSetAdd(&dedup, children[i]);
 
         Tier canonical = api_internal->GetCanonicalTier(children[i]);
-        if (!TierHashSetContains(&canonical_dedup, canonical)) {
-            TierHashSetAdd(&canonical_dedup, canonical);
-            ++ret;
-        }
+        ret += TierHashSetAdd(&canonical_dedup, canonical);
     }
     TierHashSetDestroy(&dedup);
     TierHashSetDestroy(&canonical_dedup);
-
-    if (ret < 0) {
-        char name[kDbFileNameLengthMax + 1];
-        api_internal->GetTierName(parent, name);
-        printf("ERROR: tier [%s] (#%" PRITier
-               ") contains duplicate tier children\n",
-               name, parent);
-        api_internal->GetTierName(children[i], name);
-        printf("The duplicated child tier is [%s] (#%" PRITier ")\n", name,
-               children[i]);
-        printf("List of all child tiers:\n");
-        for (int j = 0; j < num_children; ++j) {
-            api_internal->GetTierName(children[j], name);
-            printf("[%s] (#%" PRITier ")\n", name, children[j]);
-        }
-        printf("\n");
-    }
+    if (ret < 0) PrintDuplicateError(parent, children, num_children, i);
 
     return ret;
 }
@@ -681,13 +682,12 @@ static bool SolveUpdateTierGraph(Tier solved_tier) {
     for (int64_t i = 0; i < parent_tiers.size; ++i) {
         // Update canonical parent's number of unsolved children only.
         Tier canonical = api_internal->GetCanonicalTier(parent_tiers.array[i]);
-        if (TierHashSetContains(&canonical_parents, canonical)) {
+        if (!TierHashSetAdd(&canonical_parents, canonical)) {
             // It is possible that a child has two parents that are symmetrical
             // to each other. In this case, we should only decrement the child
             // counter once.
             continue;
         }
-        TierHashSetAdd(&canonical_parents, canonical);
         int num_unsolved_child_tiers = GetNumTiers(canonical);
         if (num_unsolved_child_tiers <= 0) {
             char name[kDbFileNameLengthMax + 1];
@@ -822,7 +822,7 @@ static bool IsCanonicalTier(Tier tier) {
     return api_internal->GetCanonicalTier(tier) == tier;
 }
 
-static int DiscoverTierGraph(bool force, int verbose, intptr_t memlimit) {
+static int DiscoverTierGraph(bool force, int verbose, size_t memlimit) {
     TierAnalyzerInit(api_internal, memlimit);
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -925,6 +925,7 @@ static int TestTierGraph(long seed, int64_t test_size) {
            total_tiers, total_canonical_tiers, total_size,
            TierQueueSize(&pending_tiers));
 
+    TierWorkerTestStackBufferStat *stat = TierWorkerTestStackBufferStatCreate();
     char tier_name[kDbFileNameLengthMax + 1];
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
@@ -944,7 +945,7 @@ static int TestTierGraph(long seed, int64_t test_size) {
                tier_name, tier, api_internal->GetTierSize(tier));
         TierArray parent_tiers = GetParentTiers(tier);
         TierArrayAppend(&parent_tiers, tier);
-        error = TierWorkerTest(tier, &parent_tiers, seed, test_size);
+        error = TierWorkerTest(tier, &parent_tiers, seed, test_size, stat);
         TierArrayDestroy(&parent_tiers);
         if (error == kTierSolverTestNoError) {
             // Test passed.
@@ -959,6 +960,8 @@ static int TestTierGraph(long seed, int64_t test_size) {
         printf("PASSED. %" PRId64 " tiers ready in test queue\n",
                TierQueueSize(&pending_tiers));
     }
+    TierWorkerTestStackBufferStatPrint(stat);
+    TierWorkerTestStackBufferStatDestroy(stat);
     PrintTestResult(time_elapsed);
 
     return kTierSolverTestNoError;
@@ -993,11 +996,10 @@ static void PrintTierGraphAnalysis(void) {
         printf("[%s] (#%" PRITier "), ", name, children[i]);
         const Tier canonical = api_internal->GetCanonicalTier(children[i]);
         api_internal->GetTierName(canonical, name);
-        if (TierHashSetContains(&dedup, canonical)) {
+        if (!TierHashSetAdd(&dedup, canonical)) {
             printf("which is already loaded as [%s] (#%" PRITier ")\n", name,
                    canonical);
         } else {
-            TierHashSetAdd(&dedup, canonical);
             int64_t size = api_internal->GetTierSize(canonical);
             if (canonical == children[i]) {
                 printf("which is canonical and contains %" PRId64

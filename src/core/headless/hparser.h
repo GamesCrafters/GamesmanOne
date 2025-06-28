@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Command line parsing module for headless mode.
- * @version 1.2.0
- * @date 2024-09-08
+ * @version 1.3.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,6 +31,7 @@
  * Headless Commands:
  * solve <game> [<variant_id>]    // solve and analyze game.
  * analyze <game> [<variant_id>]  // analyze only, assuming solved.
+ * test <game> [<variant_id>]     // test game variant or all variants.
  *
  * query <game> <variant_id> <position>  // get detailed position response.
  * getstart <game> [<variant_id>]        // get starting position.
@@ -38,8 +39,9 @@
  *
  * Options:
  * --data-path=<path>
- * --memory=<limit>  // in GiB
+ * -M<limit>, --memory=<limit>  // in GiB
  * -o, --output=<path>
+ * --seed=<seed>  // only effective when testing
  * -f, --force    // only effective when solving/analyzing
  * -q, --quiet    // only effective when solving/analyzing
  * -v, --verbose  // only effective when solving/analyzing
@@ -53,6 +55,7 @@ enum HeadlessAction {
     kInvalidHeadlessAction = -1, /**< Invalid. */
     kHeadlessSolve,              /**< Solve. */
     kHeadlessAnalyze,            /**< Analyze. */
+    kHeadlessTest,               /**< Test. */
     kHeadlessQuery,              /**< Query position. */
     kHeadlessGetStart,           /**< Get start position. */
     kHeadlessGetRandom,          /**< Get random position. */
@@ -68,6 +71,7 @@ typedef struct HeadlessArguments {
     char *data_path;  /**< Path to the "data" directory, NULL for default. */
     char *memlimit;   /**< Heap memory limit, NULL for default (90%). */
     char *output;     /**< Path to output file, defaults to stdout if NULL. */
+    char *seed;       /**< Seed for PRNGs, defaults to current system time. */
     int action;       /**< Action to take. */
     int force;        /**< Whether to force solve/analyze. */
     int verbose;      /**< Whether to print additional output. */

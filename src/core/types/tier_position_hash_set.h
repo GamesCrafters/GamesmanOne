@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set.
- * @version 1.1.0
- * @date 2025-03-13
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -41,9 +41,11 @@ typedef struct TierPositionHashSetEntry {
 /** @brief Linear-probing TierPosition hash set. */
 typedef struct TierPositionHashSet {
     TierPositionHashSetEntry *entries; /**< Array of buckets. */
-    int64_t capacity;                  /**< Number of buckets allocated. */
     int64_t size;           /**< Number of items stored in the set. */
     double max_load_factor; /**< Maximum load factor of the set. */
+    
+    /** Number of buckets - 1, for fast bucket indexing. */
+    int64_t capacity_mask;
 } TierPositionHashSet;
 
 /**
@@ -67,6 +69,9 @@ void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
  * \c true is returned, the target hash set \p set is guaranteed to have space
  * for at least \p size Tier Positions before it expands internally. If \c false
  * is returned, the hash set remains unchanged.
+ * @note This function takes O( \p size ) time due to the initialization of the
+ * internal array. This may become a bottleneck in a hot loop if the size of the
+ * set exceeds L1 cache size.
  *
  * @param set Target hash set.
  * @param size Number of Tier Positions to reserve space for.
@@ -85,12 +90,13 @@ void TierPositionHashSetDestroy(TierPositionHashSet *set);
 bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
 
 /**
- * @brief Adds KEY to the TierPosition hash set SET.
+ * @brief Adds \p key to \p set or does nothing if \p set already contains
+ * \p key.
  *
- * @param set Destination TierPosition hash set.
- * @param key Tier position to add.
- * @return true on success,
- * @return false otherwise.
+ * @param set Set to add \p key to.
+ * @param key Key to add to \p set.
+ * @return \c true if \p key was added to \p set as a new key, or
+ * @return \c false if \p set already contains \p key or an error occurred.
  */
 bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
 

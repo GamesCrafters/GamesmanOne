@@ -69,6 +69,7 @@ bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
 void Int64ArrayDestroy(Int64Array *array) {
     GamesmanAllocatorDeallocate(array->allocator, array->array);
     GamesmanAllocatorRelease(array->allocator);
+    array->allocator = NULL;
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;

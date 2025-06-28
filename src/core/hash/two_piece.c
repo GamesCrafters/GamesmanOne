@@ -70,13 +70,13 @@ static uint32_t **pop_order_to_pattern;
 static int curr_num_symmetries;
 static uint32_t **pattern_symmetries;  // [symm][pattern]
 
-intptr_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
-    intptr_t ret = (1 << board_size) * sizeof(int32_t);
+size_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
+    size_t ret = (1ULL << board_size) * sizeof(int32_t);
     ret += (board_size + 1) * sizeof(uint32_t *);
-    ret += (1 << board_size) * sizeof(int32_t);  // Binomial theorem
+    ret += (1ULL << board_size) * sizeof(int32_t);  // Binomial theorem
 
     if (num_symmetries > 1) {
-        ret += num_symmetries * (1 << board_size) * sizeof(uint32_t);
+        ret += num_symmetries * (1ULL << board_size) * sizeof(uint32_t);
     }
 
     return ret;
@@ -85,7 +85,7 @@ intptr_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries) {
 static int InitTables(void) {
     // Allocate space
     pattern_to_order =
-        (int32_t *)GamesmanMalloc((1 << curr_board_size) * sizeof(int32_t));
+        (int32_t *)GamesmanMalloc((1ULL << curr_board_size) * sizeof(int32_t));
     pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
         (curr_board_size + 1), sizeof(uint32_t *));
     if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
@@ -115,7 +115,7 @@ static int InitSymmetries(const int *const *symmetry_matrix) {
     if (!pattern_symmetries) return kMallocFailureError;
     for (int i = 0; i < curr_num_symmetries; ++i) {
         pattern_symmetries[i] = (uint32_t *)GamesmanMalloc(
-            (1 << curr_board_size) * sizeof(uint32_t));
+            (1ULL << curr_board_size) * sizeof(uint32_t));
         if (!pattern_symmetries[i]) return kMallocFailureError;
     }
 
@@ -216,7 +216,7 @@ Position TwoPieceHashHash(uint64_t board, int turn) {
     uint32_t s_o = _pext_u32((uint32_t)board, ~s_x);
 #else   // GAMESMAN_HAS_BMI2 not defined
     uint32_t s_o = 0;
-    for (uint64_t mask = 1 << (curr_board_size - 1); mask; mask >>= 1) {
+    for (uint64_t mask = 1ULL << (curr_board_size - 1); mask; mask >>= 1) {
         if (board & mask) {
             s_o = (s_o << 1) | 1;
         } else if (!(s_x & mask)) {

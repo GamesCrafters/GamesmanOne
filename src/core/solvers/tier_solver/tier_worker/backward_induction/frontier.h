@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
-#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -76,6 +76,9 @@ typedef struct FrontierInternal {
      */
     int64_t **dividers;
 
+    /** Allocator in use. */
+    GamesmanAllocator *allocator;
+
     /** Number of frontier arrays. */
     int size;
 
@@ -105,10 +108,12 @@ typedef struct Frontier {
  * set to the maximum remoteness supported by GAMESMAN plus one.
  * @param dividers_size Number of dividers to allocate. This should be set to
  * the number of child tiers of the current solving tier.
- * @return true on success,
- * @return false otherwise.
+ * @param allocator Pointer to the memory allocator to use.
+ * @return \c true on success,
+ * @return \c false otherwise.
  */
-bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size);
+bool FrontierInit(Frontier *frontier, int frontier_size, int dividers_size,
+                  GamesmanAllocator *allocator);
 
 /** @brief Destroys FRONTIER, freeing all allocated memory. */
 void FrontierDestroy(Frontier *frontier);
@@ -179,4 +184,4 @@ static inline int64_t FrontierGetDivider(const Frontier *frontier,
  */
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness);
 
-#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_FRONTIER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_

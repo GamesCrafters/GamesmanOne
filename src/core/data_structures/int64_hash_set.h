@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing int64_t hash set.
- * @version 1.1.1
- * @date 2025-04-26
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -59,10 +59,12 @@ typedef struct Int64HashSetEntry {
  */
 typedef struct Int64HashSet {
     Int64HashSetEntry *entries; /**< Dynamic array of buckets. */
-    int64_t capacity;           /**< Current capacity of the hash set. */
     int64_t size;               /**< Number of entries in the hash set. */
     double max_load_factor;     /**< Hash set will automatically expand if
                                 (double)size/capacity is greater than this value. */
+
+    /** Number of buckets - 1, for fast bucket indexing. */
+    int64_t capacity_mask;
 } Int64HashSet;
 
 /**
@@ -97,13 +99,13 @@ bool Int64HashSetReserve(Int64HashSet *set, int64_t size);
 void Int64HashSetDestroy(Int64HashSet *set);
 
 /**
- * @brief Adds \p key to \p set or does nothing if \p set already contains \p
- * key.
+ * @brief Adds \p key to \p set or does nothing if \p set already contains
+ * \p key.
  *
  * @param set Set to add \p key to.
  * @param key Key to add to \p set.
- * @return true on success,
- * @return false otherwise.
+ * @return \c true if \p key was added to \p set as a new key, or
+ * @return \c false if \p set already contains \p key or an error occurred.
  */
 bool Int64HashSetAdd(Int64HashSet *set, int64_t key);
 

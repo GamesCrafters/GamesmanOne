@@ -1,11 +1,13 @@
 /**
- * @file tier_hash_map_sc.h
+ * @file one_bit.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Separate chaining Position hash set.
- * @version 1.0.1
- * @date 2024-12-10
+ * @brief External memory retrograde analysis algorithm using only one bit per
+ * each position in the group of tiers made up of the tier currently being
+ * solved and its child tiers.
+ * @version 1.0.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,23 +26,20 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_SC_H_
-#define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_SC_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stddef.h>  // size_t
+#include <stdint.h>  // int64_t
 
-#include "core/data_structures/int64_hash_map_sc.h"
-#include "core/types/base.h"
+#include "core/data_structures/concurrent_bitset.h"
 
-typedef Int64HashMapSC TierHashMapSC;
+static inline size_t OneBitMemReq(int64_t tier_group_size) {
+#ifdef _OPENMP
+    return ConcurrentBitsetMemRequired(tier_group_size);
+#else   // _OPENMP not defined
+    return (size_t)tier_group_size / 8;  // one bit per position
+#endif  // _OPENMP
+}
 
-void TierHashMapSCInit(TierHashMapSC *map, double max_load_factor);
-void TierHashMapSCDestroy(TierHashMapSC *map);
-
-bool TierHashMapSCContains(const TierHashMapSC *map, Tier tier);
-bool TierHashMapSCGet(const TierHashMapSC *map, Tier tier, int64_t *value);
-bool TierHashMapSCSet(TierHashMapSC *map, Tier tier, int64_t value);
-void TierHashMapSCRemove(TierHashMapSC *map, Tier tier);
-
-#endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_

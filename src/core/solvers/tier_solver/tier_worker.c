@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.5.0
- * @date 2024-11-14
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,7 +33,8 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t, intptr_t
+#include <stddef.h>   // size_t
+#include <stdint.h>   // int64_t
 
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -45,7 +46,6 @@
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
-static intptr_t mem;
 
 #ifdef USE_MPI
 #include <unistd.h>  // sleep
@@ -55,12 +55,10 @@ static intptr_t mem;
 
 // ============================== TierWorkerInit ==============================
 
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    intptr_t memlimit) {
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
     assert(db_chunk_size > 0);
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
-    mem = memlimit;
 }
 
 // =========================== GetMethodForTierType ===========================
@@ -84,6 +82,7 @@ int GetMethodForTierType(TierType type) {
 // ============================== TierWorkerSolve ==============================
 
 const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions = {
+    .memlimit = 0,
     .compare = false,
     .force = false,
     .verbose = 1,
@@ -94,10 +93,10 @@ int TierWorkerSolve(int method, Tier tier,
     if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            return TierWorkerSolveITInternal(api_internal, tier, mem, options,
+            return TierWorkerSolveITInternal(api_internal, tier, options,
                                              solved);
         case kTierWorkerSolveMethodBackwardInduction:
-            return TierWorkerSolveBIInternal(
+            return TierWorkerBackwardInduction(
                 api_internal, current_db_chunk_size, tier, options, solved);
         case kTierWorkerSolveMethodValueIteration:
             return TierWorkerSolveVIInternal(api_internal, tier, options,
@@ -147,7 +146,7 @@ int TierWorkerMpiServe(void) {
 #endif  // USE_MPI
 
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
-                   int64_t test_size) {
+                   int64_t test_size, TierWorkerTestStackBufferStat *stat) {
     return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed,
-                                  test_size);
+                                  test_size, stat);
 }

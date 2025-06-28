@@ -28,7 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // intptr_t, int64_t
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -107,6 +107,10 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
     return current_db->CreateSolvingTier(tier, size);
 }
 
+int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size) {
+    return current_db->CreateConcurrentSolvingTier(tier, size);
+}
+
 int DbManagerFlushSolvingTier(void *aux) {
     return current_db->FlushSolvingTier(aux);
 }
@@ -123,12 +127,37 @@ int DbManagerSetRemoteness(Position position, int remoteness) {
     return current_db->SetRemoteness(position, remoteness);
 }
 
+int DbManagerSetValueRemoteness(Position position, Value value,
+                                int remoteness) {
+    return current_db->SetValueRemoteness(position, value, remoteness);
+}
+
+bool DbManagerMaximizeValueRemoteness(Position position, Value value,
+                                      int remoteness,
+                                      int (*compare)(Value v1, int r1, Value v2,
+                                                     int r2)) {
+    return current_db->MaximizeValueRemoteness(position, value, remoteness,
+                                               compare);
+}
+
+int DbManagerDecrementNumUndecidedChildren(Position position) {
+    return current_db->DecrementNumUndecidedChildren(position);
+}
+
+int DbManagerClearNumUndecidedChildren(Position position) {
+    return current_db->ClearNumUndecidedChildren(position);
+}
+
 Value DbManagerGetValue(Position position) {
     return current_db->GetValue(position);
 }
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+int DbManagerGetNumUndecidedChildren(Position position) {
+    return current_db->GetNumUndecidedChildren(position);
 }
 
 bool DbManagerCheckpointExists(Tier tier) {
@@ -148,8 +177,12 @@ int DbManagerCheckpointRemove(Tier tier) {
     return current_db->CheckpointRemove(tier);
 }
 
-intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
     return current_db->TierMemUsage(tier, size);
+}
+
+size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
+    return current_db->ConcurrentTierMemUsage(tier, size);
 }
 
 int DbManagerLoadTier(Tier tier, int64_t size) {
