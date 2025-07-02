@@ -91,13 +91,14 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
     // If we don't have enough memory to solve the tier, report failure.
     if (strategy == kUnsolvable) return kMallocFailureError;
 
+    int error = kNoError;
     switch (strategy) {
         case kFrontierPercolation:
-        case kFrontierless: {
-            int error = TierWorkerBIFrontierPercolation(api, db_chunk_size,
-                                                        tier, options, solved);
+        case kFrontierless:
+            error =
+                TierWorkerBIOneBit(api, db_chunk_size, tier, options, solved);
 
-            // If either succeeded or failed but not because of OOM, return the
+            // If either succeeded, or failed not because of OOM, return the
             // error code.
             if (error != kMallocFailureError) return error;
             // Else: frontier percolation ran out of memory.
@@ -110,12 +111,15 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
             // Otherwise, use the frontier-less approach instead.
             return TierWorkerBIFrontierless(api, db_chunk_size, tier, options,
                                             solved);
-        }
 
-        // case kOneBit:  // currently unimplemented
-        default:
+        case kOneBit:
+            return TierWorkerBIOneBit(api, db_chunk_size, tier, options,
+                                      solved);
             break;
+
+        default:
+            error = kMallocFailureError;
     }
 
-    return kMallocFailureError;
+    return error;
 }

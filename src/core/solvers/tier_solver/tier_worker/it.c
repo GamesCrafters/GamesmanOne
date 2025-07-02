@@ -34,7 +34,7 @@
 
 #include "core/concurrency.h"
 #include "core/constants.h"
-#include "core/data_structures/bitstream.h"
+#include "core/data_structures/bitset.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
@@ -120,11 +120,11 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier,
 
 // ------------------------------- Step1Iterate -------------------------------
 
-static bool Step1_0LoadChildTiers(BitStream *processed) {
+static bool Step1_0LoadChildTiers(Bitset *processed) {
     // Assuming canonical_child_tiers have been sorted in ascending size order.
     for (int64_t i = canonical_child_tiers.size - 1; i >= 0; --i) {
         // Skip if already processed.
-        if (BitStreamGet(processed, i)) continue;
+        if (BitsetTest(processed, i)) continue;
 
         // Check if the tier can be loaded.
         Tier child_tier = canonical_child_tiers.array[i];
@@ -135,7 +135,7 @@ static bool Step1_0LoadChildTiers(BitStream *processed) {
 
         // The tier can be loaded. Proceed to loading.
         mem -= required;
-        BitStreamSet(processed, i);
+        BitsetSet(processed, i);
         int error = DbManagerLoadTier(child_tier, size);
         if (error != kNoError) return false;
     }
@@ -284,23 +284,23 @@ static void Step1_2UnloadChildTiers(void) {
 
 static bool Step1Iterate(void) {
     bool success = false;
-    BitStream processed;
-    BitStreamInit(&processed, canonical_child_tiers.size);
+    Bitset *processed = BitsetCreate(canonical_child_tiers.size);
     do {
         // Load as many child tiers as possible in each iteration.
-        if (!Step1_0LoadChildTiers(&processed)) goto _bailout;
+        if (!Step1_0LoadChildTiers(processed)) goto _bailout;
 
         // Do one pass of scanning.
         if (!Step1_1IterateOnePass()) goto _bailout;
 
         // Unload all child tiers.
         Step1_2UnloadChildTiers();
-    } while (BitStreamCount(&processed) < canonical_child_tiers.size);
+    } while (BitsetCount(processed) < canonical_child_tiers.size);
     success = true;
 
 _bailout:
     Step1_2UnloadChildTiers();
-    BitStreamDestroy(&processed);
+    BitsetDestroy(processed);
+
     return success;
 }
 

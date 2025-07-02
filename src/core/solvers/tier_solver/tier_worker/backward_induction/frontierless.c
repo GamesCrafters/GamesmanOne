@@ -64,8 +64,7 @@ typedef int16_t ChildPosCounterType;
 typedef _Atomic ChildPosCounterType AtomicChildPosCounterType;
 #endif  // _OPENMP
 
-// Copy of the API functions from tier_manager. Cannot use a reference here
-// because we need to create/modify some of the functions.
+// Read-only reference to the API functions from tier_manager.
 static const TierSolverApi *api_internal;
 
 // Number of positions in each database compression block.
@@ -82,9 +81,8 @@ static AtomicChildPosCounterType *num_undecided_children = NULL;
 static ChildPosCounterType *num_undecided_children = NULL;
 #endif  // _OPENMP
 
-// Array of child tiers with this_tier appended to the back.
-static Tier child_tiers[kTierSolverNumChildTiersMax];
-static int num_child_tiers;          // Size of child_tiers.
+static Tier child_tiers[kTierSolverNumChildTiersMax];  // Array of child tiers.
+static int num_child_tiers;                            // Size of child_tiers.
 static int max_win_lose_remoteness;  // Max win/loss remoteness discovered
 static int max_tie_remoteness;       // Max tie remoteness discovered
 static int num_threads;              // Number of threads available.
@@ -134,14 +132,11 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     current_db_chunk_size = db_chunk_size;
     num_threads = ConcurrencyGetOmpNumThreads();
 
-    // Initialize child tier array.
+    // Initialize the child tier array.
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
     if (!Step0_0SetupSolverArrays()) return false;
     Step0_1SetupChildTiers();
-
-    // From this point on, child_tiers will also contain this_tier.
-    child_tiers[num_child_tiers++] = this_tier;
 
     // Make sure each thread gets at least one cache line of records when
     // performing a scan of the current tier to prevent false sharing.
@@ -254,9 +249,7 @@ static void ProcessChildTier(int child_index) {
  * @brief Load all non-drawing positions from all child tiers into frontier.
  */
 static void Step1ProcessChildTiers(void) {
-    // -1 because this_tier is the last element in child_tiers.
-    for (int child_index = 0; child_index < num_child_tiers - 1;
-         ++child_index) {
+    for (int child_index = 0; child_index < num_child_tiers; ++child_index) {
         // Load child tier from disk.
         ProcessChildTier(child_index);
     }

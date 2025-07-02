@@ -48,8 +48,7 @@
  * @param options Pointer to a \c TierWorkerSolveOptions object which contains
  * the options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
- * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
- * an existing database.
+ * \c true on success. Otherwise it remains unmodified.
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */

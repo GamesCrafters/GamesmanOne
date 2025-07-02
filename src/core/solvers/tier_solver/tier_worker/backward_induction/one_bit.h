@@ -4,7 +4,7 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief External memory retrograde analysis algorithm using only one bit per
- * each position in the group of tiers made up of the tier currently being
+ * position in the group of tiers made up of the tier currently being
  * solved and its child tiers.
  * @version 1.0.0
  * @date 2025-06-23
@@ -33,6 +33,8 @@
 #include <stdint.h>  // int64_t
 
 #include "core/data_structures/concurrent_bitset.h"
+#include "core/solvers/tier_solver/tier_solver.h"
+#include "core/solvers/tier_solver/tier_worker.h"
 
 static inline size_t OneBitMemReq(int64_t tier_group_size) {
 #ifdef _OPENMP
@@ -41,5 +43,9 @@ static inline size_t OneBitMemReq(int64_t tier_group_size) {
     return (size_t)tier_group_size / 8;  // one bit per position
 #endif  // _OPENMP
 }
+
+int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
+                       Tier tier, const TierWorkerSolveOptions *options,
+                       bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_

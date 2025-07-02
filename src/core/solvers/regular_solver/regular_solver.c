@@ -305,7 +305,7 @@ static int RegularSolverSolve(void *aux) {
         .force = options->force,
         .verbose = options->verbose,
     };
-    int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
+    int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
                                 kDefaultTier, &tier_worker_options, NULL);
     if (error != kNoError) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
