@@ -599,9 +599,9 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
         PRAGMA_OMP(task
                     in_reduction(|| : advance)
                     depend(inout : db_buf[slot], seq_buf[slot], process_chunk))
+        // clang-format on
         advance |=
             ProveLosingParentsChunk(db_buf[slot], seq_buf[slot], i, remoteness);
-        // clang-format on
 
         // Write DB chunk dependencies:
         // 1. Must wait for any previous task operating on the same DB buffer to
@@ -673,10 +673,11 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
         // 1. Must wait for any previous task operating on the same buffers to
         //    finish.
         // 2. Must wait for the previous proof process to finish.
-        PRAGMA_OMP(task in_reduction(||
-                                     : advance)
-                       depend(inout
-                              : db_buf[slot], seq_buf[slot], process_chunk))
+
+        // clang-format off
+        PRAGMA_OMP(task in_reduction(|| : advance) depend(
+            inout : db_buf[slot], seq_buf[slot], process_chunk))
+        // clang-format on
         advance |=
             ProveWinningOrTyingParentsChunk(db_buf[slot], i, val, remoteness);
 
