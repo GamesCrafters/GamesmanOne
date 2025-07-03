@@ -252,7 +252,7 @@ static void Step1ScanTierAndInitDb(void) {
     }
 }
 
-// ------------------------------- Step2Iterate -------------------------------
+// ---------------------------- Step2IterateWinLose ----------------------------
 
 static void ReadDbChunk(Record *buf, int chunk) {
     char filename[256];
@@ -707,6 +707,8 @@ static void Step2IterateWinLose(void) {
     }
 }
 
+// ------------------------------ Step3IterateTie ------------------------------
+
 static void Step3IterateTie(void) {
     int pass = 0;
     bool advance = true;
@@ -724,6 +726,8 @@ static void RecompressDbChunk(const Record *buf, int chunk,
     XzraOutStreamRun(xzra_out, (const uint8_t *)buf,
                      (end_pos - begin_pos) * sizeof(Record));
 }
+
+// ---------------------------- Step4ConsolidateDb ----------------------------
 
 static void Step4ConsolidateDb(void) {
     XzraOutStream *xzra_out = XzraOutStreamCreate(
@@ -750,6 +754,8 @@ static void Step4ConsolidateDb(void) {
     XzraOutStreamClose(xzra_out);
 }
 
+// ------------------------------- Step5Cleanup -------------------------------
+
 static void Step5Cleanup(void) {
     api_internal = NULL;
     current_db_chunk_size = 0;
@@ -773,6 +779,8 @@ static void Step5Cleanup(void) {
     ConcurrentBitsetDestroy(rand_bitset);
     rand_bitset = NULL;
 }
+
+// --------------------------------- CompareDb ---------------------------------
 
 static bool CompareDb(void) {
     DbProbe probe, ref_probe;
@@ -817,6 +825,10 @@ _bailout:
 
     return success;
 }
+
+// ============================================================================
+// ============================ TierWorkerBIOneBit ============================
+// ============================================================================
 
 int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
                        Tier tier, const TierWorkerSolveOptions *options,
