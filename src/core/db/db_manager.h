@@ -275,6 +275,24 @@ int DbManagerGetRemoteness(Position position);
  */
 int DbManagerGetNumUndecidedChildren(Position position);
 
+int DbManagerCreateSolvingSegmentBuffers(Tier tier, int num_segments,
+                                         int64_t size);
+
+int DbManagerLoadSolvingSegment(int buf_idx, int seg_idx);
+
+int DbManagerFlushSolvingSegment(int buf_idx, int seg_idx);
+
+int DbManagerFreeSolvingSegmentBuffers(void);
+
+Value DbManagerSolvingSegmentGetValue(int buf_idx, int64_t offset);
+
+int DbManagerSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
+
+void DbManagerSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                               Value value, int remoteness);
+
+int DbManagerConsolidateSolvingSegments(int64_t tier_size, int num_segments);
+
 /**
  * @brief Returns whether there exists a checkpoint for \p tier. A
  * checkpoint can be used to restore the solving progress of a tier.
@@ -494,6 +512,10 @@ int DbManagerTierStatus(Tier tier);
  * status of the current game.
  */
 int DbManagerGameStatus(void);
+
+// ------------------------- External Access Interface -------------------------
+
+const char *DbManagerGetPathPrefix(void);
 
 // --------------------- (EXPERIMENTAL) Testing Interface ---------------------
 

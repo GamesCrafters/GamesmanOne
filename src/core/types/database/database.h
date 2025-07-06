@@ -297,6 +297,24 @@ typedef struct Database {
      */
     int (*GetNumUndecidedChildren)(Position position);
 
+    int (*CreateSolvingSegmentBuffers)(Tier tier, int num_segments,
+                                       int64_t size);
+
+    int (*LoadSolvingSegment)(int buf_idx, int seg_idx);
+
+    int (*FlushSolvingSegment)(int buf_idx, int seg_idx);
+
+    int (*FreeSolvingSegmentBuffers)(void);
+
+    Value (*SolvingSegmentGetValue)(int buf_idx, int64_t offset);
+
+    int (*SolvingSegmentGetRemoteness)(int buf_idx, int64_t offset);
+
+    void (*SolvingSegmentSetValueRemoteness)(int buf_idx, int64_t offset,
+                                             Value value, int remoteness);
+
+    int (*ConsolidateSolvingSegments)(int64_t tier_size, int num_segments);
+
     /**
      * @brief Returns whether there exists a checkpoint for \p tier. A
      * checkpoint can be used to restore the solving progress of a tier.
@@ -500,6 +518,8 @@ typedef struct Database {
      * status of the current game.
      */
     int (*GameStatus)(void);
+
+    const char *(*GetPathPrefix)(void);
 } Database;
 
 #endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_

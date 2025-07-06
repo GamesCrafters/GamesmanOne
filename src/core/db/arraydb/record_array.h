@@ -236,22 +236,22 @@ static inline int RecordArrayGetNumUndecidedChildren(const RecordArray *array,
 }
 
 /**
- * @brief Returns a read-only direct pointer to the memory array used internally
+ * @brief Returns a read-only direct pointer to the raw array used internally
  * by the \c RecordArray to store its elements.
  *
  * @param array Source array.
- * @return Read-only direct pointer to the memory array.
+ * @return Read-only direct pointer to the raw array.
  */
 static inline const void *RecordArrayGetReadOnlyData(const RecordArray *array) {
     return (const void *)array->records;
 }
 
 /**
- * @brief Returns a read-write direct pointer to the memory array used
+ * @brief Returns a read-write direct pointer to the raw array used
  * internally by the \c RecordArray to store its elements.
  *
  * @param array Source array.
- * @return Direct pointer to the memory array.
+ * @return Direct pointer to the raw array.
  */
 static inline void *RecordArrayGetData(RecordArray *array) {
     return (void *)array->records;

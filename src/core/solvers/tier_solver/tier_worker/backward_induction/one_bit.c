@@ -1,6 +1,7 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/one_bit.h"
 
 #include <assert.h>     // assert
+#include <limits.h>     // PATH_MAX
 #include <stdatomic.h>  // memory_order_relaxed
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t, NULL
@@ -8,12 +9,13 @@
 #include <stdio.h>      // sprintf
 
 #include "core/concurrency.h"
+#include "core/constants.h"
 #include "core/data_structures/bitset.h"
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/db/arraydb/arraydb.h"
-#include "core/db/arraydb/record_array.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
+#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
@@ -49,15 +51,14 @@ static int num_threads;              // Number of threads available.
 
 static int64_t chunk_size;
 static int64_t num_chunks;
-static Record *db_buf[3];
 static Bitset *seq_buf[2];
 
 static ConcurrentBitset *rand_bitset;
-static char disk_read;
-static char process_chunk;
-static char disk_write;
+static char dep_chunk;
+static char dep_seg[3];
 
 static int lz4_level = 0;
+static const char *path_prefix;
 
 // ------------------------------ Step0Initialize ------------------------------
 
@@ -94,8 +95,6 @@ static void Step0_0SetupChildTiers(void) {
     TierHashSetDestroy(&dedup);
 }
 
-static int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
-
 static int64_t NextMultiple(int64_t n, int64_t mult) {
     return RoundUpDivide(n, mult) * mult;
 }
@@ -105,12 +104,12 @@ static int64_t NextMultiple(int64_t n, int64_t mult) {
  * \p mem can handle.
  *
  * @details The solver may hold a chunk of the on-disk DB and a chunk of the
- * sequential access bitset at the same time. The DB takes 2 bytes per position
- * and the bitset takes 1/8 bytes per position but with the final memory usage
- * rounded to the next integral value of bytes. The solver uses a rolling buffer
- * so there will be at most 3 chunks of DB and 2 chunks of the sequential bitset
- * loaded at the same time. Let x be the number of positions in each chunk. The
- * memory requirement is therefore
+ * sequential access bitset at the same time. The Array DB uses 2 bytes per
+ * position and the bitset uses 1/8 bytes per position but with the final
+ * memory usage rounded to the next integral value of bytes. The solver uses a
+ * rolling buffer so there will be at most 3 chunks of DB and 2 chunks of the
+ * sequential bitset loaded at the same time. Let x be the number of positions
+ * in each chunk. The memory requirement is therefore
  *
  *     3 * 2 * x + 2 * (x + 7) / 8 <= mem
  *
@@ -155,9 +154,7 @@ static bool Step0_1AllocateMemory(size_t memlimit) {
     rand_bitset = ConcurrentBitsetCreate(tier_group_size);
 
     // Allocate DB and sequential access bitset rolling buffers
-    db_buf[0] = (Record *)GamesmanMalloc(chunk_size * sizeof(Record));
-    db_buf[1] = (Record *)GamesmanMalloc(chunk_size * sizeof(Record));
-    db_buf[2] = (Record *)GamesmanMalloc(chunk_size * sizeof(Record));
+    DbManagerCreateSolvingSegmentBuffers(this_tier, 3, chunk_size);
     seq_buf[0] = BitsetCreate(chunk_size);
     seq_buf[1] = BitsetCreate(chunk_size);
 
@@ -173,6 +170,7 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
     num_threads = ConcurrencyGetOmpNumThreads();
+    path_prefix = DbManagerGetPathPrefix();
 
     // Initialize max remoteness values to 0.
     max_win_lose_remoteness = max_tie_remoteness = 0;
@@ -195,39 +193,34 @@ static bool IsCanonicalPosition(Position pos) {
     return api_internal->GetCanonicalPosition(tp) == pos;
 }
 
-static void ScanDbChunk(Record *buf, int chunk) {
+static void ScanDbChunk(int slot, int chunk) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
     PRAGMA_OMP(taskloop grainsize(128))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         TierPosition tp = {.tier = this_tier, .position = pos};
+        int64_t rec_idx = pos - begin_pos;
 
         // Assign (undecided, 0) to illegal positions and non-canonical
         // positions.
         if (!api_internal->IsLegalPosition(tp) || !IsCanonicalPosition(pos)) {
-            RecordSetValueRemoteness(&buf[pos - begin_pos], kUndecided, 0);
+            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, kUndecided,
+                                                      0);
             continue;
         }
 
         Value val = api_internal->Primitive(tp);
         // Assign (draw, 0) to non-primitive positions.
         if (val == kUndecided) {
-            RecordSetValueRemoteness(&buf[pos - begin_pos], kDraw, 0);
+            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, kDraw, 0);
             continue;
         }
 
         // If the position is primitive, assign its primitive value and
         // remoteness 0.
-        RecordSetValueRemoteness(&buf[pos - begin_pos], val, 0);
+        DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, val, 0);
     }
-}
-
-static void WriteDbChunk(const Record *buf, int chunk) {
-    char filename[256];
-    sprintf(filename, "db_%d.lz4", chunk);
-    Lz4UtilsCompressStream(buf, chunk_size * sizeof(Record), lz4_level,
-                           filename);
 }
 
 static void Step1ScanTierAndInitDb(void) {
@@ -236,29 +229,17 @@ static void Step1ScanTierAndInitDb(void) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // In-memory scanning dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous in-memory scanning task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], process_chunk))
-        ScanDbChunk(db_buf[slot], i);
+        // Scan for illegal, non-canonical, and primitive positions
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        ScanDbChunk(slot, i);
 
-        // Disk-writing dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous disk-writing task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_write))
-        WriteDbChunk(db_buf[slot], i);
+        // Write the chunk to disk
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerFlushSolvingSegment(slot, i);
     }
 }
 
 // ---------------------------- Step2IterateWinLose ----------------------------
-
-static void ReadDbChunk(Record *buf, int chunk) {
-    char filename[256];
-    sprintf(filename, "db_%d.lz4", chunk);
-    Lz4UtilsDecompressFile(filename, buf, chunk_size * sizeof(Record));
-}
 
 static void GenerateParentsFromTierPosition(TierPosition child) {
     Position parents[kTierSolverNumParentPositionsMax];
@@ -269,7 +250,7 @@ static void GenerateParentsFromTierPosition(TierPosition child) {
     }
 }
 
-static void GenerateParentsFromDbChunk(Record *buf, int chunk, Value val,
+static void GenerateParentsFromDbChunk(int slot, int chunk, Value val,
                                        int remoteness) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
@@ -278,9 +259,10 @@ static void GenerateParentsFromDbChunk(Record *buf, int chunk, Value val,
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
-        Value pos_val = RecordGetValue(&buf[rec_idx]);
+        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
         if (pos_val != val) continue;
-        int pos_remoteness = RecordGetRemoteness(&buf[rec_idx]);
+        int pos_remoteness =
+            DbManagerSolvingSegmentGetRemoteness(slot, rec_idx);
         if (pos_remoteness != remoteness) continue;
 
         TierPosition child = {.tier = this_tier, .position = pos};
@@ -294,19 +276,13 @@ static void GenerateParentsFromDbSolving(Value val, int remoteness) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // DB read dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_read))
-        ReadDbChunk(db_buf[slot], i);
+        // Load a chunk of DB into memory
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerLoadSolvingSegment(slot, i);
 
-        // Generate parents to Rand dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous parent generating task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], process_chunk))
-        GenerateParentsFromDbChunk(db_buf[slot], i, val, remoteness);
+        // Generate parents from loaded DB into random access bitset
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        GenerateParentsFromDbChunk(slot, i, val, remoteness);
     }
 }
 
@@ -345,6 +321,7 @@ static void GenerateParentsFromChildTierDb(int child_tier_idx, Value val,
             if (child_val != val || child_remoteness != remoteness) continue;
             GenerateParentsFromTierPosition(child);
         }
+        DbManagerProbeDestroy(&probe);
     }
 }
 
@@ -365,7 +342,7 @@ static void GenerateParentsFromDb(Value val, int remoteness) {
     GenerateParentsFromDbChildTiers(val, remoteness);
 }
 
-static void RemoveSolvedPositionsFromDbChunk(const Record *buf, int chunk) {
+static void RemoveSolvedPositionsFromDbChunk(int slot, int chunk) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
@@ -373,7 +350,7 @@ static void RemoveSolvedPositionsFromDbChunk(const Record *buf, int chunk) {
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // If the position has been solved, remove it from the random access
         // bitset
-        Value pos_val = RecordGetValue(&buf[pos - begin_pos]);
+        Value pos_val = DbManagerSolvingSegmentGetValue(slot, pos - begin_pos);
         if (pos_val != kDraw) {
             ConcurrentBitsetReset(rand_bitset, pos, memory_order_relaxed);
         }
@@ -390,19 +367,13 @@ static void Step2_0_0RemoveSolvedPositions(void) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // DB read dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_read))
-        ReadDbChunk(db_buf[slot], i);
+        // Load a chunk of DB into memory
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerLoadSolvingSegment(slot, i);
 
-        // Remove solved positions from Rand dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous removal task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], process_chunk))
-        RemoveSolvedPositionsFromDbChunk(db_buf[slot], i);
+        // Remove solved positions from the random access bitset
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        RemoveSolvedPositionsFromDbChunk(slot, i);
     }
 }
 
@@ -416,10 +387,12 @@ static void CopyRandToSeqChunkInMem(Bitset *seq, int chunk) {
 }
 
 static void StoreSeqChunk(Bitset *seq, int chunk) {
-    char filename[256];
-    sprintf(filename, "seq_%d.lz4", chunk);
+    static char tmp_path[PATH_MAX], path[PATH_MAX];
+    sprintf(tmp_path, "%s/seq_%d.lz4.tmp", path_prefix, chunk);
+    sprintf(path, "%s/seq_%d.lz4", path_prefix, chunk);
     size_t size = BitSetGetSerializedSize(seq);
-    Lz4UtilsCompressStream(BitsetGetRawData(seq), size, lz4_level, filename);
+    Lz4UtilsCompressStream(BitsetGetRawData(seq), size, lz4_level, tmp_path);
+    GuardedRename(tmp_path, path);
 }
 
 static void Step2_0_1DumpRandToSeq(void) {
@@ -432,20 +405,19 @@ static void Step2_0_1DumpRandToSeq(void) {
         // 1. Must wait for any previous task operating on the same bitset to
         // finish.
         // 2. Must wait for the previous copy operation to finish.
-        PRAGMA_OMP(task depend(inout : seq_buf[slot], process_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
         CopyRandToSeqChunkInMem(seq_buf[slot], i);
 
         // Remove solved positions from Rand dependences:
         // 1. Must wait for any previous task operating on the same buffer
         // to finish.
         // 2. Must wait for the previous removal task to finish.
-        PRAGMA_OMP(task depend(inout : seq_buf[slot], disk_write))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
         StoreSeqChunk(seq_buf[slot], i);
     }
 }
 
-static void LoadWinPosFromDbChunk(const Record *buf, int chunk,
-                                  int remoteness) {
+static void LoadWinPosFromDbChunk(int slot, int chunk, int remoteness) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
@@ -453,9 +425,10 @@ static void LoadWinPosFromDbChunk(const Record *buf, int chunk,
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
-        Value pos_val = RecordGetValue(&buf[rec_idx]);
+        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
         if (pos_val != kWin) continue;
-        int pos_remoteness = RecordGetRemoteness(&buf[rec_idx]);
+        int pos_remoteness =
+            DbManagerSolvingSegmentGetRemoteness(slot, rec_idx);
         if (pos_remoteness > remoteness) continue;
 
         // If pos is a "win in <= remoteness" position, mark it.
@@ -469,19 +442,13 @@ static void LoadWinPosFromDbSolving(int remoteness) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // DB read dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_read))
-        ReadDbChunk(db_buf[slot], i);
+        // Read a chunk of DB into memory
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerLoadSolvingSegment(slot, i);
 
-        // Load positions to Rand dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous position loading task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], process_chunk))
-        LoadWinPosFromDbChunk(db_buf[slot], i, remoteness);
+        // Load "win in <= N" positions into the random access bitset
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        LoadWinPosFromDbChunk(slot, i, remoteness);
     }
 }
 
@@ -502,6 +469,7 @@ static void LoadWinPosFromChildTierDb(int child_tier_idx, int remoteness) {
             ConcurrentBitsetSet(rand_bitset, pos + offset,
                                 memory_order_relaxed);
         }
+        DbManagerProbeDestroy(&probe);
     }
 }
 
@@ -523,13 +491,12 @@ static void Step2_0_2LoadWinPosFromDb(int remoteness) {
 }
 
 static void ReadDbAndSeqChunk(int slot, int chunk) {
-    ReadDbChunk(db_buf[slot], chunk);
-
-    char filename[256];
-    sprintf(filename, "seq_%d.lz4", chunk);
+    static char seq_filename[PATH_MAX];
+    DbManagerLoadSolvingSegment(slot, chunk);
+    sprintf(seq_filename, "%s/seq_%d.lz4", path_prefix, chunk);
     Bitset *seq = seq_buf[slot];
     size_t size = BitSetGetSerializedSize(seq);
-    Lz4UtilsDecompressFile(filename, BitsetGetRawData(seq), size);
+    Lz4UtilsDecompressFile(seq_filename, BitsetGetRawData(seq), size);
 }
 
 static int64_t GetChildTierOffset(Tier child) {
@@ -539,8 +506,8 @@ static int64_t GetChildTierOffset(Tier child) {
     return TierHashMapIteratorValue(&it);
 }
 
-static bool ProveLosingParentsChunk(Record *db_chunk, const Bitset *seq,
-                                    int chunk, int remoteness) {
+static bool ProveLosingParentsChunk(int slot, const Bitset *seq, int chunk,
+                                    int remoteness) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
@@ -566,8 +533,8 @@ static bool ProveLosingParentsChunk(Record *db_chunk, const Bitset *seq,
 
         // If the position has now been solved, it must be lose in N + 1.
         if (solved) {
-            RecordSetValueRemoteness(&db_chunk[pos - begin_pos], kLose,
-                                     remoteness + 1);
+            DbManagerSolvingSegmentSetValueRemoteness(slot, pos - begin_pos,
+                                                      kLose, remoteness + 1);
             advance = true;
         }
     }
@@ -583,32 +550,22 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // DB and sequential access bitset read dependences:
-        // 1. Must wait for any previous task operating on the same buffers to
-        // finish.
-        // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], seq_buf[slot], disk_read))
+        // Read a chunk of DB and a chunk of the sequential access bitset into
+        // memory
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], seq_buf[slot]))
         ReadDbAndSeqChunk(slot, i);
 
-        // Prove losing parents and write to DB chunk dependences:
-        // 1. Must wait for any previous task operating on the same buffers to
-        //    finish.
-        // 2. Must wait for the previous proof process to finish.
-
+        // Prove losing parents in DB chunk
         // clang-format off
         PRAGMA_OMP(task
                     in_reduction(|| : advance)
-                    depend(inout : db_buf[slot], seq_buf[slot], process_chunk))
+                    depend(inout : dep_seg[slot], seq_buf[slot], dep_chunk))
         // clang-format on
-        advance |=
-            ProveLosingParentsChunk(db_buf[slot], seq_buf[slot], i, remoteness);
+        advance |= ProveLosingParentsChunk(slot, seq_buf[slot], i, remoteness);
 
-        // Write DB chunk dependencies:
-        // 1. Must wait for any previous task operating on the same DB buffer to
-        //    finish.
-        // 2. Must wait for the previous write task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_write))
-        WriteDbChunk(db_buf[slot], i);
+        // Flush DB chunk
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerFlushSolvingSegment(slot, i);
     }
 
     return advance;
@@ -623,7 +580,7 @@ static bool Step2_0IterateWin(int pass) {
     return Step2_0_3ProveLosingParents(pass);
 }
 
-static bool ProveWinningOrTyingParentsChunk(Record *buf, int chunk, Value val,
+static bool ProveWinningOrTyingParentsChunk(int slot, int chunk, Value val,
                                             int remoteness) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
@@ -634,12 +591,13 @@ static bool ProveWinningOrTyingParentsChunk(Record *buf, int chunk, Value val,
         if (!ConcurrentBitsetTest(rand_bitset, pos, memory_order_relaxed)) {
             continue;  // Not a parent position to be proved.
         }
+        int64_t rec_idx = pos - begin_pos;
 
         // If the position has not been solved, mark it as win/tie in N+1.
-        Value pos_val = RecordGetValue(&buf[pos - begin_pos]);
+        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
         if (pos_val == kDraw) {
-            RecordSetValueRemoteness(&buf[pos - begin_pos], val,
-                                     remoteness + 1);
+            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, val,
+                                                      remoteness + 1);
             advance = true;
         }
     }
@@ -666,8 +624,8 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
         // 1. Must wait for any previous task operating on the same buffer to
         // finish.
         // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_read))
-        ReadDbChunk(db_buf[slot], i);
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerLoadSolvingSegment(slot, i);
 
         // Proof of parents and write to DB chunk dependences:
         // 1. Must wait for any previous task operating on the same buffers to
@@ -675,18 +633,18 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
         // 2. Must wait for the previous proof process to finish.
 
         // clang-format off
-        PRAGMA_OMP(task in_reduction(|| : advance) depend(
-            inout : db_buf[slot], seq_buf[slot], process_chunk))
+        PRAGMA_OMP(task
+                    in_reduction(|| : advance)
+                    depend(inout : dep_seg[slot], seq_buf[slot], dep_chunk))
         // clang-format on
-        advance |=
-            ProveWinningOrTyingParentsChunk(db_buf[slot], i, val, remoteness);
+        advance |= ProveWinningOrTyingParentsChunk(slot, i, val, remoteness);
 
         // Write DB chunk dependencies:
         // 1. Must wait for any previous task operating on the same buffer to
         //    finish.
         // 2. Must wait for the previous write task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_write))
-        WriteDbChunk(db_buf[slot], i);
+        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
+        DbManagerFlushSolvingSegment(slot, i);
     }
 
     return advance;
@@ -702,7 +660,9 @@ static void Step2IterateWinLose(void) {
     int pass = 0;
     bool advance = true;
     while (pass <= max_win_lose_remoteness || advance) {
-        advance = Step2_0IterateWin(pass) || Step2_1IterateLose(pass);
+        advance = false;
+        advance |= Step2_0IterateWin(pass);
+        advance |= Step2_1IterateLose(pass);
         ++pass;
     }
 }
@@ -719,39 +679,10 @@ static void Step3IterateTie(void) {
     }
 }
 
-static void RecompressDbChunk(const Record *buf, int chunk,
-                              XzraOutStream *xzra_out) {
-    Position begin_pos = chunk * chunk_size;
-    Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
-    XzraOutStreamRun(xzra_out, (const uint8_t *)buf,
-                     (end_pos - begin_pos) * sizeof(Record));
-}
-
 // ---------------------------- Step4ConsolidateDb ----------------------------
 
-static void Step4ConsolidateDb(void) {
-    XzraOutStream *xzra_out = XzraOutStreamCreate(
-        "consolidated.adb.xz", 1ULL << 20, 6, false, num_threads - 1);
-    PRAGMA_OMP(parallel)
-    PRAGMA_OMP(single)
-    for (int64_t i = 0; i < num_chunks; ++i) {
-        int slot = i % 2;
-
-        // DB read dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous read task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_read))
-        ReadDbChunk(db_buf[slot], i);
-
-        // Recompression dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous recompression task to finish.
-        PRAGMA_OMP(task depend(inout : db_buf[slot], disk_write))
-        RecompressDbChunk(db_buf[slot], i, xzra_out);
-    }
-    XzraOutStreamClose(xzra_out);
+static int Step4ConsolidateDb(void) {
+    return DbManagerConsolidateSolvingSegments(this_tier_size, num_chunks);
 }
 
 // ------------------------------- Step5Cleanup -------------------------------
@@ -761,6 +692,7 @@ static void Step5Cleanup(void) {
     current_db_chunk_size = 0;
     this_tier = kIllegalTier;
     this_tier_size = 0;
+    path_prefix = NULL;
     TierHashMapDestroy(&tier_to_size_offset);
     num_child_tiers = 0;
     max_win_lose_remoteness = 0;
@@ -768,10 +700,7 @@ static void Step5Cleanup(void) {
     num_threads = 0;
     chunk_size = 0;
     num_chunks = 0;
-    for (int i = 0; i < 3; ++i) {
-        GamesmanFree(db_buf[i]);
-        db_buf[i] = NULL;
-    }
+    DbManagerFreeSolvingSegmentBuffers();
     for (int i = 0; i < 2; ++i) {
         BitsetDestroy(seq_buf[i]);
         seq_buf[i] = NULL;
@@ -834,12 +763,16 @@ int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
                        Tier tier, const TierWorkerSolveOptions *options,
                        bool *solved) {
     int ret = kMallocFailureError;
-    if (!Step0Initialize(api, db_chunk_size, tier, options->memlimit))
+    if (!Step0Initialize(api, db_chunk_size, tier, options->memlimit)) {
         goto _bailout;
+    }
     Step1ScanTierAndInitDb();
     Step2IterateWinLose();
     Step3IterateTie();
-    Step4ConsolidateDb();
+    if (Step4ConsolidateDb() != kNoError) {
+        ret = kFileSystemError;
+        goto _bailout;
+    }
     if (options->compare && !CompareDb()) {
         ret = kRuntimeError;
         goto _bailout;

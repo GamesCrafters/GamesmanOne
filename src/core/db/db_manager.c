@@ -160,6 +160,41 @@ int DbManagerGetNumUndecidedChildren(Position position) {
     return current_db->GetNumUndecidedChildren(position);
 }
 
+int DbManagerCreateSolvingSegmentBuffers(Tier tier, int num_segments,
+                                         int64_t size) {
+    return current_db->CreateSolvingSegmentBuffers(tier, num_segments, size);
+}
+
+int DbManagerLoadSolvingSegment(int buf_idx, int seg_idx) {
+    return current_db->LoadSolvingSegment(buf_idx, seg_idx);
+}
+
+int DbManagerFlushSolvingSegment(int buf_idx, int seg_idx) {
+    return current_db->FlushSolvingSegment(buf_idx, seg_idx);
+}
+
+int DbManagerFreeSolvingSegmentBuffers(void) {
+    return current_db->FreeSolvingSegmentBuffers();
+}
+
+Value DbManagerSolvingSegmentGetValue(int buf_idx, int64_t offset) {
+    return current_db->SolvingSegmentGetValue(buf_idx, offset);
+}
+
+int DbManagerSolvingSegmentGetRemoteness(int buf_idx, int64_t offset) {
+    return current_db->SolvingSegmentGetRemoteness(buf_idx, offset);
+}
+
+void DbManagerSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                               Value value, int remoteness) {
+    current_db->SolvingSegmentSetValueRemoteness(buf_idx, offset, value,
+                                                 remoteness);
+}
+
+int DbManagerConsolidateSolvingSegments(int64_t tier_size, int num_segments) {
+    return current_db->ConsolidateSolvingSegments(tier_size, num_segments);
+}
+
 bool DbManagerCheckpointExists(Tier tier) {
     return current_db->CheckpointExists(tier);
 }
@@ -218,6 +253,8 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
 int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
 
 int DbManagerGameStatus(void) { return current_db->GameStatus(); }
+
+const char *DbManagerGetPathPrefix(void) { return current_db->GetPathPrefix(); }
 
 int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
 

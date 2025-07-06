@@ -38,12 +38,9 @@
 #include <stdio.h>    // fprintf, stderr
 #include <string.h>   // strcpy
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif  // _OPENMP
 #include "core/concurrency.h"
 #include "core/constants.h"
-#include "core/db/arraydb/atomic_record_array.h"  // TODO: move this
+#include "core/db/arraydb/atomic_record_array.h"
 #include "core/db/arraydb/record.h"
 #include "core/db/arraydb/record_array.h"
 #include "core/gamesman_memory.h"
@@ -78,6 +75,18 @@ static int ArrayDbClearNumUndecidedChildren(Position position);
 static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 static int ArrayDbGetNumUndecidedChildren(Position position);
+
+int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
+                                       int64_t size);
+int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx);
+int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx);
+int ArrayDbFreeSolvingSegmentBuffers(void);
+Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset);
+int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
+void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                             Value value, int remoteness);
+int ArrayDbConsolidateSolvingSegments(int64_t tier_size, int num_segments);
+
 static bool ArrayDbCheckpointExists(Tier tier);
 static int ArrayDbCheckpointSave(const void *status, size_t status_size);
 static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
@@ -98,6 +107,8 @@ static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbTierStatus(Tier tier);
 static int ArrayDbGameStatus(void);
+
+const char *ArrayDbGetPathPrefix(void);
 
 const Database kArrayDb = {
     .name = "arraydb",
@@ -122,6 +133,16 @@ const Database kArrayDb = {
     .GetValue = ArrayDbGetValue,
     .GetRemoteness = ArrayDbGetRemoteness,
     .GetNumUndecidedChildren = ArrayDbGetNumUndecidedChildren,
+
+    .CreateSolvingSegmentBuffers = ArrayDbCreateSolvingSegmentBuffers,
+    .LoadSolvingSegment = ArrayDbLoadSolvingSegment,
+    .FlushSolvingSegment = ArrayDbFlushSolvingSegment,
+    .FreeSolvingSegmentBuffers = ArrayDbFreeSolvingSegmentBuffers,
+    .SolvingSegmentGetValue = ArrayDbSolvingSegmentGetValue,
+    .SolvingSegmentGetRemoteness = ArrayDbSolvingSegmentGetRemoteness,
+    .SolvingSegmentSetValueRemoteness = ArrayDbSolvingSegmentSetValueRemoteness,
+    .ConsolidateSolvingSegments = ArrayDbConsolidateSolvingSegments,
+
     .CheckpointExists = ArrayDbCheckpointExists,
     .CheckpointSave = ArrayDbCheckpointSave,
     .CheckpointLoad = ArrayDbCheckpointLoad,
@@ -143,6 +164,8 @@ const Database kArrayDb = {
     .ProbeRemoteness = ArrayDbProbeRemoteness,
     .TierStatus = ArrayDbTierStatus,
     .GameStatus = ArrayDbGameStatus,
+
+    .GetPathPrefix = ArrayDbGetPathPrefix,
 };
 
 // Types
@@ -179,6 +202,8 @@ static RecordArray *records;
 static bool concurrent_solve;
 static AtomicRecordArray *atomic_records;
 static TierToPtrChainedHashMap loaded_tiers;
+static RecordArray *segments[8];
+static int cur_num_segments;
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
@@ -202,6 +227,10 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;
     TierToPtrChainedHashMapInit(&loaded_tiers, 0.75);
+    for (int i = 0; i < 8; ++i) {
+        segments[i] = NULL;
+    }
+    cur_num_segments = 0;
 
     return kNoError;
 }
@@ -221,6 +250,7 @@ static void ArrayDbFinalize(void) {
             (RecordArray *)TierToPtrChainedHashMapIteratorValue(&it));
     }
     TierToPtrChainedHashMapDestroy(&loaded_tiers);
+    ArrayDbFreeSolvingSegmentBuffers();
 }
 
 static int CheckExistingSolvingTier(const char *caller) {
@@ -331,6 +361,22 @@ static char *GetFullPathToCheckpoint(Tier tier, GetTierNameFunc GetTierName) {
 static char *GetFullPathToTempCheckpoint(Tier tier,
                                          GetTierNameFunc GetTierName) {
     return GetFullPathPlusExtension(tier, GetTierName, ".chk.tmp");
+}
+
+static char *GetFullPathToTempSegment(Tier tier, GetTierNameFunc GetTierName,
+                                      int seg_idx) {
+    char postfix[14 + kInt32Base10StringLengthMax];
+    sprintf(postfix, "_seg_%d.lz4.tmp", seg_idx);
+
+    return GetFullPathPlusExtension(tier, GetTierName, postfix);
+}
+
+static char *GetFullPathToSegment(Tier tier, GetTierNameFunc GetTierName,
+                                  int seg_idx) {
+    char postfix[10 + kInt32Base10StringLengthMax];
+    sprintf(postfix, "_seg_%d.lz4", seg_idx);
+
+    return GetFullPathPlusExtension(tier, GetTierName, postfix);
 }
 
 static char *GetFullPathToFinishFlag(void) {
@@ -564,6 +610,180 @@ static int ArrayDbGetNumUndecidedChildren(Position position) {
     return RecordArrayGetNumUndecidedChildren(records, position);
 }
 
+int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
+                                       int64_t size) {
+    if (num_segments < 0 || num_segments > 8) return kIllegalArgumentError;
+    for (int i = 0; i < num_segments; ++i) {
+        segments[i] = RecordArrayCreate(size);
+        if (segments[i] == NULL) {
+            ArrayDbFreeSolvingSegmentBuffers();
+            return kMallocFailureError;
+        }
+    }
+    current_tier = tier;
+    cur_num_segments = num_segments;
+
+    return kNoError;
+}
+
+static int ConvertLz4UtilsDecompressFileError(int64_t decomp_size) {
+    switch (decomp_size) {
+        case -1:
+        case -3:
+            return kFileSystemError;
+        case -2:
+            return kMallocFailureError;
+        case -4:
+            return kRuntimeError;
+
+        default:
+            return kNoError;
+    }
+}
+
+int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
+    char *filename =
+        GetFullPathToSegment(current_tier, CurrentGetTierName, seg_idx);
+    if (!filename) return kMallocFailureError;
+
+    int64_t decomp_size =
+        Lz4UtilsDecompressFile(filename, segments[buf_idx]->records,
+                               segments[buf_idx]->size * sizeof(Record));
+    GamesmanFree(filename);
+
+    return ConvertLz4UtilsDecompressFileError(decomp_size);
+}
+
+int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx) {
+    int error = kNoError;
+    char *tmp_name =
+        GetFullPathToTempSegment(current_tier, CurrentGetTierName, seg_idx);
+    char *name =
+        GetFullPathToSegment(current_tier, CurrentGetTierName, seg_idx);
+    if (tmp_name == NULL || name == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+    int64_t compressed_size = Lz4UtilsCompressStream(
+        segments[buf_idx]->records, segments[buf_idx]->size * sizeof(Record),
+        kDefaultLz4Level, tmp_name);
+    switch (compressed_size) {
+        case -1:
+            NotReached(
+                "ArrayDbFlushSolvingSegment: (BUG) malformed input array(s)");
+            break;
+        case -2:
+            error = kMallocFailureError;
+            goto _bailout;
+        case -3:
+            error = kFileSystemError;
+            goto _bailout;
+    }
+    int rename_error = GuardedRename(tmp_name, name);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    GamesmanFree(tmp_name);
+    GamesmanFree(name);
+
+    return error;
+}
+
+int ArrayDbFreeSolvingSegmentBuffers(void) {
+    for (int i = 0; i < cur_num_segments; ++i) {
+        RecordArrayDestroy(segments[i]);
+    }
+    cur_num_segments = 0;
+
+    return kNoError;
+}
+
+Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset) {
+    return RecordArrayGetValue(segments[buf_idx], offset);
+}
+
+int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset) {
+    return RecordArrayGetRemoteness(segments[buf_idx], offset);
+}
+
+void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                             Value value, int remoteness) {
+    RecordArraySetValueRemoteness(segments[buf_idx], offset, value, remoteness);
+}
+
+static int64_t I64Min(int64_t a, int64_t b) { return a < b ? a : b; }
+
+static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
+                              XzraOutStream *xzra_out) {
+    Position begin_pos = chunk * segments[slot]->size;
+    Position end_pos = I64Min(begin_pos + segments[slot]->size, tier_size);
+    int64_t compressed_size = XzraOutStreamRun(
+        xzra_out, (const uint8_t *)RecordArrayGetReadOnlyData(segments[slot]),
+        (end_pos - begin_pos) * sizeof(Record));
+
+    return compressed_size >= 0;
+}
+
+int ArrayDbConsolidateSolvingSegments(int64_t tier_size, int num_segments) {
+    int error = kNoError;
+    char *tmp_full_path =
+        GetFullPathToTempFile(current_tier, CurrentGetTierName);
+    char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
+    if (tmp_full_path == NULL || full_path == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+    int num_threads = ConcurrencyGetOmpNumThreads() - 1;
+    XzraOutStream *xzra_out =
+        XzraOutStreamCreate(tmp_full_path, block_size, lzma_level,
+                            enable_extreme_compression, num_threads);
+    if (xzra_out == NULL) {
+        error = kMallocFailureError;
+        goto _bailout;
+    }
+
+    bool success = true;
+    PRAGMA_OMP(parallel reduction(task, && : success))
+    PRAGMA_OMP(single)
+    for (int64_t i = 0; i < num_segments; ++i) {
+        int slot = i % num_segments;
+
+        // Read in a DB segment
+        PRAGMA_OMP(task depend(inout : segments[slot]))
+        ArrayDbLoadSolvingSegment(slot, i);
+
+        // Recompress
+        PRAGMA_OMP(task in_reduction(&& : success)
+                       depend(inout : segments[slot]))
+        success &= RecompressDbChunk(tier_size, slot, i, xzra_out);
+    }
+    if (XzraOutStreamClose(xzra_out) < 3) {
+        error = kFileSystemError;
+        goto _bailout;
+    } else if (!success) {
+        error = kRuntimeError;
+        goto _bailout;
+    }
+
+    // Rename tmp to regular db file.
+    int rename_error = GuardedRename(tmp_full_path, full_path);
+    if (rename_error) {
+        error = kFileSystemError;
+        goto _bailout;
+    }
+
+_bailout:
+    GamesmanFree(tmp_full_path);
+    GamesmanFree(full_path);
+
+    return error;
+}
+
 bool ArrayDbCheckpointExists(Tier tier) {
     char *full_path = GetFullPathToCheckpoint(tier, CurrentGetTierName);
     bool ret = full_path && FileExists(full_path);
@@ -640,7 +860,7 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
     GamesmanFree(full_path);
     if (decomp_size < 0) {
         RecordArrayDestroy(records);
-        return kRuntimeError;
+        return ConvertLz4UtilsDecompressFileError(decomp_size);
     }
 
     // Add the solving tier's index to the map.
@@ -862,3 +1082,5 @@ static int ArrayDbGameStatus(void) {
 
     return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }
+
+const char *ArrayDbGetPathPrefix(void) { return sandbox_path; }
