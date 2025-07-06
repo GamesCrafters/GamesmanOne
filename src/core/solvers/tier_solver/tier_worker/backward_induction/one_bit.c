@@ -1,7 +1,6 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/one_bit.h"
 
 #include <assert.h>     // assert
-#include <limits.h>     // PATH_MAX
 #include <stdatomic.h>  // memory_order_relaxed
 #include <stdbool.h>    // bool, true, false
 #include <stddef.h>     // size_t, NULL
@@ -45,20 +44,24 @@ static TierHashMap tier_to_size_offset;
 
 static int num_child_tiers;  // Number of child tiers in total.
 
-static int max_win_lose_remoteness;  // Max win/loss remoteness discovered
-static int max_tie_remoteness;       // Max tie remoteness discovered
-static int num_threads;              // Number of threads available.
+static ConcurrentInt
+    *max_win_lose_remoteness;              // Max win/loss remoteness discovered
+static ConcurrentInt *max_tie_remoteness;  // Max tie remoteness discovered
+static bool
+    max_remotenesses_set;  // Whether the above remoteness values have been set.
+static int num_threads;    // Number of threads available.
 
 static int64_t chunk_size;
 static int64_t num_chunks;
 static Bitset *seq_buf[2];
 
 static ConcurrentBitset *rand_bitset;
-static char dep_chunk;
+static char dep_cpu;
 static char dep_seg[3];
 
 static int lz4_level = 0;
 static const char *path_prefix;
+enum { kMaxPathLength = 4096 };
 
 // ------------------------------ Step0Initialize ------------------------------
 
@@ -81,14 +84,14 @@ static void Step0_0SetupChildTiers(void) {
             int64_t size = api_internal->GetTierSize(canonical);
             child_tier_sizes[num_child_tiers] = size;
 
-            // Calculate prefix sum for size offset into the random access
+            // Calculate next prefix sum for size offset into the random access
             // bitset.
             child_tier_size_offsets[num_child_tiers + 1] =
                 child_tier_size_offsets[num_child_tiers] + size;
 
-            // Put the prefix sum into the offset map.
+            // Put the current sum into the offset map.
             TierHashMapSet(&tier_to_size_offset, canonical,
-                           child_tier_size_offsets[num_child_tiers + 1]);
+                           child_tier_size_offsets[num_child_tiers]);
             ++num_child_tiers;
         }
     }
@@ -104,12 +107,12 @@ static int64_t NextMultiple(int64_t n, int64_t mult) {
  * \p mem can handle.
  *
  * @details The solver may hold a chunk of the on-disk DB and a chunk of the
- * sequential access bitset at the same time. The Array DB uses 2 bytes per
- * position and the bitset uses 1/8 bytes per position but with the final
- * memory usage rounded to the next integral value of bytes. The solver uses a
- * rolling buffer so there will be at most 3 chunks of DB and 2 chunks of the
- * sequential bitset loaded at the same time. Let x be the number of positions
- * in each chunk. The memory requirement is therefore
+ * sequential access bitset at the same time. The Array DB uses
+ * kArrayDbRecordSize bytes per position and the bitset uses 1/8 bytes per
+ * position but with the final memory usage rounded to the next integral value
+ * of bytes. The solver uses a rolling buffer so there will be at most 3 chunks
+ * of DB and 2 chunks of the sequential bitset loaded at the same time. Let x be
+ * the number of positions in each chunk. The memory requirement is therefore
  *
  *     3 * 2 * x + 2 * (x + 7) / 8 <= mem
  *
@@ -117,7 +120,7 @@ static int64_t NextMultiple(int64_t n, int64_t mult) {
  * function.
  */
 static int64_t CalcChunkSize(size_t mem) {
-    int64_t ret = (mem * 4 - 7) / 25;
+    int64_t ret = (mem * 4 - 7) / (12 * kArrayDbRecordSize + 1);
 
     // Distribute positions into each chunk as evenly as possible.
     ret = RoundUpDivide(this_tier_size, RoundUpDivide(this_tier_size, ret));
@@ -129,10 +132,8 @@ static int64_t CalcChunkSize(size_t mem) {
 
 static bool Step0_1AllocateMemory(size_t memlimit) {
     // Calculate the size of the current tier group.
-    int64_t tier_group_size = this_tier_size;
-    for (int i = 0; i < num_child_tiers; ++i) {
-        tier_group_size += child_tier_sizes[i];
-    }
+    int64_t tier_group_size =
+        this_tier_size + child_tier_size_offsets[num_child_tiers];
 
     // Size of the random access concurrent bitset
     size_t rand_size = ConcurrentBitsetMemRequired(tier_group_size);
@@ -163,6 +164,12 @@ static bool Step0_1AllocateMemory(size_t memlimit) {
 
 static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
                             Tier tier, size_t memlimit) {
+    // These variables are never directly used by the algorithm. They only serve
+    // as dependency flags for OpenMP tasks.
+    (void)dep_cpu;
+    (void)dep_seg;
+
+    // TODO: memlimit should not be parsed here!
     memlimit = memlimit == 0 ? GetPhysicalMemory() / 10 * 9 : memlimit;
 
     // Set API and other constants.
@@ -173,7 +180,11 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     path_prefix = DbManagerGetPathPrefix();
 
     // Initialize max remoteness values to 0.
-    max_win_lose_remoteness = max_tie_remoteness = 0;
+    max_win_lose_remoteness = GamesmanMalloc(sizeof(ConcurrentInt));
+    max_tie_remoteness = GamesmanMalloc(sizeof(ConcurrentInt));
+    ConcurrentIntInit(max_win_lose_remoteness, 0);
+    ConcurrentIntInit(max_tie_remoteness, 0);
+    max_remotenesses_set = false;
 
     // Initialize the child tier array.
     this_tier = tier;
@@ -230,7 +241,7 @@ static void Step1ScanTierAndInitDb(void) {
         int slot = i % 2;
 
         // Scan for illegal, non-canonical, and primitive positions
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         ScanDbChunk(slot, i);
 
         // Write the chunk to disk
@@ -281,7 +292,7 @@ static void GenerateParentsFromDbSolving(Value val, int remoteness) {
         DbManagerLoadSolvingSegment(slot, i);
 
         // Generate parents from loaded DB into random access bitset
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         GenerateParentsFromDbChunk(slot, i, val, remoteness);
     }
 }
@@ -290,15 +301,11 @@ static void UpdateMaxRemotenesses(Value val, int remoteness) {
     switch (val) {
         case kLose:
         case kWin:
-            if (max_win_lose_remoteness < remoteness) {
-                max_win_lose_remoteness = remoteness;
-            }
+            ConcurrentIntMax(max_win_lose_remoteness, remoteness);
             break;
 
         case kTie:
-            if (max_tie_remoteness < remoteness) {
-                max_tie_remoteness = remoteness;
-            }
+            ConcurrentIntMax(max_tie_remoteness, remoteness);
             break;
 
         default:
@@ -312,12 +319,15 @@ static void GenerateParentsFromChildTierDb(int child_tier_idx, Value val,
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition child = {.tier = child_tiers[child_tier_idx]};
-        PRAGMA_OMP(for schedule(dynamic, 128))
+        PRAGMA_OMP(for schedule(dynamic, current_db_chunk_size))
         for (Position pos = 0; pos < child_tier_sizes[child_tier_idx]; ++pos) {
             child.position = pos;
             int child_remoteness = DbManagerProbeRemoteness(&probe, child);
             Value child_val = DbManagerProbeValue(&probe, child);
-            UpdateMaxRemotenesses(child_val, remoteness);
+            if (!max_remotenesses_set) {
+                UpdateMaxRemotenesses(child_val, child_remoteness);
+            }
+
             if (child_val != val || child_remoteness != remoteness) continue;
             GenerateParentsFromTierPosition(child);
         }
@@ -372,7 +382,7 @@ static void Step2_0_0RemoveSolvedPositions(void) {
         DbManagerLoadSolvingSegment(slot, i);
 
         // Remove solved positions from the random access bitset
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         RemoveSolvedPositionsFromDbChunk(slot, i);
     }
 }
@@ -387,7 +397,7 @@ static void CopyRandToSeqChunkInMem(Bitset *seq, int chunk) {
 }
 
 static void StoreSeqChunk(Bitset *seq, int chunk) {
-    static char tmp_path[PATH_MAX], path[PATH_MAX];
+    static char tmp_path[kMaxPathLength], path[kMaxPathLength];
     sprintf(tmp_path, "%s/seq_%d.lz4.tmp", path_prefix, chunk);
     sprintf(path, "%s/seq_%d.lz4", path_prefix, chunk);
     size_t size = BitSetGetSerializedSize(seq);
@@ -405,7 +415,7 @@ static void Step2_0_1DumpRandToSeq(void) {
         // 1. Must wait for any previous task operating on the same bitset to
         // finish.
         // 2. Must wait for the previous copy operation to finish.
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         CopyRandToSeqChunkInMem(seq_buf[slot], i);
 
         // Remove solved positions from Rand dependences:
@@ -447,7 +457,7 @@ static void LoadWinPosFromDbSolving(int remoteness) {
         DbManagerLoadSolvingSegment(slot, i);
 
         // Load "win in <= N" positions into the random access bitset
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_chunk))
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         LoadWinPosFromDbChunk(slot, i, remoteness);
     }
 }
@@ -458,7 +468,7 @@ static void LoadWinPosFromChildTierDb(int child_tier_idx, int remoteness) {
         DbProbe probe;
         DbManagerProbeInit(&probe);
         TierPosition tp = {.tier = child_tiers[child_tier_idx]};
-        PRAGMA_OMP(for schedule(dynamic, 128))
+        PRAGMA_OMP(for schedule(dynamic, current_db_chunk_size))
         for (Position pos = 0; pos < child_tier_sizes[child_tier_idx]; ++pos) {
             tp.position = pos;
             Value val = DbManagerProbeValue(&probe, tp);
@@ -491,7 +501,7 @@ static void Step2_0_2LoadWinPosFromDb(int remoteness) {
 }
 
 static void ReadDbAndSeqChunk(int slot, int chunk) {
-    static char seq_filename[PATH_MAX];
+    static char seq_filename[kMaxPathLength];
     DbManagerLoadSolvingSegment(slot, chunk);
     sprintf(seq_filename, "%s/seq_%d.lz4", path_prefix, chunk);
     Bitset *seq = seq_buf[slot];
@@ -559,7 +569,7 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
         // clang-format off
         PRAGMA_OMP(task
                     in_reduction(|| : advance)
-                    depend(inout : dep_seg[slot], seq_buf[slot], dep_chunk))
+                    depend(inout : dep_seg[slot], seq_buf[slot], dep_cpu))
         // clang-format on
         advance |= ProveLosingParentsChunk(slot, seq_buf[slot], i, remoteness);
 
@@ -635,7 +645,7 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
         // clang-format off
         PRAGMA_OMP(task
                     in_reduction(|| : advance)
-                    depend(inout : dep_seg[slot], seq_buf[slot], dep_chunk))
+                    depend(inout : dep_seg[slot], seq_buf[slot], dep_cpu))
         // clang-format on
         advance |= ProveWinningOrTyingParentsChunk(slot, i, val, remoteness);
 
@@ -659,11 +669,11 @@ static bool Step2_1IterateLose(int pass) {
 static void Step2IterateWinLose(void) {
     int pass = 0;
     bool advance = true;
-    while (pass <= max_win_lose_remoteness || advance) {
-        advance = false;
-        advance |= Step2_0IterateWin(pass);
-        advance |= Step2_1IterateLose(pass);
+    while (pass <= ConcurrentIntLoad(max_win_lose_remoteness) || advance) {
+        // Cannot use || here because it short-circuits.
+        advance = Step2_0IterateWin(pass) | Step2_1IterateLose(pass);
         ++pass;
+        max_remotenesses_set = true;
     }
 }
 
@@ -672,7 +682,7 @@ static void Step2IterateWinLose(void) {
 static void Step3IterateTie(void) {
     int pass = 0;
     bool advance = true;
-    while (pass <= max_tie_remoteness || advance) {
+    while (pass <= ConcurrentIntLoad(max_tie_remoteness) || advance) {
         GenerateParentsFromDb(kTie, pass);
         advance = ProveWinningOrTyingParents(kTie, pass);
         ++pass;
@@ -695,8 +705,10 @@ static void Step5Cleanup(void) {
     path_prefix = NULL;
     TierHashMapDestroy(&tier_to_size_offset);
     num_child_tiers = 0;
-    max_win_lose_remoteness = 0;
-    max_tie_remoteness = 0;
+    GamesmanFree(max_win_lose_remoteness);
+    max_win_lose_remoteness = NULL;
+    GamesmanFree(max_tie_remoteness);
+    max_tie_remoteness = NULL;
     num_threads = 0;
     chunk_size = 0;
     num_chunks = 0;
