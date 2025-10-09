@@ -19,7 +19,6 @@
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/types/gamesman_types.h"
 #include "libs/lz4_utils/lz4_utils.h"
-#include "libs/xzra/xzra.h"
 
 // Read-only reference to the API functions from tier_manager.
 static const TierSolverApi *api_internal;
@@ -208,7 +207,7 @@ static void ScanDbChunk(int slot, int chunk) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
-    PRAGMA_OMP(taskloop grainsize(128))
+    PRAGMA_OMP(taskloop num_tasks(960))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         TierPosition tp = {.tier = this_tier, .position = pos};
         int64_t rec_idx = pos - begin_pos;
@@ -266,7 +265,7 @@ static void GenerateParentsFromDbChunk(int slot, int chunk, Value val,
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
-    PRAGMA_OMP(taskloop grainsize(128))
+    PRAGMA_OMP(taskloop num_tasks(960))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
@@ -356,7 +355,7 @@ static void RemoveSolvedPositionsFromDbChunk(int slot, int chunk) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
-    PRAGMA_OMP(taskloop grainsize(128))
+    PRAGMA_OMP(taskloop num_tasks(960))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // If the position has been solved, remove it from the random access
         // bitset
@@ -411,17 +410,11 @@ static void Step2_0_1DumpRandToSeq(void) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 2;
 
-        // In-memory bitset copy dependences:
-        // 1. Must wait for any previous task operating on the same bitset to
-        // finish.
-        // 2. Must wait for the previous copy operation to finish.
+        // In-memory bitset copy
         PRAGMA_OMP(task depend(inout : dep_seg[slot], dep_cpu))
         CopyRandToSeqChunkInMem(seq_buf[slot], i);
 
-        // Remove solved positions from Rand dependences:
-        // 1. Must wait for any previous task operating on the same buffer
-        // to finish.
-        // 2. Must wait for the previous removal task to finish.
+        // Remove solved positions from random access bitset
         PRAGMA_OMP(task depend(inout : dep_seg[slot]))
         StoreSeqChunk(seq_buf[slot], i);
     }
@@ -431,7 +424,7 @@ static void LoadWinPosFromDbChunk(int slot, int chunk, int remoteness) {
     Position begin_pos = chunk * chunk_size;
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
-    PRAGMA_OMP(taskloop grainsize(128))
+    PRAGMA_OMP(taskloop num_tasks(960))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
@@ -522,7 +515,7 @@ static bool ProveLosingParentsChunk(int slot, const Bitset *seq, int chunk,
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
     bool advance = false;
-    PRAGMA_OMP(taskloop grainsize(128) reduction(|| : advance))
+    PRAGMA_OMP(taskloop num_tasks(960) reduction(|| : advance))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip positions that are not parents to be proved.
         if (!BitsetTest(seq, pos - begin_pos)) continue;
@@ -562,8 +555,10 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
 
         // Read a chunk of DB and a chunk of the sequential access bitset into
         // memory
-        PRAGMA_OMP(task depend(inout : dep_seg[slot], seq_buf[slot]))
-        ReadDbAndSeqChunk(slot, i);
+        PRAGMA_OMP(task depend(inout : dep_seg[slot], seq_buf[slot])) {
+            // printf("loading chunk %ld into slot %d\n", i, slot);
+            ReadDbAndSeqChunk(slot, i);
+        }
 
         // Prove losing parents in DB chunk
         // clang-format off
@@ -571,11 +566,17 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
                     in_reduction(|| : advance)
                     depend(inout : dep_seg[slot], seq_buf[slot], dep_cpu))
         // clang-format on
-        advance |= ProveLosingParentsChunk(slot, seq_buf[slot], i, remoteness);
+        {
+            // printf("proving losing parents in chunk %ld in slot %d\n", i, slot);
+            advance |=
+                ProveLosingParentsChunk(slot, seq_buf[slot], i, remoteness);
+        }
 
         // Flush DB chunk
-        PRAGMA_OMP(task depend(inout : dep_seg[slot]))
-        DbManagerFlushSolvingSegment(slot, i);
+        PRAGMA_OMP(task depend(inout : dep_seg[slot])) {
+            // printf("flushing chunk %ld in slot %d\n", i, slot);
+            DbManagerFlushSolvingSegment(slot, i);
+        }
     }
 
     return advance;
@@ -596,7 +597,7 @@ static bool ProveWinningOrTyingParentsChunk(int slot, int chunk, Value val,
     Position end_pos = I64Min(begin_pos + chunk_size, this_tier_size);
 
     bool advance = false;
-    PRAGMA_OMP(taskloop grainsize(128) reduction(|| : advance))
+    PRAGMA_OMP(taskloop num_tasks(960) reduction(|| : advance))
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         if (!ConcurrentBitsetTest(rand_bitset, pos, memory_order_relaxed)) {
             continue;  // Not a parent position to be proved.
@@ -630,29 +631,19 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
     for (int64_t i = 0; i < num_chunks; ++i) {
         int slot = i % 3;  // Read, modify, write.
 
-        // DB read dependences:
-        // 1. Must wait for any previous task operating on the same buffer to
-        // finish.
-        // 2. Must wait for the previous read task to finish.
+        // Read in a chunk of DB
         PRAGMA_OMP(task depend(inout : dep_seg[slot]))
         DbManagerLoadSolvingSegment(slot, i);
 
-        // Proof of parents and write to DB chunk dependences:
-        // 1. Must wait for any previous task operating on the same buffers to
-        //    finish.
-        // 2. Must wait for the previous proof process to finish.
-
         // clang-format off
+        // Prove parents
         PRAGMA_OMP(task
                     in_reduction(|| : advance)
                     depend(inout : dep_seg[slot], seq_buf[slot], dep_cpu))
         // clang-format on
         advance |= ProveWinningOrTyingParentsChunk(slot, i, val, remoteness);
 
-        // Write DB chunk dependencies:
-        // 1. Must wait for any previous task operating on the same buffer to
-        //    finish.
-        // 2. Must wait for the previous write task to finish.
+        // Write DB chunk
         PRAGMA_OMP(task depend(inout : dep_seg[slot]))
         DbManagerFlushSolvingSegment(slot, i);
     }

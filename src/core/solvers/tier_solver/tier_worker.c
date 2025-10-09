@@ -93,8 +93,8 @@ int TierWorkerSolve(int method, Tier tier,
     if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            return TierWorkerSolveITInternal(api_internal, tier, options,
-                                             solved);
+            // return TierWorkerSolveITInternal(api_internal, tier, options,
+            //                                  solved);
         case kTierWorkerSolveMethodBackwardInduction:
             return TierWorkerBackwardInduction(
                 api_internal, current_db_chunk_size, tier, options, solved);
