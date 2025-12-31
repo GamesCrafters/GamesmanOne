@@ -53,8 +53,8 @@ typedef enum {
 
     /**
      * @brief External memory retrograde analysis algorithm using only one bit
-     * per each position in the group of tiers made up of the tier currently
-     * being solved and its child tiers. Algorithm devised by Ren Wu and Don
+     * per each position in the group of tiers including the tier currently
+     * being solved plus its child tiers. Algorithm devised by Ren Wu and Don
      * Beal, "Fast, Memory-Efficient Retrograde Algorithms."
      */
     kOneBit,
