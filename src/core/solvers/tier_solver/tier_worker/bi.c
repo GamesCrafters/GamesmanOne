@@ -49,9 +49,9 @@ static bool GetParentsAvailable(const TierSolverApi *api) {
 static BackwardInductionStrategy BestStrategy(const TierSolverApi *api,
                                               Tier tier, size_t memlimit) {
     int64_t this_tier_size = api->GetTierSize(tier);
-    int64_t tier_children_total_size = 0;
     Tier child_tiers[kTierSolverNumChildTiersMax];
     int num_child_tiers = api->GetChildTiers(tier, child_tiers);
+    int64_t tier_children_total_size = 0;
     for (int i = 0; i < num_child_tiers; ++i) {
         tier_children_total_size += api->GetTierSize(child_tiers[i]);
     }
