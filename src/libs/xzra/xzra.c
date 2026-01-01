@@ -148,7 +148,7 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
     strm->avail_in = 0;
     strm->next_out = outbuf;
     strm->avail_out = sizeof(outbuf);
-    while (true) {
+    for (;;) {
         if (strm->avail_in == 0 && !feof(infile)) {
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
@@ -226,7 +226,7 @@ static bool CompressMemHelper(lzma_stream *strm, const uint8_t *in,
     strm->avail_in = in_size;
     strm->next_out = outbuf;
     strm->avail_out = sizeof(outbuf);
-    while (true) {
+    for (;;) {
         lzma_ret ret = lzma_code(strm, LZMA_FINISH);
         if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
             size_t write_size = sizeof(outbuf) - strm->avail_out;
@@ -353,7 +353,7 @@ int64_t XzraOutStreamClose(XzraOutStream *stream) {
 
     stream->strm.next_in = NULL;
     stream->strm.avail_in = 0;
-    while (true) {
+    for (;;) {
         lzma_ret l_ret = lzma_code(&stream->strm, LZMA_FINISH);
         if (stream->strm.avail_out == 0 || l_ret == LZMA_STREAM_END) {
             size_t write_size = sizeof(stream->outbuf) - stream->strm.avail_out;
@@ -469,7 +469,7 @@ static bool DecompressFileHelper(lzma_stream *strm, FILE *infile, uint8_t *dest,
     strm->avail_in = 0;
     strm->next_out = dest;
     strm->avail_out = size;
-    while (true) {
+    for (;;) {
         if (strm->avail_in == 0 && !feof(infile)) {
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);

@@ -150,7 +150,7 @@ static const char kDoc[] =
 HeadlessArguments HeadlessParseArguments(int argc, char **argv) {
     arguments = kDefaultHeadlessArguments;
     int key;
-    while (1) {
+    for (;;) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
         // NOLINTBEGIN(concurrency-mt-unsafe)

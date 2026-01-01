@@ -94,7 +94,7 @@ static int64_t CompressStreamsInternal(const void *const *in,
     // Stream file.
     for (int i = 0; i < n; ++i) {
         size_t processed = 0;  // #Bytes processed from in[i]
-        while (1) {
+        for (;;) {
             const size_t read_size =
                 SizeMin(inbuf_size, in_sizes[i] - processed);
             if (read_size == 0) break;  // Nothing left in input buffer.
@@ -189,7 +189,7 @@ static int64_t CompressFileInternal(FILE *f_in, FILE *f_out, LZ4F_cctx *ctx,
     if (n != header_size) return -3;
 
     // Stream file.
-    while (1) {
+    for (;;) {
         const size_t read_size = fread(inbuf, 1, inbuf_size, f_in);
         if (read_size == 0) break;  // Nothing left to read from input file.
         size_t compressed_size = LZ4F_compressUpdate(ctx, outbuf, outbuf_size,

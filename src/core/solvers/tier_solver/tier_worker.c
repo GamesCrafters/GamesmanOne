@@ -112,7 +112,7 @@ int TierWorkerSolve(int method, Tier tier,
 #ifdef USE_MPI
 int TierWorkerMpiServe(void) {
     TierMpiWorkerSendCheck();
-    while (true) {
+    for (;;) {
         TierMpiManagerMessage msg;
         TierMpiWorkerRecv(&msg);
 

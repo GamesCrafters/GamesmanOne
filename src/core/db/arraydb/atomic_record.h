@@ -100,7 +100,7 @@ static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
  */
 static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
     Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
-    while (1) {
+    for (;;) {
         Record new_rec = old_rec;
         RecordSetValue(&new_rec, val);
         if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
@@ -120,7 +120,7 @@ static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
  */
 static inline void AtomicRecordSetRemoteness(AtomicRecord *ar, int remoteness) {
     Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
-    while (1) {
+    for (;;) {
         Record new_rec = old_rec;
         RecordSetRemoteness(&new_rec, remoteness);
         if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
