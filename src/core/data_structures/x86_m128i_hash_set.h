@@ -92,7 +92,7 @@ typedef struct {
 // CityHash, by Geoff Pike and Jyrki Alakuijala
 //
 // http://code.google.com/p/cityhash/
-static inline uint64_t __X86M128iHashSetHash128to64(__m128i v) {
+static inline uint64_t X86M128iHashSetInternalHash128to64(__m128i v) {
     alignas(16) uint64_t bits[2];
     _mm_store_si128((__m128i *)bits, v);
 
@@ -108,7 +108,7 @@ static inline uint64_t __X86M128iHashSetHash128to64(__m128i v) {
 }
 
 // https://stackoverflow.com/questions/26880863/testing-equality-between-two-m128i-variables
-static inline bool __X86M128iHashSetM128Equal(__m128i a, __m128i b) {
+static inline bool X86M128iHashSetInternalM128Equal(__m128i a, __m128i b) {
     __m128i neq = _mm_xor_si128(a, b);
     return _mm_test_all_zeros(neq, neq);
 }
@@ -136,9 +136,9 @@ static inline void X86M128iHashSetInit(X86M128iHashSet *hs) {
  */
 static inline bool X86M128iHashSetAdd(X86M128iHashSet *hs, __m128i key) {
     uint64_t capacity_mask = X86_M128I_HASH_SET_SIZE - 1ULL;
-    uint64_t idx = __X86M128iHashSetHash128to64(key) & capacity_mask;
+    uint64_t idx = X86M128iHashSetInternalHash128to64(key) & capacity_mask;
     while (hs->state[idx]) {
-        if (__X86M128iHashSetM128Equal(hs->keys[idx], key)) return false;
+        if (X86M128iHashSetInternalM128Equal(hs->keys[idx], key)) return false;
         idx = (idx + 1ULL) & capacity_mask;
     }
     hs->keys[idx] = key;
@@ -159,9 +159,9 @@ static inline bool X86M128iHashSetAdd(X86M128iHashSet *hs, __m128i key) {
 static inline bool X86M128iHashSetContains(const X86M128iHashSet *hs,
                                            __m128i key) {
     uint64_t capacity_mask = X86_M128I_HASH_SET_SIZE - 1ULL;
-    uint64_t idx = __X86M128iHashSetHash128to64(key) & capacity_mask;
+    uint64_t idx = X86M128iHashSetInternalHash128to64(key) & capacity_mask;
     while (hs->state[idx]) {
-        if (__X86M128iHashSetM128Equal(hs->keys[idx], key)) return true;
+        if (X86M128iHashSetInternalM128Equal(hs->keys[idx], key)) return true;
         idx = (idx + 1ULL) & capacity_mask;
     }
 
