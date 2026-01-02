@@ -76,16 +76,18 @@ static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 static int ArrayDbGetNumUndecidedChildren(Position position);
 
-int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
-                                       int64_t size);
-int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx);
-int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx);
-int ArrayDbFreeSolvingSegmentBuffers(void);
-Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset);
-int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
-void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
-                                             Value value, int remoteness);
-int ArrayDbConsolidateSolvingSegments(int64_t tier_size, int num_segments);
+static int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
+                                              int64_t size);
+static int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx);
+static int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx);
+static int ArrayDbFreeSolvingSegmentBuffers(void);
+static Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset);
+static int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
+static void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                                    Value value,
+                                                    int remoteness);
+static int ArrayDbConsolidateSolvingSegments(int64_t tier_size,
+                                             int num_segments);
 
 static bool ArrayDbCheckpointExists(Tier tier);
 static int ArrayDbCheckpointSave(const void *status, size_t status_size);
@@ -641,7 +643,7 @@ static int ConvertLz4UtilsDecompressFileError(int64_t decomp_size) {
     }
 }
 
-int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
+static int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
     char *filename =
         GetFullPathToSegment(current_tier, CurrentGetTierName, seg_idx);
     if (!filename) return kMallocFailureError;
@@ -654,7 +656,7 @@ int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
     return ConvertLz4UtilsDecompressFileError(decomp_size);
 }
 
-int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx) {
+static int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx) {
     int error = kNoError;
     char *tmp_name =
         GetFullPathToTempSegment(current_tier, CurrentGetTierName, seg_idx);
@@ -693,7 +695,7 @@ _bailout:
     return error;
 }
 
-int ArrayDbFreeSolvingSegmentBuffers(void) {
+static int ArrayDbFreeSolvingSegmentBuffers(void) {
     for (int i = 0; i < cur_num_segments; ++i) {
         RecordArrayDestroy(segments[i]);
     }
@@ -702,16 +704,17 @@ int ArrayDbFreeSolvingSegmentBuffers(void) {
     return kNoError;
 }
 
-Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset) {
+static Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset) {
     return RecordArrayGetValue(segments[buf_idx], offset);
 }
 
-int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset) {
+static int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset) {
     return RecordArrayGetRemoteness(segments[buf_idx], offset);
 }
 
-void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
-                                             Value value, int remoteness) {
+static void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
+                                                    Value value,
+                                                    int remoteness) {
     RecordArraySetValueRemoteness(segments[buf_idx], offset, value, remoteness);
 }
 
