@@ -74,7 +74,7 @@ static BackwardInductionStrategy BestStrategy(const TierSolverApi *api,
 
 int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
                                 Tier tier,
-                                const TierWorkerSolveOptions *options,
+                                const TierSolverSolveOptions *options,
                                 bool *solved) {
     if (solved != NULL) *solved = false;
 
@@ -84,9 +84,8 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
     }
 
     // Analyze memory usage and decide the best solving strategy.
-    size_t memlimit =
-        (options->memlimit) ? options->memlimit : GetPhysicalMemory() / 10 * 9;
-    BackwardInductionStrategy strategy = BestStrategy(api, tier, memlimit);
+    BackwardInductionStrategy strategy =
+        BestStrategy(api, tier, options->memlimit);
 
     // If we don't have enough memory to solve the tier, report failure.
     if (strategy == kUnsolvable) return kMallocFailureError;
@@ -95,22 +94,23 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
     switch (strategy) {
         case kFrontierPercolation:
         case kFrontierless:
-            error =
-                TierWorkerBIOneBit(api, db_chunk_size, tier, options, solved);
+            error = TierWorkerBIFrontierPercolation(api, db_chunk_size, tier,
+                                                    options, solved);
 
             // If either succeeded, or failed not because of OOM, return the
             // error code.
             if (error != kMallocFailureError) return error;
             // Else: frontier percolation ran out of memory.
 
+            // The frontier-less method requires an implementation of the
+            // GetCanonicalParentPositions function.
             // If the game does not implement GetCanonicalParentPositions, then
-            // the game developers should first consider implementing that
-            // function to reduce memory usage.
+            // the game developers should first consider implementing that to
+            // reduce memory usage.
             if (!GetParentsAvailable(api)) return kMallocFailureError;
 
             // Otherwise, use the frontier-less approach instead.
-            return TierWorkerBIFrontierless(api, db_chunk_size, tier, options,
-                                            solved);
+            return TierWorkerBIFrontierless(api, db_chunk_size, tier, solved);
 
         case kOneBit:
             return TierWorkerBIOneBit(api, db_chunk_size, tier, options,

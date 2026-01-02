@@ -299,14 +299,13 @@ static int RegularSolverSolve(void *aux) {
     if (options == NULL) options = &default_options;
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
-    TierWorkerSolveOptions tier_worker_options = {
+    TierSolverSolveOptions tier_solver_options = {
         .memlimit = options->memlimit,
-        .compare = false,
         .force = options->force,
         .verbose = options->verbose,
     };
     int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
-                                kDefaultTier, &tier_worker_options, NULL);
+                                kDefaultTier, &tier_solver_options, NULL);
     if (error != kNoError) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
                 error);

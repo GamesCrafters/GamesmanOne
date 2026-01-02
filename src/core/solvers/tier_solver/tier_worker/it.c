@@ -93,7 +93,7 @@ static bool Step0_0SetupChildTiers(void) {
 static bool Step0Initialize(const TierSolverApi *api, Tier tier,
                             size_t memlimit) {
     api_internal = api;
-    mem = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
+    mem = memlimit;
     this_tier = tier;
     this_tier_size = api_internal->GetTierSize(tier);
 
@@ -322,52 +322,6 @@ static void Step2FlushDb(void) {
     }
 }
 
-// --------------------------------- CompareDb ---------------------------------
-
-static bool CompareDb(void) {
-    DbProbe probe, ref_probe;
-    if (DbManagerProbeInit(&probe)) return false;
-    if (DbManagerRefProbeInit(&ref_probe)) {
-        DbManagerProbeDestroy(&probe);
-        return false;
-    }
-
-    bool success = true;
-    for (Position p = 0; p < this_tier_size; ++p) {
-        TierPosition tp = {.tier = this_tier, .position = p};
-        Value ref_value = DbManagerRefProbeValue(&ref_probe, tp);
-        if (ref_value == kUndecided) continue;
-
-        Value actual_value = DbManagerProbeValue(&probe, tp);
-        if (actual_value != ref_value) {
-            printf("CompareDb: inconsistent value at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-
-        int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
-        int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
-        if (actual_remoteness != ref_remoteness) {
-            printf("CompareDb: inconsistent remoteness at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-    }
-
-_bailout:
-    DbManagerProbeDestroy(&probe);
-    DbManagerRefProbeDestroy(&ref_probe);
-    if (success) {
-        printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
-    }
-
-    return success;
-}
-
 // ------------------------------- Step3Cleanup -------------------------------
 
 static void Step3Cleanup(void) {
@@ -386,7 +340,7 @@ static void Step3Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              const TierWorkerSolveOptions *options,
+                              const TierSolverSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
@@ -398,7 +352,6 @@ int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
     if (!Step0Initialize(api, tier, options->memlimit)) goto _bailout;
     if (!Step1Iterate()) goto _bailout;
     Step2FlushDb();
-    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
 
 _done:

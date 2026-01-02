@@ -46,14 +46,12 @@
  * @brief Creates and solves the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
- * @param force If set to true, the solver will solve each tier regardless of
- * the current database status. Otherwise, the solving stage is skipped if Tier
- * Manager believes that the given tier has been correctly solved already.
- * @param verbose Set to 0 for quiet (only error messages will be printed,) 1
- * for default, and 2 for verbose.
+ * @param options Non-null pointer to a \c TierSolverSolveOptions object which
+ * contains the solving options.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierManagerSolve(const TierSolverApi *api, bool force, int verbose);
+int TierManagerSolve(const TierSolverApi *api,
+                     const TierSolverSolveOptions *options);
 
 /**
  * @brief Creates and analyzes the tier graph.

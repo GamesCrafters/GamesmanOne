@@ -482,52 +482,6 @@ static void Step5SaveValues(void) {
     }
 }
 
-// --------------------------------- CompareDb ---------------------------------
-
-static bool CompareDb(void) {
-    DbProbe probe, ref_probe;
-    if (DbManagerProbeInit(&probe)) return false;
-    if (DbManagerRefProbeInit(&ref_probe)) {
-        DbManagerProbeDestroy(&probe);
-        return false;
-    }
-
-    bool success = true;
-    for (Position p = 0; p < this_tier_size; ++p) {
-        TierPosition tp = {.tier = this_tier, .position = p};
-        Value ref_value = DbManagerRefProbeValue(&ref_probe, tp);
-        if (ref_value == kUndecided) continue;
-
-        Value actual_value = DbManagerProbeValue(&probe, tp);
-        if (actual_value != ref_value) {
-            printf("CompareDb: inconsistent value at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-
-        int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
-        int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
-        if (actual_remoteness != ref_remoteness) {
-            printf("CompareDb: inconsistent remoteness at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-    }
-
-_bailout:
-    DbManagerProbeDestroy(&probe);
-    DbManagerRefProbeDestroy(&ref_probe);
-    if (success) {
-        printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
-    }
-
-    return success;
-}
-
 // ------------------------------- Step6Cleanup -------------------------------
 
 static void Step6Cleanup(void) {
@@ -546,8 +500,7 @@ static void Step6Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
-                             Tier tier, const TierWorkerSolveOptions *options,
-                             bool *solved) {
+                             Tier tier, bool *solved) {
     int ret = kMallocFailureError;
     if (!Step0Initialize(api, db_chunk_size, tier)) goto _bailout;
     Step1ProcessChildTiers();
@@ -555,10 +508,6 @@ int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
     Step3PushFrontierUp();
     Step4MarkDrawPositions();
     Step5SaveValues();
-    if (options->compare && !CompareDb()) {
-        ret = kRuntimeError;
-        goto _bailout;
-    }
 
     // Success
     if (solved != NULL) *solved = true;

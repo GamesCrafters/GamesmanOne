@@ -290,29 +290,41 @@ static ConstantReadOnlyString kTierSolverAnalyzeSkipReadOnlyMsg =
 
 static ConstantReadOnlyString kTierSolverSolveSkipSolvedMsg =
     "TierSolverSolve: the current game variant has already been solved. Use "
-    "-f "
-    "in headless mode to force re-solve the game variant.";
+    "-f in headless mode to force re-solve the game variant.";
+
+static TierSolverSolveOptions SanitizeSolveOptions(
+    const TierSolverSolveOptions *options) {
+    // If input is NULL, use the following default options
+    static const TierSolverSolveOptions default_options = {
+        .force = false,
+        .verbose = 1,
+        .memlimit = 0,
+    };
+    if (options == NULL) options = &default_options;
+
+    return (TierSolverSolveOptions){
+        .memlimit = options->memlimit ? options->memlimit
+                                      : GetPhysicalMemory() * 10 / 9,
+        .force = options->force,
+        .verbose = options->verbose,
+    };
+}
 
 static int TierSolverSolve(void *aux) {
     if (read_only_db) {  // Skip solving if database is in read-only mode.
         printf("%s\n", kTierSolverSolveSkipReadOnlyMsg);
         return kNoError;
     }
-
-    TierSolverSolveOptions default_options = {
-        .force = false,
-        .verbose = 1,
-        .memlimit = 0,  // Use default memory limit.
-    };
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
-    if (options == NULL) options = &default_options;
+    TierSolverSolveOptions sanitized = SanitizeSolveOptions(options);
+    options = &sanitized;
     if (!options->force && solver_status == kTierSolverSolveStatusSolved) {
         printf("%s\n", kTierSolverSolveSkipSolvedMsg);
         return kNoError;
     }
 #ifndef USE_MPI  // If not using MPI
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-    return TierManagerSolve(&current_api, options->force, options->verbose);
+    return TierManagerSolve(&current_api, options);
 #else   // Using MPI
     // Assumes MPI_Init or MPI_Init_thread has been called.
     int process_id, cluster_size;
@@ -322,14 +334,13 @@ static int TierSolverSolve(void *aux) {
         NotReached("TierSolverSolve: cluster size smaller than 1");
     } else if (cluster_size == 1) {  // Only one node is allocated.
         TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-        return TierManagerSolve(&current_api, options->force, options->verbose);
+        return TierManagerSolve(&current_api, options);
     } else {                    // cluster_size > 1
         if (process_id == 0) {  // This is the manager node.
-            return TierManagerSolve(&current_api, options->force,
-                                    options->verbose);
+            return TierManagerSolve(&current_api, options);
         } else {  // This is a worker node.
             TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
-            return TierWorkerMpiServe();
+            return TierWorkerMpiServe(options);
         }
     }
 
@@ -338,7 +349,7 @@ static int TierSolverSolve(void *aux) {
 }
 
 static int TierSolverAnalyze(void *aux) {
-    // Now allowing analysis on old databases now for simplicity.
+    // Disallowing analysis on old databases for simplicity.
     // Need to work on old db implementation to support new analyzer API calls.
     if (read_only_db) {
         printf("%s\n", kTierSolverAnalyzeSkipReadOnlyMsg);

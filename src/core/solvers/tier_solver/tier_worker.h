@@ -109,46 +109,39 @@ enum TierWorkerSolveMethod {
 };
 
 /**
- * @brief Returns the \c TierWorkerSolveMethod applicable to the given tier
+ * @brief Returns the \c TierWorkerSolveMethod recommended for the given tier
  * \p type .
  *
  * @param type Type of tier.
  * @return One of values from enum \link TierWorkerSolveMethod.
  */
-int GetMethodForTierType(TierType type);
-
-typedef struct TierWorkerSolveOptions {
-    size_t memlimit;
-    int verbose;
-    bool force;
-    bool compare;
-} TierWorkerSolveOptions;
-
-extern const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions;
+int TierWorkerRecommendMethodForTierType(TierType type);
 
 /**
  * @brief Solves the given \p tier using the given \p method.
  *
  * @param method Method to use. See \c TierWorkerSolveMethod for details.
  * @param tier Tier to solve.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options. Pass \c NULL to this parameter to use the default options.
+ * @param options Non-null pointer to a \c TierSolverSolveOptions object which
+ * contains the solving options.
  * @param solved (Output parameter) If not \c NULL, a truth value indicating
  * whether the given TIER is actually solved instead of loaded from the existing
  * database will be stored in this variable.
  * @return 0 on success, non-zero error code otherwise.
  */
 int TierWorkerSolve(int method, Tier tier,
-                    const TierWorkerSolveOptions *options, bool *solved);
+                    const TierSolverSolveOptions *options, bool *solved);
 
 #ifdef USE_MPI
 /**
  * @brief Serve as a MPI worker until terminated.
  *
+ * @param options Non-null pointer to a \c TierSolverSolveOptions object which
+ * contains the options.
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
-int TierWorkerMpiServe(void);
+int TierWorkerMpiServe(const TierSolverSolveOptions *options);
 #endif  // USE_MPI
 
 /**

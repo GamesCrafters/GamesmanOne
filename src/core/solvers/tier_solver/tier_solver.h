@@ -481,16 +481,16 @@ enum TierSolverTestErrors {
 
 /** @brief Solver options of the Tier Solver. */
 typedef struct TierSolverSolveOptions {
+    size_t memlimit; /**< Approximate heap memory limit in bytes. */
     int verbose;     /**< Level of details to output. */
     bool force;      /**< Whether to force (re)solve the game. */
-    size_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverSolveOptions;
 
 /** @brief Analyzer options of the Tier Solver. */
 typedef struct TierSolverAnalyzeOptions {
+    size_t memlimit; /**< Approximate heap memory limit in bytes. */
     int verbose;     /**< Level of details to output. */
     bool force;      /**< Whether to force (re)analyze the game. */
-    size_t memlimit; /**< Approximate heap memory limit in bytes. */
 } TierSolverAnalyzeOptions;
 
 typedef struct TierSolverTestOptions {

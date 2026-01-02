@@ -45,7 +45,7 @@ static inline size_t OneBitMemReq(int64_t tier_group_size) {
 }
 
 int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
-                       Tier tier, const TierWorkerSolveOptions *options,
+                       Tier tier, const TierSolverSolveOptions *options,
                        bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_

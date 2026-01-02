@@ -168,9 +168,6 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     (void)dep_cpu;
     (void)dep_seg;
 
-    // TODO: memlimit should not be parsed here!
-    memlimit = memlimit == 0 ? GetPhysicalMemory() / 10 * 9 : memlimit;
-
     // Set API and other constants.
     assert(api && api->GetCanonicalParentPositions);
     api_internal = api;
@@ -567,7 +564,8 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
                     depend(inout : dep_seg[slot], seq_buf[slot], dep_cpu))
         // clang-format on
         {
-            // printf("proving losing parents in chunk %ld in slot %d\n", i, slot);
+            // printf("proving losing parents in chunk %ld in slot %d\n", i,
+            // slot);
             advance |=
                 ProveLosingParentsChunk(slot, seq_buf[slot], i, remoteness);
         }
@@ -712,58 +710,12 @@ static void Step5Cleanup(void) {
     rand_bitset = NULL;
 }
 
-// --------------------------------- CompareDb ---------------------------------
-
-static bool CompareDb(void) {
-    DbProbe probe, ref_probe;
-    if (DbManagerProbeInit(&probe)) return false;
-    if (DbManagerRefProbeInit(&ref_probe)) {
-        DbManagerProbeDestroy(&probe);
-        return false;
-    }
-
-    bool success = true;
-    for (Position p = 0; p < this_tier_size; ++p) {
-        TierPosition tp = {.tier = this_tier, .position = p};
-        Value ref_value = DbManagerRefProbeValue(&ref_probe, tp);
-        if (ref_value == kUndecided) continue;
-
-        Value actual_value = DbManagerProbeValue(&probe, tp);
-        if (actual_value != ref_value) {
-            printf("CompareDb: inconsistent value at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-
-        int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
-        int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
-        if (actual_remoteness != ref_remoteness) {
-            printf("CompareDb: inconsistent remoteness at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-    }
-
-_bailout:
-    DbManagerProbeDestroy(&probe);
-    DbManagerRefProbeDestroy(&ref_probe);
-    if (success) {
-        printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
-    }
-
-    return success;
-}
-
 // ============================================================================
 // ============================ TierWorkerBIOneBit ============================
 // ============================================================================
 
 int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
-                       Tier tier, const TierWorkerSolveOptions *options,
+                       Tier tier, const TierSolverSolveOptions *options,
                        bool *solved) {
     int ret = kMallocFailureError;
     if (!Step0Initialize(api, db_chunk_size, tier, options->memlimit)) {
@@ -774,10 +726,6 @@ int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
     Step3IterateTie();
     if (Step4ConsolidateDb() != kNoError) {
         ret = kFileSystemError;
-        goto _bailout;
-    }
-    if (options->compare && !CompareDb()) {
-        ret = kRuntimeError;
         goto _bailout;
     }
 

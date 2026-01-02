@@ -38,8 +38,8 @@
  *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to solve.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options.
+ * @param options Pointer to a \c TierSolverSolveOptions object which contains
+ * the solving options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
@@ -47,7 +47,7 @@
  * @return non-zero error code otherwise.
  */
 int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
-                              const TierWorkerSolveOptions *options,
+                              const TierSolverSolveOptions *options,
                               bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_

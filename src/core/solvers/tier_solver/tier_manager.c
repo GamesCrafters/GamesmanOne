@@ -131,12 +131,12 @@ static int EnqueuePrimitiveTiers(void);
 static void CreateTierGraphPrintError(int error);
 
 #ifndef USE_MPI
-static int SolveTierGraph(bool force, int verbose);
+static int SolveTierGraph(const TierSolverSolveOptions *options);
 #else   // USE_MPI
-static int SolveTierGraphMpi(bool force, int verbose);
+static int SolveTierGraphMpi(const TierSolverSolveOptions *options);
 static void SolveTierGraphMpiTerminateWorkers(void);
-static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
-                                      int verbose);
+static void SolveTierGraphMpiSolveAll(time_t begin_time,
+                                      const TierSolverSolveOptions *options);
 static void PrintDispatchMessage(Tier tier, int worker_rank);
 #endif  // USE_MPI
 static bool SolveUpdateTierGraph(Tier solved_tier);
@@ -170,7 +170,8 @@ static void PrintTestResult(double time_elapsed);
 
 // -----------------------------------------------------------------------------
 
-int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
+int TierManagerSolve(const TierSolverApi *api,
+                     const TierSolverSolveOptions *options) {
     time_t begin = time(NULL);
     api_internal = api;
     int error = InitGlobalVariables(kTierSolving);
@@ -182,14 +183,14 @@ int TierManagerSolve(const TierSolverApi *api, bool force, int verbose) {
     }
 
 #ifndef USE_MPI  // If not using MPI
-    int ret = SolveTierGraph(force, verbose);
+    int ret = SolveTierGraph(options);
 #else   // Using MPI
-    int ret = SolveTierGraphMpi(force, verbose);
+    int ret = SolveTierGraphMpi(options);
 #endif  // USE_MPI
     DestroyGlobalVariables();
 
     time_t end = time(NULL);
-    if (verbose > 0) {
+    if (options->verbose > 0) {
         printf("Time Elapsed: %d seconds\n", (int)difftime(end, begin));
     }
 
@@ -520,14 +521,9 @@ static void CreateTierGraphPrintError(int error) {
 
 #ifndef USE_MPI
 
-static int SolveTierGraph(bool force, int verbose) {
-    TierWorkerSolveOptions options = {
-        .compare = false,
-        .force = force,
-        .verbose = verbose,
-    };
+static int SolveTierGraph(const TierSolverSolveOptions *options) {
     double time_elapsed = 0.0;
-    if (verbose > 0) {
+    if (options->verbose > 0) {
         printf("Begin solving all %" PRId64 " tiers (%" PRId64
                " canonical) of total size %" PRId64 " (positions)\n",
                total_tiers, total_canonical_tiers, total_size);
@@ -539,8 +535,8 @@ static int SolveTierGraph(bool force, int verbose) {
             time_t begin = time(NULL);
             bool solved;
             TierType type = api_internal->GetTierType(tier);
-            int error = TierWorkerSolve(GetMethodForTierType(type), tier,
-                                        &options, &solved);
+            int method = TierWorkerRecommendMethodForTierType(type);
+            int error = TierWorkerSolve(method, tier, options, &solved);
             if (error == 0) {
                 // Solve succeeded.
                 SolveUpdateTierGraph(tier);
@@ -552,12 +548,13 @@ static int SolveTierGraph(bool force, int verbose) {
             }
             time_t end = time(NULL);
             time_elapsed += difftime(end, begin);
-            SolveTierGraphPrintTime(tier, time_elapsed, solved, verbose);
+            SolveTierGraphPrintTime(tier, time_elapsed, solved,
+                                    options->verbose);
         } else {
             ++skipped_tiers;
         }
     }
-    if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (options->verbose > 0) PrintSolverResult(time_elapsed);
     if (failed_tiers == 0) {
         int error = DbManagerSetGameSolved();
         if (error != kNoError) {
@@ -574,18 +571,18 @@ static int SolveTierGraph(bool force, int verbose) {
 
 #else  // USE_MPI
 
-static int SolveTierGraphMpi(bool force, int verbose) {
-    if (verbose > 0) {
+static int SolveTierGraphMpi(const TierSolverSolveOptions *options) {
+    if (options->verbose > 0) {
         printf("Begin solving all %" PRId64 " tiers (%" PRId64
                " canonical) of total size %" PRId64 " (positions)\n",
                total_tiers, total_canonical_tiers, total_size);
     }
 
     time_t begin_time = time(NULL);
-    SolveTierGraphMpiSolveAll(begin_time, force, verbose);
+    SolveTierGraphMpiSolveAll(begin_time, options);
     SolveTierGraphMpiTerminateWorkers();
     double time_elapsed = difftime(time(NULL), begin_time);
-    if (verbose > 0) PrintSolverResult(time_elapsed);
+    if (options->verbose > 0) PrintSolverResult(time_elapsed);
     if (failed_tiers == 0) {
         int error = DbManagerSetGameSolved();
         if (error != kNoError) {
@@ -613,8 +610,8 @@ static void SolveTierGraphMpiTerminateWorkers(void) {
     }
 }
 
-static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
-                                      int verbose) {
+static void SolveTierGraphMpiSolveAll(time_t begin_time,
+                                      const TierSolverSolveOptions *options) {
     static Tier job_list[kMpiNumNodesMax];
     static TierArray solving_tiers;
     TierArrayInit(&solving_tiers);
@@ -637,7 +634,8 @@ static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
             TierArrayRemove(&solving_tiers, tier);
 
             double time_elapsed = difftime(time(NULL), begin_time);
-            SolveTierGraphPrintTime(tier, time_elapsed, solved, verbose);
+            SolveTierGraphPrintTime(tier, time_elapsed, solved,
+                                    options->verbose);
         }
         // The worker node that we received a message from is now idle.
 
@@ -654,7 +652,7 @@ static void SolveTierGraphMpiSolveAll(time_t begin_time, bool force,
             Tier tier = TierQueuePop(&pending_tiers);
             PrintDispatchMessage(tier, worker_rank);
             job_list[worker_rank] = tier;
-            TierMpiManagerSendSolve(worker_rank, tier, force);
+            TierMpiManagerSendSolve(worker_rank, tier);
             TierArrayAppend(&solving_tiers, tier);
         } else {
             // No solvable tiers available, let the worker node go to sleep.

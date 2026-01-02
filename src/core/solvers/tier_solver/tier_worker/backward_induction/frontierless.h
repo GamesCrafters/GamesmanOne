@@ -45,16 +45,13 @@
  * The algorithm then uses this number as the chunk size for OpenMP dynamic
  * scheduling to prevent repeated decompression of the same block.
  * @param tier Tier to solve.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true on success. Otherwise it remains unmodified.
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
 int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
-                             Tier tier, const TierWorkerSolveOptions *options,
-                             bool *solved);
+                             Tier tier, bool *solved);
 
 /**
  * @brief Returns the minimum amount of memory in bytes required to solve the

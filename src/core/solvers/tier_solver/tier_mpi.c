@@ -35,9 +35,9 @@
 static const int kMpiDefaultTag = 0;
 static const int kMpiManagerRank = 0;
 
-void TierMpiManagerSendSolve(int dest, Tier tier, bool force) {
+void TierMpiManagerSendSolve(int dest, Tier tier) {
     TierMpiManagerMessage msg = {
-        .command = force ? kTierMpiCommandForceSolve : kTierMpiCommandSolve,
+        .command = kTierMpiCommandSolve,
         .tier = tier,
     };
     SafeMpiSend(&msg, sizeof(msg), MPI_UINT8_T, dest, kMpiDefaultTag,

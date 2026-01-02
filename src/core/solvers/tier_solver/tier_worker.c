@@ -61,9 +61,9 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
     current_db_chunk_size = db_chunk_size;
 }
 
-// =========================== GetMethodForTierType ===========================
+// =================== TierWorkerRecommendMethodForTierType ===================
 
-int GetMethodForTierType(TierType type) {
+int TierWorkerRecommendMethodForTierType(TierType type) {
     switch (type) {
         case kTierTypeImmediateTransition:
             return kTierWorkerSolveMethodImmediateTransition;
@@ -75,26 +75,19 @@ int GetMethodForTierType(TierType type) {
             return kTierWorkerSolveMethodBackwardInduction;
     }
 
-    NotReached("GetMethodForTierType: unknown tier type");
+    NotReached("TierWorkerRecommendMethodForTierType: unknown tier type");
     return -1;  // Never reached.
 }
 
 // ============================== TierWorkerSolve ==============================
 
-const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions = {
-    .memlimit = 0,
-    .compare = false,
-    .force = false,
-    .verbose = 1,
-};
-
 int TierWorkerSolve(int method, Tier tier,
-                    const TierWorkerSolveOptions *options, bool *solved) {
-    if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
+                    const TierSolverSolveOptions *options, bool *solved) {
+    if (options == NULL) return kIllegalArgumentError;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            // return TierWorkerSolveITInternal(api_internal, tier, options,
-            //                                  solved);
+            return TierWorkerSolveITInternal(api_internal, tier, options,
+                                             solved);
         case kTierWorkerSolveMethodBackwardInduction:
             return TierWorkerBackwardInduction(
                 api_internal, current_db_chunk_size, tier, options, solved);
@@ -110,7 +103,7 @@ int TierWorkerSolve(int method, Tier tier,
 }
 
 #ifdef USE_MPI
-int TierWorkerMpiServe(void) {
+int TierWorkerMpiServe(const TierSolverSolveOptions *options) {
     TierMpiWorkerSendCheck();
     for (;;) {
         TierMpiManagerMessage msg;
@@ -123,14 +116,9 @@ int TierWorkerMpiServe(void) {
         } else if (msg.command == kTierMpiCommandTerminate) {
             break;
         } else {
-            TierWorkerSolveOptions options = {
-                .compare = false,
-                .force = (msg.command == kTierMpiCommandForceSolve),
-                .verbose = false,
-            };
             bool solved;
             TierType type = api_internal->GetTierType(msg.tier);
-            int error = TierWorkerSolve(type, msg.tier, &options, &solved);
+            int error = TierWorkerSolve(type, msg.tier, options, &solved);
             if (error != kNoError) {
                 TierMpiWorkerSendReportError(error);
             } else if (solved) {
