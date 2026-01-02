@@ -29,6 +29,7 @@
 
 #include <stdint.h>  // uint64_t
 
+// https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 static inline uint64_t Splitmix64(uint64_t state) {
     uint64_t x = state + UINT64_C(0x9e3779b97f4a7c15);
     x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
