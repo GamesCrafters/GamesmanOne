@@ -9,7 +9,6 @@ app = Flask(__name__)
 
 start_time = time.time()
 _server_process = psutil.Process()
-_server_process.cpu_percent()
 
 def format_time(seconds: float) -> str:
     seconds = int(seconds)
@@ -37,16 +36,29 @@ def query(game_name, variant_id, position):
 
 @app.route('/health')
 def get_health():
-    with _server_process.oneshot():
-        cpu = _server_process.cpu_percent()
-        memory = _server_process.memory_percent()
-    return {
-        'status': 'ok',
+    cpu = _server_process.cpu_percent()
+    memory = _server_process.memory_percent()
+
+    issues = []
+    if cpu > 90:
+        issues.append(f"high CPU usage: {cpu:.2f}%")
+    if memory > 90:
+        issues.append(f"high memory usage: {memory:.2f}%")
+
+    status = 'degraded' if issues else 'ok'
+
+    body = {
+        'status': status,
         'uptime': format_time(time.time() - start_time),
         'cpu_usage': f"{cpu:.2f}%",
         'memory_usage': f"{memory:.2f}%",
         'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    }, 200
+    }
+
+    if issues:
+        body['issues'] = issues
+
+    return body, 503 if issues else 200
 
 if __name__ == "__main__":
     from waitress import serve
