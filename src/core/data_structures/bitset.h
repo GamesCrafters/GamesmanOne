@@ -156,6 +156,16 @@ size_t BitsetSerializeStreaming(const Bitset *bs, size_t offset, void *buf,
 Bitset *BitsetDeserializeStreaming(Bitset *bs, size_t offset, const void *in,
                                    size_t in_size);
 
+/**
+ * @brief Returns a read-write pointer to the raw data of \p bs . The size of
+ * the raw data can be obtained using \c BitSetGetSerializedSize. The intended
+ * usage is to only read or write whole \c Bitset objects as the API does not
+ * expose any methods to manipulate internal states of the \c Bitset object.
+ *
+ * @param bs Bitset to get the raw pointer of.
+ * @return A read-write pointer to the raw data of \p bs , or \c NULL if \p bs
+ * is \c NULL .
+ */
 void *BitsetGetRawData(Bitset *bs);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_BITSET_H_
