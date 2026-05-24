@@ -62,7 +62,6 @@
 #include <stddef.h>     // size_t
 #include <stdint.h>     // int64_t
 
-#include "core/data_structures/bitset.h"
 #include "core/gamesman_memory.h"
 
 typedef struct ConcurrentBitset ConcurrentBitset;
