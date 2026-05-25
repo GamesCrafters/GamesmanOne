@@ -37,11 +37,11 @@
 
 void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
     set->entries = NULL;
+    set->capacity_mask = -1;
     set->size = 0;
     if (max_load_factor > 0.75) max_load_factor = 0.75;
     if (max_load_factor < 0.25) max_load_factor = 0.25;
     set->max_load_factor = max_load_factor;
-    set->capacity_mask = -1;
 }
 
 static int64_t Hash(int64_t key, int64_t capacity_mask) {
@@ -98,9 +98,9 @@ bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
 void Int64HashSetDestroy(Int64HashSet *set) {
     GamesmanFree(set->entries);
     set->entries = NULL;
+    set->capacity_mask = -1;
     set->size = 0;
     set->max_load_factor = 0.0;
-    set->capacity_mask = -1;
 }
 
 bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
