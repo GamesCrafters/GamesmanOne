@@ -56,7 +56,6 @@ size_t BitsetMemRequired(int64_t num_bits) {
 }
 
 Bitset *BitsetCreate(int64_t num_bits) {
-    // Allocate space.
     if (num_bits < 0) num_bits = 0;
     size_t alloc_size = BitsetMemRequired(num_bits);
     Bitset *ret = (Bitset *)GamesmanCallocWhole(1, alloc_size);
