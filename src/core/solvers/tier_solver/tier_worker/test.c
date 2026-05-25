@@ -62,17 +62,14 @@ TierWorkerTestStackBufferStat *TierWorkerTestStackBufferStatCreate(void) {
 
 void TierWorkerTestStackBufferStatPrint(
     const TierWorkerTestStackBufferStat *stat) {
-    printf("Max number of child tiers detected: %d\n",
-           ConcurrentIntLoad(&stat->max_num_child_tiers));
-    printf("Max number of moves/child positions detected: %d\n",
-           ConcurrentIntLoad(&stat->max_num_children));
-    printf("Max number of parent positions detected: %d\n",
-           ConcurrentIntLoad(&stat->max_num_parents));
-    puts("\nThe current system limit are:");
-    printf("Max number of moves: %d\n", kTierSolverNumMovesMax);
-    printf("Max number of child positions: %d\n",
+    printf("Max number of child tiers detected: %d (limit: %d)\n",
+           ConcurrentIntLoad(&stat->max_num_child_tiers),
+           kTierSolverNumMovesMax);
+    printf("Max number of moves/child positions detected: %d (limit: %d)\n",
+           ConcurrentIntLoad(&stat->max_num_children),
            kTierSolverNumChildPositionsMax);
-    printf("Max number of parent positions: %d\n\n",
+    printf("Max number of parent positions detected: %d (limit: %d)\n",
+           ConcurrentIntLoad(&stat->max_num_parents),
            kTierSolverNumParentPositionsMax);
 }
 
