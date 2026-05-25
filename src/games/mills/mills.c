@@ -40,6 +40,8 @@
 #include <string.h>     // strtok_r, strlen, strcpy
 
 #include "core/constants.h"
+#define X86_M128I_HASH_SET_SIZE 64ULL
+#include "core/data_structures/x86_m128i_hash_set.h"
 #include "core/hash/x86_simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
@@ -908,9 +910,6 @@ static int MillsGetCanonicalParentPositions(
     // parent_tier.
     return 0;
 }
-
-#define X86_M128I_HASH_SET_SIZE 64ULL
-#include "core/data_structures/x86_m128i_hash_set.h"
 
 static void CollectRotationSymmetries(X86M128iHashSet *dedup, __m128i board) {
     // Rotations 8x
