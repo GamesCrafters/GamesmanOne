@@ -65,6 +65,4 @@ void *TierToPtrChainedHashMapIteratorValue(
 bool TierToPtrChainedHashMapIteratorIsValid(
     const TierToPtrChainedHashMapIterator *it);
 
-bool TierToPtrChainedHashMapIteratorNext(TierToPtrChainedHashMapIterator *it);
-
 #endif  // GAMESMANONE_CORE_TYPES_TIER_TO_PTR_CHAINED_HASH_MAP_H_

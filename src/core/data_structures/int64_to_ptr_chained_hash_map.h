@@ -163,14 +163,4 @@ void *Int64ToPtrChainedHashMapIteratorValue(
 bool Int64ToPtrChainedHashMapIteratorIsValid(
     const Int64ToPtrChainedHashMapIterator *it);
 
-/**
- * @brief Moves iterator \p it to the next entry inside the map that \p it was
- * initialized with.
- *
- * @param iterator Iterator.
- * @return \c true if the next entry exists,
- * @return \c false otherwise.
- */
-bool Int64ToPtrChainedHashMapIteratorNext(Int64ToPtrChainedHashMapIterator *it);
-
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_TO_PTR_CHAINED_HASH_MAP_H_
