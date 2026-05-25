@@ -76,6 +76,10 @@ static Int64HashMapIterator NewIterator(const Int64HashMap *map,
     return iterator;
 }
 
+static Int64HashMapIterator NewInvalidIterator(const Int64HashMap *map) {
+    return NewIterator(map, map->capacity_mask + 1);
+}
+
 Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
     // Edge case: return invalid iterator if map is empty.
     if (map->capacity_mask < 0) return NewIterator(map, -1);
@@ -88,7 +92,7 @@ Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
         index = NextIndex(index, map->capacity_mask);
     }
 
-    return NewIterator(map, map->capacity_mask + 1);
+    return NewInvalidIterator(map);
 }
 
 static bool Expand(Int64HashMap *map, int64_t new_mask) {
