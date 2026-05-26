@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The basic record type for the Array Database, which only stores values
  * and remotenesses.
- * @version 1.0.0
- * @date 2024-07-10
+ * @version 1.1.0
+ * @date 2026-05-25
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
