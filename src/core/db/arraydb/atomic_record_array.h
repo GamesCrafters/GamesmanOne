@@ -36,8 +36,8 @@
 
 /** @brief Fixed-length \c Record array. */
 typedef struct AtomicRecordArray {
-    int64_t size;
-    AtomicRecord records[];
+    int64_t size;           /**< Number of elements in the array. */
+    AtomicRecord records[]; /**< Array or atomic records. */
 } AtomicRecordArray;
 
 /**
@@ -71,12 +71,11 @@ static inline void AtomicRecordArrayDestroy(AtomicRecordArray *array) {
 
 /**
  * @brief Atomically sets the value of position \p position in \p array to
- * \p val . Assumes
- * \p position is greater than or equal to 0 and smaller than the size of
- * \p array .
+ * \p val . Assumes \p position is greater than or equal to 0 and smaller than
+ * the size of \p array .
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to set the value for.
  * @param val New value for the \p position .
  */
 static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
@@ -91,7 +90,7 @@ static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
  * than the size of \p array .
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to set the remoteness for.
  * @param remoteness New remoteness for the \p position.
  */
 static inline void AtomicRecordArraySetRemoteness(AtomicRecordArray *array,
@@ -107,7 +106,7 @@ static inline void AtomicRecordArraySetRemoteness(AtomicRecordArray *array,
  * or equal to 0 and smaller than the size of \p array .
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to set the value and remoteness for.
  * @param val New value for the \p position .
  * @param remoteness New remoteness for the \p position .
  */
@@ -126,7 +125,7 @@ static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
  * pairs are determined by the \p compare function.
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to replace the value and remoteness for.
  * @param val Candidate new value for the \p position .
  * @param remoteness Candidate new remoteness for the \p position .
  * @param compare Pointer to a value-remoteness pair comparison function that
@@ -140,6 +139,7 @@ static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
 static inline bool AtomicRecordArrayMaximize(
     AtomicRecordArray *array, Position position, Value val, int remoteness,
     int (*compare)(Value v1, int r1, Value v2, int r2)) {
+    //
     assert(position >= 0 && position < array->size);
     return AtomicRecordMaximize(&array->records[position], val, remoteness,
                                 compare);
@@ -158,13 +158,14 @@ static inline bool AtomicRecordArrayMaximize(
  * .
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to decrement the number of undecided children for.
  * @return Number of undecided children immediately preceding the subtraction,
  * or
  * @return 0 if the subtraction is not performed.
  */
 static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
+    //
     assert(position >= 0 && position < array->size);
     return AtomicRecordDecrementNumUndecidedChildren(&array->records[position]);
 }
@@ -181,12 +182,13 @@ static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
  * .
  *
  * @param array Target array.
- * @param position Position.
+ * @param position Position to set the number of undecided children for.
  * @return Number of undecided children immediately preceding the operation, or
  * @return 0 if the operation is not performed.
  */
 static inline int AtomicRecordArrayClearNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
+    //
     assert(position >= 0 && position < array->size);
     return AtomicRecordClearNumUndecidedChildren(&array->records[position]);
 }
@@ -197,7 +199,7 @@ static inline int AtomicRecordArrayClearNumUndecidedChildren(
  * \p array.
  *
  * @param array Source array.
- * @param position Position.
+ * @param position Position to get the value of.
  * @return Value of \p position.
  */
 static inline Value AtomicRecordArrayGetValue(const AtomicRecordArray *array,
@@ -211,7 +213,7 @@ static inline Value AtomicRecordArrayGetValue(const AtomicRecordArray *array,
  * \p array.
  *
  * @param array Source array.
- * @param position Position.
+ * @param position Position to get the remoteness of.
  * @return Remoteness of \p position.
  */
 static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
@@ -229,13 +231,14 @@ static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
  * .
  *
  * @param array Source array.
- * @param position Position.
+ * @param position Position to get the number of undecided children of.
  * @return Number of undecided children of \p position if its value is
  * \c kUndecided , or
  * @return 0 otherwise.
  */
 static inline int AtomicRecordArrayGetNumUndecidedChildren(
     const AtomicRecordArray *array, Position position) {
+    //
     assert(position >= 0 && position < array->size);
     return AtomicRecordGetNumUndecidedChildren(&array->records[position]);
 }
@@ -248,6 +251,7 @@ static inline int AtomicRecordArrayGetNumUndecidedChildren(
  */
 static inline size_t AtomicRecordArrayGetSerializedSize(
     const AtomicRecordArray *array) {
+    //
     return array->size * sizeof(Record);
 }
 
@@ -256,10 +260,10 @@ static inline size_t AtomicRecordArrayGetSerializedSize(
  * \p buf , which is assumed to be of size at least \p buf_size bytes. The first
  * call to this function should have \p offset set to 0. Then, the function may
  * be called multiple times, each time continuing from the given \p offset ,
- * which is set to the total amount of serialized data, for streaming. The
- * function returns 0 when no data is left for serialization.
+ * which is set to the total amount of serialized data in bytes, for streaming.
+ * The function returns 0 when no data is left for serialization.
  *
- * @param array Array to serialize
+ * @param array Array to serialize.
  * @param offset Total amount of serialized data.
  * @param buf Output buffer.
  * @param buf_size Size of the output buffer.
@@ -267,6 +271,7 @@ static inline size_t AtomicRecordArrayGetSerializedSize(
  */
 static inline size_t AtomicRecordArraySerializeStreaming(
     const AtomicRecordArray *array, size_t offset, void *buf, size_t buf_size) {
+    //
     assert(offset % sizeof(Record) == 0);
     size_t total_bytes = AtomicRecordArrayGetSerializedSize(array);
     if (offset >= total_bytes) return 0;
