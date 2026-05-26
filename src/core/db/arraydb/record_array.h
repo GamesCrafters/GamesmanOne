@@ -258,7 +258,7 @@ static inline void *RecordArrayGetData(RecordArray *array) {
 }
 
 /**
- * @brief Returns the size of \p array in number of \c Records.
+ * @brief Returns the size of \p array in number of \c Record s.
  *
  * @param array Target array.
  * @return Size of \p array in number of \c Records.
