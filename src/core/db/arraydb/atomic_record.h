@@ -28,7 +28,7 @@
 #ifndef GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
 #define GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
 
-#include <stdatomic.h>  //
+#include <stdatomic.h>
 
 #include "core/db/arraydb/record.h"
 #include "core/types/gamesman_types.h"
@@ -51,13 +51,23 @@ static inline void AtmoicRecordInit(AtomicRecord *ar, Value value,
 }
 
 /**
+ * @brief Retrieves the raw Record value from \p ar .
+ *
+ * @param ar Source record.
+ * @return Raw Record value stored in \p ar .
+ */
+static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
+    return atomic_load_explicit(ar, memory_order_relaxed);
+}
+
+/**
  * @brief Returns the value field of record \p ar .
  *
  * @param ar Source record.
  * @return Value field of \p ar.
  */
 static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
-    Record rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record rec = AtomicRecordLoad(ar);
 
     return RecordGetValue(&rec);
 }
@@ -69,7 +79,7 @@ static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
  * @return Remoteness field of \p ar.
  */
 static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
-    Record rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record rec = AtomicRecordLoad(ar);
 
     return RecordGetRemoteness(&rec);
 }
@@ -87,7 +97,7 @@ static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
  * @return 0 otherwise.
  */
 static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
-    Record rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record rec = AtomicRecordLoad(ar);
 
     return RecordGetNumUndecidedChildren(&rec);
 }
@@ -99,7 +109,7 @@ static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
  * @param val New value.
  */
 static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
-    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record old_rec = AtomicRecordLoad(ar);
     for (;;) {
         Record new_rec = old_rec;
         RecordSetValue(&new_rec, val);
@@ -119,7 +129,7 @@ static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
  * @param remoteness New remoteness.
  */
 static inline void AtomicRecordSetRemoteness(AtomicRecord *ar, int remoteness) {
-    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record old_rec = AtomicRecordLoad(ar);
     for (;;) {
         Record new_rec = old_rec;
         RecordSetRemoteness(&new_rec, remoteness);
@@ -167,7 +177,7 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
                                         int remoteness,
                                         int (*compare)(Value v1, int r1,
                                                        Value v2, int r2)) {
-    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record old_rec = AtomicRecordLoad(ar);
     Value old_val = RecordGetValue(&old_rec);
     int old_rmt = RecordGetRemoteness(&old_rec);
     if (compare(old_val, old_rmt, val, remoteness) >= 0) return false;
@@ -203,7 +213,7 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
  * @return 0 if the subtraction is not performed.
  */
 static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
-    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record old_rec = AtomicRecordLoad(ar);
     int num_undecided;
     while ((num_undecided = RecordGetNumUndecidedChildren(&old_rec)) > 0) {
         Record new_rec = old_rec;
@@ -233,7 +243,7 @@ static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
  * @return 0 if the operation is not performed.
  */
 static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {
-    Record old_rec = atomic_load_explicit(ar, memory_order_relaxed);
+    Record old_rec = AtomicRecordLoad(ar);
     int num_undecided;
     while ((num_undecided = RecordGetNumUndecidedChildren(&old_rec)) > 0) {
         Record new_rec = old_rec;
@@ -246,16 +256,6 @@ static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {
     }
 
     return num_undecided;
-}
-
-/**
- * @brief Retrieves the raw Record value from \p ar .
- *
- * @param ar Source record.
- * @return Raw Record value stored in \p ar .
- */
-static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
-    return atomic_load_explicit(ar, memory_order_relaxed);
 }
 
 #endif  // GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
