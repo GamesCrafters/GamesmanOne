@@ -137,10 +137,9 @@ bool Int64ToPtrChainedHashMapSet(Int64ToPtrChainedHashMap *map, int64_t key,
 
     // Look for existing key to replace its value.
     int64_t index = Hash(key, map->capacity_mask);
-    Int64ToPtrChainedHashMapEntry *entry =
-        map->buckets[index];  // Find the bucket.
+    Int64ToPtrChainedHashMapEntry *entry = map->buckets[index];
     while (entry) {
-        if (entry->key == key) {  // If key already exists, replace old value.
+        if (entry->key == key) {
             entry->value = value;
             return true;
         }
