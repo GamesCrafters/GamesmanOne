@@ -52,10 +52,17 @@ typedef struct Int64ToPtrChainedHashMap {
                             (double)size/capacity is greater than this value. */
 } Int64ToPtrChainedHashMap;
 
+/**
+ * @brief Int64ToPtrChainedHashMap iterator, which is usually returned by an
+ * Int64ToPtrChainedHashMap accessor function. No internal states are intended
+ * to be expected or manipulated directly. Use the provided API functions
+ * instead.
+ */
 typedef struct Int64ToPtrChainedHashMapIterator {
-    const Int64ToPtrChainedHashMap *map;
-    int64_t bucket_index;
-    Int64ToPtrChainedHashMapEntry *cur;
+    const Int64ToPtrChainedHashMap
+        *map;             /**< The map this iterator is associated with. */
+    int64_t bucket_index; /**< Index to the internal bucket array. */
+    Int64ToPtrChainedHashMapEntry *cur; /**< Pointer to the current entry. */
 } Int64ToPtrChainedHashMapIterator;
 
 /**
