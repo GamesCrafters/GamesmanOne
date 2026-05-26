@@ -37,8 +37,8 @@
 
 /** @brief Fixed-length \c Record array. */
 typedef struct RecordArray {
-    int64_t size;
-    Record records[];
+    int64_t size;     /**< Number of records. */
+    Record records[]; /**< Array of records. */
 } RecordArray;
 
 /**
