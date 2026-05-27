@@ -102,45 +102,6 @@ for cmd in git cmake; do
     command_exists "$cmd" || error_exit "command $cmd not found. $command_not_found_msg"
 done
 
-#################
-# Library Setup #
-#################
-
-# Initialize submodules
-git submodule update --init || error_exit "Failed to update git submodules"
-
-# Prepare library build directory
-mkdir_if_not_exist "lib-build"
-cd lib-build || error_exit "Failed to change directory to lib-build"
-
-# Build json-c
-mkdir_if_not_exist "json-c"
-cd json-c || error_exit "Failed to change directory to lib-build/json-c"
-CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../res -DCMAKE_BUILD_TYPE=Release"
-cmake ../../lib/json-c/ $CMAKE_FLAGS || error_exit "CMake failed to configure json-c"
-make -j || error_exit "json-c make failed"
-make install -j || error_exit "json-c make install failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Build xz
-mkdir_if_not_exist "xz"
-cd xz || error_exit "Failed to change directory to lib-build/xz"
-cmake ../../lib/xz/ $CMAKE_FLAGS || error_exit "CMake failed to configure xz"
-make -j || error_exit "xz make failed"
-make install -j || error_exit "xz make install failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Build lz4
-mkdir_if_not_exist "lz4"
-cd lz4 || error_exit "Failed to change directory to lib-build/lz4"
-cmake ../../lib/lz4/build/cmake/ $CMAKE_FLAGS || error_exit "CMake failed to configure lz4"
-make -j || error_exit "lz4 make failed"
-make install -j || error_exit "lz4 make failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Finalize library setup
-cd ..
-
 ############################
 # Build GamesmanOne Binary #
 ############################
