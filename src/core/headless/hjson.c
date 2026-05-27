@@ -26,7 +26,7 @@
 
 #include "core/headless/hjson.h"
 
-#include <json-c/json_object.h>
+#include <json_object.h>
 
 #include "core/constants.h"
 #include "core/types/gamesman_types.h"
