@@ -622,19 +622,19 @@ static int DefaultGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kRegularSolverNumChildPositionsMax]) {
     //
-    TierPositionHashSet deduplication_set;
-    TierPositionHashSetInit(&deduplication_set, 0.5);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
     Move moves[kRegularSolverNumMovesMax];
     int num_moves = current_api.GenerateMoves(tier_position, moves);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
-        if (TierPositionHashSetAdd(&deduplication_set, child)) {
+        if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
-    TierPositionHashSetDestroy(&deduplication_set);
+    TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
