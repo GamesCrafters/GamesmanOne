@@ -1,8 +1,18 @@
 from flask import Flask
+import psutil
+import time
+from datetime import datetime, timezone
 import subprocess
 import shlex
 
 app = Flask(__name__)
+
+start_time = time.time()
+_server_process = psutil.Process()
+
+def format_time(seconds: float) -> str:
+    seconds = int(seconds)
+    return f"{seconds // 86400}d {(seconds % 86400) // 3600}h {(seconds % 3600) // 60}m {seconds % 60}s"
 
 def build_error_response(message):
     return "{ \"error\": \"" + message + "\" }"
@@ -23,6 +33,32 @@ def getstart(game_name, variant_id):
 @app.route("/<game_name>/<variant_id>/<position>")
 def query(game_name, variant_id, position):
     return run_command(f"bin/gamesman query -- {game_name} {variant_id} {position}")
+
+@app.route('/health')
+def get_health():
+    cpu = _server_process.cpu_percent()
+    memory = _server_process.memory_percent()
+
+    issues = []
+    if cpu > 90:
+        issues.append(f"high CPU usage: {cpu:.2f}%")
+    if memory > 90:
+        issues.append(f"high memory usage: {memory:.2f}%")
+
+    status = 'degraded' if issues else 'ok'
+
+    body = {
+        'status': status,
+        'uptime': format_time(time.time() - start_time),
+        'cpu_usage': f"{cpu:.2f}%",
+        'memory_usage': f"{memory:.2f}%",
+        'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    }
+
+    if issues:
+        body['issues'] = issues
+
+    return body, 503 if issues else 200
 
 if __name__ == "__main__":
     from waitress import serve
