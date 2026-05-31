@@ -39,11 +39,14 @@
  * @brief A part-move is a portion of a multipart move.
  */
 typedef struct Partmove {
-    CString autogui_move; /**< AutoGUI move string for this part-move. */
-    CString formal_move;  /**< Formal move string for this part-move. */
+    /** AutoGUI move string for this part-move. */
+    CString autogui_move;
+
+    /** Formal move string for this part-move. */
+    CString formal_move;
 
     /**
-     * NULL if and only if this part-move is the first part of the full move.
+     * \c NULL if and only if this part-move is the first part of the full move.
      * For all other parts of the full move, this field should be set to the
      * AutoGUI position string representing the intermediate board state before
      * this part-move is made.
@@ -51,19 +54,19 @@ typedef struct Partmove {
     CString from;
 
     /**
-     * NULL if and only if this part-move is the last part of the full move. For
-     * all other parts of the full move, this field should be set to the AutoGUI
-     * position string representing the intermediate board state after this
-     * part-move is made.
+     * \c NULL if and only if this part-move is the last part of the full move.
+     * For all other parts of the full move, this field should be set to the
+     * AutoGUI position string representing the intermediate board state after
+     * this part-move is made.
      */
     CString to;
 
     /**
-     * The formal move string of the full move that this part-move if part of
-     * ONLY when this part-move is the last part of the full move. For all other
-     * part-moves, this field should be set to \c NULL .
+     * When this part-move is the last part of the full move, this field is set
+     * to the formal move string of the full move. Otherwise, it is set to
+     * \c NULL .
      */
-    CString full; /**< AutoGUI move string for this part-move. */
+    CString full;
 } Partmove;
 
 /**
