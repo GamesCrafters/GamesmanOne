@@ -23,6 +23,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "core/headless/htest.h"
 
 #include <stddef.h>  // NULL
 #include <stdio.h>   // printf, fprintf, stderr
