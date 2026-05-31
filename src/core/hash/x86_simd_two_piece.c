@@ -64,9 +64,14 @@ static int32_t *pattern_to_order;
 static uint32_t **pop_order_to_pattern;
 
 size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots) {
+    // pattern_to_order
     size_t ret = (1ULL << num_slots) * sizeof(int32_t);
+
+    // pop_order_to_pattern second level pointers
     ret += (num_slots + 1) * sizeof(uint32_t *);
-    ret += (1ULL << num_slots) * sizeof(int32_t);  // Binomial theorem
+
+    // pop_order_to_pattern contents, derived from the binomial theorem
+    ret += (1ULL << num_slots) * sizeof(int32_t);
 
     return ret;
 }
@@ -122,8 +127,8 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     // Validate rows and cols
     if (rows <= 0 || rows > 8 || cols <= 0 || cols > 8) {
         fprintf(stderr,
-                "TwoPieceHashInit: invalid number of rows or columns provided. "
-                "Valid range: [1, 8]\n");
+                "X86SimdTwoPieceHashInit: invalid number of rows or columns "
+                "provided. Valid range: [1, 8]\n");
         return kIllegalArgumentError;
     }
 
@@ -131,7 +136,7 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     int board_size = rows * cols;
     if (board_size <= 0 || board_size > kBoardSizeMax) {
         fprintf(stderr,
-                "TwoPieceHashInit: invalid board size (%d) provided. "
+                "X86SimdTwoPieceHashInit: invalid board size (%d) provided. "
                 "Valid range: [1, %d]\n",
                 board_size, kBoardSizeMax);
         return kIllegalArgumentError;
@@ -153,18 +158,20 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
 }
 
 int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
-    if (board_mask == 0) {
+    // Validate board size
+    int board_size = _popcnt64(board_mask);
+    if (board_size == 0 || board_size > kBoardSizeMax) {
         fprintf(stderr,
-                "X86SimdTwoPieceHashInitIrregular: invalid board mask "
-                "provided; the mask does not contain any set bit and results "
-                "in a board of size 0\n");
+                "X86SimdTwoPieceHashInitIrregular: invalid board size (%d) "
+                "provided. Valid range: [1, %d]\n",
+                board_size, kBoardSizeMax);
         return kIllegalArgumentError;
     }
 
     // Clear previous system state if exists.
     if (system_initialized) X86SimdTwoPieceHashFinalize();
 
-    curr_board_size = _popcnt64(board_mask);
+    curr_board_size = board_size;
     MakeTriangle();
     hash_mask = board_mask;
 
@@ -198,8 +205,7 @@ void X86SimdTwoPieceHashFinalize(void) {
 }
 
 int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o) {
-    return nCr[curr_board_size - num_o][num_x] * nCr[curr_board_size][num_o] *
-           2;
+    return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o) * 2;
 }
 
 int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o) {
@@ -215,7 +221,8 @@ Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn) {
 }
 
 Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
-    // Extract the two 64-bit patterns to 16-byte-aligned stack memory
+    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
+    // required by _mm_store_si128
     alignas(16) uint64_t s[2];
     _mm_store_si128((__m128i *)s, board);
 
@@ -234,10 +241,9 @@ Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
     int pop_x = _popcnt64(patterns[0]);
     int pop_o = _popcnt64(patterns[1]);
     int64_t offset = nCr[curr_board_size - pop_o][pop_x];
-    Position ret =
-        offset * pattern_to_order[patterns[1]] + pattern_to_order[patterns[0]];
 
-    return ret;
+    return offset * pattern_to_order[patterns[1]] +
+           pattern_to_order[patterns[0]];
 }
 
 __m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {

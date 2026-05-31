@@ -223,19 +223,18 @@
  * function to check memory usage before calling X86SimdTwoPieceHashInit or
  * X86SimdTwoPieceHashInitIrregular to avoid running out of memory.
  *
- * @param slots Number of effective slots. If the board is rectangular, this
- * parameter should be set equal to the number of rows times the number of
- * columns.
+ * @param slots Number of effective slots.
  * @return Amount of memory required to initialize the hash system.
  */
 size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots);
 
 /**
- * @brief Initializes the hash system, setting effective board rows to \p rows
- * and effective board columns to \p cols.
+ * @brief Initializes the hash system for a rectangular board with \p rows rows
+ * and \p cols columns. The number of effective rows and columns are also
+ * \p rows and \p cols , respectively.
  *
- * @param rows Number of effective board rows.
- * @param cols Number of effective board cols.
+ * @param rows Number of board rows.
+ * @param cols Number of board columns.
  * @return \c kNoError on success,
  * @return \c kIllegalArgumentError if either \p rows or \p cols is less than 1
  * or greater than 8; or if \p rows * \p cols is greater than 32.
@@ -246,8 +245,8 @@ int X86SimdTwoPieceHashInit(int rows, int cols);
  * @brief Initializes the hash system for an irregular board specified through
  * the \p board_mask parameter.
  *
- * @param board_mask A bit mask where set bits mark effective board slots. See
- * the instruction manual at the beginning of this header for a detailed
+ * @param board_mask A bit mask where set bits specify effective board slots.
+ * See the instruction manual at the beginning of this header for a detailed
  * explanation.
  * @return \c kNoError on success,
  * @return \c kIllegalArgumentError if the mask contains no set bits.
@@ -260,8 +259,8 @@ int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask);
 void X86SimdTwoPieceHashFinalize(void);
 
 /**
- * @brief Returns the number of positions in total with \p num_x X's and
- * \p num_o O's on the board, including either player's turn.
+ * @brief Returns the total number of positions with \p num_x X's and \p num_o
+ * O's on the board, including both player's turns.
  * @note X is the first player, and O is the second player.
  *
  * @param num_x Number of X's on the board.
@@ -272,8 +271,8 @@ void X86SimdTwoPieceHashFinalize(void);
 int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o);
 
 /**
- * @brief Returns the number of positions in total with \p num_x X's and
- * \p num_o O's on the board, assuming it is always one of the players' turn.
+ * @brief Returns the total number of positions with \p num_x X's and \p num_o
+ * O's on the board, assuming it is always one of the players' turn.
  * @note X is the first player, and O is the second player.
  *
  * @param num_x Number of X's on the board.
@@ -441,7 +440,7 @@ static inline int X86SimdTwoPieceHashGetTurn(Position hash) { return hash & 1; }
  * @return Flipped board.
  *
  * @ref Chess Programming Wiki (note that their indexing is different)
- * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
+ * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Diagonal
  */
 static inline __m128i X86SimdTwoPieceHashFlipDiag(__m128i board) {
     __m128i t;
@@ -476,10 +475,11 @@ static inline __m128i X86SimdTwoPieceHashFlipDiag(__m128i board) {
  * @return Flipped board.
  *
  * @ref Chess Programming Wiki
- * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
+ * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Vertical
  */
 static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
-    // Extract the two 64-bit patterns to 16-byte-aligned stack memory
+    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
+    // required by _mm_store_si128
     alignas(16) uint64_t s[2];
     _mm_store_si128((__m128i *)s, board);
 
@@ -515,7 +515,7 @@ static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
  * @return Flipped board.
  *
  * @ref Chess Programming Wiki
- * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
+ * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Horizontal
  */
 static inline __m128i X86SimdTwoPieceHashMirrorHorizontal(__m128i board,
                                                           int cols) {
