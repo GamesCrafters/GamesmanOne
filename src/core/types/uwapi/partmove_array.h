@@ -65,17 +65,17 @@ void PartmoveArrayDestroy(PartmoveArray *pa);
  * @param pa Destination part-move array.
  * @param autogui_move AutoGUI move string for this part-move; non-NULL.
  * @param formal_move Formal move string for this part-move; non-NULL.
- * @param from NULL if and only if this part-move is the first part of the full
- * move. For all other parts of the full move, this field should be set to the
- * AutoGUI position string representing the intermediate board state before this
- * part-move is made.
- * @param to NULL if and only if this part-move is the last part of the full
- * move. For all other parts of the full move, this field should be set to the
- * AutoGUI position string representing the intermediate board state after this
- * part-move is made.
- * @param full The formal move string of the full move that this part-move is
- * part of ONLY when this part-move is the last part of the full move. For all
- * other part-moves, this field should be set to \c NULL .
+ * @param from \c NULL if and only if this part-move is the first part of the
+ * full move. For all other parts of the full move, this parameter should be set
+ * to the AutoGUI position string representing the intermediate board state
+ * before this part-move is made.
+ * @param to \c NULL if and only if this part-move is the last part of the full
+ * move. For all other parts of the full move, this parameter should be set to
+ * the AutoGUI position string representing the intermediate board state after
+ * this part-move is made.
+ * @param full When this part-move is the last part of the full move, this
+ * parameter should be set to the formal move string of the full move.
+ * Otherwise, it should be set to \c NULL .
  * @return \c kNoError on success, or
  * @return \c kMallocFailureError on memory allocation failure.
  */
