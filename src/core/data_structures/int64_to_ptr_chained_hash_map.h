@@ -55,7 +55,7 @@ typedef struct Int64ToPtrChainedHashMap {
 /**
  * @brief Int64ToPtrChainedHashMap iterator, which is usually returned by an
  * Int64ToPtrChainedHashMap accessor function. No internal states are intended
- * to be expected or manipulated directly. Use the provided API functions
+ * to be inspected or manipulated directly. Use the provided API functions
  * instead.
  */
 typedef struct Int64ToPtrChainedHashMapIterator {
@@ -146,7 +146,7 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapBegin(
 
 /**
  * @brief Returns the key of the entry that \p it is pointing to. The user
- * should validate the iterator using Int64ToPtrChainedHashMapIteratorIsValid
+ * should validate the iterator using \c Int64ToPtrChainedHashMapIteratorIsValid
  * before calling this function.
  *
  * @param it Iterator.
@@ -157,7 +157,7 @@ int64_t Int64ToPtrChainedHashMapIteratorKey(
 
 /**
  * @brief Returns the value of the entry that \p it is pointing to. The user
- * should validate the iterator using Int64ToPtrChainedHashMapIteratorIsValid
+ * should validate the iterator using \c Int64ToPtrChainedHashMapIteratorIsValid
  * before calling this function.
  *
  * @param it Iterator.
@@ -166,7 +166,9 @@ int64_t Int64ToPtrChainedHashMapIteratorKey(
 void *Int64ToPtrChainedHashMapIteratorValue(
     const Int64ToPtrChainedHashMapIterator *it);
 
-/** @brief Returns true if the given IT-erator is valid, or false otherwise. */
+/**
+ * @brief Returns \c true if \p it is a valid iterator, or \c false otherwise.
+ */
 bool Int64ToPtrChainedHashMapIteratorIsValid(
     const Int64ToPtrChainedHashMapIterator *it);
 
