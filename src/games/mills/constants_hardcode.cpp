@@ -1,3 +1,37 @@
+/**
+ * @file constants_hardcode.cpp
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Helper program for visualizing the hard-coded bit masks to help catch
+ * mistakes. It is kept here in case we want to add more variants in the future.
+ * @note C++ allows \c 0b constants which greatly simplifies the hard-coding
+ * process. The recommended procedure is to first hard-code the bit masks as
+ * \c 0b constants, verify their correctness using this program, and then
+ * convert them to hexidecial constants acceptable in C using
+ * \c scripts/text_binary_to_hex.py .
+ * @note This file is not included in the build system and must be built
+ * separately using a C++ compiler.
+ * @version 1.0.0
+ * @date 2025-04-26
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <cassert>
 #include <cstdint>
 #include <iostream>
@@ -6,16 +40,16 @@
 #include "masks.h"
 
 static const char *const kFormat16BoardOnly =
-"\n"
-"          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
-"          |       |       |    |       |       |\n"
-"          |   3 - 4 - 5   |    |   %c - %c - %c   |\n"
-"          |   |       |   |    |   |       |   |\n"
-"LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c\n"
-"          |   |       |   |    |   |       |   |\n"
-"          |  10 - 11- 12  |    |   %c - %c - %c   |\n"
-"          |       |       |    |       |       |\n"
-"          13 ---- 14 ---- 15   %c ----- %c ----- %c\n\n";
+    "\n"
+    "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
+    "          |       |       |    |       |       |\n"
+    "          |   3 - 4 - 5   |    |   %c - %c - %c   |\n"
+    "          |   |       |   |    |   |       |   |\n"
+    "LEGEND:   6 - 7       8 - 9    %c - %c       %c - %c\n"
+    "          |   |       |   |    |   |       |   |\n"
+    "          |  10 - 11- 12  |    |   %c - %c - %c   |\n"
+    "          |       |       |    |       |       |\n"
+    "          13 ---- 14 ---- 15   %c ----- %c ----- %c\n\n";
 
 static const char *const kFormat17BoardOnly =
     "\n"
