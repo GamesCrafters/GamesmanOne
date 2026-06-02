@@ -51,11 +51,12 @@ static ConstantReadOnlyString kOpeningCreditsFormat =
     "Welcome to GAMESMAN, version "THEME"%s"RESET". Originally       (G)ame-independent\n"
     "written by Dan Garcia, it has undergone a series of       (A)utomatic       \n"
     "exhancements from 2001-present by GamesCrafters, the      (M)ove-tree       \n"
-    "UC Berkeley Undergraduate Game Theory Research Group.     (E)xhaustive      \n"
-    "                                                          (S)earch,         \n"
-    "This program will determine the value of your game,       (M)anipulation    \n"
-    "perform analysis, & provide an interface to play it.      (A)nd             \n"
-    "                                                          (N)avigation      \n";
+    "UC Berkeley Computational Game Theory Research and        (E)xhaustive      \n"
+    "Development Group.                                        (S)earch,         \n"
+    "                                                          (M)anipulation    \n"
+    "This program will determine the value of your game,       (A)nd             \n"
+    "perform analysis, & provide an interface to play it.      (N)avigation      \n"
+    "\n";
 // clang-format on
 
 static const char *const kContinuePrompt = "--- press <return> to continue ---";
