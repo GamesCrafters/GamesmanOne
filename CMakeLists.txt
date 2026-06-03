@@ -10,21 +10,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 FetchContent_Declare(
-  dep_json-c
+  json-c
   GIT_REPOSITORY https://github.com/json-c/json-c.git
-  GIT_TAG        05180c1fa385eb39274cf0a17223da1b82832773 # json-c 0.18
+  GIT_TAG 05180c1fa385eb39274cf0a17223da1b82832773 # json-c 0.18
 )
 FetchContent_Declare(
-  dep_liblzma
+  liblzma
   GIT_REPOSITORY https://github.com/tukaani-project/xz.git
-  GIT_TAG        ebb0e6789cefe3be71756881aa8f2009fda9938c # XZ Utils 5.8.3
+  GIT_TAG ebb0e6789cefe3be71756881aa8f2009fda9938c # XZ Utils 5.8.3
 )
 FetchContent_Declare(
-  dep_lz4
+  lz4
   GIT_REPOSITORY https://github.com/lz4/lz4.git
-  GIT_TAG        ebb370ca83af193212df4dcbadcc5d87bc0de2f0 # LZ4 v1.10.0
+  GIT_TAG ebb370ca83af193212df4dcbadcc5d87bc0de2f0 # LZ4 v1.10.0
 )
-FetchContent_MakeAvailable(dep_json-c dep_liblzma dep_lz4)
+FetchContent_MakeAvailable(json-c liblzma lz4)
 
 ##########################
 # Common Flags Interface #
