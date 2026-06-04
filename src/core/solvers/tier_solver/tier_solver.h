@@ -38,12 +38,38 @@
 /** @brief Tier Solver. */
 extern const Solver kTierSolver;
 
+/**
+ * @brief Constants for Tier Solver stack memory allocation configuration.
+ *
+ * @note It is not recommended to decrease these values as some games with high
+ * usages may break with smaller buffers.
+ *
+ * @note Before you increase these values:
+
+ * 1. Double check all references to make sure no stack overflow is possible
+ * due to larger buffers.
+ *
+ * 2. Remember that larger buffer sizes do not result in better performance,
+ * especially when they exceed the size of your CPU's L1 cache.
+ */
 typedef enum {
+    /**
+     * Maximum number of moves allowed at any position in any game.
+     */
     kTierSolverNumMovesMax = 4096,
+    /**
+     * Maximum number of child positions allowed at any position in any game.
+     */
     kTierSolverNumChildPositionsMax = kTierSolverNumMovesMax,
+    /**
+     * Maximum number of parent positions allowed at any position in any game.
+     */
     kTierSolverNumParentPositionsMax = kTierSolverNumMovesMax,
+    /**
+     * Maximum number of child tiers allowed of any tier in any game.
+     */
     kTierSolverNumChildTiersMax = 128,
-} TierSolverConstants;
+} TierSolverStackAllocConstants;
 
 /**
  * @brief API for Tier Solver.
@@ -54,9 +80,10 @@ typedef struct TierSolverApi {
     /////////////////////////////////////////////////////////
 
     /**
-     * @brief Returns the initial tier of the current game variant. The actual
-     * initial tier is always be returned even if tier symmetry removal is
-     * implemented and the actual initial tier is not canonical.
+     * @brief Returns the initial tier of the current game variant. The initial
+     * tier as defined by the game rules is always returned, even if tier
+     * symmetry removal is implemented and the actual initial tier is not
+     * canonical.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -64,7 +91,7 @@ typedef struct TierSolverApi {
     Tier (*GetInitialTier)(void);
 
     /**
-     * @brief Stores all distinct child tiers of the given \p tier in as an
+     * @brief Stores all distinct child tiers of the given \p tier as an
      * array in \p child_tiers and returns the size of the array. All child
      * tiers, including ones that are not canonical if tier symmetry removal is
      * implemented, will be returned.
@@ -94,13 +121,9 @@ typedef struct TierSolverApi {
      * tiers that are symmetric to each other returns the same size.
      *
      * @details The size of a tier is defined as the maximum hash value within
-     * the tier + 1. The database will allocate an array of records for each
-     * position within the given tier of this size. If this function returns a
-     * value smaller than the actual size, the database system will, at some
-     * point, complain about an out-of-bounds array access and the solver will
-     * fail. If this function returns a value larger than the actual size, there
-     * will be no error but memory usage and the size of the database may
-     * increase.
+     * the tier + 1. The database will allocate an array of records of this size
+     * for each position within the given tier. This function is therefore
+     * guaranteed to return a size no smaller than the actual size of the tier.
      *
      * @note Assumes \p tier is a valid tier reachable from the initial tier.
      * Passing an illegal tier results in undefined behavior.
@@ -112,9 +135,9 @@ typedef struct TierSolverApi {
 
     /**
      * @brief Returns the initial position within the initial tier of the
-     * current game variant. The actual initial position is always returned even
-     * if position symmetry removal is implemented and the actual initial
-     * position is not canonical.
+     * current game variant. The initial position as defined by the game rules
+     * is always returned even if position symmetry removal is implemented and
+     * the actual initial position is not canonical.
      *
      * @note This function is REQUIRED. The solver system will panic if this
      * function is not implemented.
@@ -160,7 +183,8 @@ typedef struct TierSolverApi {
      * @brief Returns the resulting tier position after performing the given
      * \p move at \p tier_position . This function accepts non-canonical
      * \p tier_position inputs and always returns the actual resulting tier
-     * position without applying tier/position symmetries.
+     * position as defined by the game rules without applying tier/position
+     * symmetries.
      *
      * @note Assumes \p tier_position is valid and \p move is a valid move at
      * \p tier_position . Passing an invalid tier, an illegal position within
@@ -189,7 +213,7 @@ typedef struct TierSolverApi {
      * will not use them to, for example, generate moves or parent positions
      * while solving the game. Therefore, the game developer is responsible for
      * making sure that all tier positions deemed legal by this function are
-     * actually safe to be passed to other API functions such as
+     * safe to be passed as parameters to other API functions such as
      * \c TierSolverApi::GenerateMoves and \c TierSolverApi::DoMove .
      *
      * @note Assumes \p tier_position.position is between 0 and
@@ -294,7 +318,7 @@ typedef struct TierSolverApi {
      * @note This function is OPTIONAL, but can be implemented as an
      * optimization to first generating moves and then doing moves. If not
      * implemented, the system will replace calls to this function with calls to
-     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
+     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove , and
      * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
      * will be used for deduplication regardless of whether duplicated child
      * positions are possible.
@@ -324,7 +348,7 @@ typedef struct TierSolverApi {
      * @note This function is OPTIONAL, but can be implemented as an
      * optimization to first generating moves and then doing moves. If not
      * implemented, the system will replace calls to this function with calls to
-     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove ,
+     * \c TierSolverApi::GenerateMoves , \c TierSolverApi::DoMove , and
      * \c TierSolverApi::GetCanonicalPosition , and a \c TierPositionHashSet
      * will be used for deduplication regardless of whether duplicated child
      * positions are possible.
@@ -355,7 +379,9 @@ typedef struct TierSolverApi {
      * results in undefined behavior.
      *
      * @note To simplify game implementation, this function is allowed to
-     * generate illegal/primitive parent positions.
+     * generate illegal/primitive parent positions. It is therefore the caller's
+     * responsibility to test the legality of positions generated by this
+     * function.
      *
      * @note This function is OPTIONAL, but is required for Retrograde Analysis.
      * If not implemented, Retrograde Analysis will be disabled and a reverse
@@ -450,55 +476,59 @@ typedef struct TierSolverApi {
  * @brief Types of all detectable error by the test function of Tier Solver.
  */
 enum TierSolverTestErrors {
-    kTierSolverTestNoError,          /**< No error. */
-    kTierSolverTestDependencyError,  /**< Test failed due to a prior error. */
-    kTierSolverTestGetTierNameError, /**< Failed to get tier name. */
+    /** No error. */
+    kTierSolverTestNoError,
+    /** Test failed due to a prior error. */
+    kTierSolverTestDependencyError,
+    /** Failed to get tier name. */
+    kTierSolverTestGetTierNameError,
     /** Illegal child tier detected. */
     kTierSolverTestIllegalChildTierError,
     /** Illegal child position detected. */
     kTierSolverTestIllegalChildPosError,
     /** The positions returned by the game-specific GetCanonicalChildPositions
-       did not match those returned by the default function which calls
-       GenerateMoves and DoMove. */
+       did not match those generated by GenerateMoves and DoMove. */
     kTierSolverTestGetCanonicalChildPositionsMismatch,
     /** The number of canonical positions returned by the game-specific
-       GetNumberOfCanonicalChildPositions did not match the value returned by
-       the default function which calls GenerateMoves and DoMove. */
+       GetNumberOfCanonicalChildPositions did not match the value generated by
+       GenerateMoves and DoMove. */
     kTierSolverTestGetNumberOfCanonicalChildPositionsMismatch,
     /** Applying tier symmetry within the same tier returned a different
        position. */
     kTierSolverTestTierSymmetrySelfMappingError,
     /** Applying tier symmetry twice - first using a symmetric tier, then using
-       the original tier - returned a different position */
+       the original tier - returned a different position. */
     kTierSolverTestTierSymmetryInconsistentError,
     /** One of the canonical child positions of a legal canonical position was
-       found not to have that legal position as its parent */
+       found not to have that legal position as its parent. */
     kTierSolverTestChildParentMismatchError,
     /** One of the canonical parent positions of a legal canonical position was
        found not to have that legal position as its child. */
     kTierSolverTestParentChildMismatchError,
 };
 
-/** @brief Solver options of the Tier Solver. */
+/** @brief Solver options for the Tier Solver. */
 typedef struct TierSolverSolveOptions {
     size_t memlimit; /**< Approximate heap memory limit in bytes. */
     int verbose;     /**< Level of details to output. */
     bool force;      /**< Whether to force (re)solve the game. */
 } TierSolverSolveOptions;
 
-/** @brief Analyzer options of the Tier Solver. */
+/** @brief Analyzer options for the Tier Solver. */
 typedef struct TierSolverAnalyzeOptions {
     size_t memlimit; /**< Approximate heap memory limit in bytes. */
     int verbose;     /**< Level of details to output. */
     bool force;      /**< Whether to force (re)analyze the game. */
 } TierSolverAnalyzeOptions;
 
+/** @brief Test options for the Tier Solver. */
 typedef struct TierSolverTestOptions {
     long seed;         /**< Seed for PRNG for random testing. */
     int64_t test_size; /**< Number of random positions to test in each tier. */
     int verbose;       /**< Level of details to output. */
 } TierSolverTestOptions;
 
+/** @brief Solve status of a tier. */
 typedef enum TierSolverSolveStatus {
     kTierSolverSolveStatusNotSolved, /**< Not fully solved. */
     kTierSolverSolveStatusSolved,    /**< Fully solved. */
