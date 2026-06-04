@@ -1,4 +1,24 @@
 #!/usr/bin/env python3
+
+# This script scans for C/C++ header files and validates their header guards,
+# enforcing the format required by the Google C++ style guide.
+# The script is NOT smart enough to detect partially missing harder guards
+# such as when #ifndef is present but #define is missing. In these cases, it
+# will attempt to generate a new header guard that wraps the entire file but
+# without deleting the existing structure. It also does not recognize the
+# Doxygen file description comment block and will attempt to generate the
+# missing header guard on top of everything. Therefore, manual inspection
+# is required.
+# Generated using Gemini 3.1 Pro. Not fully tested and not meant to be
+# maintained. Make sure to check the output before applying the generated
+# changes!
+#
+# Usage:
+# python3 scripts/header_guards.py --check --staged       # Returns 1 if there are invalid header guards in Git staged files
+# python3 scripts/header_guards.py --dry-run --staged     # Scan for invalid header guards in Git staged files and print the projected modifications to stdout
+# python3 scripts/header_guards.py --fix --whitelist src  # Automatically fix header guards in src
+# python3 scripts/header_guards.py --fix --staged         # Automatically fix header guards in Git staged files
+
 import os
 import re
 import argparse
