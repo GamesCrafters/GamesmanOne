@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GAMESMAN_TYPES_H_
-#define GAMESMANONE_CORE_GAMESMAN_TYPES_H_
+#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_
+#define GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_
 
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -49,4 +49,4 @@
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 
-#endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_
+#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_

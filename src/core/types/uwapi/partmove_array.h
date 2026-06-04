@@ -83,4 +83,4 @@ int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
                              CString *formal_move, CString *from, CString *to,
                              CString *full);
 
-#endif  // GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_ARRAY_H
+#endif  // GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_ARRAY_H_

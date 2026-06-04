@@ -28,8 +28,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
-#define GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
+#ifndef GAMESMANONE_GAMES_MILLS_BOARDS_H_
+#define GAMESMANONE_GAMES_MILLS_BOARDS_H_
 
 // clang-format off
 
@@ -158,4 +158,4 @@ static const char *const *const kBoardIdxToFormal[] = {
     kBoardIdxToFormal24, kBoardIdxToFormal25,
 };
 
-#endif  // GAMESMANONE_GAMES_MILLS_BOARD_FORMATS_H_
+#endif  // GAMESMANONE_GAMES_MILLS_BOARDS_H_

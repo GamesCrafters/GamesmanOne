@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
-#define GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
+#ifndef GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_H_
+#define GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_H_
 
 #include <stdatomic.h>
 
@@ -258,4 +258,4 @@ static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {
     return num_undecided;
 }
 
-#endif  // GAMESMANONE_CORE_DB_BPDB_ATOMIC_RECORD_H_
+#endif  // GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_H_

@@ -25,8 +25,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_DB_BPDB_RECORD_H_
-#define GAMESMANONE_CORE_DB_BPDB_RECORD_H_
+#ifndef GAMESMANONE_CORE_DB_ARRAYDB_RECORD_H_
+#define GAMESMANONE_CORE_DB_ARRAYDB_RECORD_H_
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool, true, false
@@ -208,4 +208,4 @@ static inline int RecordClearNumUndecidedChildren(Record *rec) {
     return num_undecided;
 }
 
-#endif  // GAMESMANONE_CORE_DB_BPDB_RECORD_H_
+#endif  // GAMESMANONE_CORE_DB_ARRAYDB_RECORD_H_

@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_LIB_LZ4_UTILS_H_
-#define GAMESMANONE_LIB_LZ4_UTILS_H_
+#ifndef GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
+#define GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
 
 #include <stddef.h>  // size_t
 #include <stdint.h>  // int64_t
@@ -124,4 +124,4 @@ int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
  */
 int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size);
 
-#endif  // GAMESMANONE_LIB_LZ4_UTILS_H_
+#endif  // GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_

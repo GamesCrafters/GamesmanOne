@@ -1,3 +1,5 @@
+#ifndef GAMESMANONE_CORE_OPENING_CREDITS_H_
+#define GAMESMANONE_CORE_OPENING_CREDITS_H_
 /**
  * @file opening_credits.h
  * @author Robert Shi (robertyishi@berkeley.edu)
@@ -605,3 +607,5 @@ static const char *const kHeaderAnimation[] = {
     " \\____|\\__,_|_| |_| |_|\\___||___/_| |_| |_|\\__,_|_| |_| "RESET": ddgarcia@berkeley.edu"THEME"\n",
 };
 // clang-format on
+
+#endif  // GAMESMANONE_CORE_OPENING_CREDITS_H_

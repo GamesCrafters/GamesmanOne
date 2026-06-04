@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GAMESMAN_ERROR_H_
-#define GAMESMANONE_CORE_GAMESMAN_ERROR_H_
+#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
+#define GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
 
 enum GamesmanError {
     kNoError = 0,              /**< No error should always be 0. */
@@ -53,4 +53,4 @@ enum GamesmanError {
     kRuntimeError,                  /**< Generic runtime error. */
 };
 
-#endif  // GAMESMANONE_CORE_GAMESMAN_ERROR_H_
+#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_

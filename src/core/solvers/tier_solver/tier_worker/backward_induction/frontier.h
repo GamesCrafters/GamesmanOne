@@ -30,8 +30,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_
-#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_
+#ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
+#define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // int64_t
@@ -184,4 +184,4 @@ static inline int64_t FrontierGetDivider(const Frontier *frontier,
  */
 void FrontierFreeRemoteness(Frontier *frontier, int remoteness);
 
-#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_BACKWARD_INDUCTION_FRONTIER_H_
+#endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_

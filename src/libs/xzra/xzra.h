@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_LIB_XZRA_XZRA_H_
-#define GAMESMANONE_LIB_XZRA_XZRA_H_
+#ifndef GAMESMANONE_LIBS_XZRA_XZRA_H_
+#define GAMESMANONE_LIBS_XZRA_XZRA_H_
 
 #include <stdbool.h>  // bool
 #include <stdint.h>   // uint32_t, int64_t, uint64_t, uint8_t
@@ -321,4 +321,4 @@ size_t XzraFileRead(void *dest, size_t size, XzraFile *file);
  */
 bool XzraFileEOF(const XzraFile *file);
 
-#endif  // GAMESMANONE_LIB_XZRA_XZRA_H_
+#endif  // GAMESMANONE_LIBS_XZRA_XZRA_H_
