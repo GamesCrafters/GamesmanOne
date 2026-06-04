@@ -1,5 +1,3 @@
-#ifndef GAMESMANONE_CORE_OPENING_CREDITS_H_
-#define GAMESMANONE_CORE_OPENING_CREDITS_H_
 /**
  * @file opening_credits.h
  * @author Robert Shi (robertyishi@berkeley.edu)
@@ -25,6 +23,9 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef GAMESMANONE_CORE_OPENING_CREDITS_H_
+#define GAMESMANONE_CORE_OPENING_CREDITS_H_
 
 #ifdef NDEBUG
 #define THEME "\x1b[38;5;166m"
