@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solvable and solved
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.5.1
- * @date 2025-05-11
+ * @version 2.0.0
+ * @date 2026-06-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -197,8 +197,8 @@ int TierManagerSolve(const TierSolverApi *api,
     return ret;
 }
 
-int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
-                       size_t memlimit) {
+int TierManagerAnalyze(const TierSolverApi *api,
+                       const TierSolverAnalyzeOptions *options) {
     api_internal = api;
     int error = InitGlobalVariables(kTierAnalyzing);
     if (error != 0) {
@@ -208,13 +208,15 @@ int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
         return error;
     }
 
-    int ret = DiscoverTierGraph(force, verbose, memlimit);
+    int ret =
+        DiscoverTierGraph(options->force, options->verbose, options->memlimit);
     DestroyGlobalVariables();
 
     return ret;
 }
 
-int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size) {
+int TierManagerTest(const TierSolverApi *api,
+                    const TierSolverTestOptions *options) {
     api_internal = api;
     int error = InitGlobalVariables(kTierSolving);
     if (error != 0) {
@@ -225,7 +227,7 @@ int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size) {
     }
     PrintTierGraphAnalysis();
 
-    int ret = TestTierGraph(seed, test_size);
+    int ret = TestTierGraph(options->seed, options->test_size);
     DestroyGlobalVariables();
 
     return ret;

@@ -13,8 +13,8 @@
  * @details The tier manager module is responsible for scanning, validating, and
  * creating the tier graph in memory, keeping track of solved and solvable
  * tiers, and dispatching jobs to the tier worker module.
- * @version 1.5.1
- * @date 2025-05-11
+ * @version 2.0.0
+ * @date 2026-06-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -57,28 +57,24 @@ int TierManagerSolve(const TierSolverApi *api,
  * @brief Creates and analyzes the tier graph.
  *
  * @param api Tier solver API functions implemented by the current Game.
- * @param force If set to true, the analyzer will analyze each tier regardless
- * of the current analysis status. Otherwise, the analyzing stage is skipped if
- * Tier Manager believes that the given tier has been correctly analyzed
- * already.
- * @param verbose Set to 0 for quiet (only error messages will be printed,) 1
- * for default, and 2 for verbose.
- * @param memlimit Approximate heap memory limit in bytes.
+ * @param options Non-null pointer to a \c TierSolverAnalyzeOptions object which
+ * contains the analyzing options.
  * @return 0 on success, non-zero error code otherwise.
  */
-int TierManagerAnalyze(const TierSolverApi *api, bool force, int verbose,
-                       size_t memlimit);
+int TierManagerAnalyze(const TierSolverApi *api,
+                       const TierSolverAnalyzeOptions *options);
 
 /**
  * @brief Tests the given tier solver API implementation using the given SEED
  * for random number generation.
  *
  * @param api Tier solver API to test.
- * @param seed Seed for random number generation.
- * @param test_size Maximum number of positions to test in each tier.
+ * @param options Non-null pointer to a \c TierSolverTestOptions object which
+ * contains the test options.
  * @return 0 on success, or
  * @return one of the values from TierSolverTestErrors defined in tier_solver.h.
  */
-int TierManagerTest(const TierSolverApi *api, long seed, int64_t test_size);
+int TierManagerTest(const TierSolverApi *api,
+                    const TierSolverTestOptions *options);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_

@@ -225,7 +225,7 @@ static int TierSolverTest(void *aux) {
 
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
-    return TierManagerTest(&current_api, options->seed, options->test_size);
+    return TierManagerTest(&current_api, options);
 }
 
 static ReadOnlyString TierSolverExplainTestError(int error) {
@@ -360,8 +360,7 @@ static int TierSolverAnalyze(void *aux) {
     const TierSolverAnalyzeOptions *options = (TierSolverAnalyzeOptions *)aux;
     if (options == NULL) options = &kDefaultAnalyzeOptions;
 
-    return TierManagerAnalyze(&current_api, options->force, options->verbose,
-                              options->memlimit);
+    return TierManagerAnalyze(&current_api, options);
 }
 
 static int TierSolverGetStatus(void) { return solver_status; }
