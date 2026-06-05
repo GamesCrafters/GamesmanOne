@@ -106,14 +106,28 @@ static Tier largest_tier_group_parent;
 // Cached reverse tier graph of the game.
 static ReverseTierGraph reverse_tier_graph;
 
+// Counter for the number of positions waiting to be processed.
 static int64_t total_size;
+
+// Counter for the total number of tiers in the game.
 static int64_t total_tiers;
+
+// Counter for the total number of canonical tiers in the game.
 static int64_t total_canonical_tiers;
+
+// Counter for the number of positions processed so far.
 static int64_t processed_size;
+
+// Counter for the number of tiers processed so far.
 static int64_t processed_tiers;
+
+// Counter for the number of tiers skipped so far.
 static int64_t skipped_tiers;
+
+// Counter for the number of tiers failed to be processed so far.
 static int64_t failed_tiers;
 
+// Game-level statistics.
 static Analysis game_analysis;
 
 // Helper functions.
@@ -973,7 +987,7 @@ static void PrintTierGraphAnalysis(void) {
     // Report on the largest canonical tier.
     printf("Finished building the tier graph.\n");
     api_internal->GetTierName(largest_tier, name);
-    printf("The largest canonical tier is [%s] (#%" PRITier
+    printf("One of the largest canonical tier is [%s] (#%" PRITier
            "), which contains %" PRId64 " positions.\n",
            name, largest_tier, max_tier_size);
 
