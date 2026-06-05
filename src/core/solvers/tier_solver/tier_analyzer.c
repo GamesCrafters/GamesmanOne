@@ -67,7 +67,10 @@ static int num_child_tiers;  // Size of child_tiers.
 // Child tier to its index in the child_tiers array.
 static TierHashMap child_tier_to_index;
 
+// Maps reachable positions in this_tier to set bits.
 static ConcurrentBitset *this_tier_map;
+
+// Maps reachable positions in each child tier to set bits.
 static ConcurrentBitset **child_tier_maps;
 
 static int num_threads;  // Number of threads available.
@@ -78,7 +81,8 @@ typedef struct {
 } PaddedPositionArray;
 static PaddedPositionArray *fringe;  // Discovered but unprocessed positions.
 static PaddedPositionArray *discovered;  // Newly discovered positions.
-static ConcurrentBitset *bs_fringe, *bs_discovered;
+static ConcurrentBitset *bs_fringe;      // Compact fringe as a bitmap.
+static ConcurrentBitset *bs_discovered;  // Compact discovered set as a bitmap.
 
 // ============================= TierAnalyzerInit =============================
 
@@ -502,7 +506,10 @@ static bool DiscoverFromBitsetToArray(Analysis *dest) {
             bool use_array = ConcurrentBoolLoad(&no_oom);
             TierPosition parent = {.tier = this_tier, .position = i};
             bool step_no_oom = Expand(parent, &parts[tid].data, tid, use_array);
-            if (!step_no_oom) ConcurrentBoolStore(&no_oom, false);
+
+            // Only update the shared atomic Boolean value when it needs to be
+            // changed to minimize false sharing.
+            if (use_array && !step_no_oom) ConcurrentBoolStore(&no_oom, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
@@ -556,7 +563,10 @@ static bool DiscoverFromArrayToArray(Analysis *dest) {
             };
             bool use_array = ConcurrentBoolLoad(&no_oom);
             bool step_no_oom = Expand(parent, &parts[tid].data, tid, use_array);
-            if (!step_no_oom) ConcurrentBoolStore(&no_oom, false);
+
+            // Only update the shared atomic Boolean value when it needs to be
+            // changed to minimize false sharing.
+            if (use_array && !step_no_oom) ConcurrentBoolStore(&no_oom, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
