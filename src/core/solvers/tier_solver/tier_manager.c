@@ -65,12 +65,12 @@ enum TierManagementType {
     kTierAnalyzing,
 };
 
-typedef enum TierGraphNodeStatus {
+enum TierGraphNodeStatus {
     kStatusNotVisited,
     kStatusInProgress,
     kStatusClosed,
     kNumStatus
-} TierGraphNodeStatus;
+};
 
 enum TierGraphErrorTypes {
     kTierGraphNoError,
