@@ -274,24 +274,6 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
            "test code";
 }
 
-static ConstantReadOnlyString kTierSolverSolveSkipReadOnlyMsg =
-    "TierSolverSolve: the current game was solved with a database of a "
-    "previous version that is no longer supported. The solver has "
-    "skipped the solving process to prevent damage to the existing "
-    "database. To re-solve the current game, remove the old database "
-    "or use a different data path and try again.";
-
-static ConstantReadOnlyString kTierSolverAnalyzeSkipReadOnlyMsg =
-    "TierSolverAnalyze: the current game was solved with a database of a "
-    "previous version that is no longer supported. The solver has skipped the "
-    "analysis because some functions are missing from the original database "
-    "implementation. To analyze the current game, remove the old database "
-    "or use a different data path to resolve the game and try again.";
-
-static ConstantReadOnlyString kTierSolverSolveSkipSolvedMsg =
-    "TierSolverSolve: the current game variant has already been solved. Use "
-    "-f in headless mode to force re-solve the game variant.";
-
 static TierSolverSolveOptions SanitizeSolveOptions(
     const TierSolverSolveOptions *options) {
     // If input is NULL, use the following default options
@@ -312,14 +294,22 @@ static TierSolverSolveOptions SanitizeSolveOptions(
 
 static int TierSolverSolve(void *aux) {
     if (read_only_db) {  // Skip solving if database is in read-only mode.
-        printf("%s\n", kTierSolverSolveSkipReadOnlyMsg);
+        puts(
+            "TierSolverSolve: the current game was solved with a database of a "
+            "previous version that is no longer supported. The solver has "
+            "skipped the solving process to prevent damage to the existing "
+            "database. To re-solve the current game, remove the old database "
+            "or use a different data path and try again.");
         return kNoError;
     }
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     TierSolverSolveOptions sanitized = SanitizeSolveOptions(options);
     options = &sanitized;
     if (!options->force && solver_status == kTierSolverSolveStatusSolved) {
-        printf("%s\n", kTierSolverSolveSkipSolvedMsg);
+        puts(
+            "TierSolverSolve: the current game variant has already been "
+            "solved. Use the -f flag in headless mode to force re-solve the "
+            "game variant.");
         return kNoError;
     }
 #ifndef USE_MPI  // If not using MPI
@@ -349,10 +339,16 @@ static int TierSolverSolve(void *aux) {
 }
 
 static int TierSolverAnalyze(void *aux) {
-    // Disallowing analysis on old databases for simplicity.
+    // Disallow analysis on old databases for simplicity.
     // Need to work on old db implementation to support new analyzer API calls.
     if (read_only_db) {
-        printf("%s\n", kTierSolverAnalyzeSkipReadOnlyMsg);
+        puts(
+            "TierSolverAnalyze: the current game was solved with a database of "
+            "a previous version that is no longer supported. The solver has "
+            "skipped the analysis because some functions are missing from the "
+            "original database implementation. To analyze the current game, "
+            "remove the old database or use a different data path to resolve "
+            "the game and try again.");
         return kNoError;
     }
 
