@@ -731,15 +731,17 @@ static bool Step5SaveAnalysis(const Analysis *dest) {
 // Step6CleanUp
 
 static void Step6CleanUp(void) {
-    num_child_tiers = 0;
     TierHashMapDestroy(&child_tier_to_index);
     ConcurrentBitsetDestroy(this_tier_map);
     this_tier_map = NULL;
-    for (int i = 0; i < num_child_tiers; ++i) {
-        ConcurrentBitsetDestroy(child_tier_maps[i]);
+    if (child_tier_maps) {
+        for (int i = 0; i < num_child_tiers; ++i) {
+            ConcurrentBitsetDestroy(child_tier_maps[i]);
+        }
+        GamesmanAllocatorDeallocate(allocator, child_tier_maps);
+        child_tier_maps = NULL;
     }
-    GamesmanAllocatorDeallocate(allocator, child_tier_maps);
-    child_tier_maps = NULL;
+    num_child_tiers = 0;
 
     // Clean up fringes.
     DestroyFringeArray(fringe);
