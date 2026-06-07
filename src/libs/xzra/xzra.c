@@ -303,6 +303,7 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
 
     ret->strm = (lzma_stream)LZMA_STREAM_INIT;
     if (!InitEncoder(&ret->strm, block_size, level, extreme, num_threads)) {
+        fclose(ret->outfile);
         free(ret);
         return NULL;
     }
