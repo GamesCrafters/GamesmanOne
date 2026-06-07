@@ -123,22 +123,47 @@ static int GetCanonicalChildTiers(
     return ret;
 }
 
+// It is possible to only store one bitset in memory while streaming the other
+// two to disk. The current implementation simplifies this by allowing 3 bitsets
+// (this tier map, fringe, and discovered) to be stored at the same time. It can
+// be optimized if we need to analyze a memory-intensive game in the future.
 static bool Step0_0CheckMem(void) {
+    // Each thread uses its own fringe and discovered array (2x).
     size_t fringe_container_size =
         2 * num_threads * sizeof(PaddedPositionArray);
+
+    // Size of the fringe and discovered bitsets.
     size_t bitset_fringe_size = 2 * ConcurrentBitsetMemRequired(this_tier_size);
-    size_t this_tier_map_size = 2 * ConcurrentBitsetMemRequired(this_tier_size);
+
+    // Size of the bitset storing the discovered positions in this tier.
+    size_t this_tier_map_size = ConcurrentBitsetMemRequired(this_tier_size);
+
+    // Serialization and deserialization of concurrent bitsets is currently
+    // achieved by copying the whole bitset into memory. This can also be
+    // optimized if necessary.
+    size_t serialize_overhead = this_tier_map_size;
+
+    // Count the total amount of memory required for child tier position maps.
     size_t child_tier_maps_size = num_child_tiers * sizeof(ConcurrentBitset *);
-    size_t serialize_overhead = 0;
     for (int i = 0; i < num_child_tiers; ++i) {
         int64_t tier_size = api_internal->GetTierSize(child_tiers[i]);
-        child_tier_maps_size += ConcurrentBitsetMemRequired(tier_size);
-        if (child_tier_maps_size > serialize_overhead) {
-            serialize_overhead = child_tier_maps_size;
+        size_t this_child_tier_map_size =
+            ConcurrentBitsetMemRequired(tier_size);
+        child_tier_maps_size += this_child_tier_map_size;
+
+        // The memory bottleneck is determined by the (de)serialization of the
+        // largest tier.
+        if (this_child_tier_map_size > serialize_overhead) {
+            serialize_overhead = this_child_tier_map_size;
         }
     }
+
+    // Thread-local analyses.
     size_t partial_analysis_size = num_threads * sizeof(CacheAlignedAnalysis);
+
+    // Fringe offsets created when distributing work among threads.
     size_t fringe_offsets_size = (num_threads + 1) * sizeof(int64_t);
+
     size_t total = fringe_container_size + bitset_fringe_size +
                    child_tier_maps_size + serialize_overhead +
                    this_tier_map_size + partial_analysis_size +
