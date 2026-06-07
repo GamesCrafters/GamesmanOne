@@ -216,4 +216,21 @@ void ConcurrentBitsetSerialize(const ConcurrentBitset *s, void *buf);
  */
 void ConcurrentBitsetDeserialize(ConcurrentBitset *s, const void *buf);
 
+/**
+ * @brief Serializes at most \p bufsize bytes starting from the \p offset -th
+ * byte of the ConcurrentBitset \p s into \p buf and return the number of bytes
+ * serialized.
+ *
+ * @param s ConcurrentBitset object to be serialized.
+ * @param offset Byte offset of \p s from which serialization begins.
+ * @param buf Output buffer.
+ * @param bufsize Output buffer size. Minimum allowed buffer size is 8 bytes. If
+ * this requirement is not met, the function will silently return 0 without
+ * performing any serialization.
+ * @return Number of bytes serialized.
+ */
+size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
+                                          size_t offset, void *buf,
+                                          size_t bufsize);
+
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_

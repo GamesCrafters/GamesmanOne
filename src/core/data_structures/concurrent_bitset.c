@@ -230,3 +230,26 @@ void ConcurrentBitsetDeserialize(ConcurrentBitset *s, const void *buf) {
         atomic_store_explicit(&s->data[i], in[i], memory_order_relaxed);
     }
 }
+
+static int64_t Int64Min(int64_t a, int64_t b) { return a < b ? a : b; }
+
+size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
+                                          size_t offset, void *buf,
+                                          size_t bufsize) {
+    if (!s) return 0;
+    if (offset % sizeof(BlockType) != 0) return 0;
+    if (!buf) return 0;
+    if (bufsize < sizeof(BlockType)) return 0;
+    int64_t block_begin = offset / sizeof(BlockType);
+    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
+    int64_t block_end =
+        Int64Min(num_blocks, block_begin + bufsize / sizeof(BlockType));
+
+    BlockType *out = (BlockType *)buf;
+    for (int64_t i = block_begin; i < block_end; ++i) {
+        out[i - block_begin] =
+            atomic_load_explicit(&s->data[i], memory_order_relaxed);
+    }
+
+    return (block_end - block_begin) * sizeof(BlockType);
+}
