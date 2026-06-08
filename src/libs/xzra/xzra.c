@@ -318,6 +318,7 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
 
 int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
                          size_t in_size) {
+    int64_t total_out_begin = (int64_t)stream->strm.total_out;
     stream->strm.next_in = in;
     stream->strm.avail_in = in_size;
     while (stream->strm.avail_in) {
@@ -344,7 +345,7 @@ int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
         }
     }
 
-    return (int64_t)stream->strm.total_out;
+    return (int64_t)stream->strm.total_out - total_out_begin;
 }
 
 // ============================ XzraOutStreamClose =============================

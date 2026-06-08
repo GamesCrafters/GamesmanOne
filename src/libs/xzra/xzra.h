@@ -158,8 +158,7 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
  * @param stream Output stream.
  * @param in Pointer to the input buffer.
  * @param in_size Number of bytes to consume from the input buffer.
- * @return Number of compressed bytes generated in total since the creation of
- * \p stream on success, or
+ * @return Number of compressed bytes generated in this run on success, or
  * @return -3 on failure.
  */
 int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
