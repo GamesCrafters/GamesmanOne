@@ -134,31 +134,53 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
     int error = kNoError;
-    void *buf = NULL;  // Deserialization buffer
+    char buf[BUFSIZ];
     char *filename = GetPathToTierDiscoveryMap(tier);
     ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
+    Lz4UtilsInStream *lz4_istream = NULL;
     if (filename == NULL || s == NULL) {
         error = kMallocFailureError;
         goto _bailout;
     }
-
-    // Allocate deserialization buffer
-    size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    buf = GamesmanAllocatorAllocate(allocator, buf_size);
-    if (buf == NULL) {
-        error = kMallocFailureError;
+    if (!FileExists(filename)) {
+        error = kFileSystemError;
         goto _bailout;
     }
 
-    // Decompress into buffer.
-    int64_t res = Lz4UtilsDecompressFile(filename, buf, buf_size);
-    switch (res) {
-        case -1:
-            error = kFileSystemError;
+    lz4_istream = Lz4UtilsInStreamCreate(filename);
+    if (!lz4_istream) {
+        error = kRuntimeError;
+        goto _bailout;
+    }
+
+    size_t total_bytes = ConcurrentBitsetGetSerializedSize(s);
+    size_t deserialized = 0;
+    int64_t bytes_read = 0;
+
+    // Loop until we have deserialized all expected bytes
+    while (deserialized < total_bytes) {
+        bytes_read = Lz4UtilsInStreamRun(lz4_istream, buf, BUFSIZ);
+
+        // Break immediately on EOF (0) or error (< 0)
+        if (bytes_read <= 0) break;
+
+        size_t deserialize_step = ConcurrentBitsetDeserializeStreaming(
+            s, deserialized, buf, (size_t)bytes_read);
+
+        if (deserialize_step == 0) {
+            fprintf(stderr,
+                    "StatManagerLoadDiscoveryMap: "
+                    "ConcurrentBitsetDeserializeStreaming unexpectedly "
+                    "returned 0\n");
+            error = kRuntimeError;
             goto _bailout;
-        case -2:
-            error = kMallocFailureError;
-            goto _bailout;
+        }
+
+        deserialized += deserialize_step;
+    }
+
+    // Evaluate the exit state
+    switch (bytes_read) {
         case -3:
             fprintf(stderr,
                     "StatManagerLoadDiscoveryMap: discovery map appears to be "
@@ -173,17 +195,33 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
             error = kRuntimeError;
             goto _bailout;
         default:
-            break;  // Success.
+            // Catch any unexpected negative error codes
+            if (bytes_read < 0) {
+                fprintf(stderr,
+                        "StatManagerLoadDiscoveryMap: unknown decompression "
+                        "error %" PRId64 "\n",
+                        bytes_read);
+                error = kRuntimeError;
+                goto _bailout;
+            }
+            // Check for premature End-Of-File
+            if (deserialized < total_bytes) {
+                fprintf(stderr,
+                        "StatManagerLoadDiscoveryMap: premature end of file "
+                        "for tier %" PRITier "\n",
+                        tier);
+                error = kFileSystemError;
+                goto _bailout;
+            }
     }
 
-    // Deserialize
-    ConcurrentBitsetDeserialize(s, buf);
+    // Success.
     *dest = s;
 
 _bailout:
     GamesmanFree(filename);
-    GamesmanAllocatorDeallocate(allocator, buf);
     if (error != kNoError) ConcurrentBitsetDestroy(s);
+    Lz4UtilsInStreamClose(lz4_istream);
 
     return error;
 }

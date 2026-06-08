@@ -30,6 +30,8 @@
 #include <stddef.h>  // size_t
 #include <stdint.h>  // int64_t
 
+// ============================== Compression API ==============================
+
 /**
  * @brief Concatenates and compresses \p n input streams using level \p level
  * LZ4 frame compression, stores the compressed result as file of name \p
@@ -84,6 +86,8 @@ int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
  */
 int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
 
+// ========================= Streaming Compression API =========================
+
 /**
  * @brief Opaque object for data passing when streaming to a Lz4Utils
  * compresssed file.
@@ -108,8 +112,7 @@ Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
  * @param stream Output stream.
  * @param in Pointer to the input buffer.
  * @param in_size Number of bytes to consume from the input buffer.
- * @return Number of compressed bytes generated in total since the creation of
- * \p stream on success,
+ * @return Number of compressed bytes generated in this run on success,
  * @return -2 if internal LZ4 compression failed, or
  * @return -3 if failed to write compressed bytes to output file.
  */
@@ -128,6 +131,8 @@ int64_t Lz4UtilsOutStreamRun(Lz4UtilsOutStream *stream, const void *in,
  * @return -3 if failed to write compressed bytes to output file.
  */
 int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream);
+
+// ============================= Decompression API =============================
 
 /**
  * @brief Decompresses the input file of name \p ifname, which is assumed to
@@ -172,5 +177,48 @@ int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
  * buffer.
  */
 int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size);
+
+// ======================== Streaming Decompression API ========================
+
+/**
+ * @brief Opaque object for data passing when streaming from a Lz4Utils
+ * compresssed file.
+ */
+typedef struct Lz4UtilsInStream Lz4UtilsInStream;
+
+/**
+ * @brief Creates a new Lz4Utils input stream.
+ *
+ * @param ifname Input file name.
+ * @return Pointer to the new Lz4Utils input stream on success, or
+ * @return \c NULL on failure.
+ */
+Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname);
+
+/**
+ * @brief Decompress X bytes of data to \p out using \p stream as input stream,
+ * where X is \p out_size or the amount of compressed data left in \p stream ,
+ * whichever is smaller.
+ *
+ * @param stream
+ * @param out
+ * @param out_size
+ * @return Number of uncompressed bytes generated in this run on success,
+ * @return 0 if no bytes are left in \p stream ,
+ * @return -1 if \p stream is \c NULL ,
+ * @return -3 if the compressed file associated with \p stream is malformed, or
+ * @return -4 on internal LZ4 decompression failure.
+ */
+int64_t Lz4UtilsInStreamRun(Lz4UtilsInStream *stream, void *out,
+                            size_t out_size);
+
+/**
+ * @brief Closes the input stream \p stream .
+ *
+ * @param stream Input stream to close.
+ * @return 0 on success,
+ * @return -1 if on internal LZ4 context deallocation failure.
+ */
+int Lz4UtilsInStreamClose(Lz4UtilsInStream *stream);
 
 #endif  // GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
