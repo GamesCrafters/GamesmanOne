@@ -210,7 +210,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                         "StatManagerLoadDiscoveryMap: premature end of file "
                         "for tier %" PRITier "\n",
                         tier);
-                error = kFileSystemError;
+                error = kRuntimeError;
                 goto _bailout;
             }
     }
