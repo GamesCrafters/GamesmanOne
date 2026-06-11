@@ -278,8 +278,7 @@ static int TestChildPositions(Tier tier, Position position,
         bool in_range =
             (child.position >= 0) &&
             (child.position < api_internal->GetTierSize(child.tier));
-        bool is_legal = api_internal->IsLegalPosition(child);
-        if (!in_range || !is_legal) {
+        if (!in_range || !api_internal->IsLegalPosition(child)) {
             error = kTierSolverTestIllegalChildPosError;
             break;
         }
