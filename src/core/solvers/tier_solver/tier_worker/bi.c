@@ -97,8 +97,8 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
             error = TierWorkerBIFrontierPercolation(api, db_chunk_size, tier,
                                                     options, solved);
 
-            // If either succeeded, or failed not because of OOM, return the
-            // error code.
+            // If succeeded with either strategy, or failed not because of OOM,
+            // return the error code because it doesn't make sense to try again.
             if (error != kMallocFailureError) return error;
             // Else: frontier percolation ran out of memory.
 

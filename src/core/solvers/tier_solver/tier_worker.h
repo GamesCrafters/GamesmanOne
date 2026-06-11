@@ -50,15 +50,22 @@ void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size);
 /** @brief Solving methods for \c TierWorkerSolve. */
 enum TierWorkerSolveMethod {
     /**
-     * @brief Method of simple k-pass tier scanning assuming an immediate tier
-     * transition happens at all positions in the solving tier (for all
-     * positions P in the solving tier T, no child positions of P are in T.)
-     * This also implies that the solving tier is loop-free.
+     * @brief Method of simple k-pass tier scanning assuming that an immediate
+     * tier transition happens at all positions in the solving tier. That is,
+     * for all positions P in the solving tier T, no child positions of P are in
+     * T. This also implies that the solving tier is loop-free.
      *
-     * @details For each pass, loads as many child tiers of the solving tier as
-     * possible into memory and scan the solving tier to update the values using
-     * minimax. With enough memory to load all child tiers at once, the solver
-     * finishes in one pass.
+     * @note This method is NOT always more efficient than backward induction
+     * (kTierWorkerSolveMethodBackwardInduction) with enough memory provided. In
+     * cases where the solving tier consists mostly of deeply nested drawing
+     * positions, backward induction is capable of skipping most of them while
+     * this method will blindly scan through all of them, which is especially
+     * costly when the average branching factor is large for the position graph.
+     *
+     * @details For each pass, the solver loads as many child tiers of the
+     * solving tier as possible into memory and scans the solving tier to update
+     * the values using minimax. With enough memory to load all child tiers at
+     * once, the solver finishes in one pass.
      *
      * Worst case runtime: O(N * (V + E)), where N is the number of child tiers
      * of the tier being solved, V is the number of vertices in the position
@@ -74,13 +81,18 @@ enum TierWorkerSolveMethod {
     /**
      * @brief Method of backward induction for loopy tiers.
      *
-     * @details Starts with all primitive positions and solved positions in
-     * child tiers as the frontier. Solve by pushing the frontier up using
-     * the reverse position graph of the tier being solved.
+     * @details Starts with all primitive and solved positions in the solving
+     * tier and its child tiers as the frontier. Proceeds by pushing the
+     * frontier up using the reverse position graph of the tier being solved.
+     * The reverse position graph is either lazily generated using
+     * \c TierSolverApi::GetCanonicalParentPositions , or eagerly generated and
+     * stored in memory up front using the forward direction APIs. However,
+     * storing the reverse position graph in memory is extremely memory
+     * intensive and often infeasible.
      *
      * Worst case runtime: O(V + E), where V is the number of vertices in the
      * reverse position graph of the tier being solved, and E is the number of
-     * edges in the said graph.
+     * edges in the graph.
      *
      * Worst case memory (implicit reverse position graph): O(V).
      * Worst case memory (generated reverse position graph): O(V + E).
@@ -92,10 +104,13 @@ enum TierWorkerSolveMethod {
      *
      * @details Starts with all legal positions marked as drawing. The first
      * iteration assigns values and remotenesses to all primitive positions.
-     * Then, for each subsequent iteration, each legal position is scanned
-     * for a possible update on its value and remoteness by examining their
-     * child positions. Terminates when the previous iteration makes no update
-     * on any position.
+     * Then, for each subsequent iteration, each unsolved legal position is
+     * scanned for a possible update on its value and remoteness by examining
+     * its child positions. Terminates when the previous iteration makes no
+     * update on any position.
+     *
+     * Note that the algorithm and memory usage of this solving method do not
+     * depend on \c TierSolverApi::GetCanonicalParentPositions .
      *
      * Worst case runtime: O(R * E), where R is the maximum remoteness of the
      * tier being solved, and E is the number of edges in the position graph of
