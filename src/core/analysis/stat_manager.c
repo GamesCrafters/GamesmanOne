@@ -134,7 +134,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
     int error = kNoError;
-    char buf[BUFSIZ];
+    char buf[2][BUFSIZ];  // Updated to double-buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
     ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
     Lz4UtilsInStream *lz4_istream = NULL;
@@ -155,31 +155,61 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
 
     size_t total_bytes = ConcurrentBitsetGetSerializedSize(s);
     size_t deserialized = 0;
-    int64_t bytes_read = 0;
+    int current_buf = 0;
 
-    // Loop until we have deserialized all expected bytes
-    while (deserialized < total_bytes) {
-        bytes_read = Lz4UtilsInStreamRun(lz4_istream, buf, BUFSIZ);
+    // Prime the pipeline by reading the first chunk
+    int64_t bytes_read =
+        Lz4UtilsInStreamRun(lz4_istream, buf[current_buf], BUFSIZ);
 
-        // Break immediately on EOF (0) or error (< 0)
-        if (bytes_read <= 0) break;
+    PRAGMA_OMP(parallel) {
+        PRAGMA_OMP(single) {
+            // Loop until deserialized all expected bytes or hit an EOF/error
+            while (deserialized < total_bytes && bytes_read > 0) {
+                size_t deserialize_step = 0;
+                int64_t next_bytes_read = 0;
 
-        size_t deserialize_step = ConcurrentBitsetDeserializeStreaming(
-            s, deserialized, buf, (size_t)bytes_read);
+                // Task A: Deserialize the buffer we just read
+                PRAGMA_OMP(task shared(deserialize_step) firstprivate(
+                    current_buf, bytes_read, deserialized)) {
+                    deserialize_step = ConcurrentBitsetDeserializeStreaming(
+                        s, deserialized, buf[current_buf], (size_t)bytes_read);
+                }
 
-        if (deserialize_step == 0) {
-            fprintf(stderr,
-                    "StatManagerLoadDiscoveryMap: "
-                    "ConcurrentBitsetDeserializeStreaming unexpectedly "
-                    "returned 0\n");
-            error = kRuntimeError;
-            goto _bailout;
+                // Task B: Eagerly decompress the next chunk into the alternate
+                // buffer
+                PRAGMA_OMP(task shared(next_bytes_read)
+                               firstprivate(current_buf)) {
+                    next_bytes_read = Lz4UtilsInStreamRun(
+                        lz4_istream, buf[1 - current_buf], BUFSIZ);
+                }
+
+                // Both tasks must complete before moving forward
+                PRAGMA_OMP(taskwait)
+
+                if (deserialize_step == 0) {
+                    error = kRuntimeError;
+                    break;
+                }
+
+                deserialized += deserialize_step;
+                bytes_read = next_bytes_read;
+                current_buf = 1 - current_buf;
+            }
         }
-
-        deserialized += deserialize_step;
     }
 
-    // Evaluate the exit state
+    // Handle a sudden failure in the deserialize step cleanly outside the
+    // OpenMP block
+    if (error == kRuntimeError) {
+        fprintf(stderr,
+                "StatManagerLoadDiscoveryMap: "
+                "ConcurrentBitsetDeserializeStreaming unexpectedly "
+                "returned 0\n");
+        goto _bailout;
+    }
+
+    // Evaluate the exit state. Any errors caught by Task B's reading
+    // fall through beautifully to this existing switch statement.
     switch (bytes_read) {
         case -3:
             fprintf(stderr,
@@ -245,10 +275,9 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
             while (step > 0) {
                 bytes_serialized += step;
                 // Task A: Compress the buffer we just filled
-                PRAGMA_OMP(task shared(res) firstprivate(current_buf, step)) {
-                    res = Lz4UtilsOutStreamRun(lz4_ostream, buf[current_buf],
-                                               step);
-                }
+                PRAGMA_OMP(task shared(res) firstprivate(current_buf, step))
+                res = Lz4UtilsOutStreamRun(lz4_ostream, buf[current_buf], step);
+
                 // Task B: Eagerly serialize the next chunk into the alternate
                 // buffer
                 size_t next_step = 0;
