@@ -5,9 +5,6 @@ add_subdirectory(gameplay_api)
 add_subdirectory(solver)
 add_subdirectory(uwapi)
 
-set(LIBS core_types_database core_types_game core_types_gameplay_api
-         core_types_solver core_types_uwapi)
-
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/base.h
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_error.h

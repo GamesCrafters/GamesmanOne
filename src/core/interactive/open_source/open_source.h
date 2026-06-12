@@ -1,0 +1,8 @@
+#ifndef GAMESMANONE_CORE_INTERACTIVE_OPEN_SOURCE_OPEN_SOURCE_H_
+#define GAMESMANONE_CORE_INTERACTIVE_OPEN_SOURCE_OPEN_SOURCE_H_
+
+#include "core/types/gamesman_types.h"
+
+int InteractiveOpenSource(ReadOnlyString key);
+
+#endif  // GAMESMANONE_CORE_INTERACTIVE_OPEN_SOURCE_OPEN_SOURCE_H_
