@@ -32,18 +32,34 @@
 #include <stddef.h>  // size_t
 #include <stdint.h>  // int64_t
 
-#include "core/data_structures/concurrent_bitset.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/solvers/tier_solver/tier_worker.h"
 
-static inline size_t OneBitMemReq(int64_t tier_group_size) {
-#ifdef _OPENMP
-    return ConcurrentBitsetMemRequired(tier_group_size);
-#else   // _OPENMP not defined
-    return (size_t)tier_group_size / 8;  // one bit per position
-#endif  // _OPENMP
-}
+/**
+ * @brief Returns the amount of memory required in bytes to solve a tier group
+ * of \p tier_group_size positions.
+ *
+ * @param tier_group_size Number of positions in the tier group, which includes
+ * the positions in the solving tier and its child tiers.
+ * @return Amount of memory required in bytes.
+ */
+size_t OneBitMemReq(int64_t tier_group_size);
 
+/**
+ * @brief Solves the given \p tier using the one-bit strategy of the backward
+ * induction algorithm.
+ *
+ * @param api Game-specific tier solver API functions.
+ * @param db_chunk_size Number of positions in each database compression block.
+ * The algorithm then uses this number as the chunk size for OpenMP dynamic
+ * scheduling to prevent repeated decompression of the same block.
+ * @param tier Tier to solve.
+ * @param options Non-null pointer to a \c TierSolverSolveOptions object which
+ * contains the options.
+ * @param solved (Output parameter) If non-NULL, its value will be set to
+ * \c true on success. Otherwise it remains unmodified.
+ * @return \c kNoError on success, or
+ * @return non-zero error code otherwise.
+ */
 int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
                        Tier tier, const TierSolverSolveOptions *options,
                        bool *solved);

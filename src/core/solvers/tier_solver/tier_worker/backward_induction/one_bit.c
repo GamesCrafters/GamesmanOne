@@ -809,3 +809,15 @@ _bailout:
     Step5Cleanup();
     return ret;
 }
+
+// ============================================================================
+// =============================== OneBitMemReq ===============================
+// ============================================================================
+
+size_t OneBitMemReq(int64_t tier_group_size) {
+#ifdef _OPENMP
+    return ConcurrentBitsetMemRequired(tier_group_size);
+#else   // _OPENMP not defined
+    return (size_t)tier_group_size / 8;  // one bit per position
+#endif  // _OPENMP
+}
