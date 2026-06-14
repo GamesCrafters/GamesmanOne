@@ -170,7 +170,7 @@ const Database kArrayDb = {
     .GetPathPrefix = ArrayDbGetPathPrefix,
 };
 
-// Extern constants
+// Extern constants (see arraydb.h for comments)
 
 const int kArrayDbRecordSize = sizeof(Record);
 
