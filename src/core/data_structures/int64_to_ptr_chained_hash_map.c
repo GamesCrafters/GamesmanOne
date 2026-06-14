@@ -213,3 +213,23 @@ void *Int64ToPtrChainedHashMapIteratorValue(
     const Int64ToPtrChainedHashMapIterator *it) {
     return it->cur->value;
 }
+
+bool Int64ToPtrChainedHashMapIteratorNext(
+    Int64ToPtrChainedHashMapIterator *it) {
+    if (!Int64ToPtrChainedHashMapIteratorIsValid(it)) return false;
+
+    it->cur = it->cur->next;
+    if (it->cur != NULL) return true;
+
+    // Otherwise, look for the next valid bucket or report failure
+    ++it->bucket_index;
+    while (it->bucket_index < it->map->capacity_mask + 1) {
+        if (it->map->buckets[it->bucket_index]) {
+            it->cur = it->map->buckets[it->bucket_index];
+            return true;
+        }
+        ++it->bucket_index;
+    }
+
+    return false;
+}

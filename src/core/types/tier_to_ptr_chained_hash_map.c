@@ -80,3 +80,7 @@ bool TierToPtrChainedHashMapIteratorIsValid(
     const TierToPtrChainedHashMapIterator *it) {
     return Int64ToPtrChainedHashMapIteratorIsValid(it);
 }
+
+bool TierToPtrChainedHashMapIteratorNext(TierToPtrChainedHashMapIterator *it) {
+    return Int64ToPtrChainedHashMapIteratorNext(it);
+}
