@@ -53,12 +53,12 @@ typedef struct ArrayDbOptions {
 
     /** LZMA compression level. Ranges from 0 (store) to 9 (ultra). Using levels
      * 7-9 may increase memory usage. Default: 6. */
-    int compression_level;
+    int lzma_level;
 
     /** Set this to 1 to enable extreme LZMA compression, which slightly
      * improves compression ratio at the cost of significantly increased
      * (typically doubled) compression time. */
-    int extreme_compression;
+    int lzma_extreme;
 } ArrayDbOptions;
 
 /**
