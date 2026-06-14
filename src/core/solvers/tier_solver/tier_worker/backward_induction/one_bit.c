@@ -622,10 +622,8 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
 
         // Read a chunk of DB and a chunk of the sequential access bitset into
         // memory
-        PRAGMA_OMP(task depend(inout : dep.seg[slot], chunking.seq_buf[slot])) {
-            // printf("loading chunk %ld into slot %d\n", i, slot);
-            ReadDbAndSeqChunk(slot, i);
-        }
+        PRAGMA_OMP(task depend(inout : dep.seg[slot], chunking.seq_buf[slot]))
+        ReadDbAndSeqChunk(slot, i);
 
         // Prove losing parents in DB chunk
         // clang-format off
@@ -633,18 +631,12 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
                     in_reduction(|| : advance)
                     depend(inout : dep.seg[slot], chunking.seq_buf[slot], dep.cpu))
         // clang-format on
-        {
-            // printf("proving losing parents in chunk %ld in slot %d\n", i,
-            // slot);
-            advance |= ProveLosingParentsChunk(slot, chunking.seq_buf[slot], i,
-                                               remoteness);
-        }
+        advance |= ProveLosingParentsChunk(slot, chunking.seq_buf[slot], i,
+                                           remoteness);
 
         // Flush DB chunk
-        PRAGMA_OMP(task depend(inout : dep.seg[slot])) {
-            // printf("flushing chunk %ld in slot %d\n", i, slot);
-            DbManagerFlushSolvingSegment(slot, i);
-        }
+        PRAGMA_OMP(task depend(inout : dep.seg[slot]))
+        DbManagerFlushSolvingSegment(slot, i);
     }
 
     return advance;
