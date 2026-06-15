@@ -59,19 +59,11 @@ int DbManagerInitDb(const Database *db, bool read_only,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux);
 
-// (EXPERIMENTAL) Initializes the reference database for db comparison.
-int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
-                       int variant, ReadOnlyString data_path,
-                       GetTierNameFunc GetTierName, void *aux);
-
 /**
  * @brief Finalizes the database system, freeing all dynamically allocated
  * space.
  */
 void DbManagerFinalizeDb(void);
-
-// (EXPERIMENTAL) Finalizes the reference database.
-void DbManagerFinalizeRefDb(void);
 
 // ----------------------------- Solving Interface -----------------------------
 
@@ -622,12 +614,5 @@ int DbManagerGameStatus(void);
  * @return \c NULL if the Database is not initialized.
  */
 const char *DbManagerGetPath(void);
-
-// --------------------- (EXPERIMENTAL) Testing Interface ---------------------
-
-int DbManagerRefProbeInit(DbProbe *probe);
-int DbManagerRefProbeDestroy(DbProbe *probe);
-Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position);
-int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 
 #endif  // GAMESMANONE_CORE_DB_DB_MANAGER_H_

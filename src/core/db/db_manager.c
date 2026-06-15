@@ -38,7 +38,6 @@
 #include "core/types/gamesman_types.h"
 
 static const Database *current_db;
-static const Database *ref_db;
 
 static bool BasicDbApiImplemented(const Database *db);
 static bool IsValidDbName(ReadOnlyString name);
@@ -71,36 +70,9 @@ int DbManagerInitDb(const Database *db, bool read_only,
     return error;
 }
 
-int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
-                       int variant, ReadOnlyString data_path,
-                       GetTierNameFunc GetTierName, void *aux) {
-    if (ref_db != NULL) ref_db->Finalize();
-    ref_db = NULL;
-
-    if (!BasicDbApiImplemented(db)) {
-        fprintf(stderr,
-                "DbManagerInitDb: The %s does not have all the required "
-                "functions implemented and cannot be used.\n",
-                db->formal_name);
-        return kNotImplementedError;
-    }
-    ref_db = db;
-
-    char *path = SetupDbPath(ref_db, game_name, variant, data_path, false);
-    int error = ref_db->Init(game_name, variant, path, GetTierName, aux);
-    free(path);
-
-    return error;
-}
-
 void DbManagerFinalizeDb(void) {
     if (current_db) current_db->Finalize();
     current_db = NULL;
-}
-
-void DbManagerFinalizeRefDb(void) {
-    if (ref_db) ref_db->Finalize();
-    ref_db = NULL;
 }
 
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
@@ -259,18 +231,6 @@ int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
 int DbManagerGameStatus(void) { return current_db->GameStatus(); }
 
 const char *DbManagerGetPath(void) { return current_db->GetPath(); }
-
-int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
-
-int DbManagerRefProbeDestroy(DbProbe *probe) {
-    return ref_db->ProbeDestroy(probe);
-}
-Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position) {
-    return ref_db->ProbeValue(probe, tier_position);
-}
-int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    return ref_db->ProbeRemoteness(probe, tier_position);
-}
 
 // -----------------------------------------------------------------------------
 
