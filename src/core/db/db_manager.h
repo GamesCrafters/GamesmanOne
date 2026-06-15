@@ -615,6 +615,12 @@ int DbManagerGameStatus(void);
 
 // ------------------------- External Access Interface -------------------------
 
+/**
+ * @brief Returns the path the Database is initialized with.
+ *
+ * @return The path the Database is initialized with, or
+ * @return \c NULL if the Database is not initialized.
+ */
 const char *DbManagerGetPath(void);
 
 // --------------------- (EXPERIMENTAL) Testing Interface ---------------------
