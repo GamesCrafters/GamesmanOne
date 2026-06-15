@@ -222,7 +222,8 @@ static bool Step0_1AllocateMemory(size_t memlimit) {
     if (!rand_bitset) return false;
 
     // Allocate DB and sequential access bitset rolling buffers
-    if (DbManagerCreateSolvingSegmentBuffers(game.tier, 3, chunking.size) !=
+    if (DbManagerSegmentationMaxNumBuffers() < 3) return false;
+    if (DbManagerSegmentationCreateBuffers(game.tier, 3, chunking.size) !=
         kNoError) {
         return false;
     }
@@ -239,7 +240,7 @@ static bool Step0Initialize(const TierSolverApi *api, int64_t db_chunk_size,
     api_internal = api;
     config.db_chunk_size = db_chunk_size;
     config.num_threads = ConcurrencyGetOmpNumThreads();
-    config.path_prefix = DbManagerGetPathPrefix();
+    config.path_prefix = DbManagerGetPath();
 
     // Initialize max remoteness values to 0.
     ConcurrentIntInit(&max_remoteness.win_lose, 0);
@@ -276,21 +277,21 @@ static void ScanDbChunk(int slot, int chunk) {
         // Assign (undecided, 0) to illegal positions and non-canonical
         // positions.
         if (!api_internal->IsLegalPosition(tp) || !IsCanonicalPosition(pos)) {
-            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, kUndecided,
-                                                      0);
+            DbManagerSegmentationSetValueRemoteness(slot, rec_idx, kUndecided,
+                                                    0);
             continue;
         }
 
         Value val = api_internal->Primitive(tp);
         // Assign (draw, 0) to non-primitive positions.
         if (val == kUndecided) {
-            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, kDraw, 0);
+            DbManagerSegmentationSetValueRemoteness(slot, rec_idx, kDraw, 0);
             continue;
         }
 
         // If the position is primitive, assign its primitive value and
         // remoteness 0.
-        DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, val, 0);
+        DbManagerSegmentationSetValueRemoteness(slot, rec_idx, val, 0);
     }
 }
 
@@ -306,7 +307,7 @@ static void Step1ScanTierAndInitDb(void) {
 
         // Write the chunk to disk
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerFlushSolvingSegment(slot, i);
+        DbManagerSegmentationFlush(slot, i);
     }
 }
 
@@ -330,10 +331,9 @@ static void GenerateParentsFromDbChunk(int slot, int chunk, Value val,
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
-        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
+        Value pos_val = DbManagerSegmentationGetValue(slot, rec_idx);
         if (pos_val != val) continue;
-        int pos_remoteness =
-            DbManagerSolvingSegmentGetRemoteness(slot, rec_idx);
+        int pos_remoteness = DbManagerSegmentationGetRemoteness(slot, rec_idx);
         if (pos_remoteness != remoteness) continue;
 
         TierPosition child = {.tier = game.tier, .position = pos};
@@ -349,7 +349,7 @@ static void GenerateParentsFromDbSolving(Value val, int remoteness) {
 
         // Load a chunk of DB into memory
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerLoadSolvingSegment(slot, i);
+        DbManagerSegmentationLoad(slot, i);
 
         // Generate parents from loaded DB into random access bitset
         PRAGMA_OMP(task depend(inout : dep.seg[slot], dep.cpu))
@@ -421,7 +421,7 @@ static void RemoveSolvedPositionsFromDbChunk(int slot, int chunk) {
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // If the position has been solved, remove it from the random access
         // bitset
-        Value pos_val = DbManagerSolvingSegmentGetValue(slot, pos - begin_pos);
+        Value pos_val = DbManagerSegmentationGetValue(slot, pos - begin_pos);
         if (pos_val != kDraw) {
             ConcurrentBitsetReset(rand_bitset, pos, memory_order_relaxed);
         }
@@ -440,7 +440,7 @@ static void Step2_0_0RemoveSolvedPositions(void) {
 
         // Load a chunk of DB into memory
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerLoadSolvingSegment(slot, i);
+        DbManagerSegmentationLoad(slot, i);
 
         // Remove solved positions from the random access bitset
         PRAGMA_OMP(task depend(inout : dep.seg[slot], dep.cpu))
@@ -491,10 +491,9 @@ static void LoadWinPosFromDbChunk(int slot, int chunk, int remoteness) {
     for (Position pos = begin_pos; pos < end_pos; ++pos) {
         // Skip position if its value or remoteness does not match
         int64_t rec_idx = pos - begin_pos;
-        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
+        Value pos_val = DbManagerSegmentationGetValue(slot, rec_idx);
         if (pos_val != kWin) continue;
-        int pos_remoteness =
-            DbManagerSolvingSegmentGetRemoteness(slot, rec_idx);
+        int pos_remoteness = DbManagerSegmentationGetRemoteness(slot, rec_idx);
         if (pos_remoteness > remoteness) continue;
 
         // If pos is a "win in <= remoteness" position, mark it.
@@ -510,7 +509,7 @@ static void LoadWinPosFromDbSolving(int remoteness) {
 
         // Read a chunk of DB into memory
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerLoadSolvingSegment(slot, i);
+        DbManagerSegmentationLoad(slot, i);
 
         // Load "win in <= N" positions into the random access bitset
         PRAGMA_OMP(task depend(inout : dep.seg[slot], dep.cpu))
@@ -559,7 +558,7 @@ static void Step2_0_2LoadWinPosFromDb(int remoteness) {
 
 static void ReadDbAndSeqChunk(int slot, int chunk) {
     static char seq_filename[kMaxPathLength];
-    DbManagerLoadSolvingSegment(slot, chunk);
+    DbManagerSegmentationLoad(slot, chunk);
     sprintf(seq_filename, "%s/seq_%d.lz4", config.path_prefix, chunk);
     Bitset *seq = chunking.seq_buf[slot];
     size_t size = BitSetGetSerializedSize(seq);
@@ -603,8 +602,8 @@ static bool ProveLosingParentsChunk(int slot, const Bitset *seq, int chunk,
 
         // If the position has now been solved, it must be lose in N + 1.
         if (solved) {
-            DbManagerSolvingSegmentSetValueRemoteness(slot, pos - begin_pos,
-                                                      kLose, remoteness + 1);
+            DbManagerSegmentationSetValueRemoteness(slot, pos - begin_pos,
+                                                    kLose, remoteness + 1);
             advance = true;
         }
     }
@@ -636,7 +635,7 @@ static bool Step2_0_3ProveLosingParents(int remoteness) {
 
         // Flush DB chunk
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerFlushSolvingSegment(slot, i);
+        DbManagerSegmentationFlush(slot, i);
     }
 
     return advance;
@@ -668,10 +667,10 @@ static bool ProveWinningOrTyingParentsChunk(int slot, int chunk, Value val,
         int64_t rec_idx = pos - begin_pos;
 
         // If the position has not been solved, mark it as win/tie in N+1.
-        Value pos_val = DbManagerSolvingSegmentGetValue(slot, rec_idx);
+        Value pos_val = DbManagerSegmentationGetValue(slot, rec_idx);
         if (pos_val == kDraw) {
-            DbManagerSolvingSegmentSetValueRemoteness(slot, rec_idx, val,
-                                                      remoteness + 1);
+            DbManagerSegmentationSetValueRemoteness(slot, rec_idx, val,
+                                                    remoteness + 1);
             advance = true;
         }
     }
@@ -696,7 +695,7 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
 
         // Read in a chunk of DB
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerLoadSolvingSegment(slot, i);
+        DbManagerSegmentationLoad(slot, i);
 
         // clang-format off
         // Prove parents
@@ -708,7 +707,7 @@ static bool ProveWinningOrTyingParents(Value val, int remoteness) {
 
         // Write DB chunk
         PRAGMA_OMP(task depend(inout : dep.seg[slot]))
-        DbManagerFlushSolvingSegment(slot, i);
+        DbManagerSegmentationFlush(slot, i);
     }
 
     return advance;
@@ -746,7 +745,7 @@ static void Step3IterateTie(void) {
 // ---------------------------- Step4ConsolidateDb ----------------------------
 
 static int Step4ConsolidateDb(void) {
-    return DbManagerConsolidateSolvingSegments(game.tier_size, chunking.count);
+    return DbManagerSegmentationConsolidate(game.tier_size, chunking.count);
 }
 
 // ------------------------------- Step5Cleanup -------------------------------
@@ -765,7 +764,7 @@ static void Step5Cleanup(void) {
     config.num_threads = 0;
     chunking.size = 0;
     chunking.count = 0;
-    DbManagerFreeSolvingSegmentBuffers();
+    DbManagerSegmentationFreeBuffers();
     for (int i = 0; i < 2; ++i) {
         BitsetDestroy(chunking.seq_buf[i]);
         chunking.seq_buf[i] = NULL;

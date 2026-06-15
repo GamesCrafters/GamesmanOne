@@ -76,18 +76,17 @@ static Value ArrayDbGetValue(Position position);
 static int ArrayDbGetRemoteness(Position position);
 static int ArrayDbGetNumUndecidedChildren(Position position);
 
-static int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
-                                              int64_t size);
-static int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx);
-static int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx);
-static int ArrayDbFreeSolvingSegmentBuffers(void);
-static Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset);
-static int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
-static void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
-                                                    Value value,
-                                                    int remoteness);
-static int ArrayDbConsolidateSolvingSegments(int64_t tier_size,
-                                             int num_segments);
+static int ArrayDbSegmentationMaxNumBuffers(void);
+static int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
+                                            int64_t size);
+static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx);
+static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx);
+static int ArrayDbSegmentationFreeBuffers(void);
+static Value ArrayDbSegmentationGetValue(int buf_idx, int64_t offset);
+static int ArrayDbSegmentationGetRemoteness(int buf_idx, int64_t offset);
+static void ArrayDbSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
+                                                  Value value, int remoteness);
+static int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments);
 
 static bool ArrayDbCheckpointExists(Tier tier);
 static int ArrayDbCheckpointSave(const void *status, size_t status_size);
@@ -110,7 +109,7 @@ static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbTierStatus(Tier tier);
 static int ArrayDbGameStatus(void);
 
-const char *ArrayDbGetPathPrefix(void);
+const char *ArrayDbGetPath(void);
 
 const Database kArrayDb = {
     .name = "arraydb",
@@ -136,14 +135,18 @@ const Database kArrayDb = {
     .GetRemoteness = ArrayDbGetRemoteness,
     .GetNumUndecidedChildren = ArrayDbGetNumUndecidedChildren,
 
-    .CreateSolvingSegmentBuffers = ArrayDbCreateSolvingSegmentBuffers,
-    .LoadSolvingSegment = ArrayDbLoadSolvingSegment,
-    .FlushSolvingSegment = ArrayDbFlushSolvingSegment,
-    .FreeSolvingSegmentBuffers = ArrayDbFreeSolvingSegmentBuffers,
-    .SolvingSegmentGetValue = ArrayDbSolvingSegmentGetValue,
-    .SolvingSegmentGetRemoteness = ArrayDbSolvingSegmentGetRemoteness,
-    .SolvingSegmentSetValueRemoteness = ArrayDbSolvingSegmentSetValueRemoteness,
-    .ConsolidateSolvingSegments = ArrayDbConsolidateSolvingSegments,
+    .segmentation =
+        {
+            .MaxNumBuffers = ArrayDbSegmentationMaxNumBuffers,
+            .CreateBuffers = ArrayDbSegmentationCreateBuffers,
+            .Load = ArrayDbSegmentationLoad,
+            .Flush = ArrayDbSegmentationFlush,
+            .FreeBuffers = ArrayDbSegmentationFreeBuffers,
+            .GetValue = ArrayDbSegmentationGetValue,
+            .GetRemoteness = ArrayDbSegmentationGetRemoteness,
+            .SetValueRemoteness = ArrayDbSegmentationSetValueRemoteness,
+            .Consolidate = ArrayDbSegmentationConsolidate,
+        },
 
     .CheckpointExists = ArrayDbCheckpointExists,
     .CheckpointSave = ArrayDbCheckpointSave,
@@ -167,7 +170,7 @@ const Database kArrayDb = {
     .TierStatus = ArrayDbTierStatus,
     .GameStatus = ArrayDbGameStatus,
 
-    .GetPathPrefix = ArrayDbGetPathPrefix,
+    .GetPath = ArrayDbGetPath,
 };
 
 // Extern constants (see arraydb.h for comments)
@@ -281,7 +284,7 @@ static void ArrayDbFinalize(void) {
         TierToPtrChainedHashMapIteratorNext(&it);
     }
     TierToPtrChainedHashMapDestroy(&loaded_tiers);
-    ArrayDbFreeSolvingSegmentBuffers();
+    ArrayDbSegmentationFreeBuffers();
 }
 
 static int CheckExistingSolvingTier(const char *caller) {
@@ -647,13 +650,19 @@ static int ArrayDbGetNumUndecidedChildren(Position position) {
     return RecordArrayGetNumUndecidedChildren(solving.records, position);
 }
 
-int ArrayDbCreateSolvingSegmentBuffers(Tier tier, int num_segments,
-                                       int64_t size) {
-    if (num_segments < 0 || num_segments > 8) return kIllegalArgumentError;
+static int ArrayDbSegmentationMaxNumBuffers(void) {
+    return kNumSolvingSegmentsMax;
+}
+
+int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
+                                     int64_t size) {
+    if (num_segments < 0 || num_segments > kNumSolvingSegmentsMax) {
+        return kIllegalArgumentError;
+    }
     for (int i = 0; i < num_segments; ++i) {
         segments.array[i] = RecordArrayCreate(size);
         if (segments.array[i] == NULL) {
-            ArrayDbFreeSolvingSegmentBuffers();
+            ArrayDbSegmentationFreeBuffers();
             return kMallocFailureError;
         }
     }
@@ -678,7 +687,9 @@ static int ConvertLz4UtilsDecompressFileError(int64_t decomp_size) {
     }
 }
 
-static int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
+static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
+    if (buf_idx >= segments.num_active) return kIllegalArgumentError;
+
     char *filename = GetFullPathToSegment(current_game.tier,
                                           current_game.GetTierName, seg_idx);
     if (!filename) return kMallocFailureError;
@@ -691,7 +702,9 @@ static int ArrayDbLoadSolvingSegment(int buf_idx, int seg_idx) {
     return ConvertLz4UtilsDecompressFileError(decomp_size);
 }
 
-static int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx) {
+static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
+    if (buf_idx >= segments.num_active) return kIllegalArgumentError;
+
     int error = kNoError;
     char *tmp_name = GetFullPathToTempSegment(
         current_game.tier, current_game.GetTierName, seg_idx);
@@ -709,7 +722,7 @@ static int ArrayDbFlushSolvingSegment(int buf_idx, int seg_idx) {
     switch (compressed_size) {
         case -1:
             NotReached(
-                "ArrayDbFlushSolvingSegment: (BUG) malformed input array(s)");
+                "ArrayDbSegmentationFlush: (BUG) malformed input array(s)");
             break;
         case -2:
             error = kMallocFailureError;
@@ -731,7 +744,7 @@ _bailout:
     return error;
 }
 
-static int ArrayDbFreeSolvingSegmentBuffers(void) {
+static int ArrayDbSegmentationFreeBuffers(void) {
     for (int i = 0; i < segments.num_active; ++i) {
         RecordArrayDestroy(segments.array[i]);
     }
@@ -740,17 +753,16 @@ static int ArrayDbFreeSolvingSegmentBuffers(void) {
     return kNoError;
 }
 
-static Value ArrayDbSolvingSegmentGetValue(int buf_idx, int64_t offset) {
+static Value ArrayDbSegmentationGetValue(int buf_idx, int64_t offset) {
     return RecordArrayGetValue(segments.array[buf_idx], offset);
 }
 
-static int ArrayDbSolvingSegmentGetRemoteness(int buf_idx, int64_t offset) {
+static int ArrayDbSegmentationGetRemoteness(int buf_idx, int64_t offset) {
     return RecordArrayGetRemoteness(segments.array[buf_idx], offset);
 }
 
-static void ArrayDbSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
-                                                    Value value,
-                                                    int remoteness) {
+static void ArrayDbSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
+                                                  Value value, int remoteness) {
     RecordArraySetValueRemoteness(segments.array[buf_idx], offset, value,
                                   remoteness);
 }
@@ -770,7 +782,7 @@ static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
     return compressed_size >= 0;
 }
 
-int ArrayDbConsolidateSolvingSegments(int64_t tier_size, int num_segments) {
+int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
     int error = kNoError;
     char *tmp_full_path =
         GetFullPathToTempFile(current_game.tier, current_game.GetTierName);
@@ -798,7 +810,7 @@ int ArrayDbConsolidateSolvingSegments(int64_t tier_size, int num_segments) {
 
         // Read in a DB segment
         PRAGMA_OMP(task depend(inout : segments.array[slot]))
-        ArrayDbLoadSolvingSegment(slot, i);
+        ArrayDbSegmentationLoad(slot, i);
 
         // Recompress
         PRAGMA_OMP(task in_reduction(&& : success)
@@ -1129,4 +1141,4 @@ static int ArrayDbGameStatus(void) {
     return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }
 
-const char *ArrayDbGetPathPrefix(void) { return sandbox_path; }
+const char *ArrayDbGetPath(void) { return sandbox_path; }

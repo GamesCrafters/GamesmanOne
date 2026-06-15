@@ -41,8 +41,8 @@
 enum DatabaseConstants {
     kDbNameLengthMax = 31,       /**< Maximum length of a DB's internal name. */
     kDbFormalNameLengthMax = 63, /**< Max length of a DB's formal name. */
-    /** Max length of a DB file's name not including the extension. */
-    kDbFileNameLengthMax = 63,
+    kDbFileNameLengthMax =
+        63, /**< Max length of a DB file's name not including the extension. */
 };
 
 /** @brief Enumeration of all possible status of a tier's database file. */
@@ -60,6 +60,7 @@ enum DatabaseGameStatus {
     kDbGameStatusCheckError, /**< Error encountered. */
 };
 
+/** @brief Tier name getter function signature. */
 typedef int (*GetTierNameFunc)(Tier tier,
                                char name[static kDbFileNameLengthMax + 1]);
 
@@ -297,23 +298,130 @@ typedef struct Database {
      */
     int (*GetNumUndecidedChildren)(Position position);
 
-    int (*CreateSolvingSegmentBuffers)(Tier tier, int num_segments,
-                                       int64_t size);
+    /**
+     * @brief Segmentation API supports creating, saving, and loading of
+     * database segments in memory, which can be used if the solving algorithm
+     * supports streaming, greatly reducing the amount of memory required to
+     * load the entire database at once.
+     */
+    struct {
+        /**
+         * @brief Returns the maximum number of segment buffers supported by the
+         * Database.
+         *
+         * @return Maximum number of segment buffers supported.
+         */
+        int (*MaxNumBuffers)(void);
 
-    int (*LoadSolvingSegment)(int buf_idx, int seg_idx);
+        /**
+         * @brief Make \p num_segments segment buffers available for solving the
+         * given \p tier , where each segment is of \p size positions
+         *
+         * @param tier Tier to be solved.
+         * @param num_segments Number of segment buffers to create.
+         * @param size Number of positions in each segment.
+         * @return \c kNoError on success,
+         * @return \c kMallocFailureError on memory allocation failure, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*CreateBuffers)(Tier tier, int num_segments, int64_t size);
 
-    int (*FlushSolvingSegment)(int buf_idx, int seg_idx);
+        /**
+         * @brief Loads the \p seg_idx -th segment from disk into the \p buf_idx
+         * -th segment buffer.
+         *
+         * @param buf_idx Index of the destination segment buffer.
+         * @param seg_idx Index of the segment to load.
+         * @return \c kNoError on success,
+         * @return \c kIllegalArgumentError if \p buf_idx is not active,
+         * @return \c kFileSystemError if \p seg_idx does not exist on disk or
+         * failed to read the segment from disk, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Load)(int buf_idx, int seg_idx);
 
-    int (*FreeSolvingSegmentBuffers)(void);
+        /**
+         * @brief Flushes the contents of the \p buf_idx -th segment buffer to
+         * disk as the \p seg_idx -th segment of the current tier.
+         *
+         * @param buf_idx Index of the source segment buffer.
+         * @param seg_idx Index of the segment.
+         * @return \c kNoError on success,
+         * @return \c kIllegalArgument if \p buf_idx is not active,
+         * @return \c kFileSystemError if failed to write to disk, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Flush)(int buf_idx, int seg_idx);
 
-    Value (*SolvingSegmentGetValue)(int buf_idx, int64_t offset);
+        /**
+         * @brief Deallocates all active segment buffers.
+         *
+         * @return \c kNoError on success, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*FreeBuffers)(void);
 
-    int (*SolvingSegmentGetRemoteness)(int buf_idx, int64_t offset);
+        /**
+         * @brief Returns the value of the position at the given \p offset
+         * relative to the first position in the segment currently loaded in the
+         * \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @return Value of the position at the given \p offset in the target
+         * segment buffer.
+         */
+        Value (*GetValue)(int buf_idx, int64_t offset);
 
-    void (*SolvingSegmentSetValueRemoteness)(int buf_idx, int64_t offset,
-                                             Value value, int remoteness);
+        /**
+         * @brief Returns the remoteness of the position at the given \p offset
+         * relative to the first position in the segment currently loaded in the
+         * \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @return Remoteness of the position at the given \p offset in the
+         * target segment buffer.
+         */
+        int (*GetRemoteness)(int buf_idx, int64_t offset);
 
-    int (*ConsolidateSolvingSegments)(int64_t tier_size, int num_segments);
+        /**
+         * @brief Sets the value and remoteness of the position at the given
+         * \p offset relative to the first position in the segment currently
+         * loaded in the \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @param value New value.
+         * @param remoteness New remoteness.
+         */
+        void (*SetValueRemoteness)(int buf_idx, int64_t offset, Value value,
+                                   int remoteness);
+
+        /**
+         * @brief Merges all \p num_segments segments on disk into the normal
+         * Database archive. The output is equivalent to the output of
+         * \c Database::FlushSolvingTier in the non-segmented methods.
+         *
+         * @param tier_size Number of positions in the solving tier.
+         * @param num_segments Total number of segments, where all segments are
+         * assumed to have been solved and flushed to disk.
+         * @return \c kNoError on success,
+         * @return \c kFileSystemError if any file operation such as reading a
+         * segment or saving the output failed, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Consolidate)(int64_t tier_size, int num_segments);
+    } segmentation;
 
     /**
      * @brief Returns whether there exists a checkpoint for \p tier. A
@@ -519,7 +627,13 @@ typedef struct Database {
      */
     int (*GameStatus)(void);
 
-    const char *(*GetPathPrefix)(void);
+    /**
+     * @brief Returns the path the Database is initialized with.
+     *
+     * @return The path the Database is initialized with, or
+     * @return \c NULL if the Database is not initialized.
+     */
+    const char *(*GetPath)(void);
 } Database;
 
 #endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_

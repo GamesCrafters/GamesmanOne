@@ -275,23 +275,123 @@ int DbManagerGetRemoteness(Position position);
  */
 int DbManagerGetNumUndecidedChildren(Position position);
 
-int DbManagerCreateSolvingSegmentBuffers(Tier tier, int num_segments,
-                                         int64_t size);
+/**
+ * @brief Returns the maximum number of segment buffers supported by the
+ * Database.
+ *
+ * @return Maximum number of segment buffers supported.
+ */
+int DbManagerSegmentationMaxNumBuffers(void);
 
-int DbManagerLoadSolvingSegment(int buf_idx, int seg_idx);
+/**
+ * @brief Make \p num_segments segment buffers available for solving the
+ * given \p tier , where each segment is of \p size positions
+ *
+ * @param tier Tier to be solved.
+ * @param num_segments Number of segment buffers to create.
+ * @param size Number of positions in each segment.
+ * @return \c kNoError on success,
+ * @return \c kMallocFailureError on memory allocation failure, or
+ * @return other non-zero error code otherwise.
+ */
+int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
+                                       int64_t size);
 
-int DbManagerFlushSolvingSegment(int buf_idx, int seg_idx);
+/**
+ * @brief Loads the \p seg_idx -th segment from disk into the \p buf_idx
+ * -th segment buffer.
+ *
+ * @param buf_idx Index of the destination segment buffer.
+ * @param seg_idx Index of the segment to load.
+ * @return \c kNoError on success,
+ * @return \c kIllegalArgumentError if \p buf_idx is not active,
+ * @return \c kFileSystemError if \p seg_idx does not exist on disk or
+ * failed to read the segment from disk, or
+ * @return other non-zero error code otherwise.
+ */
+int DbManagerSegmentationLoad(int buf_idx, int seg_idx);
 
-int DbManagerFreeSolvingSegmentBuffers(void);
+/**
+ * @brief Flushes the contents of the \p buf_idx -th segment buffer to
+ * disk as the \p seg_idx -th segment of the current tier.
+ *
+ * @param buf_idx Index of the source segment buffer.
+ * @param seg_idx Index of the segment.
+ * @return \c kNoError on success,
+ * @return \c kIllegalArgument if \p buf_idx is not active,
+ * @return \c kFileSystemError if failed to write to disk, or
+ * @return other non-zero error code otherwise.
+ */
+int DbManagerSegmentationFlush(int buf_idx, int seg_idx);
 
-Value DbManagerSolvingSegmentGetValue(int buf_idx, int64_t offset);
+/**
+ * @brief Deallocates all active segment buffers.
+ *
+ * @return \c kNoError on success, or
+ * @return other non-zero error code otherwise.
+ */
+int DbManagerSegmentationFreeBuffers(void);
 
-int DbManagerSolvingSegmentGetRemoteness(int buf_idx, int64_t offset);
+/**
+ * @brief Returns the value of the position at the given \p offset
+ * relative to the first position in the segment currently loaded in the
+ * \p buf_idx -th segment buffer.
+ *
+ * @param buf_idx Index of the segment buffer, which is assumed to be
+ * active.
+ * @param offset Position offset relative to the first position in the
+ * segment loaded in the target segment buffer. The offset is assumed to
+ * be valid.
+ * @return Value of the position at the given \p offset in the target
+ * segment buffer.
+ */
+Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset);
 
-void DbManagerSolvingSegmentSetValueRemoteness(int buf_idx, int64_t offset,
-                                               Value value, int remoteness);
+/**
+ * @brief Returns the remoteness of the position at the given \p offset
+ * relative to the first position in the segment currently loaded in the
+ * \p buf_idx -th segment buffer.
+ *
+ * @param buf_idx Index of the segment buffer, which is assumed to be
+ * active.
+ * @param offset Position offset relative to the first position in the
+ * segment loaded in the target segment buffer. The offset is assumed to
+ * be valid.
+ * @return Remoteness of the position at the given \p offset in the
+ * target segment buffer.
+ */
+int DbManagerSegmentationGetRemoteness(int buf_idx, int64_t offset);
 
-int DbManagerConsolidateSolvingSegments(int64_t tier_size, int num_segments);
+/**
+ * @brief Sets the value and remoteness of the position at the given
+ * \p offset relative to the first position in the segment currently
+ * loaded in the \p buf_idx -th segment buffer.
+ *
+ * @param buf_idx Index of the segment buffer, which is assumed to be
+ * active.
+ * @param offset Position offset relative to the first position in the
+ * segment loaded in the target segment buffer. The offset is assumed to
+ * be valid.
+ * @param value New value.
+ * @param remoteness New remoteness.
+ */
+void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
+                                             Value value, int remoteness);
+
+/**
+ * @brief Merges all \p num_segments segments on disk into the normal
+ * Database archive. The output is equivalent to the output of
+ * \c Database::FlushSolvingTier in the non-segmented methods.
+ *
+ * @param tier_size Number of positions in the solving tier.
+ * @param num_segments Total number of segments, where all segments are
+ * assumed to have been solved and flushed to disk.
+ * @return \c kNoError on success,
+ * @return \c kFileSystemError if any file operation such as reading a
+ * segment or saving the output failed, or
+ * @return other non-zero error code otherwise.
+ */
+int DbManagerSegmentationConsolidate(int64_t tier_size, int num_segments);
 
 /**
  * @brief Returns whether there exists a checkpoint for \p tier. A
@@ -515,7 +615,7 @@ int DbManagerGameStatus(void);
 
 // ------------------------- External Access Interface -------------------------
 
-const char *DbManagerGetPathPrefix(void);
+const char *DbManagerGetPath(void);
 
 // --------------------- (EXPERIMENTAL) Testing Interface ---------------------
 
