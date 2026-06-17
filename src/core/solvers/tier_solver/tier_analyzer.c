@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the analyzer module for the Loopy Tier Solver.
- * @version 2.0.0
- * @date 2025-04-23
+ * @version 2.0.2
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,8 +27,8 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
 #include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, intptr_t
+#include <stddef.h>   // NULL, size_t
+#include <stdint.h>   // int64_t
 #include <string.h>   // memset
 
 #include "core/analysis/analysis.h"
@@ -51,6 +51,9 @@
 // An internal reference to the API.
 static const TierSolverApi *api_internal;
 
+// Whether to explore the canonical graph only
+static bool explore_canonical;
+
 // Size-tracking memory allocator
 static GamesmanAllocator *allocator;
 
@@ -64,7 +67,10 @@ static int num_child_tiers;  // Size of child_tiers.
 // Child tier to its index in the child_tiers array.
 static TierHashMap child_tier_to_index;
 
+// Maps reachable positions in this_tier to set bits.
 static ConcurrentBitset *this_tier_map;
+
+// Maps reachable positions in each child tier to set bits.
 static ConcurrentBitset **child_tier_maps;
 
 static int num_threads;  // Number of threads available.
@@ -75,18 +81,17 @@ typedef struct {
 } PaddedPositionArray;
 static PaddedPositionArray *fringe;  // Discovered but unprocessed positions.
 static PaddedPositionArray *discovered;  // Newly discovered positions.
-
-static ConcurrentBitset *expanded;
-static ConcurrentBitset *bs_fringe, *bs_discovered;
+static ConcurrentBitset *bs_fringe;      // Compact fringe as a bitset.
+static ConcurrentBitset *bs_discovered;  // Compact discovered set as a bitset.
 
 // ============================= TierAnalyzerInit =============================
 
-bool TierAnalyzerInit(const TierSolverApi *api, intptr_t memlimit) {
+bool TierAnalyzerInit(const TierSolverApi *api, size_t memlimit) {
     api_internal = api;
+    explore_canonical = (api->GetNumberOfSymmetries != NULL);
     GamesmanAllocatorOptions options;
     GamesmanAllocatorOptionsSetDefaults(&options);
-    options.pool_size =
-        memlimit ? memlimit : (intptr_t)GetPhysicalMemory() / 10 * 9;
+    options.pool_size = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
     allocator = GamesmanAllocatorCreate(&options);
 
     return allocator != NULL;
@@ -118,26 +123,46 @@ static int GetCanonicalChildTiers(
     return ret;
 }
 
-static bool Step0_0CheckMem(int num_threads) {
+/**
+ * @brief Checks if we have enough memory to run the analysis.
+ * @note It is possible to only store one bitset in memory while streaming the
+ * other two to disk. The current implementation simplifies this by allowing 3
+ * bitsets (this tier map, fringe, and discovered) to be stored at the same
+ * time. It can be optimized if we need to analyze a memory-intensive game in
+ * the future.
+ *
+ * @return \c true if we have enough memory,
+ * @return \c false otherwise.
+ */
+static bool Step0_0CheckMem(void) {
+    // Each thread uses its own fringe and discovered array (2x).
     size_t fringe_container_size =
         2 * num_threads * sizeof(PaddedPositionArray);
+
+    // Size of the fringe and discovered bitsets.
     size_t bitset_fringe_size = 2 * ConcurrentBitsetMemRequired(this_tier_size);
-    size_t this_tier_map_size = 2 * ConcurrentBitsetMemRequired(this_tier_size);
+
+    // Size of the bitset storing the discovered positions in this tier.
+    size_t this_tier_map_size = ConcurrentBitsetMemRequired(this_tier_size);
+
+    // Count the total amount of memory required for child tier position maps.
     size_t child_tier_maps_size = num_child_tiers * sizeof(ConcurrentBitset *);
-    size_t serialize_overhead = 0;
     for (int i = 0; i < num_child_tiers; ++i) {
         int64_t tier_size = api_internal->GetTierSize(child_tiers[i]);
-        child_tier_maps_size += ConcurrentBitsetMemRequired(tier_size);
-        if (child_tier_maps_size > serialize_overhead) {
-            serialize_overhead = child_tier_maps_size;
-        }
+        size_t this_child_tier_map_size =
+            ConcurrentBitsetMemRequired(tier_size);
+        child_tier_maps_size += this_child_tier_map_size;
     }
+
+    // Thread-local analyses.
     size_t partial_analysis_size = num_threads * sizeof(CacheAlignedAnalysis);
+
+    // Fringe offsets created when distributing work among threads.
     size_t fringe_offsets_size = (num_threads + 1) * sizeof(int64_t);
+
     size_t total = fringe_container_size + bitset_fringe_size +
-                   child_tier_maps_size + serialize_overhead +
-                   this_tier_map_size + partial_analysis_size +
-                   fringe_offsets_size;
+                   child_tier_maps_size + this_tier_map_size +
+                   partial_analysis_size + fringe_offsets_size;
 
     return total <= GamesmanAllocatorGetRemainingPoolSize(allocator);
 }
@@ -148,8 +173,8 @@ static void InitFringeArray(PaddedPositionArray *target) {
     }
 }
 
-static void Step0_1InitFringesAndExpanded(void) {
-    // Array fringes.
+static void Step0_1InitFringes(void) {
+    // Initialize array-based fringes.
     fringe = (PaddedPositionArray *)GamesmanAllocatorAllocate(
         allocator, num_threads * sizeof(PaddedPositionArray));
     discovered = (PaddedPositionArray *)GamesmanAllocatorAllocate(
@@ -163,9 +188,6 @@ static void Step0_1InitFringesAndExpanded(void) {
     // to a copy of the current tier's position bit map once it is loaded
     // from disk or created.
     bs_discovered = ConcurrentBitsetCreateAllocator(this_tier_size, allocator);
-
-    // Initialize the bitset for expanded positions in this tier.
-    expanded = ConcurrentBitsetCreateAllocator(this_tier_size, allocator);
 }
 
 static void Step0_2InitChildTiersReverseLookupMap(void) {
@@ -184,8 +206,8 @@ static bool Step0Initialize(Analysis *dest) {
     num_threads = ConcurrencyGetOmpNumThreads();
     this_tier_size = api_internal->GetTierSize(this_tier);
     num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
-    if (!Step0_0CheckMem(num_threads)) return false;
-    Step0_1InitFringesAndExpanded();
+    if (!Step0_0CheckMem()) return false;
+    Step0_1InitFringes();
     Step0_2InitChildTiersReverseLookupMap();
     Step0_3InitAnalysis(dest);
 
@@ -316,20 +338,18 @@ static int GetChildPositions(
     TierPosition children[static kTierSolverNumChildPositionsMax],
     Analysis *dest) {
     //
-    int ret = 0;
+    int num_children = 0;
     Move moves[kTierSolverNumMovesMax];
     int num_moves = api_internal->GenerateMoves(parent, moves);
 
     TierPositionHashSet dedup;
     TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, kTierSolverNumChildPositionsMax);
+    TierPositionHashSetReserve(&dedup, num_moves / 2);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(parent, moves[i]);
-        children[ret++] = child;
+        children[num_children++] = child;
         child.position = api_internal->GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&dedup, child)) {
-            TierPositionHashSetAdd(&dedup, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
 
     // If the parent position is not a canonical position, then the number of
@@ -338,7 +358,25 @@ static int GetChildPositions(
     TierPositionHashSetDestroy(&dedup);
     AnalysisDiscoverMoves(dest, parent, num_moves, num_canonical_moves);
 
-    return ret;
+    return num_children;
+}
+
+static int GetCanonicalChildPositions(
+    TierPosition parent,
+    TierPosition children[static kTierSolverNumChildPositionsMax],
+    Analysis *dest) {
+    // Generate moves just to find out how many moves there are
+    Move moves[kTierSolverNumMovesMax];
+    int num_moves = api_internal->GenerateMoves(parent, moves);
+
+    // Generate canonical child positions
+    int num_canonical_children =
+        api_internal->GetCanonicalChildPositions(parent, children);
+    int num_symmetries = api_internal->GetNumberOfSymmetries(parent);
+    AnalysisDiscoverMovesGroup(dest, parent, num_symmetries, num_moves,
+                               num_canonical_children);
+
+    return num_canonical_children;
 }
 
 static bool DiscoverProcessThisTierArray(Position child, int tid) {
@@ -401,44 +439,55 @@ static void SwapFringeBitsets(void) {
 }
 
 /**
- * @brief Expands the given \p parent position and collect information into \p
- * dest. Assumes that \p parent has not been expanded and will only be expanded
- * once by the calling thread.
+ * @brief Expands the given \p parent position in \c this_tier and collect
+ * information into \p dest . Assumes that \p parent has not been expanded and
+ * will be expanded only once by the calling thread.
  *
  * @param parent Position to expand as parent.
  * @param dest Destination Analysis object.
  * @param tid ID of the calling thread.
- * @param use_array If set to \p true, the function will begin by collecting
- * child positions into the array fringe. Otherwise, the function begins by
- * collecting child positions into the bitset fringe.
+ * @param use_array If set to \p true , the function will begin by collecting
+ * child positions into the discovered array until an OOM occurs. Otherwise, the
+ * function begins by collecting child positions into the discovered bitset, in
+ * which case no OOM can occur.
  * @return \p true if \c true was passed to \p use_array and the function did
  * not encounter an OOM error (in other words, the function call successfully
- * completed by collecting all child positions of \p parent into the array
- * fringe with no error), or
- * @return \p false otherwise. There are two cases where this function may
- * return false:
- *  1. \c false was passed to \p use_array;
- *  2. \p use_array was true but the function encountered OOM while trying to
- * push the child positions into the array fringe.
+ * collected all child positions of \p parent into the discovered array with no
+ * error), or
+ * @return \p false if OOM occurred and at least one child position has been
+ * marked in the discovered bitset instead of the discovered array. There are
+ * two cases where this function may return \c false :
+ *
+ *   1. \c false was passed to \p use_array ;
+ *
+ *   2. \p use_array was true but the function encountered OOM while trying to
+ * push the child positions into the discovered array.
+ *
+ * Regardless of whether \c true or \c false is returned, the function is
+ * guaranteed to discover all child positions of \p parent exactly once.
  */
-static bool Expand(TierPosition parent, Analysis *dest, int tid,
-                   bool use_array) {
+static bool Expand(Position parent, Analysis *dest, int tid, bool use_array) {
+    TierPosition tp = {.tier = this_tier, .position = parent};
     // Do not generate children of primitive positions.
-    if (IsPrimitive(parent)) return true;
-
-    // Mark parent position as expanded.
-    ConcurrentBitsetSet(expanded, parent.position, memory_order_relaxed);
+    if (IsPrimitive(tp)) return true;
 
     TierPosition children[kTierSolverNumChildPositionsMax];
-    int num_children = GetChildPositions(parent, children, dest);
-    for (int64_t j = 0; j < num_children; ++j) {
-        if (children[j].tier != this_tier) {
-            DiscoverProcessChildTier(children[j]);
+    int num_children;
+    if (explore_canonical) {
+        num_children = GetCanonicalChildPositions(tp, children, dest);
+    } else {
+        num_children = GetChildPositions(tp, children, dest);
+    }
+
+    for (int64_t i = 0; i < num_children; ++i) {
+        if (children[i].tier != this_tier) {
+            DiscoverProcessChildTier(children[i]);
         } else if (use_array) {
-            use_array = DiscoverProcessThisTierArray(children[j].position, tid);
-            j -= (!use_array);  // Reprocess the j-th child if failed.
-        } else {                // Already OOM, expand to bitset fringe
-            DiscoverProcessThisTierBitset(children[j].position);
+            use_array = DiscoverProcessThisTierArray(children[i].position, tid);
+            i -= (!use_array);  // Reprocess the i-th child if failed.
+        } else {
+            // Already OOM, expand to the discovered bitset
+            DiscoverProcessThisTierBitset(children[i].position);
         }
     }
 
@@ -446,85 +495,48 @@ static bool Expand(TierPosition parent, Analysis *dest, int tid,
 }
 
 // Preconditions:
-//   - array fringe is empty initialized
-//   - array discovered is empty initialized
-//   - bitset fringe contains at least one position to expand
-//   - bitset discovered is zero initialized
-//
-// Output:
-//   - array fringe remains empty initialized
-//   - array discovered remains empty initialized
-//   - bitset fringe remains unmodified
-//   - bitset discovered contains all discoverable positions from bitset fringe
-//
-static void DiscoverFromBitsetToBitset(Analysis *dest) {
-    CacheAlignedAnalysis *parts = MakePartialAnalyses();
-    if (parts == NULL) {
-        fprintf(stderr, "DiscoverFromBitsetToBitset: (BUG) unexpected OOM\n");
-        NotReached("Terminating...\n");
-    }
-
-    PRAGMA_OMP_PARALLEL {
-        int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
-        for (int64_t i = 0; i < this_tier_size; ++i) {
-            if (!ConcurrentBitsetTest(bs_fringe, i, memory_order_relaxed)) {
-                continue;
-            }
-            TierPosition parent = {
-                .tier = this_tier,
-                .position = i,
-            };
-            Expand(parent, &parts[tid].data, tid, false);
-        }
-    }
-    MergePartialAnalysisMoves(dest, parts);
-    GamesmanAllocatorDeallocate(allocator, parts);
-}
-
-// Preconditions:
-//   - array fringe is empty initialized
-//   - array discovered is empty initialized
-//   - bitset fringe contains at least one position to expand
-//   - bitset discovered is zero initialized
+//   - the fringe array is empty initialized
+//   - the discovered array is empty initialized
+//   - the fringe bitset contains at least one position to expand
+//   - the discovered bitset is zero initialized
 //
 // Output (on success):
-//   - array fringe remains empty initialized
-//   - array discovered contains all discoverable positions from bitset fringe
-//   - bitset fringe remains unmodified
-//   - bitset discovered remains zero initialized
+//   - the fringe array remains empty initialized
+//   - the discovered array contains all discoverable positions from the fringe
+//   bitset
+//   - the fringe bitset remains unmodified
+//   - the discovered bitset remains zero initialized
 //
-// Output (on failure):
-//   - array fringe remains empty initialized
-//   - array discovered contains positions discovered from bitset fringe so far
-//   - bitset fringe remains unmodified
-//   - bitset discovered remains zero initialized
+// Output (on OOM):
+//   - the fringe array remains empty initialized
+//   - the discovered array contains positions discovered before OOM
+//   - the fringe bitset remains unmodified
+//   - the discovered bitset contains positions discovered after OOM
 static bool DiscoverFromBitsetToArray(Analysis *dest) {
-    ConcurrentBool success;
-    ConcurrentBoolInit(&success, true);
+    ConcurrentBool no_oom;
+    ConcurrentBoolInit(&no_oom, true);
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (parts == NULL) {
         fprintf(stderr, "DiscoverFromBitsetToArray: (BUG) unexpected OOM\n");
-        ConcurrentBoolStore(&success, false);
+        ConcurrentBoolStore(&no_oom, false);
         goto _bailout;
     }
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(dynamic, 1024))
         for (int64_t i = 0; i < this_tier_size; ++i) {
-            if (!ConcurrentBoolLoad(&success)) {  // Fail fast.
-                continue;
-            } else if (!ConcurrentBitsetTest(bs_fringe, i,
-                                             memory_order_relaxed)) {
+            // Skip positions that are not in the fringe
+            if (!ConcurrentBitsetTest(bs_fringe, i, memory_order_relaxed)) {
                 continue;
             }
-            TierPosition parent = {
-                .tier = this_tier,
-                .position = i,
-            };
-            bool step_success = Expand(parent, &parts[tid].data, tid, true);
-            if (!step_success) ConcurrentBoolStore(&success, false);
+
+            bool use_array = ConcurrentBoolLoad(&no_oom);
+            bool step_no_oom = Expand(i, &parts[tid].data, tid, use_array);
+
+            // Only update the shared atomic Boolean value when it needs to be
+            // changed to minimize false sharing.
+            if (use_array && !step_no_oom) ConcurrentBoolStore(&no_oom, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
@@ -532,168 +544,135 @@ static bool DiscoverFromBitsetToArray(Analysis *dest) {
 _bailout:
     GamesmanAllocatorDeallocate(allocator, parts);
 
-    return ConcurrentBoolLoad(&success);
+    return ConcurrentBoolLoad(&no_oom);
 }
 
 // Preconditions:
-//   - array fringe is loaded with at least one element,
-//   - array discovered is empty initialized
-//   - bitset fringe is zero initialized
-//   - bitset discovered is zero initialized
+//   - the fringe array is loaded with at least one element,
+//   - the discovered array is empty initialized
+//   - the fringe bitset is zero initialized
+//   - the discovered bitset is zero initialized
 //
 // Output (on success):
-//   - array fringe is unmodified
-//   - array discovered contains all discoverable positions from array fringe
-//   - bitset fringe remains zero initialized
-//   - bitset discovered remains zero initialized
+//   - the fringe array is unmodified
+//   - the discovered array contains all discoverable positions from the fringe
+//   array
+//   - the fringe bitset remains zero initialized
+//   - the discovered bitset remains zero initialized
 //
-// Output (on failure):
-//   - array fringe is unmodified
-//   - array discovered contains positions discovered from array fringe so far
-//   - bitset fringe remains zero initialized
-//   - bitset discovered remains zero initialized
+// Output (on OOM):
+//   - the fringe array is unmodified
+//   - the discovered array contains positions discovered before OOM
+//   - the fringe bitset remains zero initialized
+//   - the discovered bitset contains positions discovered after OOM
 static bool DiscoverFromArrayToArray(Analysis *dest) {
-    ConcurrentBool success;
-    ConcurrentBoolInit(&success, true);
+    ConcurrentBool no_oom;
+    ConcurrentBoolInit(&no_oom, true);
 
     // Allocate space
     int64_t *fringe_offsets = MakeFringeOffsets(fringe);
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (fringe_offsets == NULL || parts == NULL) {
         fprintf(stderr, "DiscoverFromArrayToArray: (BUG) unexpected OOM\n");
-        ConcurrentBoolStore(&success, false);
+        ConcurrentBoolStore(&no_oom, false);
         goto _bailout;
     }
 
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
         int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(monotonic:dynamic, 1024))
         for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
-            if (!ConcurrentBoolLoad(&success)) continue;  // Fail fast.
             UpdateFringeId(&fringe_id, i, fringe_offsets);
             int64_t index_in_fringe = i - fringe_offsets[fringe_id];
-            TierPosition parent = {
-                .tier = this_tier,
-                .position = fringe[fringe_id].a.array[index_in_fringe],
-            };
-            bool step_success = Expand(parent, &parts[tid].data, tid, true);
-            if (!step_success) ConcurrentBoolStore(&success, false);
+            bool use_array = ConcurrentBoolLoad(&no_oom);
+            bool step_no_oom =
+                Expand(fringe[fringe_id].a.array[index_in_fringe],
+                       &parts[tid].data, tid, use_array);
+
+            // Only update the shared atomic Boolean value when it needs to be
+            // changed to minimize false sharing.
+            if (use_array && !step_no_oom) ConcurrentBoolStore(&no_oom, false);
         }
     }
     MergePartialAnalysisMoves(dest, parts);
 
 _bailout:
     GamesmanAllocatorDeallocate(allocator, fringe_offsets);
-    fringe_offsets = NULL;
     GamesmanAllocatorDeallocate(allocator, parts);
 
-    return ConcurrentBoolLoad(&success);
-}
-
-// Adds all positions in the given array fringe to bitset fringe and
-// reinitialize.
-static void TransferFringeHelper(PaddedPositionArray *src) {
-    // Allocate space
-    int64_t *fringe_offsets = MakeFringeOffsets(src);
-    if (fringe_offsets == NULL) {
-        fprintf(stderr, "TransferFringeHelper: (BUG) unexpected OOM\n");
-        NotReached("Terminating...\n");
-    }
-
-    PRAGMA_OMP_PARALLEL {
-        int fringe_id = 0;
-        PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(1024)
-        for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
-            UpdateFringeId(&fringe_id, i, fringe_offsets);
-            int64_t index_in_fringe = i - fringe_offsets[fringe_id];
-            Position pos = src[fringe_id].a.array[index_in_fringe];
-            if (!ConcurrentBitsetTest(expanded, pos, memory_order_relaxed)) {
-                ConcurrentBitsetSet(bs_fringe, pos, memory_order_relaxed);
-            }
-        }
-    }
-    GamesmanAllocatorDeallocate(allocator, fringe_offsets);
-    fringe_offsets = NULL;
+    return ConcurrentBoolLoad(&no_oom);
 }
 
 // Preconditions:
-//   - array fringe may contain positions
-//   - array discovered contains positions discovered so far
-//   - bitset fringe may contain positions
-//   - bitset discovered may contain a very few positions that were discovered
-//   from the parent position where the OOM occurred on
+//   - the fringe array is empty initialized
+//   - the discovered array contains positions discovered before OOM
+//   - the fringe bitset is empty initialized
+//   - the discovered bitset contains positions that were discovered after OOM
 //
 // Output:
-//   - array fringe is empty initialized
-//   - array discovered is empty initialized
-//   - bitset fringe contains the union of {array fringe/bitset fringe} and
-//   {array discovered}
-//   - bitset discovered remains unmodified
-static void TransferFringe(int prev_state) {
-    enum State { ArrayToArray, BitsetToArray, BitsetToBitset };
-    assert(prev_state == ArrayToArray || prev_state == BitsetToArray);
-    printf("TransferFringe: %s\n",
-           prev_state == ArrayToArray ? "array to array" : "bitset to array");
+//   - the fringe array remains empty initialized
+//   - the discovered array becomes empty initialized
+//   - the fringe bitset contains the union of the discovered array and the
+//   discovered bitset.
+//   - the discovered bitset becomes empty initialized
+static void MergeDiscoveredIntoFringeBitset(void) {
+    // Swap the fringe bitset with the discovered bitset
+    SwapFringeBitsets();
 
-    // Transfer the array fringe only if we were using the array fringe in the
-    // previous state.
-    if (prev_state == ArrayToArray) TransferFringeHelper(fringe);
+    // Transfer positions from the discovered array to the fringe bitset
+    int64_t *fringe_offsets = MakeFringeOffsets(discovered);
+    if (fringe_offsets == NULL) {
+        fprintf(stderr,
+                "MergeDiscoveredIntoFringeBitset: (BUG) unexpected OOM\n");
+        NotReached("Terminating...\n");
+    }
 
-    // The array discovered fringe is always used when an OOM occurs.
-    TransferFringeHelper(discovered);
+    PRAGMA_OMP(parallel) {
+        int fringe_id = 0;
+        PRAGMA_OMP(for schedule(monotonic:dynamic, 1024))
+        for (int64_t i = 0; i < fringe_offsets[num_threads]; ++i) {
+            UpdateFringeId(&fringe_id, i, fringe_offsets);
+            int64_t index_in_fringe = i - fringe_offsets[fringe_id];
+            Position pos = discovered[fringe_id].a.array[index_in_fringe];
+            ConcurrentBitsetSet(bs_fringe, pos, memory_order_relaxed);
+        }
+    }
+    GamesmanAllocatorDeallocate(allocator, fringe_offsets);
+    DestroyFringeArray(discovered);
+    InitFringeArray(discovered);
 }
 
 static void Step2Discover(Analysis *dest) {
-    enum State { ArrayToArray, BitsetToArray, BitsetToBitset };
+    enum State { ArrayToArray, BitsetToArray };
+
+    // The initial tier is always loaded into the bitset.
     enum State state = BitsetToArray;
-    // printf("Beginning discover step\n");
     while (state != ArrayToArray || GetFringeSize() > 0) {
-        bool success = true;
-        switch (state) {
-            case ArrayToArray:
-                success = DiscoverFromArrayToArray(dest);
-                if (success) {
-                    DestroyFringeArray(fringe);
-                    InitFringeArray(fringe);
-                    SwapFringeArrays();
-                    // printf("Array to Array finished\n");
-                } else {  // OOM
-                    // printf("Array to Array OOM\n");
-                    TransferFringe(state);
-                    state = BitsetToBitset;
-                }
-                break;
+        bool no_oom;
+        if (state == ArrayToArray) {
+            no_oom = DiscoverFromArrayToArray(dest);
+            DestroyFringeArray(fringe);
+            InitFringeArray(fringe);
+        } else {
+            assert(GetFringeSize() == 0);
+            no_oom = DiscoverFromBitsetToArray(dest);
+            ConcurrentBitsetResetAll(bs_fringe);
+        }
 
-            case BitsetToArray:
-                assert(GetFringeSize() == 0);
-                success = DiscoverFromBitsetToArray(dest);
-                if (success) {
-                    SwapFringeArrays();
-                    ConcurrentBitsetResetAll(bs_fringe);
-                    state = ArrayToArray;
-                    // printf("Bitset to Array finished\n");
-                } else {  // OOM
-                    // printf("Bitset to Array OOM\n");
-                    TransferFringe(state);
-                    state = BitsetToBitset;
-                }
-                break;
-
-            case BitsetToBitset:
-                DiscoverFromBitsetToBitset(dest);
-                ConcurrentBitsetResetAll(bs_fringe);
-                SwapFringeBitsets();
-                state = BitsetToArray;
-                // printf("Bitset to Bitset finished\n");
-                break;
+        if (no_oom) {
+            SwapFringeArrays();
+            state = ArrayToArray;
+        } else {
+            MergeDiscoveredIntoFringeBitset();
+            state = BitsetToArray;
         }
     }
 }
 
-// Step3SaveChildMaps
+// Step3SaveAndDeallocateChildMaps
 
-static bool Step3SaveChildMaps(void) {
+static bool Step3SaveAndDeallocateChildMaps(void) {
     for (int64_t i = 0; i < num_child_tiers; ++i) {
         int error =
             StatManagerSaveDiscoveryMap(child_tier_maps[i], child_tiers[i]);
@@ -710,8 +689,7 @@ static bool Step3SaveChildMaps(void) {
 // Step4Analyze
 
 static bool Step4Analyze(Analysis *dest) {
-    int error = DbManagerLoadTier(this_tier, this_tier_size);
-    if (error != kNoError) return false;
+    if (DbManagerLoadTier(this_tier, this_tier_size) != kNoError) return false;
 
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (parts == NULL) {
@@ -721,9 +699,9 @@ static bool Step4Analyze(Analysis *dest) {
 
     ConcurrentBool success;
     ConcurrentBoolInit(&success, true);
-    PRAGMA_OMP_PARALLEL {
+    PRAGMA_OMP(parallel) {
         int tid = ConcurrencyGetOmpThreadId();
-        PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(1024)
+        PRAGMA_OMP(for schedule(dynamic, 1024))
         for (int64_t i = 0; i < this_tier_size; ++i) {
             if (!ConcurrentBoolLoad(&success)) continue;  // fail fast.
 
@@ -732,25 +710,33 @@ static bool Step4Analyze(Analysis *dest) {
                 continue;
             }
 
-            TierPosition tier_position = {.tier = this_tier, .position = i};
-            Position canonical =
-                api_internal->GetCanonicalPosition(tier_position);
-
-            // Must probe canonical positions. Original might not be solved.
+            TierPosition tp = {.tier = this_tier, .position = i};
+            // If we are only exploring the canonical graph, tp is canonical;
+            // otherwise we must convert and read the canonical position.
+            Position canonical = explore_canonical
+                                     ? tp.position
+                                     : api_internal->GetCanonicalPosition(tp);
             Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
             int remoteness =
                 DbManagerGetRemotenessFromLoaded(this_tier, canonical);
-            bool is_canonical = (tier_position.position == canonical);
-            int error = AnalysisCount(&parts[tid].data, tier_position, value,
-                                      remoteness, is_canonical);
+            int error;
+            if (explore_canonical) {
+                int num_symmetries = api_internal->GetNumberOfSymmetries(tp);
+                error = AnalysisCountGroup(&parts[tid].data, tp, num_symmetries,
+                                           value, remoteness);
+            } else {
+                error = AnalysisCount(&parts[tid].data, tp, value, remoteness,
+                                      tp.position == canonical);
+            }
             if (error != 0) ConcurrentBoolStore(&success, false);
         }
     }
     MergePartialAnalysisCounts(dest, parts);
     GamesmanAllocatorDeallocate(allocator, parts);
 
-    error = DbManagerUnloadTier(this_tier);
-    if (error != kNoError) ConcurrentBoolStore(&success, false);
+    if (DbManagerUnloadTier(this_tier) != kNoError) {
+        ConcurrentBoolStore(&success, false);
+    }
     ConcurrentBitsetDestroy(this_tier_map);
     this_tier_map = NULL;
 
@@ -772,17 +758,17 @@ static bool Step5SaveAnalysis(const Analysis *dest) {
 // Step6CleanUp
 
 static void Step6CleanUp(void) {
-    num_child_tiers = 0;
     TierHashMapDestroy(&child_tier_to_index);
     ConcurrentBitsetDestroy(this_tier_map);
     this_tier_map = NULL;
-    for (int i = 0; i < num_child_tiers; ++i) {
-        ConcurrentBitsetDestroy(child_tier_maps[i]);
+    if (child_tier_maps) {
+        for (int i = 0; i < num_child_tiers; ++i) {
+            ConcurrentBitsetDestroy(child_tier_maps[i]);
+        }
+        GamesmanAllocatorDeallocate(allocator, child_tier_maps);
+        child_tier_maps = NULL;
     }
-    GamesmanAllocatorDeallocate(allocator, child_tier_maps);
-    child_tier_maps = NULL;
-    ConcurrentBitsetDestroy(expanded);
-    expanded = NULL;
+    num_child_tiers = 0;
 
     // Clean up fringes.
     DestroyFringeArray(fringe);
@@ -818,7 +804,7 @@ int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
     if (!Step0Initialize(dest)) goto _bailout;
     if (!Step1LoadDiscoveryMaps()) goto _bailout;
     Step2Discover(dest);
-    if (!Step3SaveChildMaps()) goto _bailout;
+    if (!Step3SaveAndDeallocateChildMaps()) goto _bailout;
     if (!Step4Analyze(dest)) goto _bailout;
     if (!Step5SaveAnalysis(dest)) goto _bailout;
 

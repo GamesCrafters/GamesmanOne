@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the concurrency convenience library.
- * @version 1.1.0
- * @date 2025-04-23
+ * @version 1.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -82,6 +82,23 @@ void ConcurrentIntStore(ConcurrentInt *ci, int val) {
     atomic_store(ci, val);
 #else
     *ci = val;
+#endif
+}
+
+int ConcurrentIntMax(ConcurrentInt *ci, int val) {
+#ifdef _OPENMP
+    int old = atomic_load(ci);
+    while (val > old) {
+        if (atomic_compare_exchange_weak(ci, &old, val)) {
+            break;
+        }
+    }
+    return old;
+#else
+    int ret = *ci;
+    if (val > ret) *ci = val;
+
+    return ret;
 #endif
 }
 

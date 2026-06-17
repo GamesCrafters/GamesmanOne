@@ -28,8 +28,7 @@
 
 #include <assert.h>   // assert
 #include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdint.h>   // intptr_t
+#include <stddef.h>   // NULL, size_t
 #include <stdio.h>    // printf, fprintf, stderr
 
 #include "core/game_manager.h"
@@ -41,7 +40,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/gamesman_types.h"
 
-static void *GenerateSolveOptions(bool force, int verbose, intptr_t memlimit) {
+static void *GenerateSolveOptions(bool force, int verbose, size_t memlimit) {
     const Game *game = GameManagerGetCurrentGame();
     assert(game != NULL);
 
@@ -67,7 +66,7 @@ static void *GenerateSolveOptions(bool force, int verbose, intptr_t memlimit) {
 
 int HeadlessSolve(ReadOnlyString game_name, int variant_id,
                   ReadOnlyString data_path, bool force, int verbose,
-                  intptr_t memlimit) {
+                  size_t memlimit) {
     int error = HeadlessInitSolver(game_name, variant_id, data_path);
     if (error != 0) return error;
 

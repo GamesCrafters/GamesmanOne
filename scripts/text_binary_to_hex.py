@@ -1,6 +1,8 @@
 """
+[Written by ChatGPT]
 This is a script for converting all 0b literals to 0x
-in a given text file.
+in a text file. Simply replace the file path and run
+with python3 to use this script.
 """
 
 import re
@@ -25,6 +27,6 @@ def convert_binary_to_hex(file_path):
     with open(file_path, 'w') as file:
         file.write(updated_content)
 
-# Replace with the path to your C source file
-file_path = 'quixo.c'
+# Replace with the path to your source file
+file_path = 'somefile.txt'
 convert_binary_to_hex(file_path)

@@ -2,14 +2,13 @@
  * @file bi.h
  * @author Max Delgadillo: designed and implemented the original version
  * of the backward induction algorithm (solveretrograde.c in GamesmanClassic.)
- * @author Robert Shi (robertyishi@berkeley.edu): Separated functions for
- * solving of a single tier into its own module, implemented multithreading
- * using OpenMP, and reformatted functions for readability.
+ * @author Robert Shi (robertyishi@berkeley.edu): Implemented multiple memory
+ * saving strategies and added multithreading support.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Backward induction tier worker algorithm.
- * @version 1.1.4
- * @date 2025-04-23
+ * @version 1.1.5
+ * @date 2025-05-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -46,16 +45,17 @@
  * The algorithm then uses this number as the chunk size for OpenMP dynamic
  * scheduling to prevent repeated decompression of the same block.
  * @param tier Tier to solve.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options.
+ * @param options Non-null pointer to a \c TierSolverSolveOptions object which
+ * contains the solving options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
  * @return kNoError on success, or
  * @return non-zero error code otherwise.
  */
-int TierWorkerSolveBIInternal(const TierSolverApi *api, int64_t db_chunk_size,
-                              Tier tier, const TierWorkerSolveOptions *options,
-                              bool *solved);
+int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
+                                Tier tier,
+                                const TierSolverSolveOptions *options,
+                                bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BI_H_

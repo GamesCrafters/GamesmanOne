@@ -1,11 +1,11 @@
 /**
- * @file int64_cache.h
+ * @file htest.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief (UNFINISHED) 64-bit-integer-indexed cache
- * @version 0.0.0
- * @date 2024-07-09
+ * @brief Game testing functionality of headless mode.
+ * @version 1.0.0
+ * @date 2025-05-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,23 +24,24 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_CACHE_H_
-#define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_CACHE_H_
+#ifndef GAMESMANONE_CORE_HEADLESS_HTEST_H_
+#define GAMESMANONE_CORE_HEADLESS_HTEST_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include "core/types/gamesman_types.h"
 
-typedef struct Int64Cache Int64Cache;
-typedef struct Int64CacheAllocator {
-    void *(*alloc)(size_t size);
-    void (*free)(void *ptr);
-} Int64CacheAllocator;
+/**
+ * @brief Tests the game of name \p game_name and variant index \p variant_id
+ * using \p seed as the seed for PRNGs if needed.
+ *
+ * @param game_name Name of the game used internally by GAMESMAN.
+ * @param variant_id Index of the variant to solve for. Pass a negative value to
+ * test the default variant.
+ * @param seed Seed for PRNGs.
+ * @param verbose Currently has no effect regardless of the value passed in.
+ * @return kNoError if all tests are passed,
+ * @return non-zero error code otherwise.
+ */
+int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
+                 int verbose);
 
-Int64Cache *Int64CacheInit(size_t size, Int64CacheAllocator *allocator);
-int Int64CacheDestroy(Int64Cache *cache);
-
-void *Int64CachePut(Int64Cache *cache, int64_t key, size_t size);
-void *Int64CacheGet(Int64Cache *cache, int64_t key, size_t *size);
-
-#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_CACHE_H_
+#endif  // GAMESMANONE_CORE_HEADLESS_HTEST_H_

@@ -27,12 +27,12 @@
 
 #include "core/headless/hquery.h"
 
-#include <assert.h>              // assert
-#include <json-c/json_object.h>  // json_object and related functions
-#include <stdbool.h>             // bool, true, false
-#include <stdbool.h>             // bool
-#include <stdint.h>              // int64_t
-#include <stdio.h>               // printf
+#include <assert.h>       // assert
+#include <json_object.h>  // json_object and related functions
+#include <stdbool.h>      // bool, true, false
+#include <stdbool.h>      // bool
+#include <stdint.h>       // int64_t
+#include <stdio.h>        // printf
 
 #include "core/constants.h"
 #include "core/game_manager.h"

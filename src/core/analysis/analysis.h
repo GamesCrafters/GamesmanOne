@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Game analysis helper structure.
- * @version 2.0.0
- * @date 2025-03-17
+ * @version 2.1.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -173,6 +173,25 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
                            int num_moves, int num_canonical_moves);
 
 /**
+ * @brief Reports to \p analysis that each position within the group of
+ * symmetric positions with \p canonical being the canonical position has
+ * \p num_moves moves and \p num_canonical_moves canonical moves, and there are
+ * \p group_size positions in this group.
+ *
+ * @param analysis Destination analysis.
+ * @param canonical A newly discovered canonical tier position, which is assumed
+ * to be valid for the given \p analysis .
+ * @param group_size Number of positions in the symmetry group with \p canonical
+ * being the canonical position.
+ * @param num_moves Number of moves available at each position within the group.
+ * @param num_canonical_moves Number of canonical moves available at each
+ * position within the group.
+ */
+void AnalysisDiscoverMovesGroup(Analysis *analysis, TierPosition canonical,
+                                int group_size, int num_moves,
+                                int num_canonical_moves);
+
+/**
  * @brief Merges all move-related counters of \p part into \p dest.
  *
  * @details This function is for reducing multiple thread-local analyses from a
@@ -210,6 +229,27 @@ void AnalysisMergeMoves(Analysis *dest, const CacheAlignedAnalysis *part);
  */
 int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                   int remoteness, bool is_canonical);
+
+/**
+ * @brief Reports to \p analysis that each position within the group of
+ * symmetric positions with \p canonical being the canonical position has value
+ * \p value , remoteness \p remoteness , and there are \p group_size positions
+ * in this group.
+ * @details Typical usage is to call this function once on each canonical
+ * position during the counting phase of analysis to count the number of
+ * positions of each type.
+ *
+ * @param analysis Output variable.
+ * @param canonical A newly scanned canonical tier position, which is assumed to
+ * be valid for the given \p analysis.
+ * @param num_symmetries Number of positions in the symmetry group.
+ * @param value Value of each position within the group.
+ * @param remoteness Remoteness of each position within the group.
+ * @return 0 on success,
+ * @return \c kIllegalGamePositionValueError if \p value is invalid.
+ */
+int AnalysisCountGroup(Analysis *analysis, TierPosition canonical,
+                       int num_symmetries, Value value, int remoteness);
 
 /**
  * @brief Merges all counters and examples except for those that are related to

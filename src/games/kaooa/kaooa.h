@@ -27,12 +27,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
-#define GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
+#ifndef GAMESMANONE_GAMES_KAOOA_KAOOA_H_
+#define GAMESMANONE_GAMES_KAOOA_KAOOA_H_
 
 #include "core/types/gamesman_types.h"
 
 /** @brief Kaooa */
 extern const Game kMkaooa;
 
-#endif  // GAMESMANONE_GAMES_MKAOOA_MKAOOA_H_
+#endif  // GAMESMANONE_GAMES_KAOOA_KAOOA_H_

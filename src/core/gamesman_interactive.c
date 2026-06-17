@@ -36,31 +36,30 @@
 #include "core/gamesman_memory.h"
 #include "core/interactive/main_menu.h"
 #include "core/misc.h"
+#include "core/opening_credits.h"
 #include "core/types/gamesman_types.h"
 
 // clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =
-    "\n"
-    "  ____               http://gamescrafters.berkeley.edu  : A finite,  two-person\n"
-    " / ___| __ _ _ __ ___   ___  ___ _ __ ___   __ _ _ __   : complete  information\n"
-    "| |  _ / _` | '_ ` _ \\ / _ \\/ __| '_ ` _ \\ / _` | '_ \\  : game generator.  More\n"
-    "| |_| | (_| | | | | | |  __/\\__ \\ | | | | | (_| | | | | : information?  Contact\n"
-    " \\____|\\__,_|_| |_| |_|\\___||___/_| |_| |_|\\__,_|_| |_| : ddgarcia@berkeley.edu\n"
+    "\n%s"RESET
 #ifndef NDEBUG
     "...............................................................................\n"
-    "................................ DEBUG MODE ...................................\n"
+    "................................. DEBUG BUILD .................................\n"
 #endif
     "..........................%s.............................\n"
     "\n"
-    "Welcome to GAMESMAN, version %s. Originally       (G)ame-independent\n"
+    "Welcome to GAMESMAN, version "THEME"%s"RESET". Originally       (G)ame-independent\n"
     "written by Dan Garcia, it has undergone a series of       (A)utomatic       \n"
     "exhancements from 2001-present by GamesCrafters, the      (M)ove-tree       \n"
-    "UC Berkeley Undergraduate Game Theory Research Group.     (E)xhaustive      \n"
-    "                                                          (S)earch,         \n"
-    "This program will determine the value of your game,       (M)anipulation    \n"
-    "perform analysis, & provide an interface to play it.      (A)nd             \n"
-    "                                                          (N)avigation      \n";
+    "UC Berkeley Computational Game Theory Research and        (E)xhaustive      \n"
+    "Development Group.                                        (S)earch,         \n"
+    "                                                          (M)anipulation    \n"
+    "This program will determine the value of your game,       (A)nd             \n"
+    "perform analysis, & provide an interface to play it.      (N)avigation      \n"
+    "\n";
 // clang-format on
+
+static const char *const kContinuePrompt = "--- press <return> to continue ---";
 
 static const int kOpeningCreditsMessageSize = 24;
 #ifndef USE_MPI
@@ -71,32 +70,106 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage =
     "      MPI Enabled       ";
 #endif  // USE_MPI
 
-static void PrintOpeningCredits(void) {
-    size_t length = strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
-                    kOpeningCreditsMessageSize;
-    char *opening_credits = (char *)SafeCalloc(length, sizeof(char));
+static void AnimationUpdate(char *opening_credits, int frame) {
 #ifndef USE_MPI
-    sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsNoMessage,
-            GM_DATE);
+    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
+            kOpeningCreditsNoMessage, GM_DATE);
 #else   // USE_MPI defined.
-    sprintf(opening_credits, kOpeningCreditsFormat, kOpeningCreditsMpiMessage,
-            GM_DATE);
+    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
+            kOpeningCreditsMpiMessage, GM_DATE);
 #endif  // USE_MPI
+}
 
-    int i = 0;
-    while (opening_credits[i] != '\0') {
-        printf("%c", opening_credits[i++]);
-        fflush(stdout);
-        usleep(800);
+#ifdef NDEBUG  // Release
+static void EraseLastBlockExact(const char *s) {
+    if (!s) return;
+
+    size_t len = strlen(s);
+    if (len == 0) return;
+
+    // Count newlines
+    size_t nl = 0;
+    for (const char *p = s; *p; ++p) {
+        if (*p == '\n') ++nl;
+    }
+    int none_nl_terminated_last_line = (s[len - 1] != '\n');
+
+    // Number of lines that actually contained text
+    size_t printed_lines = nl + none_nl_terminated_last_line;
+
+    // Move to the block's first line, column 1
+    if (none_nl_terminated_last_line) {
+        // Cursor is at end of the last line of the block
+        putchar('\r');  // column 1
+        if (printed_lines > 1) {
+            printf("\x1b[%zuA", printed_lines - 1);  // up to first line
+        }
+    } else {
+        // Cursor is currently on the line AFTER the block
+        printf("\x1b[%zuA", printed_lines);  // up to first line of block
+        putchar('\r');
     }
 
-    GamesmanFree(opening_credits);
+    // Clear each printed line, moving downward
+    for (size_t i = 0; i < printed_lines; ++i) {
+        printf("\x1b[2K");                             // erase entire line
+        if (i + 1 < printed_lines) printf("\x1b[1B");  // down 1
+    }
+
+    // Return cursor to the top of the cleared block (col 1)
+    if (printed_lines > 1) printf("\x1b[%zuA", printed_lines - 1);
+    putchar('\r');
+    fflush(stdout);
+}
+#endif  // NDEBUG
+
+static void PrintOpeningCredits(void) {
+    size_t length = strlen(kHeaderAnimation[0]) +
+                    strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
+                    kOpeningCreditsMessageSize;
+    char *buf = (char *)SafeCalloc(length, sizeof(char));
+
+    const int nframes = sizeof(kHeaderAnimation) / sizeof(kHeaderAnimation[0]);
+#ifdef NDEBUG  // Release
+    char *prev = NULL;
+    for (int i = 0; i < nframes; ++i) {
+        EraseLastBlockExact(prev);
+        AnimationUpdate(buf, i);
+        prev = buf;
+        printf("%s", buf);
+        fflush(stdout);
+        usleep(8000);
+    }
+#else   // Debug: no animation
+    AnimationUpdate(buf, nframes - 1);
+    printf("%s", buf);
+    fflush(stdout);
+#endif  // NDEBUG
+    GamesmanFree(buf);
+}
+
+#ifdef NDEBUG  // Release
+static void AnimateText(const char *str, unsigned int us) {
+    while (*str) {
+        putchar(*(str++));
+        fflush(stdout);
+        usleep(us);
+    }
+}
+#endif  // NDEBUG
+
+static void PromptForContinue(void) {
+#ifdef NDEBUG  // Release
+    AnimateText(kContinuePrompt, 5000);
+#else   // Debug: no animation
+    printf("%s", kContinuePrompt);
+#endif  // NDEBUG
+    getchar();
 }
 
 int GamesmanInteractiveMain(void) {
     PrintOpeningCredits();
-    printf("--- press <return> to continue ---");
-    getchar();
+    PromptForContinue();
     InteractiveMainMenu(NULL);
 
     return kNoError;

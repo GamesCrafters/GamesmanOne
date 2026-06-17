@@ -5,7 +5,7 @@
 #include <stddef.h>   // NULL
 #include <stdio.h>    // printf, fgets, getchar
 #include <stdlib.h>   // exit, EXIT_SUCCESS
-#include <string.h>   // strncmp, strchr
+#include <string.h>   // strncmp, strchr, strlen
 
 #include "core/misc.h"  // GamesmanExit
 
@@ -20,20 +20,32 @@ static bool StringEqual(ReadOnlyString s1, ReadOnlyString s2, size_t n) {
     return (strncmp(s1, s2, n) == 0);
 }
 
+static int MaxKeyLength(ConstantReadOnlyString *keys, int num_items) {
+    int max_key_len = 1;
+    for (int i = 0; i < num_items; ++i) {
+        int len = strlen(keys[i]);
+        if (len > max_key_len) max_key_len = len;
+    }
+    return max_key_len;
+}
+
 int AutoMenu(ReadOnlyString title, int num_items, ConstantReadOnlyString *items,
              ConstantReadOnlyString *keys, const HookFunctionPointer *hooks,
              void (*Update)(void)) {
-    while (1) {
+    for (;;) {
         // Update menu contents if necessary.
         if (Update != NULL) Update();
 
         // Print menu.
         printf("\n\t----- %s -----\n\n", title);
+        static ConstantReadOnlyString spaces[] = {" ", "  ", "   "};
+        const int max_key_len = MaxKeyLength(keys, num_items);
         for (int i = 0; i < num_items; ++i) {
-            printf("\t%s) %s\n", keys[i], items[i]);
+            printf("\t%s)%s%s\n", keys[i],
+                   spaces[max_key_len - strlen(keys[i])], items[i]);
         }
-        printf("\n\tb) Go back\n");
-        printf("\tq) Quit\n\n");
+        puts("\n\tb) Go back\n");
+        puts("\tq) Quit\n\n");
 
         // Prompt for input.
         bool accepted = false;
@@ -52,7 +64,7 @@ int AutoMenu(ReadOnlyString title, int num_items, ConstantReadOnlyString *items,
                     break;
                 }
             }
-            if (!accepted) printf("Invalid key. Please enter again.\n");
+            if (!accepted) puts("Invalid key. Please enter again.\n");
         } while (!accepted);
     }
 

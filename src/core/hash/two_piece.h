@@ -53,6 +53,7 @@
 #define GAMESMANONE_CORE_HASH_TWO_PIECE_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 #include <stdint.h>   // int64_t, uint64_t
 
 #include "core/types/gamesman_types.h"
@@ -66,7 +67,7 @@
  * Set this value to 1 if you wish to turn symmetries off.
  * @return Amount of memory required in bytes to initialize the hash system.
  */
-intptr_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries);
+size_t TwoPieceHashGetMemoryRequired(int board_size, int num_symmetries);
 
 /**
  * @brief Initializes the hash system.

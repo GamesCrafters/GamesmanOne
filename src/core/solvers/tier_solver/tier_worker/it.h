@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Immediate transition tier worker algorithm.
- * @version 1.1.2
- * @date 2025-04-23
+ * @version 1.1.5
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_IT_H_
 
 #include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
@@ -38,9 +39,8 @@
  *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to solve.
- * @param memlimit Maximum amount of heap memory that can be used in bytes.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options.
+ * @param options Pointer to a \c TierSolverSolveOptions object which contains
+ * the solving options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
@@ -48,8 +48,7 @@
  * @return non-zero error code otherwise.
  */
 int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
-                              intptr_t memlimit,
-                              const TierWorkerSolveOptions *options,
+                              const TierSolverSolveOptions *options,
                               bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_IT_H_

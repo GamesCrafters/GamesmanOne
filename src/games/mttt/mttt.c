@@ -357,7 +357,7 @@ static int MtttPositionToString(Position position, char *buffer) {
         fprintf(stderr,
                 "MtttPositionToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
     return kNoError;
@@ -371,7 +371,7 @@ static int MtttMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
     return kNoError;

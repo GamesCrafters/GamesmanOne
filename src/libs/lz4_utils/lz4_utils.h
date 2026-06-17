@@ -24,11 +24,13 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_LIB_LZ4_UTILS_H_
-#define GAMESMANONE_LIB_LZ4_UTILS_H_
+#ifndef GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
+#define GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
 
 #include <stddef.h>  // size_t
 #include <stdint.h>  // int64_t
+
+// ============================== Compression API ==============================
 
 /**
  * @brief Concatenates and compresses \p n input streams using level \p level
@@ -84,22 +86,53 @@ int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
  */
 int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
 
+// ========================= Streaming Compression API =========================
+
 /**
- * @brief Decompresses the input file of name \p ifname, which is assumed to
- * contain exactly one LZ4 frame, and stores the uncompresses data in \p out of
- * size \p out_size.
- *
- * @param ifname Input compressed file name.
- * @param out (Output parameter) output buffer.
- * @param out_size Size of the output buffer.
- * @return Number of bytes of uncompressed data written to \p out;
- * @return -1 if failed to open input file;
- * @return -2 if failed to allocate memory;
- * @return -3 if input file is corrupt or an error occurred when reading the
- * input file;
- * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity.
+ * @brief Opaque object for data passing when streaming to a Lz4Utils
+ * compresssed file.
  */
+typedef struct Lz4UtilsOutStream Lz4UtilsOutStream;
+
+/**
+ * @brief Creates a new Lz4Utils output stream.
+ *
+ * @param ofname Output file name.
+ * @param level LZ4 compression level.
+ * @return Pointer to the new Lz4Utils output stream on success, or
+ * @return \c NULL on failure.
+ */
+Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
+
+/**
+ * @brief Runs compression to consume \p in_size bytes of data from \p in using
+ * \p stream as output stream.
+ *
+ * @param stream Output stream.
+ * @param stream Output stream.
+ * @param in Pointer to the input buffer.
+ * @param in_size Number of bytes to consume from the input buffer.
+ * @return Number of compressed bytes generated in this run on success,
+ * @return -2 if internal LZ4 compression failed, or
+ * @return -3 if failed to write compressed bytes to output file.
+ */
+int64_t Lz4UtilsOutStreamRun(Lz4UtilsOutStream *stream, const void *in,
+                             size_t in_size);
+
+/**
+ * @brief Closes the output stream \p stream , finalizing the output file by
+ * flushing all buffered compressed bytes to disk. Does nothing and returns
+ * 0 if \p stream is \c NULL .
+ *
+ * @param stream Output stream to close.
+ * @return Number of compressed bytes generated in total since the creation of
+ * \p stream on success,
+ * @return -2 if internal LZ4 compression failed, or
+ * @return -3 if failed to write compressed bytes to output file.
+ */
+int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream);
+
+// ============================= Decompression API =============================
 
 /**
  * @brief Decompresses the input file of name \p ifname, which is assumed to
@@ -118,7 +151,9 @@ int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
  * @return -3 if input file is corrupt or an error occurred when reading the
  * input file;
  * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity.
+ * buffer capacity;
+ * @return -5 if the decompressed data is larger than the size of all output
+ * buffers combined.
  */
 int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
                                           const size_t *out_sizes, int n);
@@ -137,8 +172,53 @@ int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
  * @return -3 if input file is corrupt or an error occurred when reading the
  * input file;
  * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity.
+ * buffer capacity;
+ * @return -5 if the decompressed data is larger than the size of the output
+ * buffer.
  */
 int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size);
 
-#endif  // GAMESMANONE_LIB_LZ4_UTILS_H_
+// ======================== Streaming Decompression API ========================
+
+/**
+ * @brief Opaque object for data passing when streaming from a Lz4Utils
+ * compresssed file.
+ */
+typedef struct Lz4UtilsInStream Lz4UtilsInStream;
+
+/**
+ * @brief Creates a new Lz4Utils input stream.
+ *
+ * @param ifname Input file name.
+ * @return Pointer to the new Lz4Utils input stream on success, or
+ * @return \c NULL on failure.
+ */
+Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname);
+
+/**
+ * @brief Decompress X bytes of data to \p out using \p stream as input stream,
+ * where X is \p out_size or the amount of compressed data left in \p stream ,
+ * whichever is smaller.
+ *
+ * @param stream
+ * @param out
+ * @param out_size
+ * @return Number of uncompressed bytes generated in this run on success,
+ * @return 0 if no bytes are left in \p stream ,
+ * @return -1 if \p stream is \c NULL ,
+ * @return -3 if the compressed file associated with \p stream is malformed, or
+ * @return -4 on internal LZ4 decompression failure.
+ */
+int64_t Lz4UtilsInStreamRun(Lz4UtilsInStream *stream, void *out,
+                            size_t out_size);
+
+/**
+ * @brief Closes the input stream \p stream .
+ *
+ * @param stream Input stream to close.
+ * @return 0 on success,
+ * @return -1 if on internal LZ4 context deallocation failure.
+ */
+int Lz4UtilsInStreamClose(Lz4UtilsInStream *stream);
+
+#endif  // GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_

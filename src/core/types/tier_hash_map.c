@@ -29,10 +29,16 @@
 #include <stdint.h>  // int64_t
 
 #include "core/data_structures/int64_hash_map.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 void TierHashMapInit(TierHashMap *map, double max_load_factor) {
     Int64HashMapInit(map, max_load_factor);
+}
+
+void TierHashMapInitAllocator(TierHashMap *map, double max_load_factor,
+                              GamesmanAllocator *allocator) {
+    Int64HashMapInitAllocator(map, max_load_factor, allocator);
 }
 
 void TierHashMapDestroy(TierHashMap *map) { Int64HashMapDestroy(map); }

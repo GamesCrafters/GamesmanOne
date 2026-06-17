@@ -1,4 +1,5 @@
 /*
+ * [Written by ChatGPT]
  * cacheline.c – print the hardware cache-line size if the OS exposes it.
  *
  * Build:

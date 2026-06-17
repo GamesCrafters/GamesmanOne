@@ -1,5 +1,36 @@
 cmake_minimum_required(VERSION 3.14)
-project(GamesmanOne VERSION 1.3.1 DESCRIPTION 2026.04.30)
+project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.05.26)
+
+# Generate compile_commands.json in the build directory
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+########################
+# Library Dependencies #
+########################
+
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
+include(FetchContent)
+FetchContent_Declare(
+  json-c
+  GIT_REPOSITORY https://github.com/json-c/json-c.git
+  GIT_TAG 05180c1fa385eb39274cf0a17223da1b82832773 # json-c 0.18
+)
+FetchContent_Declare(
+  liblzma
+  GIT_REPOSITORY https://github.com/tukaani-project/xz.git
+  GIT_TAG ebb0e6789cefe3be71756881aa8f2009fda9938c # XZ Utils 5.8.3
+)
+FetchContent_Declare(
+  lz4
+  GIT_REPOSITORY https://github.com/lz4/lz4.git
+  GIT_TAG ebb370ca83af193212df4dcbadcc5d87bc0de2f0 # LZ4 v1.10.0
+)
+FetchContent_MakeAvailable(json-c liblzma lz4)
 
 ##########################
 # Common Flags Interface #
@@ -96,7 +127,6 @@ configure_file(
 
 # Add include paths.
 include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_SOURCE_DIR}/res/include")
 
 # Add source.
 add_subdirectory(src)

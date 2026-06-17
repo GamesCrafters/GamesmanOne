@@ -86,7 +86,8 @@ int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis);
 int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
 
 /**
- * @brief Loads the discovery map for \p tier as a ConcurrentBitset from disk.
+ * @brief Loads the discovery map for \p tier as a ConcurrentBitset from disk,
+ * or returns \c kFileSystemError if the discovery map is not found on disk.
  * @details A discovery map is a bitset of length equal to the size of
  * \p tier with the i-th bit turned on if and only if the position i has been
  * discovered as reachable in \p tier.
@@ -96,7 +97,8 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
  * @param allocator Memory allocator to use for \p dest.
  * @param dest Pointer to the pointer that will be modified to point to the
  * destination bitset on success. Not modified on failure.
- * @return \c kNoError on success, or
+ * @return \c kNoError on success,
+ * @return \c kFileSystemError if the discovery map is not found on disk, or
  * @return non-zero error code otherwise.
  */
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,

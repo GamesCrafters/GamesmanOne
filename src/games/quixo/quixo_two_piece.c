@@ -983,7 +983,7 @@ static int QuixoInitVariant(int selection) {
     for (int i = 0; i < 8; ++i) {
         symmetry_matrix[i] = kSymmetryMatrix[curr_variant_idx][i];
     }
-    int ret = TwoPieceHashInit(side_length, side_length, symmetry_matrix, 8);
+    int ret = TwoPieceHashInit(board_size, symmetry_matrix, 8);
     if (ret != kNoError) return ret;
 
     return kNoError;

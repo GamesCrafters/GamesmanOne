@@ -28,7 +28,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fprintf, stdout, stderr
+#include <stdio.h>    // printf, fprintf, stdout, stderr, _IOLBF
 #include <stdlib.h>   // free
 #include <string.h>   // strcmp, strcpy
 
@@ -63,6 +63,7 @@ int HeadlessRedirectOutput(ReadOnlyString output) {
         fprintf(stderr, "HeadlessRedirectOutput: failed to redirect output\n");
         return kFileSystemError;
     }
+    setvbuf(stdout, NULL, _IOLBF, 0);
 
     return kNoError;
 }

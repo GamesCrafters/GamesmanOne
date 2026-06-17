@@ -36,7 +36,6 @@
 
 #ifdef _OPENMP
 #include <omp.h>
-#include <stdatomic.h>
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
@@ -390,8 +389,7 @@ void *SafeCalloc(size_t n, size_t size) {
     if (ret == NULL) {
         fprintf(stderr,
                 "SafeCalloc: failed to allocate %zd elements each of %zd "
-                "bytes. This ususally "
-                "indicates a bug.\n",
+                "bytes. This ususally indicates a bug.\n",
                 n, size);
         fflush(stderr);
         _exit(kMallocFailureError);

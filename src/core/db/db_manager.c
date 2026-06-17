@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 2.0.1
- * @date 2024-12-22
+ * @version 2.1.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,7 +28,7 @@
 
 #include <stdbool.h>  // bool, true, false
 #include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // intptr_t, int64_t
+#include <stdint.h>   // int64_t
 #include <stdio.h>    // fprintf, stderr
 #include <stdlib.h>   // exit, EXIT_FAILURE
 #include <string.h>   // strlen
@@ -38,7 +38,6 @@
 #include "core/types/gamesman_types.h"
 
 static const Database *current_db;
-static const Database *ref_db;
 
 static bool BasicDbApiImplemented(const Database *db);
 static bool IsValidDbName(ReadOnlyString name);
@@ -71,40 +70,17 @@ int DbManagerInitDb(const Database *db, bool read_only,
     return error;
 }
 
-int DbManagerInitRefDb(const Database *db, ReadOnlyString game_name,
-                       int variant, ReadOnlyString data_path,
-                       GetTierNameFunc GetTierName, void *aux) {
-    if (ref_db != NULL) ref_db->Finalize();
-    ref_db = NULL;
-
-    if (!BasicDbApiImplemented(db)) {
-        fprintf(stderr,
-                "DbManagerInitDb: The %s does not have all the required "
-                "functions implemented and cannot be used.\n",
-                db->formal_name);
-        return kNotImplementedError;
-    }
-    ref_db = db;
-
-    char *path = SetupDbPath(ref_db, game_name, variant, data_path, false);
-    int error = ref_db->Init(game_name, variant, path, GetTierName, aux);
-    free(path);
-
-    return error;
-}
-
 void DbManagerFinalizeDb(void) {
     if (current_db) current_db->Finalize();
     current_db = NULL;
 }
 
-void DbManagerFinalizeRefDb(void) {
-    if (ref_db) ref_db->Finalize();
-    ref_db = NULL;
-}
-
 int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
     return current_db->CreateSolvingTier(tier, size);
+}
+
+int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size) {
+    return current_db->CreateConcurrentSolvingTier(tier, size);
 }
 
 int DbManagerFlushSolvingTier(void *aux) {
@@ -123,12 +99,76 @@ int DbManagerSetRemoteness(Position position, int remoteness) {
     return current_db->SetRemoteness(position, remoteness);
 }
 
+int DbManagerSetValueRemoteness(Position position, Value value,
+                                int remoteness) {
+    return current_db->SetValueRemoteness(position, value, remoteness);
+}
+
+bool DbManagerMaximizeValueRemoteness(Position position, Value value,
+                                      int remoteness,
+                                      int (*compare)(Value v1, int r1, Value v2,
+                                                     int r2)) {
+    return current_db->MaximizeValueRemoteness(position, value, remoteness,
+                                               compare);
+}
+
+int DbManagerDecrementNumUndecidedChildren(Position position) {
+    return current_db->DecrementNumUndecidedChildren(position);
+}
+
+int DbManagerClearNumUndecidedChildren(Position position) {
+    return current_db->ClearNumUndecidedChildren(position);
+}
+
 Value DbManagerGetValue(Position position) {
     return current_db->GetValue(position);
 }
 
 int DbManagerGetRemoteness(Position position) {
     return current_db->GetRemoteness(position);
+}
+
+int DbManagerGetNumUndecidedChildren(Position position) {
+    return current_db->GetNumUndecidedChildren(position);
+}
+
+int DbManagerSegmentationMaxNumBuffers(void) {
+    return current_db->segmentation.MaxNumBuffers();
+}
+
+int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
+                                       int64_t size) {
+    return current_db->segmentation.CreateBuffers(tier, num_segments, size);
+}
+
+int DbManagerSegmentationLoad(int buf_idx, int seg_idx) {
+    return current_db->segmentation.Load(buf_idx, seg_idx);
+}
+
+int DbManagerSegmentationFlush(int buf_idx, int seg_idx) {
+    return current_db->segmentation.Flush(buf_idx, seg_idx);
+}
+
+int DbManagerSegmentationFreeBuffers(void) {
+    return current_db->segmentation.FreeBuffers();
+}
+
+Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset) {
+    return current_db->segmentation.GetValue(buf_idx, offset);
+}
+
+int DbManagerSegmentationGetRemoteness(int buf_idx, int64_t offset) {
+    return current_db->segmentation.GetRemoteness(buf_idx, offset);
+}
+
+void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
+                                             Value value, int remoteness) {
+    current_db->segmentation.SetValueRemoteness(buf_idx, offset, value,
+                                                remoteness);
+}
+
+int DbManagerSegmentationConsolidate(int64_t tier_size, int num_segments) {
+    return current_db->segmentation.Consolidate(tier_size, num_segments);
 }
 
 bool DbManagerCheckpointExists(Tier tier) {
@@ -148,8 +188,12 @@ int DbManagerCheckpointRemove(Tier tier) {
     return current_db->CheckpointRemove(tier);
 }
 
-intptr_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
     return current_db->TierMemUsage(tier, size);
+}
+
+size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
+    return current_db->ConcurrentTierMemUsage(tier, size);
 }
 
 int DbManagerLoadTier(Tier tier, int64_t size) {
@@ -186,17 +230,7 @@ int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
 
 int DbManagerGameStatus(void) { return current_db->GameStatus(); }
 
-int DbManagerRefProbeInit(DbProbe *probe) { return ref_db->ProbeInit(probe); }
-
-int DbManagerRefProbeDestroy(DbProbe *probe) {
-    return ref_db->ProbeDestroy(probe);
-}
-Value DbManagerRefProbeValue(DbProbe *probe, TierPosition tier_position) {
-    return ref_db->ProbeValue(probe, tier_position);
-}
-int DbManagerRefProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    return ref_db->ProbeRemoteness(probe, tier_position);
-}
+const char *DbManagerGetPath(void) { return current_db->GetPath(); }
 
 // -----------------------------------------------------------------------------
 

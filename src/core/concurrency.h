@@ -6,8 +6,8 @@
  * @brief A convenience library for OpenMP pragmas and concurrent data type
  * definitions that work in both single-threaded and multithreaded GamesmanOne
  * builds.
- * @version 1.1.0
- * @date 2025-04-23
+ * @version 1.2.0
+ * @date 2025-05-27
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,15 +37,7 @@
 #include <stdatomic.h>  // atomic_bool, atomic_int
 
 #define PRAGMA(X) _Pragma(#X)
-
-#define PRAGMA_OMP_PARALLEL PRAGMA(omp parallel)
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp for schedule(dynamic, k))
-#define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k) PRAGMA(omp for schedule(monotonic:dynamic, k))
-
-#define PRAGMA_OMP_PARALLEL_FOR PRAGMA(omp parallel for)
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k) PRAGMA(omp parallel for schedule(dynamic, k))
-
-#define PRAGMA_OMP_CRITICAL(name) PRAGMA(omp critical(name))
+#define PRAGMA_OMP(expression) PRAGMA(omp expression)
 
 typedef atomic_bool ConcurrentBool;
 typedef atomic_int ConcurrentInt;
@@ -55,14 +47,7 @@ typedef atomic_size_t ConcurrentSizeType;
 
 // The following macros do nothing.
 
-#define PRAGMA_OMP_PARALLEL
-#define PRAGMA_OMP_FOR_SCHEDULE_DYNAMIC(k)
-#define PRAGMA_OMP_FOR_SCHEDULE_MONOTONIC_DYNAMIC(k)
-
-#define PRAGMA_OMP_PARALLEL_FOR
-#define PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(k)
-
-#define PRAGMA_OMP_CRITICAL(name)
+#define PRAGMA_OMP(expression)
 
 typedef bool ConcurrentBool;
 typedef int ConcurrentInt;
@@ -125,6 +110,18 @@ int ConcurrentIntLoad(const ConcurrentInt *ci);
  * @return The value to store.
  */
 void ConcurrentIntStore(ConcurrentInt *ci, int val);
+
+/**
+ * @brief Replaces the value pointed by \p ci with the maximum of its original
+ * value and \p val and returns the original value.
+ *
+ * @param ci Pointer to the ConcurrentInt variable to store the maximum value
+ * into.
+ * @param val Another value.
+ * @return The value pointed by \p ci immediately preceding the effects of this
+ * function.
+ */
+int ConcurrentIntMax(ConcurrentInt *ci, int val);
 
 /**
  * @brief Initializes the ConcurrentSizeType variable at \p cs to \p val.

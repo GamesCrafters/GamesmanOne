@@ -56,6 +56,25 @@ typedef Int64HashMapIterator TierHashMapIterator;
  */
 void TierHashMapInit(TierHashMap *map, double max_load_factor);
 
+/**
+ * @brief Initializes the given \p map to an empty map with maximum load
+ * factor \p max_load_factor using the given memory \p allocator .
+ *
+ * @param map Map to initialize.
+ * @param max_load_factor Set maximum load factor of \p map to this value. The
+ * hash map will automatically expand its capacity if (double)size/capacity is
+ * greater than this value. A small max_load_factor trades memory for
+ * speed whereas a large max_load_factor trades speed for memory. This value is
+ * restricted to be in the range [0.25, 0.75]. If the user passes a
+ * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
+ * value will be set to 0.25 and 0.75, respectively, regardless of the
+ * user-specified value.
+ * @param allocator Memory allocator to use. If \c NULL is passed, the effect is
+ * equivalent to calling TierHashMapInit.
+ */
+void TierHashMapInitAllocator(TierHashMap *map, double max_load_factor,
+                              GamesmanAllocator *allocator);
+
 /** @brief Destroys the Tier hash map MAP. */
 void TierHashMapDestroy(TierHashMap *map);
 

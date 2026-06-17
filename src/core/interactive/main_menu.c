@@ -1,9 +1,9 @@
 #include "core/interactive/main_menu.h"
 
 #include "core/interactive/automenu.h"
-#include "core/interactive/credits/credits.h"
 #include "core/interactive/games/games.h"
 #include "core/interactive/help/help.h"
+#include "core/interactive/open_source/open_source.h"
 
 int InteractiveMainMenu(ReadOnlyString key) {
     (void)key;  // Unused.
@@ -11,13 +11,13 @@ int InteractiveMainMenu(ReadOnlyString key) {
     static ConstantReadOnlyString items[] = {
         "List of Games",
         "GAMESMAN Help",
-        "Credits",
+        "Open Source Software Usage",
     };
     static ConstantReadOnlyString keys[] = {"g", "h", "c"};
     static const HookFunctionPointer hooks[] = {
         &InteractiveGames,
         &InteractiveHelp,
-        &InteractiveCredits,
+        &InteractiveOpenSource,
     };
     int num_items = sizeof(items) / sizeof(items[0]);
     return AutoMenu(kTitle, num_items, items, keys, hooks, NULL);

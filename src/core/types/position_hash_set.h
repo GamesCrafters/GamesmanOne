@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Position hash set.
- * @version 1.1.0
- * @date 2025-03-13
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -78,12 +78,13 @@ void PositionHashSetDestroy(PositionHashSet *set);
 bool PositionHashSetContains(PositionHashSet *set, Position position);
 
 /**
- * @brief Adds \p position to the given \p set.
+ * @brief Adds \p position to the given \p set or does nothing if \p set already
+ * contains \p position .
  *
- * @param set Set to add \p key to.
- * @param position Position to add to \p set.
- * @return true on success,
- * @return false otherwise.
+ * @param set Set to add \p position into.
+ * @param position Position to be added to \p set.
+ * @return \c true if \p position was added into \p set as a new key, or
+ * @return \c false if \p set already contains \p position or an error occurred.
  */
 bool PositionHashSetAdd(PositionHashSet *set, Position position);
 

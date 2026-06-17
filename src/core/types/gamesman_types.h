@@ -24,8 +24,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_GAMESMAN_TYPES_H_
-#define GAMESMANONE_CORE_GAMESMAN_TYPES_H_
+#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_
+#define GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_
 
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -40,13 +40,13 @@
 #include "core/types/solver/solver_option.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_map.h"
-#include "core/types/tier_hash_map_sc.h"
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_array.h"
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/tier_queue.h"
 #include "core/types/tier_stack.h"
+#include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 
-#endif  // GAMESMANONE_CORE_GAMESMAN_TYPES_H_
+#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_TYPES_H_

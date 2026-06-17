@@ -9,8 +9,8 @@
  * length equal to the size of the given tier. The array is block-compressed
  * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
  * random access) library.
- * @version 1.1.2
- * @date 2025-04-26
+ * @version 1.2.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -53,12 +53,12 @@ typedef struct ArrayDbOptions {
 
     /** LZMA compression level. Ranges from 0 (store) to 9 (ultra). Using levels
      * 7-9 may increase memory usage. Default: 6. */
-    int compression_level;
+    int lzma_level;
 
     /** Set this to 1 to enable extreme LZMA compression, which slightly
      * improves compression ratio at the cost of significantly increased
      * (typically doubled) compression time. */
-    int extreme_compression;
+    int lzma_extreme;
 } ArrayDbOptions;
 
 /**

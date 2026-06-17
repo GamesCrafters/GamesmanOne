@@ -24,6 +24,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef GAMESMANONE_CONFIG_H_
+#define GAMESMANONE_CONFIG_H_
+
+// clang-format off
+
 /**
  * @brief Version of GamesmanOne.
  */
@@ -39,3 +44,5 @@
  * to 64.
  */
 #define GM_CACHE_LINE_SIZE @GamesmanOne_CACHE_LINE_SIZE@
+
+#endif  // GAMESMANONE_CONFIG_H_

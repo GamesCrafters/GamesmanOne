@@ -33,10 +33,9 @@
 
 /** @brief Tier manager to worker MPI commands. */
 enum TierMpiCommands {
-    kTierMpiCommandSolve,      /**< Solve the provided tier. */
-    kTierMpiCommandForceSolve, /**< Force Re-solve the provided tier. */
-    kTierMpiCommandSleep,      /**< Sleep for 1 second. */
-    kTierMpiCommandTerminate,  /**< Terminate the worker. */
+    kTierMpiCommandSolve,     /**< Solve the provided tier. */
+    kTierMpiCommandSleep,     /**< Sleep for 1 second. */
+    kTierMpiCommandTerminate, /**< Terminate the worker. */
 };
 
 /** @brief Tier worker to manager MPI requests. */
@@ -50,8 +49,7 @@ enum TierMpiRequests {
 /** @brief Packed manager-to-worker message. */
 typedef struct TierMpiManagerMessage {
     /**
-     * Tier to solve; ignored if command is not one of \c kTierMpiCommandSolve
-     * and \c kTierMpiCommandForceSolve.
+     * Tier to solve; ignored if command is not \c kTierMpiCommandSolve .
      */
     Tier tier;
     int command; /**< Manager-to-worker command. */
@@ -74,9 +72,8 @@ typedef struct TierMpiWorkerMessage {
  *
  * @param dest Rank of the worker node.
  * @param tier Tier to solve.
- * @param force Force re-solve \p tier if set to true.
  */
-void TierMpiManagerSendSolve(int dest, Tier tier, bool force);
+void TierMpiManagerSendSolve(int dest, Tier tier);
 
 /**
  * @brief Send a "sleep" command to the worker node of rank \p dest.

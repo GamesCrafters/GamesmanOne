@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,8 +38,8 @@
  *
  * @param api Game-specific tier solver API functions.
  * @param tier Tier to solve.
- * @param options Pointer to a \c TierWorkerSolveOptions object which contains
- * the options.
+ * @param options Pointer to a \c TierSolverSolveOptions object which contains
+ * the solving options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
@@ -47,7 +47,7 @@
  * @return non-zero error code otherwise.
  */
 int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
-                              const TierWorkerSolveOptions *options,
+                              const TierSolverSolveOptions *options,
                               bool *solved);
 
 #endif  // GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_VI_H_

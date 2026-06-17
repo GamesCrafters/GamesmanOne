@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HJSON_H_
 #define GAMESMANONE_CORE_HEADLESS_HJSON_H_
 
-#include <json-c/json_object.h>  // json_object
+#include <json_object.h>  // json_object
 
 #include "core/types/gamesman_types.h"
 

@@ -18,7 +18,6 @@ target_link_libraries(gamesman PRIVATE common_flags)
 
 # Check dependent packages.
 list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res") # Add directory for additional libraries
-find_package(json-c REQUIRED CONFIG) # json-c
 if(NOT DISABLE_OPENMP) # OpenMP
   find_package(OpenMP)
   if(OpenMP_FOUND)
@@ -41,7 +40,7 @@ add_subdirectory(games)
 add_subdirectory(libs)
 
 # Link libraries.
-target_link_libraries(gamesman PRIVATE json-c::json-c) # json-c
+target_link_libraries(gamesman PRIVATE json-c) # json-c
 if(OpenMP_FOUND) # OpenMP (optional)
   target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
 endif()

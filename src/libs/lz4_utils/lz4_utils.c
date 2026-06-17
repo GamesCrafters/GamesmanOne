@@ -27,6 +27,7 @@
 #include "lz4_utils.h"
 
 #include <lz4frame.h>  // LZ4F_*
+#include <stdbool.h>   // bool, true, false
 #include <stddef.h>    // size_t, NULL
 #include <stdint.h>    // int64_t
 #include <stdio.h>     // FILE, fopen, fread, fclose
@@ -94,7 +95,7 @@ static int64_t CompressStreamsInternal(const void *const *in,
     // Stream file.
     for (int i = 0; i < n; ++i) {
         size_t processed = 0;  // #Bytes processed from in[i]
-        while (1) {
+        for (;;) {
             const size_t read_size =
                 SizeMin(inbuf_size, in_sizes[i] - processed);
             if (read_size == 0) break;  // Nothing left in input buffer.
@@ -189,7 +190,7 @@ static int64_t CompressFileInternal(FILE *f_in, FILE *f_out, LZ4F_cctx *ctx,
     if (n != header_size) return -3;
 
     // Stream file.
-    while (1) {
+    for (;;) {
         const size_t read_size = fread(inbuf, 1, inbuf_size, f_in);
         if (read_size == 0) break;  // Nothing left to read from input file.
         size_t compressed_size = LZ4F_compressUpdate(ctx, outbuf, outbuf_size,
@@ -256,13 +257,138 @@ int64_t Lz4UtilsCompressFile(const char *ifname, int level,
     return ret;
 }
 
+// ============================= Lz4UtilsOutStream =============================
+
+struct Lz4UtilsOutStream {
+    FILE *f_out; /**< Output file. */
+    LZ4F_preferences_t preferences;
+    LZ4F_cctx *ctx;
+    void *buf;
+    size_t bufsize;
+    int64_t outsize;
+};
+
+// ========================== Lz4UtilsOutStreamCreate ==========================
+
+Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level) {
+    bool success = true;
+    if (ofname == NULL) return NULL;
+
+    Lz4UtilsOutStream *ret =
+        (Lz4UtilsOutStream *)calloc(1, sizeof(Lz4UtilsOutStream));
+    if (!ret) return NULL;
+
+    ret->f_out = fopen(ofname, "wb");
+    if (ret->f_out == NULL) {
+        fprintf(stderr,
+                "Lz4UtilsOutStreamCreate: failed to open output file %s\n",
+                ofname);
+        success = false;
+        goto _bailout;
+    }
+
+    const LZ4F_errorCode_t ctx_creation =
+        LZ4F_createCompressionContext(&ret->ctx, LZ4F_VERSION);
+    ret->preferences = kLz4PreferencesTemplate;
+    ret->preferences.compressionLevel = level;
+    ret->bufsize = LZ4F_compressBound(kInChunkSize, &ret->preferences);
+    ret->buf = malloc(ret->bufsize);
+    if (Lz4fIsErrorExplained(ctx_creation) || ret->buf == NULL) {
+        success = false;
+        goto _bailout;
+    }
+
+    // Write frame header.
+    const size_t header_size =
+        LZ4F_compressBegin(ret->ctx, ret->buf, ret->bufsize, &ret->preferences);
+    if (Lz4fIsErrorExplained(header_size)) {
+        success = false;
+        goto _bailout;
+    }
+
+    ret->outsize += header_size;
+    size_t written = fwrite(ret->buf, 1, header_size, ret->f_out);
+    if (written != header_size) {
+        success = false;
+        goto _bailout;
+    }
+
+_bailout:
+    if (!success) {
+        free(ret->buf);
+        LZ4F_freeCompressionContext(ret->ctx); /* supports free on NULL */
+        if (ret->f_out) fclose(ret->f_out);
+        free(ret);
+        ret = NULL;
+    }
+
+    return ret;
+}
+
+// =========================== Lz4UtilsOutStreamRun ===========================
+
+int64_t Lz4UtilsOutStreamRun(Lz4UtilsOutStream *stream, const void *in,
+                             size_t in_size) {
+    int64_t begin_outsize = stream->outsize;
+    size_t processed = 0;
+    while (processed < in_size) {
+        // Process at most kInChunkSize bytes or the rest of remaining bytes
+        // left in the input buffer.
+        const size_t read_size = SizeMin(kInChunkSize, in_size - processed);
+        const void *next_in = GenericPointerShift(in, processed);
+        size_t compressed_size =
+            LZ4F_compressUpdate(stream->ctx, stream->buf, stream->bufsize,
+                                next_in, read_size, NULL);
+        if (Lz4fIsErrorExplained(compressed_size)) return -2;
+        size_t written = fwrite(stream->buf, 1, compressed_size, stream->f_out);
+        if (written != compressed_size) return -3;
+        processed += read_size;
+        stream->outsize += compressed_size;
+    }
+
+    return stream->outsize - begin_outsize;
+}
+
+// ========================== Lz4UtilsOutStreamClose ==========================
+
+int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream) {
+    if (stream == NULL) return 0;
+
+    int64_t ret = 0;
+
+    // Flush whatever remains within internal buffers.
+    const size_t compressed_size =
+        LZ4F_compressEnd(stream->ctx, stream->buf, stream->bufsize, NULL);
+
+    if (Lz4fIsErrorExplained(compressed_size)) {
+        ret = -2;
+    } else {
+        size_t written = fwrite(stream->buf, 1, compressed_size, stream->f_out);
+        if (written != compressed_size) {
+            ret = -3;
+        } else {
+            stream->outsize += compressed_size;
+            ret = stream->outsize;
+        }
+    }
+
+    // Unconditional cleanup
+    free(stream->buf);
+    LZ4F_freeCompressionContext(stream->ctx);
+    fclose(stream->f_out);
+    free(stream);
+
+    return ret;
+}
+
 // ===================== Lz4UtilsDecompressFileMultistream =====================
 
 // LZ4F_decompress has a somewhat confusing API. The 3rd
 // (dstSizePtr) and the 5th (srcSizePtr) parameters are used as
-// input and output parameters at the same time. The initially hold
+// input and output parameters at the same time. They initially hold
 // the CAPACITIES of the buffers and are set to the number of
 // ACTUALLY CONSUMED bytes after the function call.
+// Note that src is the read buffer for compressed file contents from f_in.
 static int64_t DecompressFileInternal(FILE *f_in, void **out,
                                       const size_t *out_sizes, int n,
                                       LZ4F_dctx *dctx, void *src,
@@ -276,6 +402,7 @@ static int64_t DecompressFileInternal(FILE *f_in, void **out,
     }
     if (out_index == n) return total_size;
 
+    // While in this loop, there are more compressed contents in f_in to process
     while (lz4f_code != 0) {
         size_t read_size =
             fread(src, 1, src_capacity, f_in);  // Load more input
@@ -283,12 +410,18 @@ static int64_t DecompressFileInternal(FILE *f_in, void **out,
         const void *const src_end = (const char *)src + read_size;
         if (read_size == 0 || ferror(f_in)) return -3;
 
-        // Continue while there is more input in buffer and the frame isn't
+        // While in this loop, there is more input in buffer and the frame isn't
         // over.
         while (src_begin < src_end && lz4f_code != 0) {
-            // Distribute decompressed data across streams in a round-robin
-            // manner
-            for (; out_index < n; ++out_index, out_offset = 0) {
+            if (out_index >= n) {
+                // Output buffers exhausted, but frame data remains.
+                // Prevent infinite loop by returning an error code.
+                return -5;
+            }
+
+            // While in this loop, the contents in src have not been fully
+            // consumed and we still have at least one output buffer to fill.
+            while (out_index < n) {
                 void *out_begin =
                     GenericPointerShift(out[out_index], out_offset);
                 size_t dest_buffer_size = out_sizes[out_index] - out_offset;
@@ -300,8 +433,12 @@ static int64_t DecompressFileInternal(FILE *f_in, void **out,
                 total_size += (int64_t)dest_buffer_size;
                 src_begin = GenericPointerShift(src_begin, src_buffer_size);
 
-                // Break early if input is fully consumed for this round
+                // Break if all bytes in src are fully consumed for this round
                 if (src_begin >= src_end) break;
+
+                // Otherwise, we move on to the next output buffer
+                ++out_index;
+                out_offset = 0;
             }
         }
     }
@@ -355,4 +492,115 @@ int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size) {
     const size_t out_sizes[] = {out_size};
 
     return Lz4UtilsDecompressFileMultistream(ifname, out_buffers, out_sizes, 1);
+}
+
+// ============================= Lz4UtilsInStream =============================
+
+struct Lz4UtilsInStream {
+    FILE *f_in;
+    LZ4F_dctx *dctx;
+    void *buf;
+    size_t buf_offset;
+    size_t buf_size;
+    size_t lz4f_code;
+};
+
+// ========================== Lz4UtilsInStreamCreate ==========================
+
+Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname) {
+    if (ifname == NULL) return NULL;
+    Lz4UtilsInStream *ret =
+        (Lz4UtilsInStream *)calloc(1, sizeof(Lz4UtilsInStream));
+    if (!ret) return NULL;
+
+    ret->f_in = fopen(ifname, "rb");
+    if (ret->f_in == NULL) {
+        free(ret);
+        return NULL;
+    }
+
+    ret->buf = malloc(kInChunkSize);
+    if (ret->buf == NULL) {
+        fclose(ret->f_in);
+        free(ret);
+        return NULL;
+    }
+
+    size_t const dctx_status =
+        LZ4F_createDecompressionContext(&ret->dctx, LZ4F_VERSION);
+    if (Lz4fIsErrorExplained(dctx_status)) {
+        free(ret->buf);
+        fclose(ret->f_in);
+        free(ret);
+        return NULL;
+    }
+
+    ret->lz4f_code = 1;
+
+    return ret;
+}
+
+// ============================ Lz4UtilsInStreamRun ============================
+
+int64_t Lz4UtilsInStreamRun(Lz4UtilsInStream *stream, void *out,
+                            size_t out_size) {
+    if (stream == NULL || out == NULL) return -1;
+
+    size_t initial_out_size = out_size;
+
+    // If frame is already complete, return 0 (EOF)
+    if (stream->lz4f_code == 0 && stream->buf_offset >= stream->buf_size) {
+        return 0;
+    }
+
+    while (stream->lz4f_code != 0 && out_size > 0) {
+        // Decompress whatever is currently available in the buffer
+        while (stream->lz4f_code != 0 &&
+               stream->buf_offset < stream->buf_size && out_size > 0) {
+            size_t dest_buffer_size = out_size;
+            size_t src_buffer_size = stream->buf_size - stream->buf_offset;
+            void *src_begin =
+                GenericPointerShift(stream->buf, stream->buf_offset);
+            stream->lz4f_code =
+                LZ4F_decompress(stream->dctx, out, &dest_buffer_size, src_begin,
+                                &src_buffer_size, NULL);
+            if (Lz4fIsErrorExplained(stream->lz4f_code)) return -4;
+
+            out = GenericPointerShift(out, dest_buffer_size);
+            out_size -= dest_buffer_size;
+            stream->buf_offset += src_buffer_size;
+        }
+
+        if (stream->lz4f_code == 0 || out_size == 0) break;
+
+        // Fetch more data if internal buffer is exhausted
+        if (stream->buf_offset >= stream->buf_size) {
+            stream->buf_offset = 0;
+            stream->buf_size =
+                fread(stream->buf, 1, kInChunkSize, stream->f_in);
+            if (ferror(stream->f_in)) return -3;
+            if (stream->buf_size == 0) {
+                // Unexpected EOF while frame is incomplete
+                if (stream->lz4f_code != 0) return -3;
+                break;
+            }
+        }
+    }
+
+    return (int64_t)(initial_out_size - out_size);
+}
+
+// =========================== Lz4UtilsInStreamClose ===========================
+
+int Lz4UtilsInStreamClose(Lz4UtilsInStream *stream) {
+    if (stream == NULL) return 0;
+    free(stream->buf);
+    fclose(stream->f_in);
+    LZ4F_errorCode_t code = LZ4F_freeDecompressionContext(stream->dctx);
+    if (Lz4fIsErrorExplained(code)) {
+        return -1;
+    }
+    free(stream);
+
+    return 0;
 }

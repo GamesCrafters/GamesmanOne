@@ -7,8 +7,8 @@
  * @details A Database is an abstract type of a database. To implement a new
  * Database, fully implement all member functions and set function pointers.
  * All member functions are required unless otherwise noted.
- * @version 1.2.0
- * @date 2024-11-11
+ * @version 1.3.0
+ * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,7 +32,7 @@
 
 #include <stdbool.h>  // bool
 #include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, intptr_t
+#include <stdint.h>   // int64_t
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
@@ -41,8 +41,8 @@
 enum DatabaseConstants {
     kDbNameLengthMax = 31,       /**< Maximum length of a DB's internal name. */
     kDbFormalNameLengthMax = 63, /**< Max length of a DB's formal name. */
-    /** Max length of a DB file's name not including the extension. */
-    kDbFileNameLengthMax = 63,
+    kDbFileNameLengthMax =
+        63, /**< Max length of a DB file's name not including the extension. */
 };
 
 /** @brief Enumeration of all possible status of a tier's database file. */
@@ -60,6 +60,7 @@ enum DatabaseGameStatus {
     kDbGameStatusCheckError, /**< Error encountered. */
 };
 
+/** @brief Tier name getter function signature. */
 typedef int (*GetTierNameFunc)(Tier tier,
                                char name[static kDbFileNameLengthMax + 1]);
 
@@ -104,16 +105,54 @@ typedef struct Database {
     // Solving API
 
     /**
-     * @brief Creates an in-memory DB for solving of the given TIER of SIZE
-     * positions.
+     * @brief Creates an in-memory DB for solving the given \p tier of size
+     * \p size positions.
+     *
+     * @note This function is part of the Solving API.
+     *
+     * @note In-memory databases created using this function are not thread-safe
+     * and the following functions, when called on the same position, must be
+     * synchronized externally:
+     *
+     *     - SetValue
+     *
+     *     - SetRemoteness
+     *
+     *     - SetValueRemoteness
+     *
+     *     - MaximizeValueRemoteness
+     *
+     *     - DecrementNumUndecidedChildren
+     *
+     *     - ClearNumUndecidedChildren
+     *
+     *     - GetValue
+     *
+     *     - GetRemoteness
+     *
+     *     - GetNumUndecidedChildren
+     *
+     * @param tier Tier to be solved and stored in memory.
+     * @param size Size of \p tier in number of positions.
+     *
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
+     */
+    int (*CreateSolvingTier)(Tier tier, int64_t size);
+
+    /**
+     * @brief Creates a multi-reader multi-writer concurrent in-memory DB for
+     * solving the given \p tier of size \p size positions.
+     *
      * @note This function is part of the Solving API.
      *
      * @param tier Tier to be solved and stored in memory.
-     * @param size Size of the TIER in number of Positions.
+     * @param size Size of \p tier in number of positions.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
-    int (*CreateSolvingTier)(Tier tier, int64_t size);
+    int (*CreateConcurrentSolvingTier)(Tier tier, int64_t size);
 
     /**
      * @brief Flushes the in-memory DB to disk.
@@ -121,7 +160,8 @@ typedef struct Database {
      *
      * @param aux Auxiliary parameter.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FlushSolvingTier)(void *aux);
 
@@ -130,7 +170,8 @@ typedef struct Database {
      * been created.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*FreeSolvingTier)(void);
 
@@ -146,7 +187,8 @@ typedef struct Database {
      * @brief Sets the value of POSITION to VALUE.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetValue)(Position position, Value value);
 
@@ -154,9 +196,74 @@ typedef struct Database {
      * @brief Sets the remoteness of POSITION to REMOTENESS.
      * @note This function is part of the Solving API.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*SetRemoteness)(Position position, int remoteness);
+
+    /**
+     * @brief Sets the \p value and \p remoteness of \p position .
+     * @note This function is part of the Solving API.
+     *
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
+     */
+    int (*SetValueRemoteness)(Position position, Value value, int remoteness);
+
+    /**
+     * @brief Replaces the value and remoteness of \p position with the maximum
+     * of its original value-remoteness pair and the one provided by \p value
+     * and \p remoteness . The order of value-remoteness pairs are
+     * determined by the \p compare function.
+     *
+     * @param position Position to update.
+     * @param value Candidate value.
+     * @param remoteness Candidate remoteness.
+     * @param compare Pointer to a value-remoteness pair comparison function
+     * that takes in two value-remoteness pairs (v1, r1) and (v2, r2) and
+     * returns a negative integer if (v1, r1) < (v2, r2), a positive integer if
+     * (v1, r1) > (v2, r2), or zero if they are equal.
+     * @return \c true if the provided \p value - \p remoteness pair is greater
+     * than the original value-remoteness pair and the old pair is replaced;
+     * @return \c false otherwise.
+     */
+    bool (*MaximizeValueRemoteness)(Position position, Value value,
+                                    int remoteness,
+                                    int (*compare)(Value v1, int r1, Value v2,
+                                                   int r2));
+
+    /**
+     * @brief Subtracts one from the number of undecided children of \p position
+     * and returns the value immediately preceding the operation if the value of
+     * the position is \c kUndecided and its number of undecided children is at
+     * least one. Does nothing otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children immediately preceding the
+     * subtraction, or
+     * @return 0 if the operation is not performed.
+     */
+    int (*DecrementNumUndecidedChildren)(Position position);
+
+    /**
+     * @brief Sets the number of undecided children of \p position to zero and
+     * returns the value immediately preceding the operation if the value of the
+     * position is \c kUndecided . Does nothing otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children immediately preceding the
+     * operation, or
+     * @return 0 if the operation is not performed.
+     */
+    int (*ClearNumUndecidedChildren)(Position position);
 
     /**
      * @brief Returns the value of the given \p position from in-memory DB.
@@ -175,6 +282,146 @@ typedef struct Database {
      * @return \c kErrorRemoteness otherwise.
      */
     int (*GetRemoteness)(Position position);
+
+    /**
+     * @brief Returns the number of undecided children of \p position if its
+     * value is \c kUndecided . Returns 0 otherwise.
+     *
+     * @note By convention, we overload the remoteness field of a record as the
+     * counter for the number of undecided children of that position when its
+     * value is \c kUndecided .
+     *
+     * @param position Target position.
+     * @return The number of undecided children of \p position if its value is
+     * \c kUndecided , or
+     * @return 0 otherwise.
+     */
+    int (*GetNumUndecidedChildren)(Position position);
+
+    /**
+     * @brief Segmentation API supports creating, saving, and loading of
+     * database segments in memory, which can be used if the solving algorithm
+     * supports streaming, greatly reducing the amount of memory required to
+     * load the entire database at once.
+     */
+    struct {
+        /**
+         * @brief Returns the maximum number of segment buffers supported by the
+         * Database.
+         *
+         * @return Maximum number of segment buffers supported.
+         */
+        int (*MaxNumBuffers)(void);
+
+        /**
+         * @brief Make \p num_segments segment buffers available for solving the
+         * given \p tier , where each segment is of \p size positions
+         *
+         * @param tier Tier to be solved.
+         * @param num_segments Number of segment buffers to create.
+         * @param size Number of positions in each segment.
+         * @return \c kNoError on success,
+         * @return \c kMallocFailureError on memory allocation failure, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*CreateBuffers)(Tier tier, int num_segments, int64_t size);
+
+        /**
+         * @brief Loads the \p seg_idx -th segment from disk into the \p buf_idx
+         * -th segment buffer.
+         *
+         * @param buf_idx Index of the destination segment buffer.
+         * @param seg_idx Index of the segment to load.
+         * @return \c kNoError on success,
+         * @return \c kIllegalArgumentError if \p buf_idx is not active,
+         * @return \c kFileSystemError if \p seg_idx does not exist on disk or
+         * failed to read the segment from disk, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Load)(int buf_idx, int seg_idx);
+
+        /**
+         * @brief Flushes the contents of the \p buf_idx -th segment buffer to
+         * disk as the \p seg_idx -th segment of the current tier.
+         *
+         * @param buf_idx Index of the source segment buffer.
+         * @param seg_idx Index of the segment.
+         * @return \c kNoError on success,
+         * @return \c kIllegalArgument if \p buf_idx is not active,
+         * @return \c kFileSystemError if failed to write to disk, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Flush)(int buf_idx, int seg_idx);
+
+        /**
+         * @brief Deallocates all active segment buffers.
+         *
+         * @return \c kNoError on success, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*FreeBuffers)(void);
+
+        /**
+         * @brief Returns the value of the position at the given \p offset
+         * relative to the first position in the segment currently loaded in the
+         * \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @return Value of the position at the given \p offset in the target
+         * segment buffer.
+         */
+        Value (*GetValue)(int buf_idx, int64_t offset);
+
+        /**
+         * @brief Returns the remoteness of the position at the given \p offset
+         * relative to the first position in the segment currently loaded in the
+         * \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @return Remoteness of the position at the given \p offset in the
+         * target segment buffer.
+         */
+        int (*GetRemoteness)(int buf_idx, int64_t offset);
+
+        /**
+         * @brief Sets the value and remoteness of the position at the given
+         * \p offset relative to the first position in the segment currently
+         * loaded in the \p buf_idx -th segment buffer.
+         *
+         * @param buf_idx Index of the segment buffer, which is assumed to be
+         * active.
+         * @param offset Position offset relative to the first position in the
+         * segment loaded in the target segment buffer. The offset is assumed to
+         * be valid.
+         * @param value New value.
+         * @param remoteness New remoteness.
+         */
+        void (*SetValueRemoteness)(int buf_idx, int64_t offset, Value value,
+                                   int remoteness);
+
+        /**
+         * @brief Merges all \p num_segments segments on disk into the normal
+         * Database archive. The output is equivalent to the output of
+         * \c Database::FlushSolvingTier in the non-segmented methods.
+         *
+         * @param tier_size Number of positions in the solving tier.
+         * @param num_segments Total number of segments, where all segments are
+         * assumed to have been solved and flushed to disk.
+         * @return \c kNoError on success,
+         * @return \c kFileSystemError if any file operation such as reading a
+         * segment or saving the output failed, or
+         * @return other non-zero error code otherwise.
+         */
+        int (*Consolidate)(int64_t tier_size, int num_segments);
+    } segmentation;
 
     /**
      * @brief Returns whether there exists a checkpoint for \p tier. A
@@ -231,9 +478,20 @@ typedef struct Database {
      *
      * @param tier Tier to be loaded.
      * @param size Size of \p tier in number of positions.
-     * @return An upper bound on memory usage.
+     * @return An upper bound on memory usage in bytes.
      */
-    intptr_t (*TierMemUsage)(Tier tier, int64_t size);
+    size_t (*TierMemUsage)(Tier tier, int64_t size);
+
+    /**
+     * @brief Returns an upper bound, in bytes, on the amount of memory that
+     * will be used to store the a concurrent solving tier \p tier of \p size
+     * positions.
+     *
+     * @param tier Concurrent solving tier to create in memory.
+     * @param size Size of \p tier in number of positions.
+     * @return An upper bound on memory usage in bytes.
+     */
+    size_t (*ConcurrentTierMemUsage)(Tier tier, int64_t size);
 
     /**
      * @brief Loads the given \p tier of \p size positions into memory.
@@ -246,24 +504,34 @@ typedef struct Database {
     int (*LoadTier)(Tier tier, int64_t size);
 
     /**
-     * @brief Unloads the given \p tier from memory if it was previously loaded.
+     * @brief Unloads the given \p tier from memory if it was previously loaded
+     * via Database::LoadTier.
      *
-     * @return \c kNoError on success, or
-     * @return non-zero error code otherwise.
+     * @note \c kIllegalArgumentError will be returned if this function is used
+     * to unload the solving tier.
+     *
+     * @return \c kNoError on success,
+     * @return \c kIllegalArgumentError if \p tier is the solving tier, which
+     * can only be unloaded using Database::FreeSolvingTier, or
+     * @return any other non-zero error code otherwise.
      */
     int (*UnloadTier)(Tier tier);
 
     /**
-     * @brief Returns whether the given \p tier has been loaded.
+     * @brief Returns \c true if \p tier has been loaded via Database::LoadTier
+     * or if \p tier is the solving tier and has been created via
+     * Database::CreateSolvingTier, Database::CreateConcurrentSolvingTier, or
+     * Database::CheckpointLoad. Returns \c false otherwise.
      *
-     * @return \c kNoError on success, or
-     * @return non-zero error code otherwise.
+     * @return \c true if \p tier has been loaded,
+     * @return \c false otherwise.
      */
     bool (*IsTierLoaded)(Tier tier);
 
     /**
      * @brief Returns the value of position \p position in tier \p tier if
-     * \p tier has been loaded. Returns \c kErrorValue otherwise.
+     * \p tier has been created as the solving tier or if \p tier has been
+     * loaded via Database::LoadTier. Returns \c kErrorValue otherwise.
      *
      * @param tier A loaded tier.
      * @param position Query the value of this position.
@@ -275,7 +543,8 @@ typedef struct Database {
 
     /**
      * @brief Returns the remoteness of position \p position in tier \p tier if
-     * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
+     * \p tier has been created as the solving tier or if \p tier has been
+     * loaded via Database::LoadTier. Returns \c kErrorRemoteness otherwise.
      *
      * @param tier A loaded tier.
      * @param position Query the remoteness of this position.
@@ -290,14 +559,16 @@ typedef struct Database {
     /**
      * @brief Initializes the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeInit)(DbProbe *probe);
 
     /**
      * @brief Frees the given Database PROBE.
      *
-     * @return 0 on success, non-zero error code otherwise.
+     * @return \c kNoError on success,
+     * @return non-zero error code otherwise.
      */
     int (*ProbeDestroy)(DbProbe *probe);
 
@@ -355,6 +626,14 @@ typedef struct Database {
      * status of the current game.
      */
     int (*GameStatus)(void);
+
+    /**
+     * @brief Returns the path the Database is initialized with.
+     *
+     * @return The path the Database is initialized with, or
+     * @return \c NULL if the Database is not initialized.
+     */
+    const char *(*GetPath)(void);
 } Database;
 
 #endif  // GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_

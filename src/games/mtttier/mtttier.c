@@ -360,7 +360,8 @@ static TierType MtttierGetTierType(Tier tier) {
 
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
-    return sprintf(name, "%" PRITier "p", tier);
+    sprintf(name, "%" PRITier "p", tier);
+    return kNoError;
 }
 
 static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position) {
@@ -399,7 +400,7 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
     return kNoError;
@@ -413,7 +414,7 @@ static int MtttierMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
     return kNoError;

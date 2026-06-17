@@ -29,19 +29,29 @@ command_exists() {
 
 # Function to install dependencies on Debian/Ubuntu
 install_debian() {
-    sudo apt update && sudo apt install -y git cmake zlib1g zlib1g-dev
+    sudo apt update && sudo apt install -y git cmake zlib1g zlib1g-dev || return 1
+    
+    # Attempt ccache separately so failure doesn't abort the setup
+    sudo apt install -y ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    return 0
 }
 
 # Function to install dependencies on RHEL/CentOS
 install_rhel() {
-    sudo dnf update && sudo dnf install -y git cmake zlib zlib-devel
+    sudo dnf update && sudo dnf install -y git cmake zlib zlib-devel || return 1
+    
+    sudo dnf install -y ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    return 0
 }
 
 # Function to install dependencies on MacOS
 install_macos() {
     # Assuming Homebrew is installed
-    xcode-select --install
-    brew install git cmake zlib llvm libomp || error_exit "brew install failed"
+    xcode-select --install 2>/dev/null # Suppress error if already installed
+    brew install git cmake zlib llvm libomp || return 1
+    
+    brew install ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    return 0
 }
 
 #########################
@@ -65,12 +75,16 @@ fi
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-# Check if --install flag is given
-if [ "$1" == "--install" ]; then
-    INSTALL_DEPENDENCIES=true
-else
-    INSTALL_DEPENDENCIES=false
-fi
+# Parse command-line arguments
+INSTALL_DEPENDENCIES=false
+
+for arg in "$@"; do
+    case $arg in
+        --install)
+            INSTALL_DEPENDENCIES=true
+            ;;
+    esac
+done
 
 # Install dependencies if requested.
 if [ "$INSTALL_DEPENDENCIES" = true ]; then
@@ -78,15 +92,15 @@ if [ "$INSTALL_DEPENDENCIES" = true ]; then
     Linux*)
         # Detect if using Debian/Ubuntu or RHEL/CentOS
         if [ -f /etc/debian_version ]; then
-            install_debian || error_exit "Failed to install dependencies on Debian/Ubuntu."
+            install_debian || error_exit "Failed to install mandatory dependencies on Debian/Ubuntu."
         elif [ -f /etc/redhat-release ]; then
-            install_rhel || error_exit "Failed to install dependencies on RHEL/CentOS."
+            install_rhel || error_exit "Failed to install mandatory dependencies on RHEL/CentOS."
         else
             error_exit "Unsupported Linux distribution."
         fi
         ;;
     Darwin*)
-        install_macos || error_exit "Failed to install dependencies on MacOS."
+        install_macos || error_exit "Failed to install mandatory dependencies on MacOS."
         ;;
     *)
         error_exit "Unsupported operating system."
@@ -101,45 +115,6 @@ command_not_found_msg="Try installing dependencies by running this script with -
 for cmd in git cmake; do
     command_exists "$cmd" || error_exit "command $cmd not found. $command_not_found_msg"
 done
-
-#################
-# Library Setup #
-#################
-
-# Initialize submodules
-git submodule update --init || error_exit "Failed to update git submodules"
-
-# Prepare library build directory
-mkdir_if_not_exist "lib-build"
-cd lib-build || error_exit "Failed to change directory to lib-build"
-
-# Build json-c
-mkdir_if_not_exist "json-c"
-cd json-c || error_exit "Failed to change directory to lib-build/json-c"
-CMAKE_FLAGS="-DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../../res -DCMAKE_BUILD_TYPE=Release"
-cmake ../../lib/json-c/ $CMAKE_FLAGS || error_exit "CMake failed to configure json-c"
-make -j || error_exit "json-c make failed"
-make install -j || error_exit "json-c make install failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Build xz
-mkdir_if_not_exist "xz"
-cd xz || error_exit "Failed to change directory to lib-build/xz"
-cmake ../../lib/xz/ $CMAKE_FLAGS || error_exit "CMake failed to configure xz"
-make -j || error_exit "xz make failed"
-make install -j || error_exit "xz make install failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Build lz4
-mkdir_if_not_exist "lz4"
-cd lz4 || error_exit "Failed to change directory to lib-build/lz4"
-cmake ../../lib/lz4/build/cmake/ $CMAKE_FLAGS || error_exit "CMake failed to configure lz4"
-make -j || error_exit "lz4 make failed"
-make install -j || error_exit "lz4 make failed"
-cd ../ || error_exit "Failed to change directory back to lib-build"
-
-# Finalize library setup
-cd ..
 
 ############################
 # Build GamesmanOne Binary #

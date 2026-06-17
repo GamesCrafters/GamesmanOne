@@ -40,6 +40,7 @@
 #include "games/gobblet/gobblet_gobblers.h"
 #include "games/kaooa/kaooa.h"
 #include "games/mallqueenschess/mallqueenschess.h"
+#include "games/mills/mills.h"
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
 #include "games/neutron/neutron.h"
@@ -53,7 +54,7 @@
 const Game *kAllGames[] = {
     &kWinkers,         &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko,
     &kDobutsuShogi,    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,
-    &kMallqueenschess, &kMkaooa,          NULL,
+    &kMallqueenschess, &kMkaooa,          &kMills,   NULL,
 };
 
 // ============================================================================

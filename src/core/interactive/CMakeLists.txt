@@ -1,9 +1,7 @@
 # Add subdirectories for each component
-add_subdirectory(credits)
+add_subdirectory(open_source)
 add_subdirectory(games)
 add_subdirectory(help)
-
-set(LIBS core_interactive_credits core_interactive_games core_interactive_help)
 
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/automenu.h
