@@ -23,6 +23,10 @@
 #include "core/types/tier_position_hash_set.h"
 #include "games/gates/gates_tier.h"
 
+#ifndef NDEBUG
+#include "core/types/database/database.h"
+#endif  // NDEBUG
+
 // NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
 
 enum {

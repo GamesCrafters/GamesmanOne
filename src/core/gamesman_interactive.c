@@ -28,7 +28,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "config.h"
 #include "core/gamesman_memory.h"
@@ -36,6 +35,10 @@
 #include "core/opening_credits.h"
 #include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+
+#ifdef NDEBUG  // Release
+#include <unistd.h>
+#endif  // NDEBUG
 
 // clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =
