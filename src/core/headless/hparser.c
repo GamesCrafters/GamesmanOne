@@ -26,16 +26,16 @@
 
 #include "core/headless/hparser.h"
 
-#include <getopt.h>  // struct option, getopt_long
-#include <stdarg.h>  // va_list, va_start, va_end
-#include <stddef.h>  // NULL
-#include <stdio.h>   // vprintf, fprintf, stderr, FILE, stdout
-#include <stdlib.h>  // exit
-#include <string.h>  // strcmp
+#include <getopt.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "config.h"
-#include "core/gamesman_headless.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_error.h"
 
 static HeadlessArguments arguments;
 static ConstantReadOnlyString HeadlessCommands[] = {

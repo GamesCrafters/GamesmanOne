@@ -36,10 +36,6 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MANAGER_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
-
 #include "core/solvers/tier_solver/tier_solver.h"
 
 /**

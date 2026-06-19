@@ -28,10 +28,11 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
 #define GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/data_structures/int64_hash_map.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 /** @brief Linear-probing Tier to int64_t hash map using Int64HashMap. */

@@ -26,11 +26,11 @@
 
 #include "core/solvers/tier_solver/tier_worker/it.h"
 
-#include <assert.h>   // static_assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // printf, fprintf, stderr
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
@@ -39,7 +39,8 @@
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_hash_set.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

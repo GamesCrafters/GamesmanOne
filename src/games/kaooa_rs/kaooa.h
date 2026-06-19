@@ -27,8 +27,6 @@
 #ifndef GAMESMANONE_GAMES_KAOOA_RS_KAOOA_H_
 #define GAMESMANONE_GAMES_KAOOA_RS_KAOOA_H_
 
-#include "core/types/gamesman_types.h"
-
 extern const Game kKaooa;
 
 #endif  // GAMESMANONE_GAMES_KAOOA_RS_KAOOA_H_

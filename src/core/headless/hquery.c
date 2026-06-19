@@ -27,19 +27,24 @@
 
 #include "core/headless/hquery.h"
 
-#include <assert.h>       // assert
-#include <json_object.h>  // json_object and related functions
-#include <stdbool.h>      // bool, true, false
-#include <stdbool.h>      // bool
-#include <stdint.h>       // int64_t
-#include <stdio.h>        // printf
+#include <assert.h>
+#include <json_object.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/game_manager.h"
 #include "core/headless/hjson.h"
 #include "core/headless/hutils.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/uwapi/partmove.h"
+#include "core/types/uwapi/partmove_array.h"
+#include "json_types.h"
 
 static int InitAndCheckGame(ReadOnlyString game_name, int variant_id,
                             ReadOnlyString data_path, bool *is_tier_game);

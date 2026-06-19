@@ -24,15 +24,14 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // sprintf
-#include <stdlib.h>  // atoi
-#include <string.h>  // strtok_r, strlen, strcpy
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/hash/two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
 #include "games/quixo/quixo.h"
 
 // =================================== Types ===================================

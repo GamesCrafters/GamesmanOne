@@ -28,7 +28,7 @@
 #ifndef GAMESMANONE_GAMES_NEUTRON_NEUTRON_H_
 #define GAMESMANONE_GAMES_NEUTRON_NEUTRON_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 /** @brief Neutron. */
 extern const Game kNeutron;

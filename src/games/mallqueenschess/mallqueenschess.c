@@ -28,16 +28,22 @@
 
 #include "games/mallqueenschess/mallqueenschess.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // atoi
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
 
 // Game, Solver, and Gameplay API Functions
 

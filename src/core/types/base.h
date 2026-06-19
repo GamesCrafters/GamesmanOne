@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_BASE_H_
 #define GAMESMANONE_CORE_TYPES_BASE_H_
 
-#include <inttypes.h>  // PRId64
-#include <stdint.h>    // int64_t
+#include <inttypes.h>
+#include <stdint.h>
 
 /** @brief Tier as a 64-bit integer. */
 typedef int64_t Tier;

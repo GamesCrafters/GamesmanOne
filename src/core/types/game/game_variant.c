@@ -26,10 +26,9 @@
 
 #include "core/types/game/game_variant.h"
 
-#include <stddef.h>  // NULL
+#include <stddef.h>
 
 #include "core/data_structures/int64_array.h"
-#include "core/types/game/game_variant_option.h"
 
 static int GameVariantGetNumOptions(const GameVariant *variant);
 

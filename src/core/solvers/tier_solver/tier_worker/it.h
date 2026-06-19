@@ -27,12 +27,11 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_IT_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_IT_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
-#include "core/types/gamesman_types.h"
 
 /**
  * @brief Solves \p tier using the immediate transition algorithm given \p api.

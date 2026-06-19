@@ -28,7 +28,8 @@
 #ifndef GAMESMANONE_CORE_GAME_MANAGER_H_
 #define GAMESMANONE_CORE_GAME_MANAGER_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
 
 /**
  * @brief Returns a NULL-terminated read-only array of all games in GAMESMAN.

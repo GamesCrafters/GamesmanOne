@@ -28,18 +28,27 @@
 
 #include "games/dshogi/dshogi.h"
 
-#include <assert.h>   // assert
-#include <ctype.h>    // isupper, islower, tolower
-#include <stdbool.h>  // bool, false
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // atoi
-#include <string.h>   // strcpy, strlen, strtok_r
+#include <assert.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_regular.h"
 
 // clang-tidy gives many warnings about narrowing conversion from 'int' to
 // 'char' that are known to be correct. The following line turns them all

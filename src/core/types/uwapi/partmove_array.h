@@ -26,7 +26,7 @@
 #ifndef GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_ARRAY_H_
 #define GAMESMANONE_CORE_TYPES_UWAPI_PARTMOVE_ARRAY_H_
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>
 
 #include "core/data_structures/cstring.h"
 #include "core/types/uwapi/partmove.h"

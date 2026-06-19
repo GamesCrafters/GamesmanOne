@@ -27,12 +27,12 @@
 
 #include "core/solvers/tier_solver/tier_worker/backward_induction/one_bit.h"
 
-#include <assert.h>     // assert
-#include <stdatomic.h>  // memory_order_relaxed
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // size_t, NULL
-#include <stdint.h>     // int64_t
-#include <stdio.h>      // sprintf
+#include <assert.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
@@ -40,11 +40,12 @@
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
-#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/solvers/tier_solver/tier_worker.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_hash_map.h"
+#include "core/types/tier_hash_set.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 // Read-only reference to the API functions from tier_manager.

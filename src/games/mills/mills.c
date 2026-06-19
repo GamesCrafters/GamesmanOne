@@ -29,22 +29,37 @@
 
 #include "games/mills/mills.h"
 
-#include <assert.h>     // assert
-#include <ctype.h>      // toupper
-#include <immintrin.h>  // __m128i, _mm_*, _tzcnt_u64, _blsr_u64, _blsi_u64
-#include <stdalign.h>   // alignas
-#include <stddef.h>     // NULL
-#include <stdint.h>     // int64_t, int8_t, uint64_t
-#include <stdio.h>      // sprintf
-#include <stdlib.h>     // atoi
-#include <string.h>     // strtok_r, strlen, strcpy
+#include <assert.h>
+#include <ctype.h>
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "core/constants.h"
 #define X86_M128I_HASH_SET_SIZE 64ULL
+#include "core/data_structures/cstring.h"
 #include "core/data_structures/x86_m128i_hash_set.h"
 #include "core/hash/x86_simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_tier.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/tier_position_hash_set.h"
+#include "core/types/uwapi/autogui.h"
+#include "core/types/uwapi/partmove_array.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_tier.h"
 #include "games/mills/boards.h"
 #include "games/mills/masks.h"
 #include "games/mills/variants.h"

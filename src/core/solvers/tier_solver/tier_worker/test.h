@@ -29,7 +29,7 @@
 
 #include "core/concurrency.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/tier_array.h"
 
 /**
  * @brief Opaque type for tier solver stack buffer usage statistics.

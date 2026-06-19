@@ -27,12 +27,12 @@
 #ifndef GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_ARRAY_H_
 #define GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_ARRAY_H_
 
-#include <stddef.h>  // size_t
-#include <stdint.h>  // int64_t
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/db/arraydb/atomic_record.h"
 #include "core/db/arraydb/record.h"
-#include "core/types/gamesman_types.h"
+#include "core/gamesman_memory.h"
 
 /** @brief Fixed-length \c Record array. */
 typedef struct AtomicRecordArray {

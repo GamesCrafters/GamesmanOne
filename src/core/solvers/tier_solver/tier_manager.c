@@ -35,15 +35,15 @@
 
 #include "core/solvers/tier_solver/tier_manager.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // printf, fprintf, stderr
-#include <time.h>      // time_t, time, difftime
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "core/analysis/analysis.h"
+#include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
@@ -52,7 +52,14 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_array.h"
+#include "core/types/tier_hash_map.h"
+#include "core/types/tier_hash_set.h"
+#include "core/types/tier_queue.h"
+#include "core/types/tier_stack.h"
 
 #ifdef USE_MPI
 #include <mpi.h>

@@ -1,9 +1,12 @@
 #ifndef GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_
 #define GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_MATCH_H_
 
-#include <stdbool.h>  // bool
+#include <stdbool.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/move_array.h"
 
 int InteractiveMatchSetGame(const Game *game);
 const Game *InteractiveMatchGetCurrentGame(void);

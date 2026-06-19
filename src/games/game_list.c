@@ -26,11 +26,10 @@
 
 #include "games/game_list.h"
 
-#include <stddef.h>  // NULL
-#include <stdlib.h>  // qsort
-#include <string.h>  // strcmp
-
-#include "core/types/gamesman_types.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 // 1. To add a new game, include the game header here.
 

@@ -32,7 +32,7 @@
 #ifndef GAMESMANONE_CORE_DB_ARRAYDB_ARRAYDB_H_
 #define GAMESMANONE_CORE_DB_ARRAYDB_ARRAYDB_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/database/database.h"
 
 /**
  * @brief Simple array database which stores value-remoteness pairs in a 16-bit

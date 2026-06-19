@@ -27,9 +27,9 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HJSON_H_
 #define GAMESMANONE_CORE_HEADLESS_HJSON_H_
 
-#include <json_object.h>  // json_object
+#include <json_types.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Adds {"position: <FORMAL_POSITION>"} to the DEST json object.

@@ -27,9 +27,9 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_BITSET_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_BITSET_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /** @brief Opaque fixed-size bit set type. */
 typedef struct Bitset Bitset;

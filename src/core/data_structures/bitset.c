@@ -26,11 +26,11 @@
 
 #include "core/data_structures/bitset.h"
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t NULL
-#include <stdint.h>   // int64_t, uint64_t
-#include <stdio.h>    // fprintf, stderr
-#include <string.h>   // memcpy
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/gamesman_memory.h"
 

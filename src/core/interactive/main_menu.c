@@ -1,5 +1,7 @@
 #include "core/interactive/main_menu.h"
 
+#include <stddef.h>
+
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/games.h"
 #include "core/interactive/help/help.h"

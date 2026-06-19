@@ -1,17 +1,26 @@
 #include "games/gates/gates.h"
 
-#include <assert.h>  // assert
-#include <ctype.h>   // islower
-#include <stddef.h>  // NULL
-#include <stdio.h>   // sprintf
-#include <stdlib.h>  // atoi
-#include <string.h>  // memcpy, strtok_r
+#include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_tier.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/tier_hash_set.h"
+#include "core/types/tier_position_hash_set.h"
 #include "games/gates/gates_tier.h"
 
 // NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)

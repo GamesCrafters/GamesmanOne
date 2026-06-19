@@ -29,10 +29,12 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_ONE_BIT_H_
 
-#include <stddef.h>  // size_t
-#include <stdint.h>  // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 
 /**
  * @brief Returns the amount of memory required in bytes to solve a tier group

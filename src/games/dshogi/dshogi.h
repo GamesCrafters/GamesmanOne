@@ -29,7 +29,7 @@
 #ifndef GAMESMANONE_GAMES_DSHOGI_DSHOGI_H_
 #define GAMESMANONE_GAMES_DSHOGI_DSHOGI_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 /** @brief Dōbutsu shōgi. */
 extern const Game kDobutsuShogi;

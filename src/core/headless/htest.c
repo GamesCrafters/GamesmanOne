@@ -25,8 +25,8 @@
  */
 #include "core/headless/htest.h"
 
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf, fprintf, stderr
+#include <stddef.h>
+#include <stdio.h>
 
 #include "core/game_manager.h"
 #include "core/headless/hutils.h"
@@ -34,7 +34,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 static int TestOneVariant(ReadOnlyString game_name, int variant_id, long seed) {
     printf("TESTING VARIANT %d OF GAME %s\n", variant_id, game_name);

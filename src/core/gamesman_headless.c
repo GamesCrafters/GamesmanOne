@@ -26,9 +26,11 @@
 
 #include "core/gamesman_headless.h"
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdlib.h>   // atoi
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
@@ -39,7 +41,7 @@
 #include "core/headless/hsolve.h"
 #include "core/headless/htest.h"
 #include "core/headless/hutils.h"
-#include "core/misc.h"
+#include "core/types/gamesman_error.h"
 
 /**
  * @brief Convert the input memory limit string \p str, which is in GiB, into

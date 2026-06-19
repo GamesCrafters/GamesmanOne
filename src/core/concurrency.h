@@ -29,12 +29,12 @@
 #ifndef GAMESMANONE_CORE_CONCURRENCY_H_
 #define GAMESMANONE_CORE_CONCURRENCY_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
+#include <stdbool.h>
+#include <stddef.h>
 
 #ifdef _OPENMP
 
-#include <stdatomic.h>  // atomic_bool, atomic_int
+#include <stdatomic.h>
 
 #define PRAGMA(X) _Pragma(#X)
 #define PRAGMA_OMP(expression) PRAGMA(omp expression)

@@ -52,14 +52,13 @@
 #include "core/hash/two_piece.h"
 
 #ifdef GAMESMAN_HAS_BMI2
-#include <immintrin.h>  // _pdep_u32, _pext_u32
-#endif                  // GAMESMAN_HAS_BMI2
-#include <stdint.h>     // int64_t, uint32_t, uint64_t
-#include <stdio.h>      // fprintf, stderr
+#include <immintrin.h>
+#endif  // GAMESMAN_HAS_BMI2
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
 
 enum { kBoardSizeMax = 32 };
 

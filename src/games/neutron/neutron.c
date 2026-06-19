@@ -27,17 +27,30 @@
 
 #include "games/neutron/neutron.h"
 
-#include <assert.h>  // assert
-#include <ctype.h>   // toupper
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t
-#include <stdlib.h>  // atoi
-#include <string.h>  // strlen, strtok_r
+#include <assert.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/autogui.h"
+#include "core/types/uwapi/partmove_array.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_regular.h"
 
 // ============================= Type Definitions =============================
 

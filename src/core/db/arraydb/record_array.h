@@ -27,10 +27,10 @@
 #ifndef GAMESMANONE_CORE_DB_ARRAYDB_RECORD_ARRAY_H_
 #define GAMESMANONE_CORE_DB_ARRAYDB_RECORD_ARRAY_H_
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL, size_t
-#include <stdint.h>  // int64_t
-#include <string.h>  // memset
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/db/arraydb/record.h"
 #include "core/gamesman_memory.h"

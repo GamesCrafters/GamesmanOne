@@ -26,10 +26,10 @@
 
 #include "core/data_structures/cstring.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdlib.h>   // malloc, free
-#include <string.h>   // memset, strlen
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 const CString kNullCString = {
     .str = NULL,

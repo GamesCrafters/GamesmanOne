@@ -27,18 +27,20 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t, uint32_t, uint64_t
-#include <stdio.h>    // FILE
-#include <time.h>     // clock_t
-#include <zlib.h>     // gzFile
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <time.h>
+#include <zconf.h>
+#include <zlib.h>
 
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Gracefully exits GAMESMAN.

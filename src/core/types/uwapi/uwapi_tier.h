@@ -35,7 +35,7 @@
 #ifndef GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H_
 #define GAMESMANONE_CORE_TYPES_UWAPI_UWAPI_TIER_H_
 
-#include <stdbool.h>  // bool
+#include <stdbool.h>
 
 #include "core/data_structures/cstring.h"
 #include "core/types/base.h"

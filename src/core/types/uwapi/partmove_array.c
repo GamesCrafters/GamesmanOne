@@ -25,11 +25,11 @@
  */
 #include "core/types/uwapi/partmove_array.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t
-#include <stdlib.h>  // realloc, free
-#include <string.h>  // memset
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/data_structures/cstring.h"
 #include "core/types/gamesman_error.h"

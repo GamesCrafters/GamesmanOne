@@ -26,10 +26,10 @@
 
 #include "core/headless/hanalyze.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL, size_t
-#include <stdio.h>    // fprintf, stderr
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
@@ -38,7 +38,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 static void *GenerateAnalyzeOptions(bool force, int verbose, size_t memlimit) {
     const Game *game = GameManagerGetCurrentGame();

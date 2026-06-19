@@ -1,13 +1,12 @@
 #include "core/interactive/automenu.h"
 
-#include <ctype.h>    // tolower
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fgets, getchar
-#include <stdlib.h>   // exit, EXIT_SUCCESS
-#include <string.h>   // strncmp, strchr, strlen
+#include <ctype.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "core/misc.h"  // GamesmanExit
+#include "core/misc.h"
 
 static void FormatInput(char *input) {
     // Convert all characters to lowercase.

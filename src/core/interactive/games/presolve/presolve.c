@@ -1,12 +1,11 @@
 #include "core/interactive/games/presolve/presolve.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64, int64_t
-#include <stdbool.h>   // true
-#include <stddef.h>    // NULL
-#include <stdio.h>     // printf, fprintf, stderr, scanf
-#include <stdlib.h>    // atoi
-#include <time.h>      // time
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "core/constants.h"
 #include "core/game_manager.h"
@@ -14,14 +13,13 @@
 #include "core/interactive/games/presolve/match.h"
 #include "core/interactive/games/presolve/options/options.h"
 #include "core/interactive/games/presolve/postsolve/postsolve.h"
-#include "core/interactive/games/presolve/savio/partition_select.h"
 #include "core/interactive/games/presolve/solver_options/solver_options.h"
 #include "core/misc.h"
-#include "core/savio/scriptgen.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_error.h"
 
 #ifndef USE_MPI
 static const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";

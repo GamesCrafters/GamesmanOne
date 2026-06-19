@@ -35,16 +35,15 @@
 
 #include "core/hash/generic.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // free, realloc
-#include <string.h>   // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/data_structures/int64_hash_map.h"
 #include "core/hash/generic_context.h"
-#include "core/types/gamesman_types.h"
 
 typedef struct ContextManager {
     GenericHashContext *contexts;

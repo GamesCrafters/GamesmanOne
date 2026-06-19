@@ -26,13 +26,13 @@
 
 #include "core/analysis/stat_manager.h"
 
-#include <assert.h>    // assert
-#include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
-#include <stddef.h>    // NULL, size_t
-#include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
-#include <string.h>    // strlen, memset
-#include <sys/stat.h>  // S_IRWXU, S_IRWXG, S_IRWXO
-#include <zlib.h>      // gzread, gzFile, Z_NULL
+#include <fcntl.h>
+#include <inttypes.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "core/analysis/analysis.h"
 #include "core/concurrency.h"
@@ -40,7 +40,7 @@
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 static char *sandbox_path;

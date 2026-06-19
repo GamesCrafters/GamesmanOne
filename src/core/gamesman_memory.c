@@ -25,21 +25,22 @@
  */
 #include "core/gamesman_memory.h"
 
-#include <assert.h>   // assert
-#include <lzma.h>     // lzma_physmem
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // size_t, NULL
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // aligned_alloc, malloc, calloc, free
-#include <string.h>   // memset, memcpy
-#include <unistd.h>   // _exit
+#include <assert.h>
+#include <lzma.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 ///////////////
 // ALLOCATOR //

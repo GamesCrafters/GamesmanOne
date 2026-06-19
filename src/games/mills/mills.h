@@ -30,7 +30,7 @@
 #ifndef GAMESMANONE_GAMES_MILLS_MILLS_H_
 #define GAMESMANONE_GAMES_MILLS_MILLS_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 /**
  * @brief Most variants of the Mills Games. Provided options include piece and

@@ -27,9 +27,11 @@
 #include "core/headless/hjson.h"
 
 #include <json_object.h>
+#include <json_types.h>
+#include <stddef.h>
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 static int AddStringHelper(json_object *dest, ReadOnlyString key,
                            ReadOnlyString value) {

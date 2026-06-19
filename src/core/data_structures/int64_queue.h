@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief int64_t queue using dynamic array.

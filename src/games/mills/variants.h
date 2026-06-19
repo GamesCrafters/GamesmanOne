@@ -31,9 +31,7 @@
 #ifndef GAMESMANONE_GAMES_MILLS_VARIANTS_H_
 #define GAMESMANONE_GAMES_MILLS_VARIANTS_H_
 
-#include <stdint.h>  // int8_t
-
-#include "core/types/gamesman_types.h"
+#include <stdint.h>
 
 // clang-format off
 /*

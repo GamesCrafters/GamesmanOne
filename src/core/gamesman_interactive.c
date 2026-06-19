@@ -26,18 +26,16 @@
 
 #include "core/gamesman_interactive.h"
 
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf
-#include <stdlib.h>  // free
-#include <string.h>  // strlen
-#include <unistd.h>  // usleep
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "core/gamesman_memory.h"
 #include "core/interactive/main_menu.h"
-#include "core/misc.h"
 #include "core/opening_credits.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_error.h"
 
 // clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =

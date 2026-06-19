@@ -30,10 +30,13 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_SOLVER_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/solver/solver.h"
 
 /** @brief Tier Solver. */
 extern const Solver kTierSolver;

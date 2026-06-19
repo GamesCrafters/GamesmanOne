@@ -26,12 +26,12 @@
 
 #include "core/data_structures/int64_queue.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <string.h>   // memcpy
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/gamesman_memory.h"
 

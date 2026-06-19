@@ -32,11 +32,12 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_REVERSE_GRAPH_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_REVERSE_GRAPH_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/position_array.h"
+#include "core/types/tier_hash_map.h"
 
 #ifdef _OPENMP
 #include <omp.h>

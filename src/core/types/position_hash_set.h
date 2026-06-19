@@ -27,6 +27,9 @@
 #ifndef GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_
 #define GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 

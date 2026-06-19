@@ -1,12 +1,13 @@
 #include "core/savio/scriptgen.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // FILE, printf, sprintf
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include "core/misc.h"
 #include "core/savio/savio.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_error.h"
 
 static int GetOmpNumThreads(int cpus_per_node, int ntasks_per_node,
                             bool bind_to_cores);

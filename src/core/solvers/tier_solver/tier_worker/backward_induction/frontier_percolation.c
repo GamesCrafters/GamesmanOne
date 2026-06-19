@@ -31,12 +31,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // printf, fprintf, stderr
-#include <string.h>   // memcpy
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
@@ -47,7 +47,10 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontier.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/reverse_graph.h"
 #include "core/solvers/tier_solver/tier_worker/bi.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/position_array.h"
+#include "core/types/tier_hash_map.h"
+#include "core/types/tier_hash_set.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

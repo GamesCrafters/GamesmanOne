@@ -27,11 +27,10 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_TYPES_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_TYPES_H_
 
-#include <stddef.h>  // size_t
-#include <stdint.h>  // int64_t
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/db/db_manager.h"
-#include "core/types/gamesman_types.h"
 
 /**
  * @brief Backward induction loopy solve strategies.

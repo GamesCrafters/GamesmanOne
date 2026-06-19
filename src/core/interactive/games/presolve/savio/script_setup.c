@@ -1,10 +1,10 @@
 #include "core/interactive/games/presolve/savio/script_setup.h"
 
-#include <ctype.h>    // isalnum, isdigit
-#include <stdbool.h>  // bool, true, false
-#include <stdio.h>    // sprintf, printf
-#include <stdlib.h>   // atoi
-#include <string.h>   // strlen
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/game_manager.h"
@@ -13,7 +13,7 @@
 #include "core/misc.h"
 #include "core/savio/savio.h"
 #include "core/savio/scriptgen.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 static SavioJobSettings settings;
 static int partition_id;
