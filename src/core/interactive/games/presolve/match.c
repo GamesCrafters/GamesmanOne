@@ -1,16 +1,15 @@
 #include "core/interactive/games/presolve/match.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // memset
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/data_structures/int64_array.h"
-#include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_position_array.h"
 
 typedef struct Match {
     const Game *game;

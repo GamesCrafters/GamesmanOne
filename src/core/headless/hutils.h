@@ -27,9 +27,9 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HUTILS_H_
 #define GAMESMANONE_CORE_HEADLESS_HUTILS_H_
 
-#include <stdbool.h>  // bool
+#include <stdbool.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Returns the level of verbosity to use given the two user-specified

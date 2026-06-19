@@ -1,13 +1,15 @@
 #include "games/gates/gates_tier.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int8_t
-#include <stdio.h>    // sprintf
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_hash_set.h"
 
 // ====================== GatesTierGetSymmetryMatrixEntry ======================
 

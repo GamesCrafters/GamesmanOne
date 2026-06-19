@@ -26,17 +26,18 @@
 
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int32_t, int64_t
-#include <stdio.h>    // puts, printf, fprintf, stderr
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_hash_set.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.

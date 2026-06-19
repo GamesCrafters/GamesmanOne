@@ -31,21 +31,26 @@
 
 #include "core/db/arraydb/arraydb.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // uint64_t, int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <string.h>   // strcpy
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
+#include "core/db/arraydb/atomic_record.h"
 #include "core/db/arraydb/atomic_record_array.h"
 #include "core/db/arraydb/record.h"
 #include "core/db/arraydb/record_array.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/lz4_utils/lz4_utils.h"
 #include "libs/xzra/xzra.h"
 

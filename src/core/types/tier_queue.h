@@ -27,6 +27,9 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_
 #define GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "core/data_structures/int64_queue.h"
 #include "core/types/base.h"
 

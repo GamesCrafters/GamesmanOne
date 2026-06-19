@@ -29,26 +29,32 @@
 
 #include "core/solvers/regular_solver/regular_solver.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // strtoll
-#include <string.h>   // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
+#include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
 #include "core/constants.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
-#include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/database/database.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/solver/solver_config.h"
+#include "core/types/solver/solver_option.h"
+#include "core/types/tier_array.h"
+#include "core/types/tier_position_hash_set.h"
 
 // Solver API functions.
 

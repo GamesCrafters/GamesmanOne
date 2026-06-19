@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
 #define GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/types/base.h"
 

@@ -31,8 +31,9 @@ command_exists() {
 install_debian() {
     sudo apt update && sudo apt install -y git cmake zlib1g zlib1g-dev || return 1
     
-    # Attempt ccache separately so failure doesn't abort the setup
+    # Attempt ccache and iwyu separately so failure doesn't abort the setup
     sudo apt install -y ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    sudo apt install -y iwyu 2>/dev/null || echo "Note: iwyu could not be installed. Continuing without it..."
     return 0
 }
 
@@ -41,6 +42,7 @@ install_rhel() {
     sudo dnf update && sudo dnf install -y git cmake zlib zlib-devel || return 1
     
     sudo dnf install -y ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    sudo dnf install -y include-what-you-use 2>/dev/null || echo "Note: include-what-you-use could not be installed. Continuing without it..."
     return 0
 }
 
@@ -51,6 +53,7 @@ install_macos() {
     brew install git cmake zlib llvm libomp || return 1
     
     brew install ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    brew install include-what-you-use 2>/dev/null || echo "Note: include-what-you-use could not be installed. Continuing without it..."
     return 0
 }
 

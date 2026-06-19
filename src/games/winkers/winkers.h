@@ -28,7 +28,7 @@
 #ifndef GAMESMANONE_GAMES_WINKERS_WINKERS_H_
 #define GAMESMANONE_GAMES_WINKERS_WINKERS_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 /** @brief Winkers. */
 extern const Game kWinkers;

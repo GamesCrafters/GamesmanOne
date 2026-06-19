@@ -27,11 +27,13 @@
 #ifndef GAMESMANONE_CORE_DB_DB_MANAGER_H_
 #define GAMESMANONE_CORE_DB_DB_MANAGER_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/database/db_probe.h"
 
 /**
  * @brief Initializes the database system and load the chosen DB module.

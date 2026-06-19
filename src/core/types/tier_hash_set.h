@@ -27,6 +27,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_HASH_SET_H_
 #define GAMESMANONE_CORE_TYPES_TIER_HASH_SET_H_
 
+#include <stdbool.h>
+
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 

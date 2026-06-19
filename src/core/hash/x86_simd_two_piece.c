@@ -31,16 +31,16 @@
  */
 #include "core/hash/x86_simd_two_piece.h"
 
-#include <assert.h>     // assert
-#include <immintrin.h>  // __m128i, _mm_*, _pdep_u64, _pext_u64
-#include <stdalign.h>   // alignas
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, uint64_t, uint32_t
-#include <stdio.h>      // fprintf, stderr
+#include <assert.h>
+#include <immintrin.h>
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 /**
  * @brief Maximum supported board size.
@@ -113,7 +113,7 @@ static int InitTables(void) {
     // Initialize tables
     int32_t order_count[kBoardSizeMax] = {0};
     for (uint32_t i = 0; i < (1U << curr_board_size); ++i) {
-        int pop = _popcnt32(i);
+        int pop = __builtin_popcount(i);
         assert(pop <= curr_board_size);
         int32_t order = order_count[pop]++;
         pattern_to_order[i] = order;
@@ -159,7 +159,7 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
 
 int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
     // Validate board size
-    int board_size = _popcnt64(board_mask);
+    int board_size = __builtin_popcountll(board_mask);
     if (board_size == 0 || board_size > kBoardSizeMax) {
         fprintf(stderr,
                 "X86SimdTwoPieceHashInitIrregular: invalid board size (%d) "
@@ -238,8 +238,8 @@ Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
 
     // Perform the normal hashing procedure.
     patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
-    int pop_x = _popcnt64(patterns[0]);
-    int pop_o = _popcnt64(patterns[1]);
+    int pop_x = __builtin_popcountll(patterns[0]);
+    int pop_o = __builtin_popcountll(patterns[1]);
     int64_t offset = nCr[curr_board_size - pop_o][pop_x];
 
     return offset * pattern_to_order[patterns[1]] +

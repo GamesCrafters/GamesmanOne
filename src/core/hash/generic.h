@@ -35,9 +35,10 @@
 #ifndef GAMESMANONE_CORE_HASH_GENERIC_H_
 #define GAMESMANONE_CORE_HASH_GENERIC_H_
 
-#include <stdint.h>  // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief (Re)initializes the Generic Hash system, clearing all previously

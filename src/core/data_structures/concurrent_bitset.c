@@ -54,11 +54,11 @@
  */
 #include "core/data_structures/concurrent_bitset.h"
 
-#include <assert.h>     // assert
-#include <stdatomic.h>  // ATOMIC_*_LOCK_FREE, _Atomic, atomic_*
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // int64_t
+#include <assert.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/concurrency.h"
 #include "core/gamesman_memory.h"

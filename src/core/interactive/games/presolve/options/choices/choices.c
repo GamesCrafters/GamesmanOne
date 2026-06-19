@@ -1,13 +1,14 @@
 #include "core/interactive/games/presolve/options/choices/choices.h"
 
-#include <stddef.h>  // NULL
-#include <stdio.h>   // sprintf, fprintf, stderr
-#include <stdlib.h>  // atoi
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/solver/solver_option.h"
 
 static int option_index = -1;
 // Hard-coded size based on the title definition in UpdateTitle.

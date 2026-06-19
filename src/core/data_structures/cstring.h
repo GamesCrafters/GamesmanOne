@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_CSTRING_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_CSTRING_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 /** @brief Dynamic C-string. */
 typedef struct CString {

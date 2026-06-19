@@ -28,12 +28,11 @@
 #ifndef GAMESMANONE_CORE_DB_ARRAYDB_RECORD_H_
 #define GAMESMANONE_CORE_DB_ARRAYDB_RECORD_H_
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // uint16_t
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/constants.h"
-#include "core/types/gamesman_types.h"
 
 /** @brief The record type. */
 typedef uint16_t Record;

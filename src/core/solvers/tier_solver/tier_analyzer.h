@@ -27,12 +27,11 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_ANALYZER_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "core/analysis/analysis.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
 
 /**
  * @brief Initializes the Tier Analyzer Module using the given API functions.

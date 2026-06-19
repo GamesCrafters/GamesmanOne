@@ -26,11 +26,10 @@
 
 #include "core/solvers/tier_solver/tier_mpi.h"
 
-#include <mpi.h>      // MPI_*
-#include <stdbool.h>  // bool
+#include <mpi.h>
+#include <stdbool.h>
 
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
 
 static const int kMpiDefaultTag = 0;
 static const int kMpiManagerRank = 0;

@@ -29,12 +29,12 @@
 
 #include "core/solvers/tier_solver/tier_solver.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL, size_t
-#include <stdint.h>  // int64_t
-#include <stdio.h>   // fprintf, stderr
-#include <stdlib.h>  // strtoll
-#include <string.h>  // memset, memcpy, strncmp
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
@@ -42,10 +42,15 @@
 #include "core/analysis/stat_manager.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 #include "core/solvers/tier_solver/tier_worker.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/solver/solver_config.h"
+#include "core/types/solver/solver_option.h"
+#include "core/types/tier_position_hash_set.h"
 
 enum { kTierSolverNumOptions = 3 };
 

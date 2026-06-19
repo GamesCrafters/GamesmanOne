@@ -31,10 +31,10 @@
 
 #include "core/solvers/tier_solver/tier_worker.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -42,13 +42,13 @@
 #include "core/solvers/tier_solver/tier_worker/it.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
 
 #ifdef USE_MPI
-#include <unistd.h>  // sleep
+#include <unistd.h>
 
 #include "core/solvers/tier_solver/tier_mpi.h"
 #endif  // USE_MPI

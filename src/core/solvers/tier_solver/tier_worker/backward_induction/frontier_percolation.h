@@ -34,11 +34,10 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_PERCOLATION_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_PERCOLATION_H_
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
-#include "core/types/gamesman_types.h"
 
 /**
  * @brief Solves the given \p tier using the frontier percolation strategy of

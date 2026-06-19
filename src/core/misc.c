@@ -26,28 +26,27 @@
 
 #include "core/misc.h"
 
-#include <assert.h>     // assert
-#include <errno.h>      // errno
-#include <fcntl.h>      // open
-#include <inttypes.h>   // PRId64, PRIu64
-#include <stdarg.h>     // va_list, va_start, va_end
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, uint32_t, uint64_t, INT64_MAX, uint8_t
-#include <stdio.h>      // fgets, fprintf, stderr, FILE, rename
-#include <stdlib.h>     // exit
-#include <string.h>     // strcspn, strlen, strncpy, memset
-#include <sys/stat.h>   // mkdir, struct stat
-#include <sys/types.h>  // mode_t
-#include <time.h>       // clock_t, CLOCKS_PER_SEC
-#include <unistd.h>     // close, _exit
-#include <zlib.h>  // gzFile, gzopen, gzdopen, gzread, gzwrite, Z_NULL, Z_OK
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+#include <zlib.h>
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");

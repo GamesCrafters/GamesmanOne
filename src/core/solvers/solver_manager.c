@@ -34,12 +34,15 @@
 
 #include "core/solvers/solver_manager.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include "core/game_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/solver/solver.h"
 
 static const Solver *current_solver;
 

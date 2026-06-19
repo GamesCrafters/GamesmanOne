@@ -26,13 +26,12 @@
 
 #include "core/types/tier_position_array.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, realloc
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#include "core/constants.h"
 #include "core/types/base.h"
 
 void TierPositionArrayInit(TierPositionArray *array) {

@@ -1,11 +1,11 @@
 #ifndef GAMESMANONE_GAMES_GATES_GATES_TIER_H_
 #define GAMESMANONE_GAMES_GATES_GATES_TIER_H_
 
-#include <inttypes.h>  // PRIu8
-#include <stdint.h>    // int8_t
+#include <stdint.h>
 
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
 
 enum {
     kBoardSize = 18,

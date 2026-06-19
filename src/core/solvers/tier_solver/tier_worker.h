@@ -32,12 +32,13 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/tier_array.h"
 
 /**
  * @brief Initializes the Tier Worker Module using the given API functions.

@@ -26,14 +26,16 @@
 
 #include "core/solvers/tier_solver/tier_worker/test.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdio.h>    // printf, fprintf, stderr
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include "core/concurrency.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_hash_set.h"
+#include "core/types/tier_position_hash_set.h"
 #include "libs/mt19937/mt19937-64.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.

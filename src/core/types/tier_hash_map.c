@@ -26,7 +26,7 @@
 
 #include "core/types/tier_hash_map.h"
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>
 
 #include "core/data_structures/int64_hash_map.h"
 #include "core/gamesman_memory.h"

@@ -31,14 +31,14 @@
 
 #include "core/solvers/tier_solver/tier_worker/backward_induction/reverse_graph.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <string.h>   // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/position_array.h"
 
 #ifdef _OPENMP
 #include <omp.h>

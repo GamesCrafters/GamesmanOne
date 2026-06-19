@@ -1,9 +1,7 @@
 #ifndef GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_
 #define GAMESMANONE_CORE_INTERACTIVE_AUTOMENU_H_
 
-#include <stddef.h>  // size_t
-
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 enum InteractiveAutoMenuConstants { kKeyLengthMax = 3 };
 

@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_
 #define GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/types/base.h"
 
@@ -43,7 +43,7 @@ typedef struct TierPositionHashSet {
     TierPositionHashSetEntry *entries; /**< Array of buckets. */
     int64_t size;           /**< Number of items stored in the set. */
     double max_load_factor; /**< Maximum load factor of the set. */
-    
+
     /** Number of buckets - 1, for fast bucket indexing. */
     int64_t capacity_mask;
 } TierPositionHashSet;

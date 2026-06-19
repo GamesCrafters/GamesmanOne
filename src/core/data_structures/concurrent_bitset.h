@@ -57,10 +57,10 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_
 
-#include <stdatomic.h>  // memory_order
-#include <stdbool.h>    // bool
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/gamesman_memory.h"
 

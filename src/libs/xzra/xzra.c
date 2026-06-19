@@ -27,7 +27,6 @@
 #include "libs/xzra/xzra.h"
 
 #include <errno.h>
-#include <inttypes.h>
 #include <lzma.h>
 #include <stdbool.h>
 #include <stdio.h>

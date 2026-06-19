@@ -28,8 +28,8 @@
 #ifndef GAMESMANONE_CORE_GAMESMAN_MEMORY_H_
 #define GAMESMANONE_CORE_GAMESMAN_MEMORY_H_
 
-#include <assert.h>  // static_assert
-#include <stddef.h>  // size_t
+#include <assert.h>
+#include <stddef.h>
 
 #include "config.h"
 

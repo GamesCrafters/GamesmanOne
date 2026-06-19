@@ -2,8 +2,6 @@
 
 #include <stdio.h>
 
-#include "core/types/gamesman_types.h"
-
 int InteractiveSolverOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO

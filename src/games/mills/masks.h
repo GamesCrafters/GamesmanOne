@@ -30,7 +30,7 @@
 #ifndef GAMESMANONE_GAMES_MILLS_MASKS_H_
 #define GAMESMANONE_GAMES_MILLS_MASKS_H_
 
-#include <stdint.h>  // int8_t, uint64_t
+#include <stdint.h>
 
 #include "games/mills/variants.h"
 

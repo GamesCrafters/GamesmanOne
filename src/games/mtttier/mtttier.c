@@ -30,18 +30,28 @@
 
 #include "games/mtttier/mtttier.h"
 
-#include <assert.h>    // assert
-#include <ctype.h>     // toupper
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr, sprintf
-#include <stdlib.h>    // atoi
+#include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_tier.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_tier.h"
 
 // Game, Solver, Gameplay, and UWAPI Functions
 

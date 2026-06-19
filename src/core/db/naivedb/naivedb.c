@@ -27,15 +27,21 @@
 
 #include "core/db/naivedb/naivedb.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // fprintf, stderr, fopen, fseek, fclose
-#include <string.h>  // strcpy, memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/tier_to_ptr_chained_hash_map.h"
 
 // Database API.
 

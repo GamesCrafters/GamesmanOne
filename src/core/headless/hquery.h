@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HQUERY_H_
 #define GAMESMANONE_CORE_HEADLESS_HQUERY_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Prints out a detailed position response for the given FORMAL_POSITION

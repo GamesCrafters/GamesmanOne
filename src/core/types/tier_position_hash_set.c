@@ -26,10 +26,9 @@
 
 #include "core/types/tier_position_hash_set.h"
 
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"

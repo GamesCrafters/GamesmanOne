@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief Entry object of an \c Int64HashSet. This struct is not meant to be

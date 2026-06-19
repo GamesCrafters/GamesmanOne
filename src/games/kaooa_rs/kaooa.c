@@ -25,17 +25,16 @@
 
 #include "games/kaooa/kaooa.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // sprintf, sscanf
-#include <stdlib.h>   // atoi
-#include <string.h>   // strlen
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
 
 // ============================= Type Definitions =============================
 

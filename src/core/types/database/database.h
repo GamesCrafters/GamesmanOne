@@ -30,9 +30,9 @@
 #ifndef GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_
 #define GAMESMANONE_CORE_TYPES_DATABASE_DATABASE_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"

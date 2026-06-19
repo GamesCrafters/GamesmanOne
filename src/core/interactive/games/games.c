@@ -1,13 +1,13 @@
 #include "core/interactive/games/games.h"
 
-#include <stdio.h>  // sprintf
+#include <stdio.h>
 
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 static char **AllocateItems(int num_items) {
     char **items = (char **)SafeMalloc(num_items * sizeof(char *));

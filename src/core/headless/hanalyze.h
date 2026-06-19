@@ -27,10 +27,10 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 #define GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
+#include <stdbool.h>
+#include <stddef.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Analyzes the variant VARIANT_ID of game GAME_NAME.

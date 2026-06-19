@@ -31,17 +31,16 @@
 
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontier.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <string.h>   // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/concurrency.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
 
 #ifdef _OPENMP
 #include <omp.h>

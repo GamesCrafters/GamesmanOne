@@ -26,10 +26,10 @@
 
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // int64_t
-#include <string.h>   // memset
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
@@ -39,7 +39,11 @@
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/position_array.h"
+#include "core/types/tier_hash_map.h"
+#include "core/types/tier_hash_set.h"
+#include "core/types/tier_position_hash_set.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

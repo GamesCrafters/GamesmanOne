@@ -27,13 +27,13 @@
 #ifndef GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
 #define GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // FILE
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/constants.h"
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Analysis of a game or a single tier.

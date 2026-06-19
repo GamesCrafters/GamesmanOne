@@ -8,7 +8,6 @@ add_subdirectory(uwapi)
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/base.h
     ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_error.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_types.h
     ${CMAKE_CURRENT_SOURCE_DIR}/move_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/position_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/position_hash_set.h

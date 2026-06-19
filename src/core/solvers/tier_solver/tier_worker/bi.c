@@ -29,10 +29,9 @@
 
 #include "core/solvers/tier_solver/tier_worker/bi.h"
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/db/db_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -40,7 +39,8 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontierless.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/one_bit.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/types.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/database/database.h"
+#include "core/types/gamesman_error.h"
 
 static bool GetParentsAvailable(const TierSolverApi *api) {
     return api->GetCanonicalParentPositions != NULL;

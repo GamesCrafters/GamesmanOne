@@ -26,16 +26,18 @@
 
 #include "core/analysis/analysis.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // FILE, sprintf, fprintf, stderr
-#include <string.h>    // memset
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <zlib.h>
 
 #include "core/constants.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;

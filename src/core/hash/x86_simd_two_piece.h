@@ -209,13 +209,15 @@
 #ifndef GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 #define GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 
-#include <immintrin.h>  // __m128i, _mm_*
-#include <stdalign.h>   // alignas
-#include <stdbool.h>    // bool
-#include <stddef.h>     // size_t
-#include <stdint.h>     // int64_t, uint64_t
+#include <emmintrin.h>
+#include <smmintrin.h>
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <xmmintrin.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Returns the amount of memory in bytes required to initialize the hash
@@ -484,8 +486,8 @@ static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
     _mm_store_si128((__m128i *)s, board);
 
     // Byte swap flips the board vertically
-    s[0] = _bswap64(s[0]);
-    s[1] = _bswap64(s[1]);
+    s[0] = __builtin_bswap64(s[0]);
+    s[1] = __builtin_bswap64(s[1]);
 
     // Pack the values back into the __m128i register
     board = _mm_load_si128((const __m128i *)s);

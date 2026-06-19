@@ -27,13 +27,14 @@
 
 #include "core/game_manager.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // fprintf, stderr
-#include <string.h>  // strcmp
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/data_structures/int64_array.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gamesman_error.h"
 #include "games/game_list.h"
 
 static const Game *current_game;

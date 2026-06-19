@@ -27,9 +27,12 @@
 #ifndef GAMESMANONE_CORE_ANALYSIS_STAT_MANAGER_H_
 #define GAMESMANONE_CORE_ANALYSIS_STAT_MANAGER_H_
 
+#include <stdint.h>
+
 #include "core/analysis/analysis.h"
 #include "core/data_structures/concurrent_bitset.h"
-#include "core/types/gamesman_types.h"
+#include "core/gamesman_memory.h"
+#include "core/types/base.h"
 
 /** @brief Enumeration of all possible statuses of a tier's analysis. */
 enum AnalysisTierStatus {

@@ -26,16 +26,16 @@
 
 #include "core/db/db_manager.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL, size_t
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // strlen
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/gamesman_error.h"
 
 static const Database *current_db;
 

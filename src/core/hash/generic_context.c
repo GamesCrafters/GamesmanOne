@@ -32,13 +32,13 @@
 
 #include "core/hash/generic_context.h"
 
-#include <assert.h>   // assert
-#include <limits.h>   // CHAR_MAX
-#include <stdbool.h>  // bool
-#include <stdint.h>   // INT8_MAX, int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, free
-#include <string.h>   // memset, memcpy
+#include <assert.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/misc.h"
 

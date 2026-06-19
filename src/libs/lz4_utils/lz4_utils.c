@@ -26,12 +26,12 @@
 
 #include "lz4_utils.h"
 
-#include <lz4frame.h>  // LZ4F_*
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // size_t, NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // FILE, fopen, fread, fclose
-#include <stdlib.h>    // malloc, free
+#include <lz4frame.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // ================================= Constants =================================
 

@@ -27,9 +27,9 @@
 #ifndef GAMESMANONE_LIBS_XZRA_XZRA_H_
 #define GAMESMANONE_LIBS_XZRA_XZRA_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // uint32_t, int64_t, uint64_t, uint8_t
-#include <stdlib.h>   // size_t
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 // ============================== Compression API ==============================
 

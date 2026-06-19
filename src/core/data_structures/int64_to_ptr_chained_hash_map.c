@@ -27,11 +27,9 @@
 
 #include "core/data_structures/int64_to_ptr_chained_hash_map.h"
 
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <string.h>   // memset
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"

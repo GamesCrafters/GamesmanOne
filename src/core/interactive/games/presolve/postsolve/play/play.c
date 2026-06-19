@@ -1,19 +1,20 @@
 #include "core/interactive/games/presolve/postsolve/play/play.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // exit, EXIT_FAILURE
-#include <string.h>   // strcmp
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
+#include "core/data_structures/int64_hash_map.h"
 #include "core/gamesman_memory.h"
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/move_array.h"
 
 static bool solved;
 static int lose_children_remoteness_min;

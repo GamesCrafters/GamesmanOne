@@ -33,11 +33,11 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/position_array.h"
 
 /**
  * @brief Internal data structure of a frontier.

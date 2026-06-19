@@ -26,18 +26,17 @@
 
 #include "core/headless/hutils.h"
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fprintf, stdout, stderr, _IOLBF
-#include <stdlib.h>   // free
-#include <string.h>   // strcmp, strcpy
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "core/data_structures/int64_array.h"
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_error.h"
 
 static int MakeDirectory(ReadOnlyString output);
 

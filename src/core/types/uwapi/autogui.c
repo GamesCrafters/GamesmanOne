@@ -26,10 +26,8 @@
 
 #include "core/types/uwapi/autogui.h"
 
-#include <stddef.h>  // size_t
-#include <stdio.h>   // sprintf
-#include <stdlib.h>  // free
-#include <string.h>  // strlen
+#include <stdio.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"

@@ -27,8 +27,8 @@
 
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/data_structures/int64_to_ptr_chained_hash_map.h"
 #include "core/types/base.h"

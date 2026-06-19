@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_HASH_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_HASH_H_
 
-#include <stdint.h>  // uint64_t
+#include <stdint.h>
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 static inline uint64_t Splitmix64(uint64_t state) {

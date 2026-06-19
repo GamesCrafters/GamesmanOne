@@ -31,7 +31,6 @@
 #include <stdatomic.h>
 
 #include "core/db/arraydb/record.h"
-#include "core/types/gamesman_types.h"
 
 /** @brief The atomic record type. */
 typedef _Atomic Record AtomicRecord;

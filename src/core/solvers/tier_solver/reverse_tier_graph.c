@@ -29,11 +29,14 @@
 
 #include "core/solvers/tier_solver/reverse_tier_graph.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t
-#include <stdlib.h>  // realloc, free
-#include <string.h>  // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "core/types/gamesman_error.h"
 
 static int AddNewTier(ReverseTierGraph *graph, Tier child);
 static int ReverseTierGraphExpand(ReverseTierGraph *graph);

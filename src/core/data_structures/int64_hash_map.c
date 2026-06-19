@@ -26,12 +26,10 @@
 
 #include "core/data_structures/int64_hash_map.h"
 
-#include <assert.h>   // assert
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, uint64_t
-#include <string.h>   // memset
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"

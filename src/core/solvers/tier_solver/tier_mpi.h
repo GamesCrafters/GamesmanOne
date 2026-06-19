@@ -27,9 +27,7 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_MPI_H_
 
-#include <stdbool.h>  // bool
-
-#include "core/types/gamesman_types.h"
+#include <stdbool.h>
 
 /** @brief Tier manager to worker MPI commands. */
 enum TierMpiCommands {

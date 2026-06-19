@@ -1,8 +1,8 @@
 #include "core/interactive/games/presolve/options/options.h"
 
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf, fprintf, stderr, sprintf
-#include <string.h>  // strcat, strncat, strlen
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
@@ -10,7 +10,11 @@
 #include "core/interactive/games/presolve/options/choices/choices.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/game/game_variant_option.h"
+#include "core/types/gamesman_error.h"
+#include "core/types/solver/solver_option.h"
 
 static char **items;
 

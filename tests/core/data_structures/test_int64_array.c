@@ -3,10 +3,8 @@
  * @brief Unit tests for the Int64Array module.
  */
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "core/data_structures/int64_array.h"

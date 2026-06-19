@@ -9,7 +9,7 @@
 #include "core/interactive/games/presolve/postsolve/configure/configure.h"
 #include "core/interactive/games/presolve/postsolve/help/game_help.h"
 #include "core/interactive/games/presolve/postsolve/play/play.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 static const char title_format[] =
     "Play (Post-Solved) Menu for %s (variant %d)";

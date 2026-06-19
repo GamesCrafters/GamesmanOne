@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HTEST_H_
 #define GAMESMANONE_CORE_HEADLESS_HTEST_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Tests the game of name \p game_name and variant index \p variant_id

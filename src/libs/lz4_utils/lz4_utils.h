@@ -27,8 +27,8 @@
 #ifndef GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
 #define GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
 
-#include <stddef.h>  // size_t
-#include <stdint.h>  // int64_t
+#include <stddef.h>
+#include <stdint.h>
 
 // ============================== Compression API ==============================
 

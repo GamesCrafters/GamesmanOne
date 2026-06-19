@@ -27,11 +27,12 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_
 #define GAMESMANONE_CORE_SOLVERS_REGULAR_SOLVER_REGULAR_SOLVER_H_
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <stdint.h>   // int64_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/solver/solver.h"
 
 /** @brief The Regular Solver. */
 extern const Solver kRegularSolver;
