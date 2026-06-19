@@ -1,18 +1,22 @@
 cmake_minimum_required(VERSION 3.14)
-project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.05.26)
+project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # Generate compile_commands.json in the build directory
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-########################
-# Library Dependencies #
-########################
+##########
+# Ccache #
+##########
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
   set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
   set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 endif()
+
+########################
+# Library Dependencies #
+########################
 
 include(FetchContent)
 FetchContent_Declare(
@@ -31,6 +35,25 @@ FetchContent_Declare(
   GIT_TAG ebb370ca83af193212df4dcbadcc5d87bc0de2f0 # LZ4 v1.10.0
 )
 FetchContent_MakeAvailable(json-c liblzma lz4)
+
+########################
+# include-what-you-use #
+########################
+
+# CMake integration
+find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+
+if(IWYU_PATH)
+  message(STATUS "Found IWYU: ${IWYU_PATH}")
+  # Run IWYU alongside the C compiler, silencing Clang complaints about GCC flags
+  set(CMAKE_C_INCLUDE_WHAT_YOU_USE
+    ${IWYU_PATH}
+    "-Wno-unknown-warning-option"
+    "-Wno-ignored-optimization-argument"
+  )
+else()
+  message(WARNING "Include What You Use not found. IWYU features will be disabled.")
+endif()
 
 ##########################
 # Common Flags Interface #
