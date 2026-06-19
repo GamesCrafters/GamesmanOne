@@ -15,4 +15,4 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/reverse_graph.c
 )
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

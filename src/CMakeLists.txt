@@ -10,11 +10,11 @@ else()
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 endif()
 
-# Define the executable.
-add_executable(gamesman main.c)
+# Define the library that contains all application logic except the main entry point (main.c).
+add_library(gamesman_core STATIC)
 
 # Add common flags.
-target_link_libraries(gamesman PRIVATE common_flags)
+target_link_libraries(gamesman_core PRIVATE common_flags)
 
 # Check dependent packages.
 list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/res") # Add directory for additional libraries
@@ -31,7 +31,7 @@ endif()
 if(USE_MPI) # MPI
   find_package(MPI REQUIRED)
   message(STATUS "MPI enabled")
-  target_compile_definitions(gamesman PRIVATE USE_MPI)
+  target_compile_definitions(gamesman_core PRIVATE USE_MPI)
 endif()
 
 # Execute subdirectories.
@@ -40,10 +40,14 @@ add_subdirectory(games)
 add_subdirectory(libs)
 
 # Link libraries.
-target_link_libraries(gamesman PRIVATE json-c) # json-c
+target_link_libraries(gamesman_core PRIVATE json-c) # json-c
 if(OpenMP_FOUND) # OpenMP (optional)
-  target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)
+  target_link_libraries(gamesman_core PRIVATE OpenMP::OpenMP_C)
 endif()
 if(USE_MPI) # MPI (optional)
-  target_link_libraries(gamesman PRIVATE MPI::MPI_C)
+  target_link_libraries(gamesman_core PRIVATE MPI::MPI_C)
 endif()
+
+# Define the GAMESMAN executable
+add_executable(gamesman main.c)
+target_link_libraries(gamesman PRIVATE gamesman_core)

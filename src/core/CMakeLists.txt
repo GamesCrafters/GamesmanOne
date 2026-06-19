@@ -43,5 +43,5 @@ set(SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
-target_link_libraries(gamesman PRIVATE misc gamesman_memory)
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})
+target_link_libraries(gamesman_core PRIVATE misc gamesman_memory)

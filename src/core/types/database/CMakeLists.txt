@@ -1,4 +1,4 @@
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/database.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/db_probe.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/db_probe.h)
 
-target_sources(gamesman PRIVATE ${HEADERS})
+target_sources(gamesman_core PRIVATE ${HEADERS})

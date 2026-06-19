@@ -10,4 +10,4 @@ set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/match.h
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/match.c
     ${CMAKE_CURRENT_SOURCE_DIR}/presolve.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

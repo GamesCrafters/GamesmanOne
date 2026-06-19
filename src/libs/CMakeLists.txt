@@ -5,4 +5,4 @@ add_subdirectory(xzra)
 
 set(LIBS lz4_utils mt19937 xzra)
 
-target_link_libraries(gamesman PRIVATE ${LIBS})
+target_link_libraries(gamesman_core PRIVATE ${LIBS})
