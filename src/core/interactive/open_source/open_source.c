@@ -10,6 +10,10 @@ typedef struct OpenSourceSoftware {
 // clang-format off
 static const OpenSourceSoftware kSoftwareList[] = {
     {
+        .name = "GoogleTest",
+        .url= "https://github.com/google/googletest",
+    },
+    {
         .name = "JSON-C - A JSON implementation in C",
         .url = "https://github.com/json-c/json-c",
     },

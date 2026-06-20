@@ -1,0 +1,10 @@
+{
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
+    "cmake.configureOnOpen": false,
+    "cmake.preRunCoverageTarget": "coverage-clean",
+    "cmake.postRunCoverageTarget": "coverage-generate",
+    "cmake.coverageInfoFiles": [
+        "${workspaceFolder}/build/lcov.info"
+    ],
+    "testing.coverageToolbarEnabled": true,
+}

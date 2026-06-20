@@ -62,7 +62,7 @@ dkms.conf
 *~
 
 # VSCode
-.vscode
+/.vscode
 
 # GCC
 *.gcda
