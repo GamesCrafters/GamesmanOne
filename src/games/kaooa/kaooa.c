@@ -406,7 +406,7 @@ static Value MkaooaPrimitive(Position position) {
                         possible_trap[count++] = j;
                     }
                 }
-                for (int j = 0; j < 6; j++) {
+                for (int j = 0; j < count; j++) {
                     if (board[possible_trap[j]] == BLANK) {
                         return kUndecided;
                     }

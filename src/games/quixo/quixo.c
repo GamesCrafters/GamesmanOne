@@ -850,7 +850,9 @@ static const TierSolverApi kQuixoSolverApi = {
 // ============================= kQuixoGameplayApi =============================
 
 MoveArray QuixoGenerateMovesGameplay(TierPosition tier_position) {
-    Move moves[kTierSolverNumMovesMax];
+    // Zero-initialize to silence a static analyzer warning.
+    // Performance is less important here so initialization is fine.
+    Move moves[kTierSolverNumMovesMax] = {0};
     int num_moves = QuixoGenerateMoves(tier_position, moves);
     MoveArray ret;
     MoveArrayInit(&ret);

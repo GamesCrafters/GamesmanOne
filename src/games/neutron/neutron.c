@@ -960,6 +960,7 @@ static PartmoveArray NeutronGeneratePartmovesInternal(
     if (pos == kInitialPosition) return ret;
 
     int8_t n_src = FindNeutron(board);
+    assert(n_src >= 0);
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // Make the current neutron move and generate piece moves.

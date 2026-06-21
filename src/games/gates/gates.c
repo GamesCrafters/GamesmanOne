@@ -504,6 +504,7 @@ static int GenerateMovesGateMoving(const GatesTier *pt,
     char gate = kPieces[!(turn - 1)];
     GatesMove move = kGatesMoveInit;
     move.unpacked.gate_src = FindGate(board, gate, pt->phase == kGate2Moving);
+    assert(move.unpacked.gate_src >= 0);
     int ret = 0;
 
     // Find all empty slots where the gate can go, INCLUDING THE ORIGINAL SLOT.
