@@ -30,10 +30,12 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIERLESS_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIERLESS_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "core/solvers/tier_solver/tier_worker.h"
+#include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 
 /**
  * @brief Solves the given \p tier using the frontierless strategy of the

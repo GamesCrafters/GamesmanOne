@@ -26,9 +26,12 @@
 
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
+#include <assert.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "core/analysis/analysis.h"

@@ -26,13 +26,14 @@
 
 #include "core/solvers/tier_solver/tier_worker/test.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 
 #include "core/concurrency.h"
+#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/database/database.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"

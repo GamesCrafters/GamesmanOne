@@ -26,19 +26,19 @@
 
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/database/database.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_set.h"
-#include "libs/lz4_utils/lz4_utils.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

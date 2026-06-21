@@ -36,10 +36,11 @@
 #include "core/constants.h"
 #include "core/data_structures/bitset.h"
 #include "core/db/db_manager.h"
-#include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/database/database.h"
 #include "core/types/gamesman_error.h"
+#include "core/types/tier_array.h"
 #include "core/types/tier_hash_set.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.

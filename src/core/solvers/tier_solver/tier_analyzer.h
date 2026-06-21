@@ -32,6 +32,7 @@
 
 #include "core/analysis/analysis.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 
 /**
  * @brief Initializes the Tier Analyzer Module using the given API functions.

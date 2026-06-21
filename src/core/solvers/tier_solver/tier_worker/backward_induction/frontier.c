@@ -40,7 +40,6 @@
 
 #include "core/concurrency.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 
 #ifdef _OPENMP
 #include <omp.h>

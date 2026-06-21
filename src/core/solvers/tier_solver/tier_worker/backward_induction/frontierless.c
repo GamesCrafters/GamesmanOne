@@ -32,14 +32,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
+#include "config.h"
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/database/db_probe.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_set.h"
 
