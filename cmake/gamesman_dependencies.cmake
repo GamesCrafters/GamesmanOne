@@ -39,3 +39,18 @@ FetchContent_MakeAvailable(googletest json-c liblzma lz4)
 
 # Re-enable testing for our own tests.
 set(BUILD_TESTING ON CACHE BOOL "Restore testing" FORCE)
+
+if(NOT DISABLE_OPENMP) # OpenMP
+    find_package(OpenMP)
+    if(OpenMP_FOUND)
+        message(STATUS "OpenMP multithreading enabled")
+    else()
+        message(WARNING "OpenMP not found, configuring without multithreading")
+    endif()
+else()
+    message(STATUS "OpenMP multithreading disabled")
+endif()
+if(USE_MPI) # MPI
+    find_package(MPI REQUIRED)
+    message(STATUS "MPI enabled")
+endif()

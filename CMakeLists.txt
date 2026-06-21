@@ -1,18 +1,94 @@
+##################
+# Initialization #
+##################
+
 cmake_minimum_required(VERSION 3.22)
 project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # Add the 'cmake' directory to the module search path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# GoogleTest requires at least C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Generate compile_commands.json in the build directory
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Set binary output directory to bin.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
 # Necessary for conditional compilation and flag inclusion
 include(CheckCCompilerFlag)
 
-# Necessary for line coverage generation.
-include(CTest)
+########################
+# Library Dependencies #
+########################
 
-#######################
-# Compile-time Macros #
-#######################
+include(gamesman_dependencies)
+
+########################
+# Options and Settings #
+########################
+
+option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP.
+option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI.
+option(ENABLE_STATIC_ANALYZER "Enable compiler static analyzer." OFF) # Set this to ON to enable compile-time static code analysis.
+option(ENABLE_SANITIZERS "Enable sanitizers." OFF) # Set this to ON to enable sanitizers
+option(ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
+
+# ccache (optional)
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+  message(STATUS "ccache not found. Repeated compilation on unmodified targets may take longer.")
+endif()
+
+# include-what-you-use (optional)
+find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+if(IWYU_PATH)
+  message(STATUS "Found IWYU: ${IWYU_PATH}")
+  set(CMAKE_C_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
+else()
+  message(WARNING "include-what-you-use iwyu not found. Compile-time IWYU checking will be disabled.")
+endif()
+
+#######################################
+# Common Flags Interface for Gamesman #
+#######################################
+
+# common_flags will be linked to all Gamesman targets
+add_library(common_flags INTERFACE)
+target_compile_options(common_flags INTERFACE -Wall -Wextra -Wpedantic -march=native)
+
+if(ENABLE_STATIC_ANALYZER)
+  include(gamesman_static_analyzer) # Modifies common_flags internally
+endif()
+
+if(ENABLE_SANITIZERS)
+  message(STATUS "Sanitizers enabled: ASAN, LSAN")
+  target_compile_options(common_flags INTERFACE -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer)
+  target_link_options(common_flags INTERFACE -fsanitize=address)
+endif()
+
+if(ENABLE_LINE_COVERAGE)
+  find_program(LCOV_PATH lcov)
+  if(LCOV_PATH)
+    message(STATUS "Found lcov: ${LCOV_PATH}")
+    target_compile_options(common_flags INTERFACE --coverage)
+    target_link_options(common_flags INTERFACE --coverage)
+    include(gamesman_lcov)
+  else()
+    message(STATUS "lcov not found. Code coverage targets will not be available.")
+  endif()
+endif()
+
+########################
+# Macros/System Checks #
+########################
 
 # Run a small cache line size detection program to configure
 # GamesmanOne_CACHE_LINE_SIZE
@@ -31,29 +107,16 @@ else()
   set(GamesmanOne_CACHE_LINE_SIZE 64) # fallback
 endif()
 
-#####################################
-# Global Compilation Configurations #
-#####################################
+# Check and enable link-time optimizations for "Release" builds if possible.
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
 
-# GoogleTest requires at least C++17
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Generate compile_commands.json in the build directory
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-########################
-# Library Dependencies #
-########################
-
-include(gamesman_dependencies)
-
-###########################################
-# Compilation Configurations for Gamesman #
-###########################################
-
-# Set binary output directory to bin.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+if(ipo_supported)
+  message(STATUS "IPO / LTO enabled for Release builds (current config: ${CMAKE_BUILD_TYPE})")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+else()
+  message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")
+endif()
 
 # Add configure header.
 configure_file(
@@ -61,83 +124,9 @@ configure_file(
   "${PROJECT_SOURCE_DIR}/src/config.h"
 )
 
-# Add --coverage flag to Gamesman targets when build type is Debug.
-add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:--coverage>)
-add_link_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:--coverage>)
-
-########################
-# Custom CMake Options #
-########################
-
-option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP.
-option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI.
-
-##########################
-# Common Flags Interface #
-##########################
-
-# Create an interface library for common flags
-# Use the following command to link the flags to a target:
-# target_link_libraries(<target> PRIVATE common_flags)
-add_library(common_flags INTERFACE)
-target_compile_options(common_flags INTERFACE
-  # MSVC flags
-  $<$<C_COMPILER_ID:MSVC>:/W4 /WX>
-
-  # Non-MSVC flags
-  $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -march=native>
-)
-
-#####################
-# Ccache (optional) #
-#####################
-
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-  message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
-  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-else()
-  message(STATUS "ccache not found. Repeated compilation on unmodified targets may take longer.")
-endif()
-
-##################################
-# Line Coverage (lcov, optional) #
-##################################
-
-find_program(LCOV_PATH lcov)
-if(LCOV_PATH)
-  message(STATUS "Found lcov: ${LCOV_PATH}")
-  include(gamesman_lcov)
-else()
-  message(STATUS "lcov command not found. Code coverage targets will not be available.")
-endif()
-
-###################################
-# include-what-you-use (optional) #
-###################################
-
-find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-if(IWYU_PATH)
-  message(STATUS "Found IWYU: ${IWYU_PATH}")
-  # Run IWYU alongside the C compiler, silencing Clang complaints about GCC flags
-  set(CMAKE_C_INCLUDE_WHAT_YOU_USE
-    ${IWYU_PATH}
-    "-Wno-unknown-warning-option"
-    "-Wno-ignored-optimization-argument"
-  )
-else()
-  message(WARNING "Include What You Use not found. IWYU features will be disabled.")
-endif()
-
-##############################
-# Static Analyzer (optional) #
-##############################
-
-# Enable static analyzer if possible when build type is "Debug"
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  include(gamesman_static_analyzer)
-endif()
+####################
+# Gamesman Targets #
+####################
 
 # Add include paths.
 include_directories("${PROJECT_SOURCE_DIR}/src")
@@ -145,6 +134,6 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 # Add source.
 add_subdirectory(src)
 
-# Add tests.
-enable_testing()
+# Necessary for line coverage generation. Calls enable_testing() internally.
+include(CTest)
 add_subdirectory(tests)
