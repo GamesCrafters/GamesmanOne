@@ -1,6 +1,7 @@
 add_executable(gamesman_test)
 
 target_link_libraries(gamesman_test PRIVATE
+    common_flags
     gamesman_core
     GTest::gtest_main
 )

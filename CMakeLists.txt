@@ -70,7 +70,7 @@ endif()
 
 if(ENABLE_SANITIZERS)
   message(STATUS "Sanitizers enabled: ASAN, LSAN")
-  target_compile_options(common_flags INTERFACE -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer)
+  target_compile_options(common_flags INTERFACE -fsanitize=address -fno-omit-frame-pointer)
   target_link_options(common_flags INTERFACE -fsanitize=address)
 endif()
 
@@ -112,7 +112,7 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
 
 if(ipo_supported)
-  message(STATUS "IPO / LTO enabled for Release builds (current config: ${CMAKE_BUILD_TYPE})")
+  message(STATUS "Found IPO / LTO, will enable for Release bulids (current config: ${CMAKE_BUILD_TYPE})")
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 else()
   message(STATUS "IPO / LTO not supported: <${ipo_support_error}>")

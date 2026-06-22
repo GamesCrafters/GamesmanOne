@@ -2,7 +2,7 @@ set(LCOV_BASELINE_INFO "${CMAKE_BINARY_DIR}/baseline.info")
 set(LCOV_TEST_INFO "${CMAKE_BINARY_DIR}/test.info")
 set(LCOV_MERGED_INFO "${CMAKE_BINARY_DIR}/merged.info")
 set(LCOV_OUTPUT_INFO "${CMAKE_BINARY_DIR}/lcov.info")
-set(LCOV_SRC_FILTER "'/usr/*'")
+set(LCOV_SRC_FILTER "'/usr/*'" "build/*")
 
 # For vscode CMake Tools line coverage configuration cmake.preRunCoverageTarget
 # Wipes old coverage data before tests run
