@@ -4,7 +4,15 @@
     "cmake.preRunCoverageTarget": "coverage-clean",
     "cmake.postRunCoverageTarget": "coverage-generate",
     "cmake.coverageInfoFiles": [
-        "${workspaceFolder}/build/lcov.info"
+        "${command:cmake.buildDirectory}/lcov.info",
     ],
     "testing.coverageToolbarEnabled": true,
+    "cmake.ctest.allowParallelJobs": true,
+    "cmake.configureOnEdit": false,
+    "cmake.automaticReconfigure": false,
+    "cmake.configureArgs": [
+        "-DENABLE_SANITIZERS=ON",
+        "-DENABLE_LINE_COVERAGE=ON",
+        "-DENABLE_STATIC_ANALYZER=ON",
+    ],
 }
