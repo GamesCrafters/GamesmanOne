@@ -75,7 +75,7 @@ static int64_t BitOffset(int64_t bit_index) {
 }
 
 bool BitsetSet(Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -90,7 +90,7 @@ bool BitsetSet(Bitset *bs, int64_t i) {
 }
 
 bool BitsetReset(Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -105,7 +105,7 @@ bool BitsetReset(Bitset *bs, int64_t i) {
 }
 
 bool BitsetSetTo(Bitset *bs, int64_t i, bool val) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -120,7 +120,7 @@ bool BitsetSetTo(Bitset *bs, int64_t i, bool val) {
 }
 
 bool BitsetTest(const Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
