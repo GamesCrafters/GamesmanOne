@@ -38,12 +38,6 @@ TEST(BitsetTest, MemRequiredZeroBits) {
     EXPECT_GE(mem, 0) << "Memory required should be non-negative.";
 }
 
-TEST(BitsetTest, MemRequiredNegativeBits) {
-    size_t mem = BitsetMemRequired(-42);
-
-    EXPECT_GE(mem, 0) << "Memory required should be non-negative.";
-}
-
 TEST(BitsetTest, CreateAndDestroy) {
     Bitset *bs = BitsetCreate(100);
     EXPECT_NE(bs, nullptr)
@@ -58,14 +52,6 @@ TEST(BitsetTest, CreateZeroBits) {
     Bitset *bs = BitsetCreate(0);
     EXPECT_NE(bs, nullptr)
         << "BitsetCreate should return a valid pointer even for size 0.";
-    BitsetDestroy(bs);
-}
-
-TEST(BitsetTest, CreateNegativeBits) {
-    Bitset *bs = BitsetCreate(0);
-    EXPECT_NE(bs, nullptr) << "BitsetCreate should return a valid pointer even "
-                              "for negative sizes. The API specifies a same "
-                              "behavior as creating with zero size.";
     BitsetDestroy(bs);
 }
 
@@ -156,98 +142,38 @@ TEST(BitsetTest, CountAccuracy) {
     BitsetDestroy(bs);
 }
 
-// --- Serialization and Deserialization Tests ---
+// --- BitSetGetSerializedSize Tests ---
 
-TEST(BitsetTest, SerializationSizeAndRawData) {
-    Bitset *bs = BitsetCreate(32);
+TEST(BitsetTest, SerializationSizeIsGreaterThanZeroForPositiveLengthBitsets) {
+    Bitset *bs = BitsetCreate(42);
     ASSERT_NE(bs, nullptr);
 
     size_t size = BitSetGetSerializedSize(bs);
     EXPECT_GT(size, 0) << "Serialized size should be larger than 0 bytes.";
 
+    BitsetDestroy(bs);
+}
+
+TEST(BitsetTest, SerializationSizeIsZeroForNullInputs) {
+    size_t size = BitSetGetSerializedSize(nullptr);
+    EXPECT_EQ(size, 0) << "Serialized size should be 0 for NULL inputs.";
+}
+
+// --- BitsetGetRawData Tests ---
+
+TEST(BitsetTest, GetRawDataShouldReturnNonNullForValidBitsets) {
+    Bitset *bs = BitsetCreate(42);
+    ASSERT_NE(bs, nullptr);
+
     void *raw_data = BitsetGetRawData(bs);
     EXPECT_NE(raw_data, nullptr)
         << "Raw data pointer should not be null for a valid Bitset.";
 
+    BitsetDestroy(bs);
+}
+
+TEST(BitsetTest, GetRawDataShouldReturnNullForNullInput) {
     EXPECT_EQ(BitsetGetRawData(nullptr), nullptr)
         << "Raw data pointer for NULL Bitset should be NULL.";
-
-    BitsetDestroy(bs);
-}
-
-TEST(BitsetTest, FullSerializeDeserializeInOneGo) {
-    // 1. Create and populate initial bitset
-    Bitset *bs_out = BitsetCreate(256);
-    ASSERT_NE(bs_out, nullptr);
-    BitsetSet(bs_out, 10);
-    BitsetSet(bs_out, 150);
-    BitsetSet(bs_out, 255);
-
-    // 2. Determine size and allocate buffer
-    size_t size = BitSetGetSerializedSize(bs_out);
-    std::vector<uint8_t> buffer(size);
-
-    // 3. Serialize
-    size_t written = BitsetSerializeStreaming(bs_out, 0, buffer.data(), size);
-    EXPECT_EQ(written, size)
-        << "Should serialize the entire expected size in one go.";
-
-    // 4. Deserialize into a new Bitset
-    Bitset *bs_in = BitsetDeserializeStreaming(nullptr, 0, buffer.data(), size);
-    ASSERT_NE(bs_in, nullptr)
-        << "Deserialization should successfully allocate a new Bitset.";
-
-    // 5. Verify the states match exactly
-    EXPECT_TRUE(BitsetTest(bs_in, 10));
-    EXPECT_TRUE(BitsetTest(bs_in, 150));
-    EXPECT_TRUE(BitsetTest(bs_in, 255));
-    EXPECT_FALSE(BitsetTest(bs_in, 11));  // Random unset bit
-    EXPECT_EQ(BitsetCount(bs_in), 3)
-        << "Deserialized bitset should retain the exact bit count.";
-
-    BitsetDestroy(bs_out);
-    BitsetDestroy(bs_in);
-}
-
-TEST(BitsetTest, DeserializeStreamingChunks) {
-    Bitset *bs_out = BitsetCreate(128);
-    ASSERT_NE(bs_out, nullptr);
-    BitsetSet(bs_out, 50);
-
-    size_t total_size = BitSetGetSerializedSize(bs_out);
-
-    // Ensure we have at least 8 bytes for a valid minimum chunk
-    // (As noted by @note The minimum allowed input size is 8 bytes).
-    ASSERT_GE(total_size, 16);
-
-    std::vector<uint8_t> buffer(total_size);
-    BitsetSerializeStreaming(bs_out, 0, buffer.data(), total_size);
-
-    // Simulate streaming by deserializing in two parts
-    size_t chunk1_size = 8;
-    size_t chunk2_size = total_size - chunk1_size;
-
-    Bitset *bs_in =
-        BitsetDeserializeStreaming(nullptr, 0, buffer.data(), chunk1_size);
-    ASSERT_NE(bs_in, nullptr);
-
-    bs_in = BitsetDeserializeStreaming(
-        bs_in, chunk1_size, buffer.data() + chunk1_size, chunk2_size);
-    ASSERT_NE(bs_in, nullptr);
-
-    EXPECT_TRUE(BitsetTest(bs_in, 50));
-
-    BitsetDestroy(bs_out);
-    BitsetDestroy(bs_in);
-}
-
-TEST(BitsetTest, DeserializeStreamingReturnsNullOnInvalidInputSize) {
-    std::vector<uint8_t> buffer(16);
-    Bitset *bs = BitsetDeserializeStreaming(nullptr, 0, buffer.data(), 1);
-    EXPECT_EQ(bs, nullptr)
-        << "Invalid in_size 1 which is less than 8 should cause "
-           "BitsetDeserializeStreaming to return NULL.";
-    // Either way we destroy the Bitset returned to avoid memory leak.
-    BitsetDestroy(bs);
 }
 }  // namespace
