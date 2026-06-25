@@ -4,9 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Non-cryptographic hash functions.
- * @version 1.0.0
- * @date 2025-06-10
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -21,7 +18,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http: *www.gnu.org/licenses/>.
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_HASH_H_
@@ -39,9 +36,10 @@
  * excellent avalanche characteristics.
  *
  * @param[in] state The current internal 64-bit state/seed value.
+ *
  * @return A 64-bit pseudo-randomly scrambled unsigned integer.
  *
- * @see https: *rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
+ * @see https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
  */
 static inline uint64_t Splitmix64(uint64_t state) {
     uint64_t x = state + UINT64_C(0x9e3779b97f4a7c15);
@@ -51,19 +49,6 @@ static inline uint64_t Splitmix64(uint64_t state) {
 }
 
 /**
- * @brief Mixes a 128-bit value down to a 64-bit hash.
- *
- * This function uses a MurmurHash3-inspired multiplication and xorshift
- * avalanche technique to combine two 64-bit integers (`lo` and `hi`) into
- * a single, highly distinct 64-bit hash value.
- *
- * It provides excellent bit distribution and is ideal for constructing hash
- * table keys out of composite types, UUIDs, or large 128-bit identifiers.
- *
- * @param[in] lo The lower 64 bits of the 128-bit value to hash.
- * @param[in] hi The upper 64 bits of the 128-bit value to hash.
- * @return A thoroughly scrambled 64-bit unsigned integer hash.
- *
  * @copyright Copyright (c) 2011 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -86,7 +71,21 @@ static inline uint64_t Splitmix64(uint64_t state) {
  *
  * CityHash, by Geoff Pike and Jyrki Alakuijala
  *
+ * @brief Mixes a 128-bit value down to a 64-bit hash.
+ *
+ * This function uses a MurmurHash3-inspired multiplication and xorshift
+ * avalanche technique to combine two 64-bit integers (`lo` and `hi`) into
+ * a single, highly distinct 64-bit hash value.
+ *
+ * It provides excellent bit distribution and is ideal for constructing hash
+ * table keys out of composite types, UUIDs, or large 128-bit identifiers.
+ *
  * @note This function is adapted from Google CityHash
+ *
+ * @param[in] lo The lower 64 bits of the 128-bit value to hash.
+ * @param[in] hi The upper 64 bits of the 128-bit value to hash.
+ *
+ * @return A thoroughly scrambled 64-bit unsigned integer hash.
  *
  * @see [CityHash Source](http://code.google.com/p/cityhash/)
  */

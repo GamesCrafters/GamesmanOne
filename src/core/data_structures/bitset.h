@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Fixed-size bit set.
- * @version 2.0.0
- * @date 2026-06-22
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,7 +29,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** * @brief Opaque fixed-size bit set type. */
+/**
+ * @brief Opaque fixed-size bit set type.
+ */
 typedef struct Bitset Bitset;
 
 /**
@@ -50,18 +50,18 @@ size_t BitsetMemRequired(int64_t num_bits);
  *
  * @param[in] num_bits The capacity of the new Bitset in bits.
  *
- * @pre @p num_bits must be >= 0.
+ * @pre `num_bits` must be >= 0.
  *
- * @return A pointer to a newly created Bitset, or @c NULL on memory allocation
- * failure. Note that a valid pointer will be returned even if @p num_bits is 0.
- * A @c NULL return always indicates an error.
+ * @return A pointer to a newly created Bitset, or `NULL` on memory allocation
+ * failure. Note that a valid pointer will be returned even if `num_bits` is 0.
+ * A `NULL` return always indicates an error.
  */
 Bitset *BitsetCreate(int64_t num_bits);
 
 /**
  * @brief Deallocates the target bitset.
  *
- * @param[in] bs The bitset to destroy. If @p bs is @c NULL, the function does
+ * @param[in] bs The bitset to destroy. If `bs` is `NULL`, the function does
  * nothing.
  */
 void BitsetDestroy(Bitset *bs);
@@ -72,8 +72,8 @@ void BitsetDestroy(Bitset *bs);
  * @param[in,out] bs Target bitset.
  * @param[in] i Index of the bit to set.
  *
- * @pre @p bs must not be @c NULL.
- * @pre @p i must be valid (0 <= @p i < @c bs->num_bits). Bounds checking is
+ * @pre `bs` must not be `NULL`.
+ * @pre `i` must be valid (0 <= `i` < `bs->num_bits`). Bounds checking is
  * omitted for performance; out-of-bounds indices result in undefined behavior.
  *
  * @return The previous value of the bit.
@@ -86,8 +86,8 @@ bool BitsetSet(Bitset *bs, int64_t i);
  * @param[in,out] bs Target bitset.
  * @param[in] i Index of the bit to reset.
  *
- * @pre @p bs must not be @c NULL.
- * @pre @p i must be valid (0 <= @p i < @c bs->num_bits).
+ * @pre `bs` must not be `NULL`.
+ * @pre `i` must be valid (0 <= `i` < `bs->num_bits`).
  *
  * @return The previous value of the bit.
  */
@@ -100,8 +100,8 @@ bool BitsetReset(Bitset *bs, int64_t i);
  * @param[in] i Index of the bit to modify.
  * @param[in] val The desired bit value.
  *
- * @pre @p bs must not be @c NULL.
- * @pre @p i must be valid (0 <= @p i < @c bs->num_bits).
+ * @pre `bs` must not be `NULL`.
+ * @pre `i` must be valid (0 <= `i` < `bs->num_bits`).
  *
  * @return The previous value of the bit.
  */
@@ -113,11 +113,11 @@ bool BitsetSetTo(Bitset *bs, int64_t i, bool val);
  * @param[in] bs Source bitset.
  * @param[in] i Index of the bit to test.
  *
- * @pre @p bs must not be @c NULL.
- * @pre @p i must be valid (0 <= @p i < @c bs->num_bits).
+ * @pre `bs` must not be `NULL`.
+ * @pre `i` must be valid (0 <= `i` < `bs->num_bits`).
  *
- * @retval @c true if the bit is set to 1
- * @retval @c false otherwise.
+ * @retval `true` if the bit is set to 1
+ * @retval `false` otherwise.
  */
 bool BitsetTest(const Bitset *bs, int64_t i);
 
@@ -126,7 +126,7 @@ bool BitsetTest(const Bitset *bs, int64_t i);
  *
  * @param[in] bs Source bitset.
  *
- * @pre @p bs must not be @c NULL.
+ * @pre `bs` must not be `NULL`.
  *
  * @return The number of high bits.
  */
@@ -137,8 +137,8 @@ int64_t BitsetCount(const Bitset *bs);
  *
  * @param[in] bs Source bitset.
  *
- * @return The exact number of bytes required to serialize @p bs, or 0 if @p bs
- * is @c NULL.
+ * @return The exact number of bytes required to serialize `bs`, or 0 if `bs`
+ * is `NULL`.
  */
 size_t BitSetGetSerializedSize(const Bitset *bs);
 
@@ -147,11 +147,11 @@ size_t BitSetGetSerializedSize(const Bitset *bs);
  *
  * This function breaks opacity to allow direct, whole-object memory operations.
  * The total size of the memory block matches the return value of
- * @c BitSetGetSerializedSize.
+ * `BitSetGetSerializedSize`.
  *
  * @param[in,out] bs The bitset to expose.
  *
- * @return A pointer to the raw struct data, or @c NULL if @p bs is @c NULL.
+ * @return A pointer to the raw struct data, or `NULL` if `bs` is `NULL`.
  */
 void *BitsetGetRawData(Bitset *bs);
 
