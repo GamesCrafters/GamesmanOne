@@ -437,8 +437,10 @@ static int64_t DecompressFileInternal(FILE *f_in, void **out,
                 if (src_begin >= src_end) break;
 
                 // Otherwise, we move on to the next output buffer
-                ++out_index;
                 out_offset = 0;
+                do {
+                    ++out_index;
+                } while (out_index < n && out_sizes[out_index] == 0);
             }
         }
     }
