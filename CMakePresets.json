@@ -1,0 +1,150 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin"
+      }
+    },
+    {
+      "name": "ci-asan",
+      "inherits": "base",
+      "displayName": "RelWithDebInfo + ASan + UBSan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "ENABLE_ASAN_UBSAN": "ON"
+      }
+    },
+    {
+      "name": "ci-tsan",
+      "inherits": "base",
+      "displayName": "RelWithDebInfo + TSan",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "ENABLE_TSAN": "ON"
+      }
+    },
+    {
+      "name": "ci-coverage",
+      "inherits": "base",
+      "displayName": "Debug + Coverage",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_LINE_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "ci-analyze-gcc",
+      "inherits": "base",
+      "displayName": "Debug + Static Analysis (GCC -fanalyzer)",
+      "environment": {
+        "CC": "gcc",
+        "CXX": "g++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_STATIC_ANALYZER": "ON"
+      }
+    },
+    {
+      "name": "ci-analyze-clang",
+      "inherits": "base",
+      "displayName": "Debug + Static Analysis (Clang-Tidy)",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_STATIC_ANALYZER": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "base-build",
+      "hidden": true
+    },
+    {
+      "name": "release-build",
+      "inherits": "base-build",
+      "configurePreset": "release",
+      "targets": "gamesman"
+    },
+    {
+      "name": "ci-asan-build",
+      "inherits": "base-build",
+      "configurePreset": "ci-asan"
+    },
+    {
+      "name": "ci-tsan-build",
+      "inherits": "base-build",
+      "configurePreset": "ci-tsan"
+    },
+    {
+      "name": "ci-coverage-build",
+      "inherits": "base-build",
+      "configurePreset": "ci-coverage"
+    },
+    {
+      "name": "ci-analyze-gcc-build",
+      "inherits": "base-build",
+      "configurePreset": "ci-analyze-gcc"
+    },
+    {
+      "name": "ci-analyze-clang-build",
+      "inherits": "base-build",
+      "configurePreset": "ci-analyze-clang",
+      "targets": "tidy"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base-test",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci-asan-test",
+      "inherits": "base-test",
+      "configurePreset": "ci-asan"
+    },
+    {
+      "name": "ci-tsan-test",
+      "inherits": "base-test",
+      "configurePreset": "ci-tsan",
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "ci-coverage-test",
+      "inherits": "base-test",
+      "configurePreset": "ci-coverage"
+    }
+  ]
+}

@@ -12,12 +12,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generate compile_commands.json in the build directory
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Set binary output directory to bin.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-
 # Necessary for conditional compilation and flag inclusion
 include(CheckCCompilerFlag)
 
@@ -31,10 +25,11 @@ include(gamesman_dependencies)
 # Options and Settings #
 ########################
 
-option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP.
-option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI.
-option(ENABLE_STATIC_ANALYZER "Enable compiler static analyzer." OFF) # Set this to ON to enable compile-time static code analysis.
-option(ENABLE_SANITIZERS "Enable sanitizers." OFF) # Set this to ON to enable sanitizers
+option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP
+option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI
+option(ENABLE_STATIC_ANALYZER "Enable compiler static analyzer." OFF) # Set this to ON to enable compile-time static code analysis
+option(ENABLE_ASAN_UBSAN "Enable address sanitizer and undefined behavior sanitizer." OFF) # Set this to ON to enable ASan and UBSan
+option(ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to enable TSan
 option(ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
 
 # ccache (optional)
@@ -68,10 +63,16 @@ if(ENABLE_STATIC_ANALYZER)
   include(gamesman_static_analyzer) # Modifies common_flags internally
 endif()
 
-if(ENABLE_SANITIZERS)
-  message(STATUS "Sanitizers enabled: ASAN, LSAN")
-  target_compile_options(common_flags INTERFACE -fsanitize=address -fno-omit-frame-pointer)
+if(ENABLE_ASAN)
+  message(STATUS "Sanitizers enabled: ASan, LSan")
+  target_compile_options(common_flags INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
   target_link_options(common_flags INTERFACE -fsanitize=address)
+endif()
+
+if(ENABLE_TSAN)
+  message(STATUS "Sanitizers enabled: TSan")
+  target_compile_options(common_flags INTERFACE -fsanitize=thread)
+  target_link_options(common_flags INTERFACE -fsanitize=thread)
 endif()
 
 if(ENABLE_LINE_COVERAGE)

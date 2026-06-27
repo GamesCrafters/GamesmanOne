@@ -14,11 +14,24 @@ endif()
 # Clang Compiler
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "AppleClang")
     find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-    if(CLANG_TIDY_EXE)
+    find_program(RUN_CLANG_TIDY_EXE NAMES "run-clang-tidy" "run-clang-tidy.py")
+    if(CLANG_TIDY_EXE AND RUN_CLANG_TIDY_EXE)
         message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
-        set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXE}" "-checks=-*,bugprone-*,performance-*,warning-*")
+        message(STATUS "Found run-clang-tidy: ${RUN_CLANG_TIDY_EXE}")
+        # Write a .clang-tidy file that disables all checks
+        file(WRITE "${CMAKE_BINARY_DIR}/.clang-tidy"
+            "# Disable all checks in this folder.\nChecks: '-*'\n"
+        )
+        message(STATUS "Generated .clang-tidy ignore file for FetchContent dependencies.")
+
+        # Create a custom target that does not compile code
+        add_custom_target(tidy
+            COMMAND ${RUN_CLANG_TIDY_EXE} -p ${CMAKE_BINARY_DIR}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Running clang-tidy in parallel (No compilation)..."
+        )
     else()
-        message(WARNING "clang-tidy not found. Compile-time static analysis disabled.")
+        message(WARNING "clang-tidy tools not found. Static analysis disabled.")
     endif()
 endif()
 

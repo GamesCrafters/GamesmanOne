@@ -1,6 +1,7 @@
 Checks: >
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   -clang-analyzer-security.insecureAPI.*,
   concurrency-*,
@@ -13,7 +14,7 @@ Checks: >
   google-*,
   -google-readability-todo,
   misc-*,
-  -misc-include-cleaner,
+  -misc-const-correctness,
   modernize-*,
   mpi-*,
   performance-*,
