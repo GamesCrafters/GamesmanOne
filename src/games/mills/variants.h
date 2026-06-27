@@ -86,8 +86,8 @@ static const char *const kMillsBoardAndPiecesChoices[] = {
     "9 pieces each on a 24-slot board (Nine Men's Morris)",
     "10 pieces each on a 24-slot board (Lasker Morris)",
     "11 pieces each on a 24-slot board with diagonals (Eleven Men's Morris)",
-    "12 pieces each on a 24-slot board with diagonals (Morabaraba/Twelve Men's "
-    "Morris)",
+    ("12 pieces each on a 24-slot board with diagonals (Morabaraba/Twelve "
+     "Men's Morris)"),
     "12 pieces each on a 25-slot Sesotho board (Sesotho Morabaraba)",
 };
 #define NUM_BOARD_AND_PIECES_CHOICES       \
