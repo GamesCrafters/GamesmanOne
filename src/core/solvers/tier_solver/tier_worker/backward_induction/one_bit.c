@@ -725,7 +725,7 @@ static void Step2IterateWinLose(void) {
     bool advance = true;
     while (pass <= ConcurrentIntLoad(&max_remoteness.win_lose) || advance) {
         // Cannot use || here because it short-circuits.
-        advance = Step2_0IterateWin(pass) | Step2_1IterateLose(pass);
+        advance = Step2_0IterateWin(pass) || Step2_1IterateLose(pass);
         ++pass;
         max_remoteness.set = true;
     }
