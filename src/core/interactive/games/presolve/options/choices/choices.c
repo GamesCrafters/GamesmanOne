@@ -6,6 +6,7 @@
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/solver/solver_option.h"

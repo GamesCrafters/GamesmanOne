@@ -7,6 +7,7 @@
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
 #include "core/misc.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 
 static char **AllocateItems(int num_items) {

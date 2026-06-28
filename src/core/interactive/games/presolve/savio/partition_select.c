@@ -8,6 +8,7 @@
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/savio/script_setup.h"
 #include "core/savio/savio.h"
+#include "core/types/base.h"
 
 static char items[kNumSavioPartitions][kSavioPartitionDescLengthMax + 1];
 static ReadOnlyString items_p[kNumSavioPartitions];

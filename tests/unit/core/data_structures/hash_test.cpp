@@ -12,6 +12,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+
 extern "C" {
 #include "core/data_structures/hash.h"
 }

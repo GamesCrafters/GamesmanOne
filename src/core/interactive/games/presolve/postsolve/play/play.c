@@ -13,6 +13,7 @@
 #include "core/interactive/games/presolve/match.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/move_array.h"
 

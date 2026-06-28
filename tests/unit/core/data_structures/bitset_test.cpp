@@ -12,8 +12,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
 #include <cstdint>
-#include <vector>
 
 extern "C" {
 #include "core/data_structures/bitset.h"

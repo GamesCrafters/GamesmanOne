@@ -33,6 +33,8 @@
 #include <string.h>
 
 #include "core/data_structures/int64_array.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/gamesman_error.h"
 #include "games/game_list.h"

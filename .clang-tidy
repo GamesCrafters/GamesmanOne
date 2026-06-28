@@ -19,7 +19,8 @@ Checks: >
   mpi-*,
   performance-*,
   portability-*
-
+CheckOptions:
+  misc-include-cleaner.IgnoreHeaders: '<atomic>;bits/getopt_core\.h;bits/getopt_ext\.h;getopt\.h;stdint\.h'
 FormatStyle: "Google"    # Use Google code formatting style
 HeaderFilterRegex: ''  # Analyze all files including headers
 UseColor: true

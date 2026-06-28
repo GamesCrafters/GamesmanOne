@@ -35,6 +35,7 @@
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"
 

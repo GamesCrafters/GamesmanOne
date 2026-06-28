@@ -42,6 +42,7 @@
 #include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_map.h"

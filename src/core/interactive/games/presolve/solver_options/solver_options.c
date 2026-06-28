@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+#include "core/types/base.h"
+
 int InteractiveSolverOptions(ReadOnlyString key) {
     (void)key;  // Unused.
     // TODO

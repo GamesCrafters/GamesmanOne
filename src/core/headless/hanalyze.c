@@ -38,6 +38,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 
 static void *GenerateAnalyzeOptions(bool force, int verbose, size_t memlimit) {

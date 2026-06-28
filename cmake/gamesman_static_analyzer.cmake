@@ -24,11 +24,20 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "AppleClan
         )
         message(STATUS "Generated .clang-tidy ignore file for FetchContent dependencies.")
 
-        # Create a custom target that does not compile code
+        # TARGET tidy runs clang-tidy on all sources without compiling them
         add_custom_target(tidy
             COMMAND ${RUN_CLANG_TIDY_EXE} -p ${CMAKE_BINARY_DIR}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             COMMENT "Running clang-tidy in parallel (No compilation)..."
+        )
+
+        # TARGET tidy-fix-includes automatically fixes includes
+        add_custom_target(tidy-fix-includes
+            # -fix applies the changes. 
+            # -checks='-*,misc-include-cleaner' turns off everything EXCEPT the include cleaner.
+            COMMAND ${RUN_CLANG_TIDY_EXE} -p ${CMAKE_BINARY_DIR} -checks='-*,misc-include-cleaner' -fix
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Running clang-tidy to automatically fix include issues..."
         )
     else()
         message(WARNING "clang-tidy tools not found. Static analysis disabled.")

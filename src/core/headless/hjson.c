@@ -31,6 +31,7 @@
 #include <stddef.h>
 
 #include "core/constants.h"
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
 
 static int AddStringHelper(json_object *dest, ReadOnlyString key,

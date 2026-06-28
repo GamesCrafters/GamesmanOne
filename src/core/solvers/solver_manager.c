@@ -39,6 +39,7 @@
 #include <stdio.h>
 
 #include "core/game_manager.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/gamesman_error.h"

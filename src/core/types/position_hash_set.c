@@ -26,6 +26,8 @@
 
 #include "core/types/position_hash_set.h"
 
+#include <stdint.h>
+
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 

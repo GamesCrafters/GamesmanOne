@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+#include "core/types/base.h"
+
 typedef struct OpenSourceSoftware {
     char name[256];
     char url[2048];

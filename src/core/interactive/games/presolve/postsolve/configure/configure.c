@@ -5,6 +5,7 @@
 
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
+#include "core/types/base.h"
 
 static void PrintPlayerConfiguration(void) {
     bool first_player_is_computer = InteractiveMatchPlayerIsComputer(0);

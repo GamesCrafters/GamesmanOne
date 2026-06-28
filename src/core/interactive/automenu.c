@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "core/misc.h"
+#include "core/types/base.h"
 
 static void FormatInput(char *input) {
     // Convert all characters to lowercase.

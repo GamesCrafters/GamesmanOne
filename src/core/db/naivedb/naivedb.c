@@ -38,6 +38,7 @@
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/types/base.h"
+#include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"

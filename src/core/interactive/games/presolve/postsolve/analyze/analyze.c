@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "core/solvers/solver_manager.h"
+#include "core/types/base.h"
 
 int InteractiveAnalyze(ReadOnlyString key) {
     (void)key;  // Unused.

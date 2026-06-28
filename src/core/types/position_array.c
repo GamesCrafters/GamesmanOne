@@ -27,6 +27,7 @@
 #include "core/types/position_array.h"
 
 #include "core/data_structures/int64_array.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 void PositionArrayInit(PositionArray *array) { Int64ArrayInit(array); }

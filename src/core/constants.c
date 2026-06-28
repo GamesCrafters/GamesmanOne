@@ -26,6 +26,8 @@
 
 #include "core/constants.h"
 
+#include "core/types/base.h"
+
 ConstantReadOnlyString kValueStrings[] = {
     "undecided", "lose", "draw", "tie", "win",
 };
