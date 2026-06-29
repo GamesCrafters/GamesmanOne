@@ -37,6 +37,15 @@ FetchContent_Declare(
 # Pull the above dependencies from their sources.
 FetchContent_MakeAvailable(googletest json-c liblzma lz4)
 
+# Create a dummy target
+add_library(lzma_wrapper INTERFACE)
+
+# Bundle the third-party library and the missing headers into your wrapper
+target_link_libraries(lzma_wrapper INTERFACE liblzma)
+target_include_directories(lzma_wrapper INTERFACE
+    "${liblzma_SOURCE_DIR}/src/liblzma/api"
+)
+
 # Re-enable testing for our own tests.
 set(BUILD_TESTING ON CACHE BOOL "Restore testing" FORCE)
 

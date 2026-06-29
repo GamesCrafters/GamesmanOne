@@ -5,7 +5,7 @@ add_library(gamesman_memory STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
 target_link_libraries(gamesman_memory PRIVATE common_flags)
-target_link_libraries(gamesman_memory PRIVATE liblzma)
+target_link_libraries(gamesman_memory PRIVATE lzma_wrapper)
 
 # misc library
 add_library(misc STATIC ${CMAKE_CURRENT_SOURCE_DIR}/misc.h ${CMAKE_CURRENT_SOURCE_DIR}/misc.c)
