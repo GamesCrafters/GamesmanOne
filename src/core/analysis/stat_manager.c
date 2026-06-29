@@ -26,14 +26,13 @@
 
 #include "core/analysis/stat_manager.h"
 
-#include <fcntl.h>
+#include <fcntl.h>  // IWYU pragma: no_include <sys/types.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 #include "core/analysis/analysis.h"
 #include "core/concurrency.h"
