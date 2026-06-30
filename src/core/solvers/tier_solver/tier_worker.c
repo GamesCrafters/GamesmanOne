@@ -42,7 +42,9 @@
 #include "core/solvers/tier_solver/tier_worker/it.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+#include "core/types/tier_array.h"
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;

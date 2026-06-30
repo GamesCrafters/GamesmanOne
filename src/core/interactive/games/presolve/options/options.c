@@ -10,6 +10,7 @@
 #include "core/interactive/games/presolve/options/choices/choices.h"
 #include "core/misc.h"
 #include "core/solvers/solver_manager.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/game/game_variant_option.h"

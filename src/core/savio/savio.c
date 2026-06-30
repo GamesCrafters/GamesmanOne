@@ -1,5 +1,7 @@
 #include "core/savio/savio.h"
 
+#include "core/types/base.h"
+
 const SavioPartition kSavioPartitions[kNumSavioPartitions] = {
     {
         .name = "savio3",

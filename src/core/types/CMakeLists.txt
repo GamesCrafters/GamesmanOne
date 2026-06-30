@@ -33,4 +33,4 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_stack.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_to_ptr_chained_hash_map.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

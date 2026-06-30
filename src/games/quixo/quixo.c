@@ -41,6 +41,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/types/game/game.h"
+
 #define X86_M128I_HASH_SET_SIZE 32ULL
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/x86_m128i_hash_set.h"
@@ -850,7 +852,9 @@ static const TierSolverApi kQuixoSolverApi = {
 // ============================= kQuixoGameplayApi =============================
 
 MoveArray QuixoGenerateMovesGameplay(TierPosition tier_position) {
-    Move moves[kTierSolverNumMovesMax];
+    // Zero-initialize to silence a static analyzer warning.
+    // Performance is less important here so initialization is fine.
+    Move moves[kTierSolverNumMovesMax] = {0};
     int num_moves = QuixoGenerateMoves(tier_position, moves);
     MoveArray ret;
     MoveArrayInit(&ret);

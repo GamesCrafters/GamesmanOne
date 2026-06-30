@@ -35,6 +35,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "config.h"  // IWYU pragma: keep
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif  // _OPENMP

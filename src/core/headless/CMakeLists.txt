@@ -10,4 +10,4 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/hsolve.h ${CMAKE_CURRENT_SOURCE_DIR}/htest.c
     ${CMAKE_CURRENT_SOURCE_DIR}/hsolve.c ${CMAKE_CURRENT_SOURCE_DIR}/hutils.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

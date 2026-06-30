@@ -13,6 +13,7 @@
 #include "core/misc.h"
 #include "core/savio/savio.h"
 #include "core/savio/scriptgen.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 
 static SavioJobSettings settings;

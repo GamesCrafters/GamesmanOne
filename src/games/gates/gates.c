@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
+#include "core/types/game/game.h"
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
@@ -22,6 +24,10 @@
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
 #include "games/gates/gates_tier.h"
+
+#ifndef NDEBUG
+#include "core/types/database/database.h"
+#endif  // NDEBUG
 
 // NOLINTBEGIN(cppcoreguidelines-narrowing-conversions)
 
@@ -500,6 +506,7 @@ static int GenerateMovesGateMoving(const GatesTier *pt,
     char gate = kPieces[!(turn - 1)];
     GatesMove move = kGatesMoveInit;
     move.unpacked.gate_src = FindGate(board, gate, pt->phase == kGate2Moving);
+    assert(move.unpacked.gate_src >= 0);
     int ret = 0;
 
     // Find all empty slots where the gate can go, INCLUDING THE ORIGINAL SLOT.

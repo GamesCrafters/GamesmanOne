@@ -41,6 +41,7 @@
 #include <string.h>
 
 #include "core/misc.h"
+#include "core/types/base.h"
 
 // At most 128 pieces, 128 additional slots for pieces in the unordered section.
 #define STACK_CONFIG_SIZE 256

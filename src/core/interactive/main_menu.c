@@ -6,6 +6,7 @@
 #include "core/interactive/games/games.h"
 #include "core/interactive/help/help.h"
 #include "core/interactive/open_source/open_source.h"
+#include "core/types/base.h"
 
 int InteractiveMainMenu(ReadOnlyString key) {
     (void)key;  // Unused.

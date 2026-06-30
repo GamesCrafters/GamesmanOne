@@ -1,0 +1,93 @@
+name: CI Build and Test
+
+on:
+  # Allows manual triggering from the GitHub Actions UI
+  workflow_dispatch:
+  
+  # Runs when code is actually pushed/merged into these branches
+  push:
+    branches:
+      - main
+      - dev
+      
+  # Runs when a PR is opened or updated targeting these branches
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  # Job 1: Build and Run Tests (ASan, TSan, Coverage)
+  test:
+    name: Test (${{ matrix.preset }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Let all presets finish even if one fails
+      matrix:
+        preset: [ci-asan, ci-tsan, ci-coverage]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # Install ccache system binaries
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
+
+      # Set up the GitHub Cache (Isolated per matrix preset)
+      - name: Cache compiler objects
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ github.workspace }}/.cache/ccache
+          # Include ${{ matrix.preset }} in the keys to keep the builds separated
+          key: ${{ runner.os }}-ccache-${{ matrix.preset }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ matrix.preset }}-
+
+      # Configure Gamesman
+      - name: Configure Gamesman
+        run: |
+          chmod +x gamesman_setup.sh 
+          ./gamesman_setup.sh --install-deps
+
+      # Inject CCACHE environment variables so CMake routes builds correctly
+      - name: Configure CMake
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: |
+          cmake --build --preset ${{ matrix.preset }}-build
+          ccache -s
+
+      - name: Run Tests
+        run: ctest --preset ${{ matrix.preset }}-test
+
+  # Job 2: Static Analysis (Disabled for now)
+  # static-analysis:
+  #   name: Analyze (${{ matrix.preset }})
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       preset: [ci-analyze-gcc, ci-analyze-clang]
+    
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v7
+
+  #     - name: Install Dependencies
+  #       run: |
+  #         chmod +x setup.sh
+  #         ./setup.sh --install
+
+  #     - name: Configure CMake
+  #       run: cmake --preset ${{ matrix.preset }}
+
+  #     - name: Build / Analyze
+        # These presets don't have matching test presets in your JSON, 
+        # as the analysis happens during the compilation step.
+        # run: cmake --build --preset ${{ matrix.preset }}-build

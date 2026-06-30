@@ -30,7 +30,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "core/gamesman_memory.h"
 
@@ -49,14 +48,14 @@ static int64_t NumBitsToNumBlocks(int64_t num_bits) {
 }
 
 size_t BitsetMemRequired(int64_t num_bits) {
-    if (num_bits < 0) num_bits = 0;
+    assert(num_bits >= 0);  // LCOV_EXCL_BR_LINE
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
 
     return sizeof(Bitset) + num_blocks * sizeof(BlockType);
 }
 
 Bitset *BitsetCreate(int64_t num_bits) {
-    if (num_bits < 0) num_bits = 0;
+    assert(num_bits >= 0);  // LCOV_EXCL_BR_LINE
     size_t alloc_size = BitsetMemRequired(num_bits);
     Bitset *ret = (Bitset *)GamesmanCallocWhole(1, alloc_size);
     if (ret != NULL) ret->num_bits = num_bits;
@@ -75,7 +74,7 @@ static int64_t BitOffset(int64_t bit_index) {
 }
 
 bool BitsetSet(Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -90,7 +89,7 @@ bool BitsetSet(Bitset *bs, int64_t i) {
 }
 
 bool BitsetReset(Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -105,7 +104,7 @@ bool BitsetReset(Bitset *bs, int64_t i) {
 }
 
 bool BitsetSetTo(Bitset *bs, int64_t i, bool val) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -120,7 +119,7 @@ bool BitsetSetTo(Bitset *bs, int64_t i, bool val) {
 }
 
 bool BitsetTest(const Bitset *bs, int64_t i) {
-    assert(i >= 0 && i < bs->num_bits);
+    assert(i >= 0 && i < bs->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(i);
     int64_t block_index = BlockIndex(i);
     BlockType mask = kOne << bit_offset;
@@ -131,37 +130,11 @@ bool BitsetTest(const Bitset *bs, int64_t i) {
 int64_t BitsetCount(const Bitset *bs) { return bs->count; }
 
 size_t BitSetGetSerializedSize(const Bitset *bs) {
-    return BitsetMemRequired(bs->num_bits);
-}
-
-size_t BitsetSerializeStreaming(const Bitset *bs, size_t offset, void *buf,
-                                size_t buf_size) {
-    size_t total_bytes = BitSetGetSerializedSize(bs);
-    if (offset >= total_bytes) return 0;
-
-    size_t remaining_bytes = total_bytes - offset;
-    size_t bytes_to_copy =
-        remaining_bytes < buf_size ? remaining_bytes : buf_size;
-    memcpy(buf, (char *)bs + offset, bytes_to_copy);
-
-    return bytes_to_copy;
-}
-
-Bitset *BitsetDeserializeStreaming(Bitset *bs, size_t offset, const void *in,
-                                   size_t in_size) {
-    if (bs == NULL) {
-        if (offset != 0 || in_size < sizeof(int64_t)) return NULL;
-
-        // Read in the number of bits
-        bs = BitsetCreate(*(int64_t *)in);
-        offset += sizeof(int64_t);
-        in = (const char *)in + offset;
-        in_size -= offset;
+    if (!bs) {
+        return 0;
     }
 
-    memcpy((char *)bs + offset, in, in_size);
-
-    return bs;
+    return BitsetMemRequired(bs->num_bits);
 }
 
 void *BitsetGetRawData(Bitset *bs) { return (void *)bs; }

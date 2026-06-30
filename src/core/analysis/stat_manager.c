@@ -26,13 +26,13 @@
 
 #include "core/analysis/stat_manager.h"
 
-#include <fcntl.h>
+#include <fcntl.h>  // IWYU pragma: no_include <sys/types.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 #include "core/analysis/analysis.h"
 #include "core/concurrency.h"
@@ -40,6 +40,7 @@
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
 #include "libs/lz4_utils/lz4_utils.h"
 

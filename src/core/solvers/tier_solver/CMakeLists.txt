@@ -16,7 +16,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_worker.c
 )
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})
 
 set(MPI_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_mpi.h
@@ -27,5 +27,5 @@ set(MPI_SOURCES
 )
 
 if(USE_MPI)
-    target_sources(gamesman PRIVATE ${MPI_HEADERS} ${MPI_SOURCES})
+    target_sources(gamesman_core PRIVATE ${MPI_HEADERS} ${MPI_SOURCES})
 endif()

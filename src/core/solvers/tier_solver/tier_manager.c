@@ -39,6 +39,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
 #include <time.h>
 

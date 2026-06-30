@@ -41,6 +41,7 @@
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
+#include "core/types/game/game.h"
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
@@ -960,6 +961,7 @@ static PartmoveArray NeutronGeneratePartmovesInternal(
     if (pos == kInitialPosition) return ret;
 
     int8_t n_src = FindNeutron(board);
+    assert(n_src >= 0);
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // Make the current neutron move and generate piece moves.

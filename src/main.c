@@ -24,7 +24,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #ifdef _OPENMP
 #include <omp.h>
 #endif  // _OPENMP

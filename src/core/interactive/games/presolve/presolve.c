@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -18,6 +19,7 @@
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"
 

@@ -39,6 +39,7 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontierless.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/one_bit.h"
 #include "core/solvers/tier_solver/tier_worker/backward_induction/types.h"
+#include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/gamesman_error.h"
 

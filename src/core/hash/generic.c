@@ -44,6 +44,7 @@
 
 #include "core/data_structures/int64_hash_map.h"
 #include "core/hash/generic_context.h"
+#include "core/types/base.h"
 
 typedef struct ContextManager {
     GenericHashContext *contexts;

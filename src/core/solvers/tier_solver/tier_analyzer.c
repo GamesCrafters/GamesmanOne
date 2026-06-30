@@ -26,9 +26,12 @@
 
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
+#include <assert.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "core/analysis/analysis.h"
@@ -39,6 +42,7 @@
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/position_array.h"
 #include "core/types/tier_hash_map.h"

@@ -40,6 +40,7 @@
 #include <stdio.h>
 
 #include "core/gamesman_memory.h"
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
 
 /**

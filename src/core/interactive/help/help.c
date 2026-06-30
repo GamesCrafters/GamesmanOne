@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "core/interactive/automenu.h"
+#include "core/types/base.h"
 
 static ConstantReadOnlyString kHelpWhatIsGameValue =
     "A game VALUE is one of either WIN, LOSE, or TIE.  That is, if a game \n"

@@ -36,7 +36,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+#include "core/types/tier_array.h"
+#include "core/types/tier_hash_map.h"
 
 static int AddNewTier(ReverseTierGraph *graph, Tier child);
 static int ReverseTierGraphExpand(ReverseTierGraph *graph);

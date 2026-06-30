@@ -42,6 +42,7 @@
 #include "core/db/db_manager.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_map.h"
@@ -725,7 +726,7 @@ static void Step2IterateWinLose(void) {
     bool advance = true;
     while (pass <= ConcurrentIntLoad(&max_remoteness.win_lose) || advance) {
         // Cannot use || here because it short-circuits.
-        advance = Step2_0IterateWin(pass) | Step2_1IterateLose(pass);
+        advance = Step2_0IterateWin(pass) || Step2_1IterateLose(pass);
         ++pass;
         max_remoteness.set = true;
     }

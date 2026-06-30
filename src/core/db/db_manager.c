@@ -35,6 +35,9 @@
 
 #include "core/constants.h"
 #include "core/misc.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/database/db_probe.h"
 #include "core/types/gamesman_error.h"
 
 static const Database *current_db;

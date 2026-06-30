@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+#include "core/types/base.h"
+
 typedef struct OpenSourceSoftware {
     char name[256];
     char url[2048];
@@ -9,6 +11,10 @@ typedef struct OpenSourceSoftware {
 
 // clang-format off
 static const OpenSourceSoftware kSoftwareList[] = {
+    {
+        .name = "GoogleTest",
+        .url= "https://github.com/google/googletest",
+    },
     {
         .name = "JSON-C - A JSON implementation in C",
         .url = "https://github.com/json-c/json-c",

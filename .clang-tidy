@@ -1,6 +1,7 @@
 Checks: >
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   -clang-analyzer-security.insecureAPI.*,
   concurrency-*,
@@ -13,12 +14,13 @@ Checks: >
   google-*,
   -google-readability-todo,
   misc-*,
-  -misc-include-cleaner,
+  -misc-const-correctness,
   modernize-*,
   mpi-*,
   performance-*,
   portability-*
-
+CheckOptions:
+  misc-include-cleaner.IgnoreHeaders: '<atomic>;bits/getopt_core\.h;bits/getopt_ext\.h;getopt\.h;stdint\.h'
 FormatStyle: "Google"    # Use Google code formatting style
 HeaderFilterRegex: ''  # Analyze all files including headers
 UseColor: true

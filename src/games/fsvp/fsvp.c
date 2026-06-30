@@ -31,11 +31,13 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
+#include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/game/game_variant_option.h"
 #include "core/types/gameplay_api/gameplay_api.h"

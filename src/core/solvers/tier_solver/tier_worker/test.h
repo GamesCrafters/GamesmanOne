@@ -27,8 +27,10 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_TEST_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_TEST_H_
 
-#include "core/concurrency.h"
+#include <stdint.h>
+
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/base.h"
 #include "core/types/tier_array.h"
 
 /**

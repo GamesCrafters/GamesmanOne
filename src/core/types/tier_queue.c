@@ -26,6 +26,8 @@
 
 #include "core/types/tier_queue.h"
 
+#include <stdint.h>
+
 #include "core/data_structures/int64_queue.h"
 #include "core/types/base.h"
 
