@@ -88,8 +88,8 @@ jobs:
       env:
         CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
       run: |
-        chmod +x gamesman_install.sh 
-        ./gamesman_install.sh --install
+        chmod +x gamesman_setup.sh 
+        ./gamesman_setup.sh --install-deps --build release
         ccache -s
 
     - name: Perform CodeQL Analysis

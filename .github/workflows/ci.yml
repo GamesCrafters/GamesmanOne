@@ -47,9 +47,8 @@ jobs:
       # Configure Gamesman
       - name: Configure Gamesman
         run: |
-          chmod +x gamesman_install.sh 
-          ./gamesman_install.sh --install
-          ccache -s
+          chmod +x gamesman_setup.sh 
+          ./gamesman_setup.sh --install-deps
 
       # Inject CCACHE environment variables so CMake routes builds correctly
       - name: Configure CMake
