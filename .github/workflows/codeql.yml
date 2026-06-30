@@ -73,10 +73,10 @@ jobs:
       with:
         path: ~/.cache/ccache
         # The exact key changes on every commit, saving a new cache at the end
-        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        key: ${{ runner.os }}-ccache-codeql-${{ github.sha }}
         # Restores the most recent cache starting with this prefix
         restore-keys: |
-          ${{ runner.os }}-ccache-
+          ${{ runner.os }}-ccache-codeql-
 
     # Manual build steps
     # ℹ️ Command-line programs to run using the OS shell.
@@ -90,6 +90,7 @@ jobs:
       run: |
         chmod +x gamesman_install.sh 
         ./gamesman_install.sh --install
+        ccache -s
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
