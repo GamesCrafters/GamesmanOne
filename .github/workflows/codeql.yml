@@ -71,7 +71,7 @@ jobs:
       if: matrix.build-mode == 'manual'
       uses: actions/cache@v5.1.0
       with:
-        path: ~/.cache/ccache
+        path: ${{ github.workspace }}/.cache/ccache
         # The exact key changes on every commit, saving a new cache at the end
         key: ${{ runner.os }}-ccache-codeql-${{ github.sha }}
         # Restores the most recent cache starting with this prefix
@@ -86,7 +86,7 @@ jobs:
       shell: bash
       # Force CCache to consistently use the same cache directory
       env:
-        CCACHE_DIR: ~/.cache/ccache
+        CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
       run: |
         chmod +x gamesman_install.sh 
         ./gamesman_install.sh --install
