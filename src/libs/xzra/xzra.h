@@ -194,7 +194,7 @@ XzraStatus XzraOutStreamClose(XzraOutStream *stream, uint64_t *out_total_bytes);
  *
  * @param stream Output stream to abort.
  */
-// void XzraOutStreamAbort(XzraOutStream *stream);
+void XzraOutStreamAbort(XzraOutStream *stream);
 
 // ============================= Decompression API =============================
 

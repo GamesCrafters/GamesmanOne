@@ -424,6 +424,24 @@ XzraStatus XzraOutStreamClose(XzraOutStream *stream,
     return status;
 }
 
+// ============================ XzraOutStreamAbort =============================
+
+void XzraOutStreamAbort(XzraOutStream *stream) {
+    if (stream == NULL) return;
+
+    // Free all LZMA internal memory allocations associated with this stream.
+    lzma_end(&stream->strm);
+
+    // Close the file handle. We ignore the return value here since we are
+    // already in an abort/error path and don't care about flush failures.
+    if (stream->outfile != NULL) {
+        fclose(stream->outfile);
+    }
+
+    // Free the stream container itself.
+    free(stream);
+}
+
 // ======================== XzraDecompressionMemUsage =========================
 
 XzraStatus XzraDecompressionMemUsage(const XzraCodecOptions *options,
