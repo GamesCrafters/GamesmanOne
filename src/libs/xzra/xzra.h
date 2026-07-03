@@ -31,26 +31,50 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// ============================== Common API ==============================
+
+/**
+ * @brief Return status codes for the XZRA library.
+ */
+typedef enum {
+    XZRA_SUCCESS = 0,
+    XZRA_ERR_IN_FILE,
+    XZRA_ERR_OUT_FILE,
+    XZRA_ERR_CODEC,
+    XZRA_ERR_CLOSE,
+    XZRA_ERR_INVALID_PARAM,
+} XzraStatus;
+
+/**
+ * @brief Compression and decompression options.
+ */
+typedef struct {
+    /** Size of each uncompressed block. */
+    uint64_t block_size;
+    /** Compression level from 0 (store) to 9 (ultra). */
+    uint32_t level;
+    /** Extreme compression mode will be enabled if this parameter is set to
+     * true. */
+    bool extreme;
+    /** Number of threads to use. 0 detects and uses physical threads available
+     * while falling back to 1 if detection fails.
+     */
+    int num_threads;
+} XzraCodecOptions;
+
 // ============================== Compression API ==============================
 
 /**
  * @brief Returns the memory usage (in bytes) of the XZRA compressor using the
  * given compression options.
  *
- * @param block_size Size of each uncompressed block.
- * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this parameter is
- * set to \c true. Enabling extreme compression slightly improves compression
- * ratio at the cost of increased compression time.
- * @param num_threads Number of threads to use for multithreaded compression.
- * The function will automatically detect and use the number of physical threads
- * available if this parameter is set to 0.
- * @return Number of bytes of memory required for compression using the given
- * options, or
- * @return UINT64_MAX if the given options are invalid.
+ * @param options Pointer to the compression options.
+ * @param out_mem_usage Pointer to store the number of bytes of memory required.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_INVALID_PARAM if the given options are invalid.
  */
-uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
-                                 bool extreme, int num_threads);
+XzraStatus XzraCompressionMemUsage(const XzraCodecOptions *options,
+                                   uint64_t *out_mem_usage);
 
 /**
  * @brief Compresses input file of name \p ifname using a single LZMA2 filter
@@ -70,23 +94,18 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
  * ratio.
  *
  * @param ofname Output file name.
- * @param block_size Size of each uncompressed block.
- * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this parameter is
- * set to \c true. Enabling extreme compression slightly improves compression
- * ratio at the cost of increased compression time.
- * @param num_threads Number of threads to use for multithreaded compression.
- * The function will automatically detect and use the number of physical threads
- * available if this parameter is set to 0.
  * @param ifname Input file name.
- * @return Size of the output file in bytes on success;
- * @return -1 if the input file cannot be opened;
- * @return -2 if the output file cannot be created or opened;
- * @return -3 if compression failed.
+ * @param options Pointer to the compression options.
+ * @param out_size Pointer to store the size of the output file in bytes.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_IN_FILE if the input file cannot be opened;
+ * @return XZRA_ERR_OUT_FILE if the output file cannot be created, opened,
+ * written to, or properly closed;
+ * @return XZRA_ERR_CODEC if compression failed.
  */
-int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
-                         uint32_t level, bool extreme, int num_threads,
-                         const char *ifname);
+XzraStatus XzraCompressFile(const char *ofname, const char *ifname,
+                            const XzraCodecOptions *options,
+                            uint64_t *out_size);
 
 /**
  * @brief Compresses a single consecutive chunk of memory of size \p in_size
@@ -107,23 +126,17 @@ int64_t XzraCompressFile(const char *ofname, uint64_t block_size,
  * ratio.
  *
  * @param ofname Output file name.
- * @param block_size Size of each uncompressed block.
- * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this parameter is
- * set to \c true. Enabling extreme compression slightly improves compression
- * ratio at the cost of increased compression time.
- * @param num_threads Number of threads to use for multithreaded compression.
- * The function will automatically detect and use the number of physical threads
- * available if this parameter is set to 0.
  * @param in Input stream.
  * @param in_size Size of the input stream in bytes.
- * @return Size of the output file in bytes on success;
- * @return -2 if the output file cannot be created or opened;
- * @return -3 if compression failed.
+ * @param options Pointer to the compression options.
+ * @param out_size Pointer to store the size of the output file in bytes.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_OUT_FILE if the output file cannot be created or opened;
+ * @return XZRA_ERR_CODEC if compression failed.
  */
-int64_t XzraCompressMem(const char *ofname, uint64_t block_size, uint32_t level,
-                        bool extreme, int num_threads, const uint8_t *in,
-                        size_t in_size);
+XzraStatus XzraCompressMem(const char *ofname, const uint8_t *in,
+                           size_t in_size, const XzraCodecOptions *options,
+                           uint64_t *out_size);
 
 // =============================== Streaming API ===============================
 
@@ -136,20 +149,12 @@ typedef struct XzraOutStream XzraOutStream;
  * @brief Creates a new XZRA output stream.
  *
  * @param ofname Output file name.
- * @param block_size Size of each uncompressed block.
- * @param level Compression level from 0 (store) to 9 (ultra).
- * @param extreme Extreme compression mode will be enabled if this parameter is
- * set to \c true. Enabling extreme compression slightly improves compression
- * ratio at the cost of increased compression time.
- * @param num_threads Number of threads to use for multithreaded compression.
- * The function will automatically detect and use the number of physical threads
- * available if this parameter is set to 0.
+ * @param options Pointer to the compression options.
  * @return Pointer to the new XZRA output stream on success, or
  * @return \c NULL on failure.
  */
-XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
-                                   uint32_t level, bool extreme,
-                                   int num_threads);
+XzraOutStream *XzraOutStreamCreate(const char *ofname,
+                                   const XzraCodecOptions *options);
 
 /**
  * @brief Runs compression to consume \p in_size bytes of data from \p in using
@@ -158,46 +163,51 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname, uint64_t block_size,
  * @param stream Output stream.
  * @param in Pointer to the input buffer.
  * @param in_size Number of bytes to consume from the input buffer.
- * @return Number of compressed bytes generated in this run on success, or
- * @return -3 on failure.
+ * @param out_bytes_written Pointer to store the number of compressed bytes
+ * generated in this run.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_OUT_FILE if the output file cannot be written to;
+ * @return XZRA_ERR_CODEC on failure.
  */
-int64_t XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
-                         size_t in_size);
+XzraStatus XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                            size_t in_size, uint64_t *out_bytes_written);
 
 /**
  * @brief Closes the output stream \p stream , finalizing the output file by
  * flushing all buffered compressed bytes to disk. Does nothing and returns
- * 0 if \p stream is \c NULL .
+ * XZRA_SUCCESS if \p stream is \c NULL .
  *
  * @param stream Output stream to close.
- * @return Number of compressed bytes generated in total since the creation of
- * \p stream on success, or
- * @return -3 on failure.
+ * @param out_total_bytes Pointer to store the total number of compressed bytes
+ * generated.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_OUT_FILE if the output file cannot be written to or properly
+ * closed;
+ * @return XZRA_ERR_CODEC on failure.
  */
-int64_t XzraOutStreamClose(XzraOutStream *stream);
+XzraStatus XzraOutStreamClose(XzraOutStream *stream, uint64_t *out_total_bytes);
+
+/**
+ * @brief Safely frees the stream memory without finalizing or flushing data to
+ * disk. Useful for cleaning up resources when an error occurs halfway through
+ * streaming.
+ *
+ * @param stream Output stream to abort.
+ */
+// void XzraOutStreamAbort(XzraOutStream *stream);
 
 // ============================= Decompression API =============================
 
 /**
  * @brief Returns the memory usage (in bytes) of the XZRA decompressor.
  *
- * @param block_size Size of each uncompressed block. This is a property of the
- * compressed stream set at the time of compression.
- * @param level Compression level from 0 (store) to 9 (ultra). This is a
- * property of the compressed stream set at the time of compression.
- * @param extreme Extreme compression mode will be enabled if this parameter is
- * set to \c true. Enabling extreme compression slightly improves compression
- * ratio at the cost of increased compression time. This is a property of the
- * compressed stream set at the time of compression.
- * @param num_threads Number of threads to use for multithreaded decompression.
- * The function will automatically detect and use the number of physical threads
- * available if this parameter is set to 0.
- * @return Number of bytes of memory required for decompression using the given
- * options, or
- * @return UINT64_MAX if the given options are invalid.
+ * @param options Pointer to the compression options used during encoding.
+ * @param out_mem_usage Pointer to store the number of bytes of memory required.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_INVALID_PARAM if the given options are invalid.
  */
-uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
-                                   bool extreme, int num_threads);
+XzraStatus XzraDecompressionMemUsage(const XzraCodecOptions *options,
+                                     uint64_t *out_mem_usage);
 
 /**
  * @brief Decompresses at most \p size bytes of the input XZ file of name
@@ -212,31 +222,30 @@ uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
  * the properties of the input file (e.g., dictionary size) and \p memlimit to
  * not use more memory than required. If, however, the decompression cannot be
  * completed using no more than \p memlimit bytes of memory even on a single
- * thread, the decompression will fail and -3 will be returned. Note that
- * \p memlimit does not include \p size, and it is the caller's responsibility
- * to take the output buffer size into account when calculating memory usage.
+ * thread, the decompression will fail and XZRA_ERR_INVALID_PARAM will be
+ * returned. Note that \p memlimit does not include \p size, and it is the
+ * caller's responsibility to take the output buffer size into account when
+ * calculating memory usage.
  *
  * @param dest Destination buffer, which is assumed to be of size at least
  * \p size bytes.
- * @param size Number of bytes to decompress.
- * @param num_threads Number of threads to use. The function will automatically
- * detect and use the number of physical threads available if this parameter is
- * set to 0.
- * @param memlimit Memory limit of the function in bytes. The function is
- * guaranteed not to allocate more than this amount of heap memory during its
- * execution. Setting this value too small may cause the function to use fewer
- * threads as specified depending on the property of the input file. If the
- * decompression cannot be completed under this memory limit even on a single
- * thread, the decompression will fail and -3 will be returned.
  * @param filename Name of the input file to decompress.
- * @return Number of bytes decompressed on success;
- * @return -1 if failed to initialize the XZ stream decoder;
- * @return -2 if failed to open file of name \p filename;
- * @return -3 if an error occurred during decompression;
- * @return -4 if failed to close the file.
+ * @param size Number of bytes to decompress.
+ * @param num_threads Number of threads to use. 0 detects and uses physical
+ * threads available.
+ * @param memlimit Memory limit of the function in bytes.
+ * @param out_decompressed_size Pointer to store the number of bytes
+ * successfully decompressed.
+ * @return XZRA_SUCCESS on success;
+ * @return XZRA_ERR_IN_FILE if failed to open file;
+ * @return XZRA_ERR_CODEC if an error occurred during decompression;
+ * @return XZRA_ERR_CLOSE if failed to close the file;
+ * @return XZRA_ERR_INVALID_PARAM if failed due to invalid \p num_threads,
+ * \p memlimit, or out of memory.
  */
-int64_t XzraDecompressFile(uint8_t *dest, size_t size, int num_threads,
-                           uint64_t memlimit, const char *filename);
+XzraStatus XzraDecompressFile(uint8_t *dest, const char *filename, size_t size,
+                              int num_threads, uint64_t memlimit,
+                              uint64_t *out_decompressed_size);
 
 /** @brief Read-only XZ file with random access. */
 typedef struct XzraFile XzraFile;
