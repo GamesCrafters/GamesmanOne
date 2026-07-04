@@ -47,18 +47,27 @@ typedef enum {
  */
 typedef struct {
     /**
-     * Size of each uncompressed block.
+     * Compression: Size of each uncompressed block in bytes for input data
+     * chunking. XZ Utils enforces a minimum block size of 4 KiB and recommends
+     * at least 1 MiB for reasonable compression.
+     * Decompression: Overloaded to represent the decoder's dictionary size.
+     * Valid range is from 4096 bytes to 4 GiB. However, it does not make sense
+     * to use a dictionary size that is larger than the dictionary size used
+     * during compression, which is the same as the block size.
      */
     uint64_t block_size;
 
     /**
-     * Compression level from 0 (store) to 9 (ultra).
+     * Compression: LZMA compression level to use. Valid range is from 0 (store)
+     * to 9 (ultra).
+     * Decompression: Ignored.
      */
     uint32_t level;
 
     /**
-     * Extreme compression mode will be enabled if this parameter is set to
-     * true.
+     * Compression: Extreme compression mode will be enabled if this parameter
+     * is set to true.
+     * Decompression: Ignored.
      */
     bool extreme;
 

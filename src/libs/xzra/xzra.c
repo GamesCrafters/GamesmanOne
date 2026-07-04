@@ -446,6 +446,12 @@ void XzraOutStreamAbort(XzraOutStream *stream) {
 
 XzraStatus XzraDecompressionMemUsage(const XzraCodecOptions *options,
                                      uint64_t *out_mem_usage) {
+    // lzma_raw_decoder_memusage may not care about the minimum decoder
+    // dictionary size so we need to enforce the minimum requirement ourselves.
+    if (options->block_size < 4096) {
+        return XZRA_ERR_INVALID_PARAM;
+    }
+
     // Set up filters.
     lzma_options_lzma opt_lzma2;
     lzma_lzma_preset(&opt_lzma2, options->extreme
