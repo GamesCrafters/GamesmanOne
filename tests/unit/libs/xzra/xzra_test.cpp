@@ -614,14 +614,39 @@ TEST_F(XzraTest, StreamRunZeroByteChunksRoundTrip) {
 
 // ======================== 4. Decompression API Tests ========================
 
-// Tests fully decompressing a valid XZ file into memory
-TEST_F(XzraTest, DecompressFileSuccess) {
+// Tests fully decompressing a valid XZ file into memory by specifying a
+// a size that exactly matches the raw data.
+TEST_F(XzraTest, DecompressFileSuccessExactSize) {
     // Setup: Generate a valid compressed file first
     ASSERT_EQ(XzraCompressFile(dummy_out_file.c_str(), dummy_in_file.c_str(),
                                &default_options, nullptr),
               XZRA_SUCCESS);
 
     std::vector<uint8_t> dest(test_data.size());
+    uint64_t decompressed_size = 0;
+
+    XzraStatus status = XzraDecompressFile(
+        dest.data(), dummy_out_file.c_str(), dest.size(), kDefaultNumThreads,
+        kDefaultDecompMemLimit, &decompressed_size);
+
+    EXPECT_EQ(status, XZRA_SUCCESS);
+    EXPECT_EQ(decompressed_size, test_data.size());
+
+    // Verify lossless round-trip
+    EXPECT_EQ(std::memcmp(dest.data(), test_data.data(), decompressed_size), 0)
+        << "Decompressed data should exactly match the original uncompressed "
+           "data.";
+}
+
+// Tests fully decompressing a valid XZ file into memory by specifying a
+// a size that is greater than the size of the raw data.
+TEST_F(XzraTest, DecompressFileSuccessBufferLongerThanRawData) {
+    // Setup: Generate a valid compressed file first
+    ASSERT_EQ(XzraCompressFile(dummy_out_file.c_str(), dummy_in_file.c_str(),
+                               &default_options, nullptr),
+              XZRA_SUCCESS);
+
+    std::vector<uint8_t> dest(test_data.size() + 100);
     uint64_t decompressed_size = 0;
 
     XzraStatus status = XzraDecompressFile(
