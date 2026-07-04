@@ -116,8 +116,8 @@ bool BitsetSetTo(Bitset *bs, int64_t i, bool val);
  * @pre `bs` must not be `NULL`.
  * @pre `i` must be valid (0 <= `i` < `bs->num_bits`).
  *
- * @retval `true` if the bit is set to 1
- * @retval `false` otherwise.
+ * @retval true if the bit is set to 1
+ * @retval false otherwise.
  */
 bool BitsetTest(const Bitset *bs, int64_t i);
 

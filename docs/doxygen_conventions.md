@@ -5,12 +5,15 @@ Doxygen Conventions for Gamesman
        rules on how to format file headers.
     b. All identifiers (functions, types, variables, enums, macros, etc.) in
        C/C++ header files (.h, .hpp) must be documented using rules in sections
-       3-5. There are no requirements or rules on how C/C++ source files may be
-       documented. However, comments are still highly encouraged for complex
-       logics and code segments that may be hard to read or understand.
+       3-5. There are no requirements or rules on how C/C++ source files (.c,
+       .cc, .cpp) may be documented. However, comments are still highly
+       encouraged for complex logics and code segments that may be hard to read
+       or understand.
     c. Use Javadoc-style comment blocks that start with "/**"
     d. Use the @ symbol for all tags
-    e. Prefer Markdown syntax to inline tagging (such as @c).
+    e. All identifiers must be highlighted as inline code using Markdown syntax
+       by enclosing them in backticks. Always prefer Markdown syntax to inline
+       tagging (such as @c).
     f. Project-wide 80-character line width limit also applies to comment blocks
        unless doing so is impossible or significantly reduces readability.
     g. There should be exactly one empty line above each out-of-line comment
@@ -65,9 +68,10 @@ Doxygen Conventions for Gamesman
        struct or enum itself.
     b. Do not use any tags when documenting a member field unless it is a
        function pointer, in which case the same rules for functions apply.
-    c. Use in-line comment syntax that starts with "/**<" only for comments that
-       fit in one line (80 characters). Otherwise, use a single out-of-line
-       comment block but without any tags.
+    c. Use in-line comment syntax that starts with "/**<" only if all comments
+       fit on the same line (80 characters) with the corresponding members.\
+       If not, use a single out-of-line comment block without any tags for
+       all members.
 6. Typedef rules
     a. For typedefs that serve as simple type aliases (including structs and
        enums), place a single out-of-line comment block above the definition. 

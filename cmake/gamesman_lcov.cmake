@@ -16,7 +16,7 @@ add_custom_target(coverage-clean
     COMMENT "Resetting counters and capturing 0% baseline..."
 )
 
-# For vscode CMake Tools line coverage configuration cmake.preRunCoverageTarget
+# For vscode CMake Tools line coverage configuration cmake.postRunCoverageTarget
 # Captures new data and merges with baseline after tests run
 add_custom_target(coverage-generate
     # Capture the actual test execution data

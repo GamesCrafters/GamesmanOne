@@ -7,6 +7,7 @@ target_link_libraries(gamesman_test PRIVATE
 )
 
 add_subdirectory(core)
+add_subdirectory(libs)
 
 # Discover all tests for CTest
 include(GoogleTest)

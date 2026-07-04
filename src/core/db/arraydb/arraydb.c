@@ -442,9 +442,13 @@ static int FlushSolvingTierConcurrent(void) {
         GetFullPathToFile(current_game.tier, current_game.GetTierName);
     char *tmp_full_path =
         GetFullPathToTempFile(current_game.tier, current_game.GetTierName);
-    XzraOutStream *xout = XzraOutStreamCreate(
-        tmp_full_path, lzma_options.block_size, lzma_options.level,
-        lzma_options.extreme, ConcurrencyGetOmpNumThreads());
+    XzraCodecOptions xzra_options = {
+        .block_size = lzma_options.block_size,
+        .level = lzma_options.level,
+        .extreme = lzma_options.extreme,
+        .num_threads = ConcurrencyGetOmpNumThreads(),
+    };
+    XzraOutStream *xout = XzraOutStreamCreate(tmp_full_path, &xzra_options);
     void *buf = GamesmanMalloc(1ULL << 20);
     if (full_path == NULL || tmp_full_path == NULL || xout == NULL ||
         buf == NULL) {
@@ -457,8 +461,8 @@ static int FlushSolvingTierConcurrent(void) {
     size_t serialized = AtomicRecordArraySerializeStreaming(
         solving.atomic_records, 0, buf, sizeof(buf));
     while (serialized) {
-        int64_t compressed = XzraOutStreamRun(xout, buf, serialized);
-        if (compressed < 0) {
+        XzraStatus status = XzraOutStreamRun(xout, buf, serialized, NULL);
+        if (status != XZRA_SUCCESS) {
             error = kRuntimeError;
             goto _bailout;
         }
@@ -466,7 +470,7 @@ static int FlushSolvingTierConcurrent(void) {
         serialized = AtomicRecordArraySerializeStreaming(
             solving.atomic_records, total, buf, sizeof(buf));
     }
-    if (XzraOutStreamClose(xout) < 0) {
+    if (XzraOutStreamClose(xout, NULL) != XZRA_SUCCESS) {
         error = kRuntimeError;
         goto _bailout;
     }
@@ -482,7 +486,7 @@ static int FlushSolvingTierConcurrent(void) {
 _bailout:
     GamesmanFree(full_path);
     GamesmanFree(tmp_full_path);
-    XzraOutStreamClose(xout);
+    XzraOutStreamClose(xout, NULL);
     GamesmanFree(buf);
 
     return error;
@@ -501,18 +505,24 @@ static int FlushSolvingTierNormal(void) {
     }
 
     // First compress to a temp file.
-    int64_t compressed_size = XzraCompressMem(
-        tmp_full_path, lzma_options.block_size, lzma_options.level,
-        lzma_options.extreme, ConcurrencyGetOmpNumThreads(),
-        RecordArrayGetReadOnlyData(solving.records),
-        RecordArrayGetRawSize(solving.records));
-    switch (compressed_size) {
-        case -2:
+    XzraCodecOptions xzra_options = {
+        .block_size = lzma_options.block_size,
+        .level = lzma_options.level,
+        .extreme = lzma_options.extreme,
+        .num_threads = ConcurrencyGetOmpNumThreads(),
+    };
+    XzraStatus status = XzraCompressMem(
+        tmp_full_path, RecordArrayGetReadOnlyData(solving.records),
+        RecordArrayGetRawSize(solving.records), &xzra_options, NULL);
+    switch (status) {
+        case XZRA_ERR_OUT_FILE:
             error = kFileSystemError;
             goto _bailout;
-        case -3:
+        case XZRA_ERR_CODEC:
             error = kRuntimeError;
             goto _bailout;
+        default:
+            break;
     }
 
     // If successful, rename the temp file into the desired tier DB name.
@@ -780,12 +790,12 @@ static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
     Position begin_pos = chunk * segments.array[slot]->size;
     Position end_pos =
         I64Min(begin_pos + segments.array[slot]->size, tier_size);
-    int64_t compressed_size = XzraOutStreamRun(
+    XzraStatus status = XzraOutStreamRun(
         xzra_out,
         (const uint8_t *)RecordArrayGetReadOnlyData(segments.array[slot]),
-        (end_pos - begin_pos) * sizeof(Record));
+        (end_pos - begin_pos) * sizeof(Record), NULL);
 
-    return compressed_size >= 0;
+    return status == XZRA_SUCCESS;
 }
 
 int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
@@ -799,10 +809,13 @@ int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
         goto _bailout;
     }
 
-    int num_threads = ConcurrencyGetOmpNumThreads() - 1;
-    XzraOutStream *xzra_out = XzraOutStreamCreate(
-        tmp_full_path, lzma_options.block_size, lzma_options.level,
-        lzma_options.extreme, num_threads);
+    XzraCodecOptions xzra_options = {
+        .block_size = lzma_options.block_size,
+        .level = lzma_options.level,
+        .extreme = lzma_options.extreme,
+        .num_threads = ConcurrencyGetOmpNumThreads() - 1,
+    };
+    XzraOutStream *xzra_out = XzraOutStreamCreate(tmp_full_path, &xzra_options);
     if (xzra_out == NULL) {
         error = kMallocFailureError;
         goto _bailout;
@@ -823,7 +836,7 @@ int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
                        depend(inout : segments.array[slot]))
         success &= RecompressDbChunk(tier_size, slot, i, xzra_out);
     }
-    if (XzraOutStreamClose(xzra_out) < 3) {
+    if (XzraOutStreamClose(xzra_out, NULL) != XZRA_SUCCESS) {
         error = kFileSystemError;
         goto _bailout;
     } else if (!success) {
@@ -966,14 +979,25 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    uint64_t mem = XzraDecompressionMemUsage(
-        lzma_options.block_size, lzma_options.level, lzma_options.extreme,
-        ConcurrencyGetOmpNumThreads());
-    int64_t decomp_size =
-        XzraDecompressFile(RecordArrayGetData(load), size * sizeof(Record),
-                           ConcurrencyGetOmpNumThreads(), mem, full_path);
+    XzraCodecOptions xzra_options = {
+        .block_size = lzma_options.block_size,
+        .level = lzma_options.level,
+        .extreme = lzma_options.extreme,
+        .num_threads = ConcurrencyGetOmpNumThreads(),
+    };
+    uint64_t mem = 0;
+    XzraStatus status = XzraDecompressionMemUsage(&xzra_options, &mem);
+    if (status != XZRA_SUCCESS) {
+        RecordArrayDestroy(load);
+        GamesmanFree(full_path);
+        return kRuntimeError;
+    }
+
+    status = XzraDecompressFile(RecordArrayGetData(load), full_path,
+                                size * sizeof(Record),
+                                ConcurrencyGetOmpNumThreads(), mem, NULL);
     GamesmanFree(full_path);
-    if (decomp_size < 0) {
+    if (status != XZRA_SUCCESS) {
         RecordArrayDestroy(load);
         return kRuntimeError;
     }
