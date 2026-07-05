@@ -50,8 +50,9 @@
  * @return -2 if failed to allocate memory for compression; or
  * @return -3 if failed to create or write to the output file.
  */
-int64_t Lz4UtilsCompressStreams(const void *const *in, const size_t *in_sizes,
-                                int n, int level, const char *ofname);
+int64_t Lz4UtilsCompressBuffersToFile(const void *const *in,
+                                      const size_t *in_sizes, int n, int level,
+                                      const char *ofname);
 
 /**
  * @brief Compresses \p in_size bytes of \p in using level \p level LZ4 frame
@@ -68,8 +69,8 @@ int64_t Lz4UtilsCompressStreams(const void *const *in, const size_t *in_sizes,
  * @return -2 if failed to allocate memory for compression, or
  * @return -3 if failed to create or write to the output file.
  */
-int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
-                               const char *ofname);
+int64_t Lz4UtilsCompressBufferToFile(const void *in, size_t in_size, int level,
+                                     const char *ofname);
 
 /**
  * @brief Compresses the input file of name \p ifname using level \p level LZ4
@@ -84,13 +85,14 @@ int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
  * @return -2 if failed to allocate memory for compression, or
  * @return -3 if failed to create or write to the output file.
  */
-int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
+int64_t Lz4UtilsCompressFileToFile(const char *ifname, int level,
+                                   const char *ofname);
 
 // ========================= Streaming Compression API =========================
 
 /**
  * @brief Opaque object for data passing when streaming to a Lz4Utils
- * compresssed file.
+ * compressed file.
  */
 typedef struct Lz4UtilsOutStream Lz4UtilsOutStream;
 
@@ -100,7 +102,7 @@ typedef struct Lz4UtilsOutStream Lz4UtilsOutStream;
  * @param ofname Output file name.
  * @param level LZ4 compression level.
  * @return Pointer to the new Lz4Utils output stream on success, or
- * @return \c NULL on failure.
+ * @return NULL on failure.
  */
 Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
 
@@ -108,7 +110,6 @@ Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
  * @brief Runs compression to consume \p in_size bytes of data from \p in using
  * \p stream as output stream.
  *
- * @param stream Output stream.
  * @param stream Output stream.
  * @param in Pointer to the input buffer.
  * @param in_size Number of bytes to consume from the input buffer.
@@ -155,8 +156,8 @@ int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream);
  * @return -5 if the decompressed data is larger than the size of all output
  * buffers combined.
  */
-int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
-                                          const size_t *out_sizes, int n);
+int64_t Lz4UtilsDecompressFileToBuffers(const char *ifname, void **out,
+                                        const size_t *out_sizes, int n);
 
 /**
  * @brief Decompresses the input file of name \p ifname, which is assumed to
@@ -176,13 +177,14 @@ int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
  * @return -5 if the decompressed data is larger than the size of the output
  * buffer.
  */
-int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size);
+int64_t Lz4UtilsDecompressFileToBuffer(const char *ifname, void *out,
+                                       size_t out_size);
 
 // ======================== Streaming Decompression API ========================
 
 /**
  * @brief Opaque object for data passing when streaming from a Lz4Utils
- * compresssed file.
+ * compressed file.
  */
 typedef struct Lz4UtilsInStream Lz4UtilsInStream;
 
@@ -191,7 +193,7 @@ typedef struct Lz4UtilsInStream Lz4UtilsInStream;
  *
  * @param ifname Input file name.
  * @return Pointer to the new Lz4Utils input stream on success, or
- * @return \c NULL on failure.
+ * @return NULL on failure.
  */
 Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname);
 

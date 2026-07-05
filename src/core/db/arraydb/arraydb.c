@@ -710,9 +710,9 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
                                           current_game.GetTierName, seg_idx);
     if (!filename) return kMallocFailureError;
 
-    int64_t decomp_size =
-        Lz4UtilsDecompressFile(filename, segments.array[buf_idx]->records,
-                               segments.array[buf_idx]->size * sizeof(Record));
+    int64_t decomp_size = Lz4UtilsDecompressFileToBuffer(
+        filename, segments.array[buf_idx]->records,
+        segments.array[buf_idx]->size * sizeof(Record));
     GamesmanFree(filename);
 
     return ConvertLz4UtilsDecompressFileError(decomp_size);
@@ -731,10 +731,10 @@ static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
         goto _bailout;
     }
 
-    int64_t compressed_size =
-        Lz4UtilsCompressStream(segments.array[buf_idx]->records,
-                               segments.array[buf_idx]->size * sizeof(Record),
-                               kDefaultLz4Level, tmp_name);
+    int64_t compressed_size = Lz4UtilsCompressBufferToFile(
+        segments.array[buf_idx]->records,
+        segments.array[buf_idx]->size * sizeof(Record), kDefaultLz4Level,
+        tmp_name);
     switch (compressed_size) {
         case -1:
             NotReached(
@@ -881,7 +881,7 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
                             status};
     const size_t input_sizes[] = {RecordArrayGetRawSize(solving.records),
                                   status_size};
-    int64_t compressed_size = Lz4UtilsCompressStreams(
+    int64_t compressed_size = Lz4UtilsCompressBuffersToFile(
         inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path);
     switch (compressed_size) {
         case -1:
@@ -933,7 +933,7 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
     void *out_buffers[] = {RecordArrayGetData(solving.records), status};
     size_t out_sizes[] = {RecordArrayGetRawSize(solving.records), status_size};
     int64_t decomp_size =
-        Lz4UtilsDecompressFileMultistream(full_path, out_buffers, out_sizes, 2);
+        Lz4UtilsDecompressFileToBuffers(full_path, out_buffers, out_sizes, 2);
     GamesmanFree(full_path);
     if (decomp_size < 0) {
         RecordArrayDestroy(solving.records);

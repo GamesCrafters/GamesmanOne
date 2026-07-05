@@ -36,16 +36,24 @@
 // ================================= Constants =================================
 
 // IO buffer size.
-static const int kInChunkSize = 16 << 10;
+static const int kInChunkSize = 16 << 10;  // 16 KiB
 
 // A template for LZ4 compression preferences.
 static const LZ4F_preferences_t kLz4PreferencesTemplate = {
-    {LZ4F_max256KB, LZ4F_blockLinked, LZ4F_noContentChecksum, LZ4F_frame,
-     0 /* unknown content size */, 0 /* no dictID */, LZ4F_noBlockChecksum},
-    0,         /* compression level; 0 == default */
-    0,         /* autoflush */
-    0,         /* favor decompression speed */
-    {0, 0, 0}, /* reserved, must be set to 0 */
+    {
+        // frameInfo
+        LZ4F_max256KB,           // block size, using > LZ4 default 64KB
+        LZ4F_blockLinked,        // use dependent blocks, improves compression
+        LZ4F_noContentChecksum,  // frame checksum, disabled by default
+        LZ4F_frame,              // frame type, using non-skippable frames
+        0,                       // size of uncompressed content; 0 == unknown
+        0,                       // dictionary ID; 0 == not provided
+        LZ4F_noBlockChecksum,    // block checksum, disabled by default
+    },
+    0,          // compression level; 0 == default
+    0,          // auto flush; 0 == disabled
+    0,          // favor decompression speed for high compression mode; ignored
+    {0, 0, 0},  // reserved, must be set to 0
 };
 
 // ========================== Common Helper Functions ==========================
@@ -75,7 +83,8 @@ static unsigned int Lz4fIsErrorExplained(LZ4F_errorCode_t code) {
     return ret;
 }
 
-// ========================== Lz4UtilsCompressStreams ==========================
+// ========================== Lz4UtilsCompressBuffersToFile
+// ==========================
 
 static int64_t CompressStreamsInternal(const void *const *in,
                                        const size_t *in_sizes, int n,
@@ -147,8 +156,9 @@ _bailout:
     return ret;
 }
 
-int64_t Lz4UtilsCompressStreams(const void *const *in, const size_t *in_sizes,
-                                int n, int level, const char *ofname) {
+int64_t Lz4UtilsCompressBuffersToFile(const void *const *in,
+                                      const size_t *in_sizes, int n, int level,
+                                      const char *ofname) {
     if (n > 0 && (in == NULL || in_sizes == NULL)) return -1;
     for (int i = 0; i < n; ++i) {
         if (in_sizes[i] > 0 && in[i] == NULL) return -1;
@@ -164,17 +174,19 @@ int64_t Lz4UtilsCompressStreams(const void *const *in, const size_t *in_sizes,
     return ret;
 }
 
-// ========================== Lz4UtilsCompressStream ==========================
+// ========================== Lz4UtilsCompressBufferToFile
+// ==========================
 
-int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
-                               const char *ofname) {
+int64_t Lz4UtilsCompressBufferToFile(const void *in, size_t in_size, int level,
+                                     const char *ofname) {
     const void *inputs[] = {in};
     const size_t input_sizes[] = {in_size};
 
-    return Lz4UtilsCompressStreams(inputs, input_sizes, 1, level, ofname);
+    return Lz4UtilsCompressBuffersToFile(inputs, input_sizes, 1, level, ofname);
 }
 
-// =========================== Lz4UtilsCompressFile ===========================
+// =========================== Lz4UtilsCompressFileToFile
+// ===========================
 
 static int64_t CompressFileInternal(FILE *f_in, FILE *f_out, LZ4F_cctx *ctx,
                                     const LZ4F_preferences_t *pref, void *inbuf,
@@ -239,8 +251,8 @@ _bailout:
     return ret;
 }
 
-int64_t Lz4UtilsCompressFile(const char *ifname, int level,
-                             const char *ofname) {
+int64_t Lz4UtilsCompressFileToFile(const char *ifname, int level,
+                                   const char *ofname) {
     FILE *const f_in = fopen(ifname, "rb");
     if (f_in == NULL) return -1;
 
@@ -381,7 +393,7 @@ int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream) {
     return ret;
 }
 
-// ===================== Lz4UtilsDecompressFileMultistream =====================
+// ===================== Lz4UtilsDecompressFileToBuffers =====================
 
 // LZ4F_decompress has a somewhat confusing API. The 3rd
 // (dstSizePtr) and the 5th (srcSizePtr) parameters are used as
@@ -470,8 +482,8 @@ static int64_t DecompressFileMultistream(FILE *f_in, void **out,
     return result;
 }
 
-int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
-                                          const size_t *out_sizes, int n) {
+int64_t Lz4UtilsDecompressFileToBuffers(const char *ifname, void **out,
+                                        const size_t *out_sizes, int n) {
     if (n > 0 && (out == NULL || out_sizes == NULL)) return -4;
     for (int i = 0; i < n; ++i) {
         if (out_sizes[i] > 0 && out[i] == NULL) return -4;
@@ -487,13 +499,15 @@ int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
     return ret;
 }
 
-// ========================== Lz4UtilsDecompressFile ==========================
+// ========================== Lz4UtilsDecompressFileToBuffer
+// ==========================
 
-int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size) {
+int64_t Lz4UtilsDecompressFileToBuffer(const char *ifname, void *out,
+                                       size_t out_size) {
     void *out_buffers[] = {out};
     const size_t out_sizes[] = {out_size};
 
-    return Lz4UtilsDecompressFileMultistream(ifname, out_buffers, out_sizes, 1);
+    return Lz4UtilsDecompressFileToBuffers(ifname, out_buffers, out_sizes, 1);
 }
 
 // ============================= Lz4UtilsInStream =============================
