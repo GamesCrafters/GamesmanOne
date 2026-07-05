@@ -24,7 +24,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "lz4_utils.h"
+#include "libs/lz4_utils/lz4_utils.h"
 
 #include <lz4frame.h>
 #include <stdbool.h>
