@@ -465,7 +465,7 @@ static void StoreSeqChunk(Bitset *seq, int chunk) {
     sprintf(path, "%s/seq_%d.lz4", config.path_prefix, chunk);
     size_t size = BitSetGetSerializedSize(seq);
     Lz4UtilsCompressBufferToFile(BitsetGetRawData(seq), size, config.lz4_level,
-                                 tmp_path);
+                                 tmp_path, NULL);
     GuardedRename(tmp_path, path);
 }
 
@@ -564,7 +564,8 @@ static void ReadDbAndSeqChunk(int slot, int chunk) {
     sprintf(seq_filename, "%s/seq_%d.lz4", config.path_prefix, chunk);
     Bitset *seq = chunking.seq_buf[slot];
     size_t size = BitSetGetSerializedSize(seq);
-    Lz4UtilsDecompressFileToBuffer(seq_filename, BitsetGetRawData(seq), size);
+    Lz4UtilsDecompressFileToBuffer(seq_filename, BitsetGetRawData(seq), size,
+                                   NULL);
 }
 
 static int64_t GetChildTierOffset(Tier child) {

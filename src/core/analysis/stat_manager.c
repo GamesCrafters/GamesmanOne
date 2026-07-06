@@ -27,7 +27,6 @@
 #include "core/analysis/stat_manager.h"
 
 #include <fcntl.h>  // IWYU pragma: no_include <sys/types.h>
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -53,7 +52,7 @@ static char *GetPathToTierAnalysis(Tier tier);
 static char *GetPathToTierDiscoveryMap(Tier tier);
 static char *GetPathTo(Tier tier, ReadOnlyString extension);
 
-static int ReportLz4UtilsError(int64_t code);
+static int ReportLz4UtilsError(Lz4UtilsStatus status);
 
 // -----------------------------------------------------------------------------
 
@@ -135,7 +134,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
     int error = kNoError;
-    char buf[2][BUFSIZ];  // Updated to double-buffer
+    char buf[2][BUFSIZ];  // Double-buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
     ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
     Lz4UtilsInStream *lz4_istream = NULL;
@@ -159,29 +158,30 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
     int current_buf = 0;
 
     // Prime the pipeline by reading the first chunk
-    int64_t bytes_read =
-        Lz4UtilsInStreamRun(lz4_istream, buf[current_buf], BUFSIZ);
+    size_t bytes_read = 0;
+    Lz4UtilsInStreamRun(lz4_istream, buf[current_buf], BUFSIZ, &bytes_read);
+    // TODO: add LZ4 status checks
 
     PRAGMA_OMP(parallel) {
         PRAGMA_OMP(single) {
             // Loop until deserialized all expected bytes or hit an EOF/error
             while (deserialized < total_bytes && bytes_read > 0) {
                 size_t deserialize_step = 0;
-                int64_t next_bytes_read = 0;
+                size_t next_bytes_read = 0;
 
                 // Task A: Deserialize the buffer we just read
                 PRAGMA_OMP(task shared(deserialize_step) firstprivate(
                     current_buf, bytes_read, deserialized)) {
                     deserialize_step = ConcurrentBitsetDeserializeStreaming(
-                        s, deserialized, buf[current_buf], (size_t)bytes_read);
+                        s, deserialized, buf[current_buf], bytes_read);
                 }
 
                 // Task B: Eagerly decompress the next chunk into the alternate
                 // buffer
                 PRAGMA_OMP(task shared(next_bytes_read)
                                firstprivate(current_buf)) {
-                    next_bytes_read = Lz4UtilsInStreamRun(
-                        lz4_istream, buf[1 - current_buf], BUFSIZ);
+                    Lz4UtilsInStreamRun(lz4_istream, buf[1 - current_buf],
+                                        BUFSIZ, &next_bytes_read);
                 }
 
                 // Both tasks must complete before moving forward
@@ -199,8 +199,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
         }
     }
 
-    // Handle a sudden failure in the deserialize step cleanly outside the
-    // OpenMP block
+    // Handle a sudden failure in the deserialize step
     if (error == kRuntimeError) {
         fprintf(stderr,
                 "StatManagerLoadDiscoveryMap: "
@@ -209,41 +208,14 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
         goto _bailout;
     }
 
-    // Evaluate the exit state. Any errors caught by Task B's reading
-    // fall through beautifully to this existing switch statement.
-    switch (bytes_read) {
-        case -3:
-            fprintf(stderr,
-                    "StatManagerLoadDiscoveryMap: discovery map appears to be "
-                    "corrupt for tier %" PRITier "\n",
-                    tier);
-            error = kRuntimeError;
-            goto _bailout;
-        case -4:
-            NotReached(
-                "StatManagerLoadDiscoveryMap: not enough space for "
-                "destination bit stream allocated, likely a bug\n");
-            error = kRuntimeError;
-            goto _bailout;
-        default:
-            // Catch any unexpected negative error codes
-            if (bytes_read < 0) {
-                fprintf(stderr,
-                        "StatManagerLoadDiscoveryMap: unknown decompression "
-                        "error %" PRId64 "\n",
-                        bytes_read);
-                error = kRuntimeError;
-                goto _bailout;
-            }
-            // Check for premature End-Of-File
-            if (deserialized < total_bytes) {
-                fprintf(stderr,
-                        "StatManagerLoadDiscoveryMap: premature end of file "
-                        "for tier %" PRITier "\n",
-                        tier);
-                error = kRuntimeError;
-                goto _bailout;
-            }
+    // Check for premature End-Of-File
+    if (deserialized < total_bytes) {
+        fprintf(stderr,
+                "StatManagerLoadDiscoveryMap: premature end of file "
+                "for tier %" PRITier "\n",
+                tier);
+        error = kRuntimeError;
+        goto _bailout;
     }
 
     // Success.
@@ -268,7 +240,8 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
     char buf[2][BUFSIZ];
     int current_buf = 0;
     size_t bytes_serialized = 0;
-    int64_t res = 0;
+    Lz4UtilsStatus status = LZ4_UTILS_SUCCESS;
+    size_t compressed_bytes = 0;
     size_t step = ConcurrentBitsetSerializeStreaming(s, bytes_serialized,
                                                      buf[current_buf], BUFSIZ);
     PRAGMA_OMP(parallel) {
@@ -276,8 +249,10 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
             while (step > 0) {
                 bytes_serialized += step;
                 // Task A: Compress the buffer we just filled
-                PRAGMA_OMP(task shared(res) firstprivate(current_buf, step))
-                res = Lz4UtilsOutStreamRun(lz4_ostream, buf[current_buf], step);
+                PRAGMA_OMP(task shared(status, compressed_bytes)
+                               firstprivate(current_buf, step))
+                status = Lz4UtilsOutStreamRun(lz4_ostream, buf[current_buf],
+                                              step, &compressed_bytes);
 
                 // Task B: Eagerly serialize the next chunk into the alternate
                 // buffer
@@ -287,20 +262,22 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
                     next_step = ConcurrentBitsetSerializeStreaming(
                         s, bytes_serialized, buf[1 - current_buf], BUFSIZ);
                 }
+
                 // Both tasks must complete before moving forward
                 PRAGMA_OMP(taskwait)
-                if (res < 0) break;  // Break if compression failed
+                if (status != LZ4_UTILS_SUCCESS)
+                    break;  // Break if compression failed
                 step = next_step;
                 current_buf = 1 - current_buf;
             }
         }
     }
 
-    int64_t close_res = Lz4UtilsOutStreamClose(lz4_ostream);
-    int error = ReportLz4UtilsError(close_res);
+    Lz4UtilsStatus close_status = Lz4UtilsOutStreamClose(lz4_ostream, NULL);
+    int error = ReportLz4UtilsError(close_status);
     if (error != kNoError) return error;
 
-    return ReportLz4UtilsError(res);
+    return ReportLz4UtilsError(status);
 }
 
 int StatManagerRemoveDiscoveryMap(Tier tier) {
@@ -383,14 +360,18 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
     return path;
 }
 
-static int ReportLz4UtilsError(int64_t code) {
-    switch (code) {
-        case -1:
+static int ReportLz4UtilsError(Lz4UtilsStatus status) {
+    switch (status) {
+        case LZ4_UTILS_SUCCESS:
+            return kNoError;
+        case LZ4_UTILS_ERR_INVALID_PARAM:
+        case LZ4_UTILS_ERR_INSUFFICIENT_BUF:
             return kIllegalArgumentError;
-        case -2:
+        case LZ4_UTILS_ERR_OOM:
             return kMallocFailureError;
-        case -3:
+        case LZ4_UTILS_ERR_IO:
             return kFileSystemError;
+        default:
+            return kRuntimeError;
     }
-    return kNoError;
 }
