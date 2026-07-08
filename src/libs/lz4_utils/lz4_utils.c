@@ -23,6 +23,7 @@
 
 #include "libs/lz4_utils/lz4_utils.h"
 
+#include <assert.h>
 #include <lz4frame.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -64,7 +65,7 @@ static const void *PointerShiftConst(const void *p, size_t n) {
 }
 
 // Returns p1 - p2.
-static int64_t GenericPointerDiff(const void *p1, const void *p2) {
+static int64_t PointerDiff(const void *p1, const void *p2) {
     return (const char *)p1 - (const char *)p2;
 }
 
@@ -579,19 +580,33 @@ static Lz4UtilsStatus DecompressFileInternal(FILE *f_in, void *const *out,
                 out_offset = 0;
             }
 
-            // Output buffers exhausted, but frame data remains
-            if (out_index >= n) {
-                return LZ4_UTILS_ERR_INSUFFICIENT_BUF;
+            void *out_begin = NULL;
+            size_t dest_buffer_size = 0;
+
+            // If we still have valid output capacity, set up the destination
+            // buffer
+            if (out_index < n) {
+                out_begin = PointerShift(out[out_index], out_offset);
+                dest_buffer_size = out_sizes[out_index] - out_offset;
             }
 
-            // Decompress to the current output buffer
-            void *out_begin = PointerShift(out[out_index], out_offset);
-            size_t dest_buffer_size = out_sizes[out_index] - out_offset;
-            size_t src_buffer_size = GenericPointerDiff(src_end, src_begin);
+            size_t src_buffer_size = PointerDiff(src_end, src_begin);
+
+            // Allow decompression to proceed. If dest_buffer_size is 0,
+            // LZ4F_decompress will just consume input (like headers) until it
+            // actually needs to emit data.
             lz4f_code = LZ4F_decompress(dctx, out_begin, &dest_buffer_size,
                                         src_begin, &src_buffer_size, NULL);
+
             if (Lz4fIsErrorExplained(lz4f_code)) {
                 return LZ4_UTILS_ERR_CORRUPT_DATA;
+            }
+
+            // If the decompressor couldn't consume any input AND couldn't
+            // produce output, it is stalled because it has actual data to
+            // output but no buffer space.
+            if (src_buffer_size == 0 && dest_buffer_size == 0) {
+                return LZ4_UTILS_ERR_INSUFFICIENT_BUF;
             }
 
             out_offset += dest_buffer_size;
