@@ -1,0 +1,1349 @@
+#include <gtest/gtest.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <vector>
+
+// Include the C library header
+extern "C" {
+#include "libs/lz4_utils/lz4_utils.h"
+}
+
+// =============================== Test Fixture ===============================
+
+class Lz4UtilsTest : public ::testing::Test {
+   protected:
+    std::string temp_raw_file_;          /**< Contains raw data */
+    std::string temp_compressed_file_;   /**< Contains compressed data */
+    std::string temp_decompressed_file_; /**< Contains decompressed data */
+
+    void SetUp() override {
+        // Generate unique filenames for the test instance
+        const testing::TestInfo* test_info =
+            testing::UnitTest::GetInstance()->current_test_info();
+        std::string base_name =
+            std::string(test_info->test_suite_name()) + "_" + test_info->name();
+
+        temp_raw_file_ = base_name + "_raw.tmp";
+        temp_compressed_file_ = base_name + "_compressed.lz4";
+        temp_decompressed_file_ = base_name + "_decompressed.tmp";
+    }
+
+    void TearDown() override {
+        // Clean up temporary files after each test
+        std::remove(temp_raw_file_.c_str());
+        std::remove(temp_compressed_file_.c_str());
+        std::remove(temp_decompressed_file_.c_str());
+    }
+
+    // Helper: Generates pseudo-random compressible data
+    std::vector<uint8_t> GenerateTestData(size_t size) {
+        std::vector<uint8_t> data(size);
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = static_cast<uint8_t>(i & UINT8_MAX);
+        }
+        return data;
+    }
+
+    // Helper: Writes raw data to a file
+    bool WriteFile(const std::string& path, const std::vector<uint8_t>& data) {
+        std::ofstream ofs(path, std::ios::binary);
+        if (!ofs) return false;
+        if (!data.empty()) {
+            ofs.write(reinterpret_cast<const char*>(data.data()), data.size());
+        }
+        return ofs.good();
+    }
+
+    // Helper: Reads raw data from a file
+    std::vector<uint8_t> ReadFile(const std::string& path) {
+        std::ifstream ifs(path, std::ios::binary | std::ios::ate);
+        if (!ifs) return {};
+
+        std::streamsize size = ifs.tellg();
+        ifs.seekg(0, std::ios::beg);
+
+        std::vector<uint8_t> buffer(size);
+        if (ifs.read(reinterpret_cast<char*>(buffer.data()), size)) {
+            return buffer;
+        }
+        return {};
+    }
+};
+
+// ======================= Lz4UtilsCompressBuffersToFile =======================
+
+// Tests successful compression of multiple input buffers
+TEST_F(Lz4UtilsTest, CompressMultipleBuffersToFileSuccess) {
+    // Simulates scatter-gather I/O where payload and headers are in separate
+    // memory allocations
+    std::vector<uint8_t> buf1 = GenerateTestData(1024);
+    std::vector<uint8_t> buf2 = GenerateTestData(2048);
+    std::vector<uint8_t> buf3 = GenerateTestData(512);
+
+    const void* in[] = {buf1.data(), buf2.data(), buf3.data()};
+    const size_t in_sizes[] = {buf1.size(), buf2.size(), buf3.size()};
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 3, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    // Even an empty payload generates LZ4 frame headers, so size must be
+    // strictly positive
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests successful compression of a single input buffer
+TEST_F(Lz4UtilsTest, CompressSingleBufferToFileSuccess) {
+    std::vector<uint8_t> buf = GenerateTestData(4096);
+    const void* in[] = {buf.data()};
+    const size_t in_sizes[] = {buf.size()};
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 1, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests successful compression when all provided buffers are empty (size 0)
+TEST_F(Lz4UtilsTest, CompressEmptyBuffersToFileSuccess) {
+    // LZ4 should still produce a valid framing structure even if no actual data
+    // is compressed
+    std::vector<uint8_t> buf1;
+    std::vector<uint8_t> buf2;
+    const void* in[] = {
+        buf1.data(),
+        buf2.data(),
+    };  // data() may return nullptr for empty vectors
+    const size_t in_sizes[] = {0, 0};
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 2, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests behavior when the optional output compressed size parameter is NULL
+TEST_F(Lz4UtilsTest, CompressBuffersToFileNullOutParamSuccess) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    const void* in[] = {buf.data()};
+    const size_t in_sizes[] = {buf.size()};
+
+    // The API explicitly permits passing NULL for the output size parameter
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 1, 1, temp_compressed_file_.c_str(), nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the input array pointer is NULL but n
+// > 0
+TEST_F(Lz4UtilsTest, CompressBuffersToFileNullInArrayInvalidParam) {
+    const size_t in_sizes[] = {1024};
+    size_t compressed_size = 0;
+
+    // Passing a non-zero buffer count requires a valid array of buffer pointers
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        nullptr, in_sizes, 1, 1, temp_compressed_file_.c_str(),
+        &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the sizes array pointer is NULL but n
+// > 0
+TEST_F(Lz4UtilsTest, CompressBuffersToFileNullSizesArrayInvalidParam) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    const void* in[] = {buf.data()};
+    size_t compressed_size = 0;
+
+    // The sizes array is strictly required to bound memory reads
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, nullptr, 1, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when a specific buffer pointer is NULL but
+// its size > 0
+TEST_F(Lz4UtilsTest, CompressBuffersToFileNullBufferPointerInvalidParam) {
+    std::vector<uint8_t> buf1 = GenerateTestData(1024);
+    // Simulating a partially populated array where the second buffer is
+    // unexpectedly null
+    const void* in[] = {buf1.data(), nullptr};
+    const size_t in_sizes[] = {buf1.size(), 2048};
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 2, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the output filename is NULL
+TEST_F(Lz4UtilsTest, CompressBuffersToFileNullFilenameInvalidParam) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    const void* in[] = {buf.data()};
+    const size_t in_sizes[] = {buf.size()};
+    size_t compressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 1, 1, nullptr, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_IO when the output directory does not exist or lacks
+// permissions
+TEST_F(Lz4UtilsTest, CompressBuffersToFileInvalidPathIoError) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    const void* in[] = {buf.data()};
+    const size_t in_sizes[] = {buf.size()};
+    size_t compressed_size = 0;
+
+    // Bypassing file system validation by supplying a path mapped to an
+    // impossible directory
+    const char* invalid_path = "/this_directory_does_not_exist/file.lz4";
+
+    Lz4UtilsStatus status = Lz4UtilsCompressBuffersToFile(
+        in, in_sizes, 1, 1, invalid_path, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// ======================= Lz4UtilsCompressBufferToFile =======================
+
+// Tests successful compression of a single contiguous buffer
+TEST_F(Lz4UtilsTest, CompressBufferToFileSuccess) {
+    std::vector<uint8_t> buf = GenerateTestData(4096);
+    size_t compressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        buf.data(), buf.size(), 1, temp_compressed_file_.c_str(),
+        &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests successful compression of a zero-length buffer
+TEST_F(Lz4UtilsTest, CompressEmptyBufferToFileSuccess) {
+    size_t compressed_size = 0;
+
+    // Passing nullptr is strictly permitted if the corresponding size is 0,
+    // as it indicates a valid empty payload rather than a missing memory
+    // reference.
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        nullptr, 0, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests behavior when the optional output compressed size parameter is NULL
+TEST_F(Lz4UtilsTest, CompressBufferToFileNullOutParamSuccess) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        buf.data(), buf.size(), 1, temp_compressed_file_.c_str(), nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the input buffer is NULL but size > 0
+TEST_F(Lz4UtilsTest, CompressBufferToFileNullBufferInvalidParam) {
+    size_t compressed_size = 0;
+
+    // A non-zero size with a null pointer breaks memory bounds checking
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        nullptr, 1024, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the output filename is NULL
+TEST_F(Lz4UtilsTest, CompressBufferToFileNullFilenameInvalidParam) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    size_t compressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        buf.data(), buf.size(), 1, nullptr, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_IO when writing to an invalid or restricted file path
+TEST_F(Lz4UtilsTest, CompressBufferToFileInvalidPathIoError) {
+    std::vector<uint8_t> buf = GenerateTestData(1024);
+    size_t compressed_size = 0;
+
+    // Targeting a non-existent root directory ensures file creation fails at
+    // the OS level
+    const char* invalid_path = "/this_directory_does_not_exist/file.lz4";
+
+    Lz4UtilsStatus status = Lz4UtilsCompressBufferToFile(
+        buf.data(), buf.size(), 1, invalid_path, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// ======================== Lz4UtilsCompressFileToFile ========================
+
+// Tests successful compression of an existing file
+TEST_F(Lz4UtilsTest, CompressFileToFileSuccess) {
+    std::vector<uint8_t> data = GenerateTestData(4096);
+    // The source file must be populated on disk prior to calling the file-based
+    // compression API
+    ASSERT_TRUE(WriteFile(temp_raw_file_, data));
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, temp_compressed_file_.c_str(),
+        &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests successful compression of an empty file (0 bytes)
+TEST_F(Lz4UtilsTest, CompressEmptyFileToFileSuccess) {
+    // Compressing an empty file validates that the internal stream creation
+    // and finalization handle zero-byte payloads without hanging or crashing.
+    ASSERT_TRUE(WriteFile(temp_raw_file_, {}));
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, temp_compressed_file_.c_str(),
+        &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    // The compressed file must include at least the LZ4 frame header and footer
+    EXPECT_GT(compressed_size, 0);
+}
+
+// Tests behavior when the optional output compressed size parameter is NULL
+TEST_F(Lz4UtilsTest, CompressFileToFileNullOutParamSuccess) {
+    std::vector<uint8_t> data = GenerateTestData(1024);
+    ASSERT_TRUE(WriteFile(temp_raw_file_, data));
+
+    // Callers who read the output file via standard OS filesystem APIs later
+    // can safely omit the output size pointer.
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, temp_compressed_file_.c_str(), nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the input filename is NULL
+TEST_F(Lz4UtilsTest, CompressFileToFileNullInputFilenameInvalidParam) {
+    size_t compressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        nullptr, 1, temp_compressed_file_.c_str(), &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the output filename is NULL
+TEST_F(Lz4UtilsTest, CompressFileToFileNullOutputFilenameInvalidParam) {
+    std::vector<uint8_t> data = GenerateTestData(1024);
+    ASSERT_TRUE(WriteFile(temp_raw_file_, data));
+
+    size_t compressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, nullptr, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_IO when the input file does not exist
+TEST_F(Lz4UtilsTest, CompressFileToFileMissingInputFileIoError) {
+    // Explicitly delete any stale file from previous test runs to guarantee an
+    // OS-level open failure
+    std::remove(temp_raw_file_.c_str());
+    ASSERT_FALSE(std::filesystem::exists(temp_raw_file_));
+
+    size_t compressed_size = 0;
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, temp_compressed_file_.c_str(),
+        &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// Tests LZ4_UTILS_ERR_IO when the output path is invalid
+TEST_F(Lz4UtilsTest, CompressFileToFileInvalidOutputPathIoError) {
+    std::vector<uint8_t> data = GenerateTestData(1024);
+    ASSERT_TRUE(WriteFile(temp_raw_file_, data));
+
+    size_t compressed_size = 0;
+    // Targeting a non-existent root directory ensures file creation fails at
+    // the OS level
+    const char* invalid_path = "/this_directory_does_not_exist/file.lz4";
+
+    Lz4UtilsStatus status = Lz4UtilsCompressFileToFile(
+        temp_raw_file_.c_str(), 1, invalid_path, &compressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// =========================== Streaming Compression ===========================
+
+// Tests successful creation, standard chunked writing, and closing of the
+// stream
+TEST_F(Lz4UtilsTest, OutStreamStandardChunkingSuccess) {
+    Lz4UtilsOutStream* stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> chunk = GenerateTestData(1024);
+    size_t total_written_during_run = 0;
+
+    // Simulating an application feeding steady, predictable blocks of data
+    // (e.g., from a network socket)
+    for (int i = 0; i < 5; ++i) {
+        size_t bytes_written = 0;
+        Lz4UtilsStatus status = Lz4UtilsOutStreamRun(
+            stream, chunk.data(), chunk.size(), &bytes_written);
+        EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+        // We cannot make any assumptions on bytes_written due to internal
+        // buffering
+        total_written_during_run += bytes_written;
+    }
+
+    size_t total_compressed_size = 0;
+    Lz4UtilsStatus close_status =
+        Lz4UtilsOutStreamClose(stream, &total_compressed_size);
+    EXPECT_EQ(close_status, LZ4_UTILS_SUCCESS);
+
+    // The final size includes internal framing and any data flushed during the
+    // close operation
+    EXPECT_GE(total_compressed_size, total_written_during_run);
+    EXPECT_GT(total_compressed_size, 0);
+}
+
+// Tests streaming compression with highly irregular chunk sizes (e.g., 1 byte,
+// then 1MB)
+TEST_F(Lz4UtilsTest, OutStreamIrregularChunkingSuccess) {
+    Lz4UtilsOutStream* stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> tiny_chunk = GenerateTestData(1);
+    std::vector<uint8_t> large_chunk = GenerateTestData(1024 * 1024);  // 1 MB
+
+    // Real-world streams can stall or dump large bursts; the internal buffer
+    // must handle both gracefully
+    size_t bytes_written = 0;
+    EXPECT_EQ(Lz4UtilsOutStreamRun(stream, tiny_chunk.data(), tiny_chunk.size(),
+                                   &bytes_written),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(Lz4UtilsOutStreamRun(stream, large_chunk.data(),
+                                   large_chunk.size(), &bytes_written),
+              LZ4_UTILS_SUCCESS);
+
+    size_t total_size = 0;
+    EXPECT_EQ(Lz4UtilsOutStreamClose(stream, &total_size), LZ4_UTILS_SUCCESS);
+    EXPECT_GT(total_size, 0);
+}
+
+// Tests successful consumption of zero-byte chunks without failing
+TEST_F(Lz4UtilsTest, OutStreamZeroByteChunksSuccess) {
+    Lz4UtilsOutStream* stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(stream, nullptr);
+
+    size_t bytes_written = 0;
+    // Feeding 0 bytes shouldn't mutate internal state or trigger compression
+    // errors
+    Lz4UtilsStatus status =
+        Lz4UtilsOutStreamRun(stream, nullptr, 0, &bytes_written);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(bytes_written, 0);
+
+    EXPECT_EQ(Lz4UtilsOutStreamClose(stream, nullptr), LZ4_UTILS_SUCCESS);
+}
+
+// Tests behavior when optional output parameters (written bytes, total size)
+// are NULL
+TEST_F(Lz4UtilsTest, OutStreamNullOutParamsSuccess) {
+    Lz4UtilsOutStream* stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> chunk = GenerateTestData(1024);
+
+    // Consumers tracking progress externally shouldn't be forced to provide
+    // size pointers
+    EXPECT_EQ(Lz4UtilsOutStreamRun(stream, chunk.data(), chunk.size(), nullptr),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(Lz4UtilsOutStreamClose(stream, nullptr), LZ4_UTILS_SUCCESS);
+}
+
+// Tests that closing a NULL stream gracefully returns LZ4_UTILS_SUCCESS
+TEST_F(Lz4UtilsTest, OutStreamCloseNullStreamSuccess) {
+    size_t total_size = 999;
+
+    // Safely handling a NULL pointer on close simplifies teardown logic in
+    // client code
+    Lz4UtilsStatus status = Lz4UtilsOutStreamClose(nullptr, &total_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    // The out parameter must remain unmodified on error or NULL-op scenarios
+    EXPECT_EQ(total_size, 999);
+}
+
+// Tests creation failure (returns NULL) when given an invalid output filename
+TEST_F(Lz4UtilsTest, OutStreamCreateInvalidPathReturnsNull) {
+    // Verifying that initialization fails synchronously rather than deferring
+    // the IO error to the first Run()
+    const char* invalid_path = "/this_directory_does_not_exist/stream.lz4";
+    Lz4UtilsOutStream* stream = Lz4UtilsOutStreamCreate(invalid_path, 1);
+
+    EXPECT_EQ(stream, nullptr);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when attempting to run with a NULL stream
+// pointer
+TEST_F(Lz4UtilsTest, OutStreamRunNullStreamInvalidParam) {
+    std::vector<uint8_t> chunk = GenerateTestData(1024);
+    size_t bytes_written = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsOutStreamRun(nullptr, chunk.data(),
+                                                 chunk.size(), &bytes_written);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when input buffer is NULL but input size >
+// 0
+TEST_F(Lz4UtilsTest, OutStreamRunNullBufferInvalidParam) {
+    Lz4UtilsOutStream* stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(stream, nullptr);
+
+    size_t bytes_written = 0;
+    // A null pointer coupled with a non-zero size prevents safe memory reading
+    Lz4UtilsStatus status =
+        Lz4UtilsOutStreamRun(stream, nullptr, 1024, &bytes_written);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+
+    Lz4UtilsOutStreamClose(stream, nullptr);
+}
+
+// ====================== Lz4UtilsDecompressFileToBuffers ======================
+
+// Tests successful decompression into multiple pre-allocated buffers
+TEST_F(Lz4UtilsTest, DecompressFileToMultipleBuffersSuccess) {
+    // Generate and compress a known payload so we have a valid LZ4 frame on
+    // disk to decompress
+    std::vector<uint8_t> original_data = GenerateTestData(3000);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Provide scattered output buffers with slightly more total capacity (3500)
+    // than the payload (3000) to ensure the decompressor halts correctly at the
+    // end of the frame without over-filling.
+    std::vector<uint8_t> out_buf1(1000);
+    std::vector<uint8_t> out_buf2(1000);
+    std::vector<uint8_t> out_buf3(1500);
+
+    void* out[] = {out_buf1.data(), out_buf2.data(), out_buf3.data()};
+    const size_t out_sizes[] = {out_buf1.size(), out_buf2.size(),
+                                out_buf3.size()};
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 3, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, original_data.size());
+}
+
+// Tests successful decompression when target buffers strictly match the
+// uncompressed data
+TEST_F(Lz4UtilsTest, DecompressFileToExactCapacityBuffersSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(2048);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Tight boundary check: total buffer capacity exactly matches the
+    // uncompressed payload size. This verifies that the API doesn't mistakenly
+    // throw an insufficient buffer error at the EOF boundary.
+    std::vector<uint8_t> out_buf1(1024);
+    std::vector<uint8_t> out_buf2(1024);
+
+    void* out[] = {out_buf1.data(), out_buf2.data()};
+    const size_t out_sizes[] = {out_buf1.size(), out_buf2.size()};
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 2, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, original_data.size());
+}
+
+// Tests behavior when the optional output uncompressed size parameter is NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullOutParamSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(512);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+
+    // The uncompressed size pointer is explicitly marked optional in the API
+    // contract, so clients should be able to pass nullptr if they already know
+    // the expected size.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 1, nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the number of buffers 'n' is less than
+// 0
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNegativeCountInvalidParam) {
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+    size_t uncompressed_size = 0;
+
+    // A negative buffer count makes no logical sense for array indexing
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, -1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when 'n' > 0 but the input filename is NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullFilenameInvalidParam) {
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+    size_t uncompressed_size = 0;
+
+    // A missing filename prevents opening the source stream entirely
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        nullptr, out, out_sizes, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when 'n' > 0 but the output buffers array
+// is NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullOutArrayInvalidParam) {
+    const size_t out_sizes[] = {1024};
+    size_t uncompressed_size = 0;
+
+    // Passing a non-zero buffer count requires a valid array of destination
+    // pointers to write the decompressed data into.
+    Lz4UtilsStatus status =
+        Lz4UtilsDecompressFileToBuffers(temp_compressed_file_.c_str(), nullptr,
+                                        out_sizes, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when 'n' > 0 but the output sizes array is
+// NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullSizesArrayInvalidParam) {
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    size_t uncompressed_size = 0;
+
+    // The sizes array is required to ensure the decompressor knows the strict
+    // capacity limits of the destination memory, preventing buffer overflows.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, nullptr, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when an output buffer is NULL but its size
+// > 0
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullBufferPointerInvalidParam) {
+    std::vector<uint8_t> out_buf(1024);
+    // Simulating a partially allocated scatter-gather array where the second
+    // allocation failed.
+    void* out[] = {out_buf.data(), nullptr};
+    const size_t out_sizes[] = {out_buf.size(), 2048};
+    size_t uncompressed_size = 0;
+
+    // The decompressor cannot safely write to a null pointer if the stated
+    // capacity is > 0.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 2, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_IO when the compressed input file does not exist
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersMissingFileIoError) {
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+    size_t uncompressed_size = 0;
+
+    // Ensure there's no stale file left over that could accidentally make this
+    // test pass.
+    std::remove(temp_compressed_file_.c_str());
+    ASSERT_FALSE(std::filesystem::exists(temp_compressed_file_));
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// Tests LZ4_UTILS_ERR_CORRUPT_DATA when feeding random/non-LZ4 data to the
+// decompressor
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersCorruptDataError) {
+    // Injecting non-LZ4 arbitrary data to verify the decoder validates frame
+    // headers and structural integrity instead of blindly parsing memory.
+    std::vector<uint8_t> garbage_data = GenerateTestData(512);
+    ASSERT_TRUE(WriteFile(temp_compressed_file_, garbage_data));
+
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_CORRUPT_DATA);
+}
+
+// Tests LZ4_UTILS_ERR_INSUFFICIENT_BUF when total buffer capacity is less than
+// uncompressed size
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersInsufficientCapacityError) {
+    // Generate a payload larger than the output buffer we intend to provide.
+    std::vector<uint8_t> original_data = GenerateTestData(4096);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Provide inadequate output space (1024 bytes) for a 4096 byte payload.
+    // This tests that the API safely aborts and reports the capacity shortfall
+    // rather than causing a heap buffer overflow.
+    std::vector<uint8_t> out_buf(1024);
+    void* out[] = {out_buf.data()};
+    const size_t out_sizes[] = {out_buf.size()};
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffers(
+        temp_compressed_file_.c_str(), out, out_sizes, 1, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INSUFFICIENT_BUF);
+}
+
+// ====================== Lz4UtilsDecompressFileToBuffer ======================
+
+// Tests successful decompression into a single output buffer
+TEST_F(Lz4UtilsTest, DecompressFileToBufferSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(2048);
+    // Prepare a valid compressed file to act as the source.
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Allocate an output buffer with slightly more capacity than needed
+    // to verify the decompressor halts exactly at the end of the frame.
+    std::vector<uint8_t> out_buf(3000);
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), out_buf.data(), out_buf.size(),
+        &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, original_data.size());
+}
+
+// Tests successful decompression of an empty LZ4 frame into a zero-size buffer
+TEST_F(Lz4UtilsTest, DecompressEmptyFrameToBufferSuccess) {
+    // Generate a file containing only LZ4 frame headers (a 0-byte payload).
+    ASSERT_EQ(Lz4UtilsCompressBufferToFile(
+                  nullptr, 0, 1, temp_compressed_file_.c_str(), nullptr),
+              LZ4_UTILS_SUCCESS);
+
+    // Initialize to a garbage value to confirm it gets overwritten.
+    size_t uncompressed_size = 999;
+
+    // Passing nullptr as the output buffer is valid as long as out_size is 0,
+    // indicating we are safely expecting an empty payload.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), nullptr, 0, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, 0);
+}
+
+// Tests behavior when the optional output uncompressed size parameter is NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBufferNullOutParamSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(512);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    std::vector<uint8_t> out_buf(1024);
+
+    // Callers who rely on predefined fixed-size payloads or out-of-band size
+    // markers can safely omit the uncompressed size pointer.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), out_buf.data(), out_buf.size(), nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the input filename is NULL
+TEST_F(Lz4UtilsTest, DecompressFileToBufferNullFilenameInvalidParam) {
+    std::vector<uint8_t> out_buf(1024);
+    size_t uncompressed_size = 0;
+
+    // A missing filename guarantees the underlying file cannot be opened.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        nullptr, out_buf.data(), out_buf.size(), &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the output buffer is NULL but capacity
+// > 0
+TEST_F(Lz4UtilsTest, DecompressFileToBufferNullBufferInvalidParam) {
+    size_t uncompressed_size = 0;
+
+    // Passing a null pointer with a non-zero capacity violates memory safety
+    // contracts, as the decompressor would attempt to write output to an
+    // invalid address.
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), nullptr, 1024, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_IO when the compressed input file cannot be found
+TEST_F(Lz4UtilsTest, DecompressFileToBufferMissingFileIoError) {
+    std::vector<uint8_t> out_buf(1024);
+    size_t uncompressed_size = 0;
+
+    // Ensure the target file is strictly absent to guarantee an OS-level open
+    // failure.
+    std::remove(temp_compressed_file_.c_str());
+    ASSERT_FALSE(std::filesystem::exists(temp_compressed_file_));
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), out_buf.data(), out_buf.size(),
+        &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_IO);
+}
+
+// Tests LZ4_UTILS_ERR_CORRUPT_DATA when the LZ4 frame header is truncated or
+// malformed
+TEST_F(Lz4UtilsTest, DecompressFileToBufferCorruptDataError) {
+    // Injecting non-LZ4 arbitrary data verifies that the decoder relies on
+    // frame header validation and magic numbers, failing safely instead of
+    // performing undefined behavior.
+    std::vector<uint8_t> garbage_data = GenerateTestData(512);
+    ASSERT_TRUE(WriteFile(temp_compressed_file_, garbage_data));
+
+    std::vector<uint8_t> out_buf(1024);
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), out_buf.data(), out_buf.size(),
+        &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_CORRUPT_DATA);
+}
+
+// Tests LZ4_UTILS_ERR_INSUFFICIENT_BUF when the output buffer is too small for
+// the payload
+TEST_F(Lz4UtilsTest, DecompressFileToBufferInsufficientCapacityError) {
+    // Generate a payload significantly larger than the output buffer we intend
+    // to provide.
+    std::vector<uint8_t> original_data = GenerateTestData(4096);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Provide an inadequate output space (1024 bytes) for a 4096-byte payload.
+    // This explicitly tests the API's bounds-checking to prevent heap buffer
+    // overflows.
+    std::vector<uint8_t> out_buf(1024);
+    size_t uncompressed_size = 0;
+
+    Lz4UtilsStatus status = Lz4UtilsDecompressFileToBuffer(
+        temp_compressed_file_.c_str(), out_buf.data(), out_buf.size(),
+        &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INSUFFICIENT_BUF);
+}
+
+// ========================== Streaming Decompression ==========================
+
+// Tests successful creation, standard chunked reading, and closure of the input
+// stream
+TEST_F(Lz4UtilsTest, InStreamStandardChunkingSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(4096);
+    // Prepare a valid compressed file to stream from.
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> out_chunk(1024);
+    size_t total_read = 0;
+
+    // Simulating an application pulling fixed-size blocks (e.g., streaming over
+    // a network)
+    for (int i = 0; i < 4; ++i) {
+        size_t uncompressed_size = 0;
+        Lz4UtilsStatus status = Lz4UtilsInStreamRun(
+            stream, out_chunk.data(), out_chunk.size(), &uncompressed_size);
+
+        EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+        EXPECT_GT(uncompressed_size, 0);
+        total_read += uncompressed_size;
+    }
+
+    EXPECT_EQ(total_read, original_data.size());
+    Lz4UtilsInStreamClose(stream);
+}
+
+// Tests reading decompressed data using irregular output chunk sizes (1 byte,
+// 1024 bytes)
+TEST_F(Lz4UtilsTest, InStreamIrregularChunkingSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(1025);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    size_t uncompressed_size = 0;
+    std::vector<uint8_t> tiny_chunk(1);
+
+    // The internal decoder state must handle internal framing boundaries
+    // seamlessly regardless of how fragmented the caller's read requests are.
+    EXPECT_EQ(Lz4UtilsInStreamRun(stream, tiny_chunk.data(), tiny_chunk.size(),
+                                  &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, 1);
+
+    std::vector<uint8_t> large_chunk(2048);
+    // Asking for more data than remains in the stream should naturally cap out
+    // at the end of the frame.
+    EXPECT_EQ(Lz4UtilsInStreamRun(stream, large_chunk.data(),
+                                  large_chunk.size(), &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, 1024);
+
+    Lz4UtilsInStreamClose(stream);
+}
+
+// Tests that reading at the end of the LZ4 stream returns SUCCESS and
+// out_uncompressed_size == 0 (EOF)
+TEST_F(Lz4UtilsTest, InStreamReadEofReturnsZeroSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(512);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> out_chunk(1024);
+    size_t uncompressed_size = 0;
+
+    // The first read consumes the entire payload.
+    ASSERT_EQ(Lz4UtilsInStreamRun(stream, out_chunk.data(), out_chunk.size(),
+                                  &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, 512);
+
+    // Subsequent reads on a depleted stream must gracefully return SUCCESS and
+    // 0 bytes to signal standard EOF instead of hanging or returning an
+    // arbitrary IO error.
+    Lz4UtilsStatus eof_status = Lz4UtilsInStreamRun(
+        stream, out_chunk.data(), out_chunk.size(), &uncompressed_size);
+
+    EXPECT_EQ(eof_status, LZ4_UTILS_SUCCESS);
+    EXPECT_EQ(uncompressed_size, 0);
+
+    Lz4UtilsInStreamClose(stream);
+}
+
+// Tests behavior when the optional out_uncompressed_size parameter is NULL
+TEST_F(Lz4UtilsTest, InStreamRunNullOutParamSuccess) {
+    std::vector<uint8_t> original_data = GenerateTestData(512);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> out_chunk(512);
+
+    // Callers tracking exact offsets out-of-band may not need the API to report
+    // bytes written.
+    Lz4UtilsStatus status = Lz4UtilsInStreamRun(stream, out_chunk.data(),
+                                                out_chunk.size(), nullptr);
+
+    EXPECT_EQ(status, LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStreamClose(stream);
+}
+
+// Tests that closing a NULL input stream gracefully completes without crashing
+TEST_F(Lz4UtilsTest, InStreamCloseNullStreamSuccess) {
+    // Safely handling a NULL pointer simplifies cleanup paths in client code,
+    // avoiding the need for redundant null checks before stream destruction.
+    Lz4UtilsInStreamClose(nullptr);
+}
+
+// Tests creation failure (returns NULL) when given a missing or invalid input
+// filename
+TEST_F(Lz4UtilsTest, InStreamCreateMissingPathReturnsNull) {
+    // Ensure no stale file exists that could accidentally make the open succeed
+    std::remove(temp_compressed_file_.c_str());
+
+    // Verifying that initialization fails synchronously rather than deferring
+    // the IO error to the first Run() call.
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+
+    EXPECT_EQ(stream, nullptr);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when attempting to run with a NULL stream
+// pointer
+TEST_F(Lz4UtilsTest, InStreamRunNullStreamInvalidParam) {
+    std::vector<uint8_t> out_chunk(1024);
+    size_t uncompressed_size = 0;
+
+    // Passing a null stream simulates a failure to check the return value
+    // of InStreamCreate; the API must fail safely instead of dereferencing.
+    Lz4UtilsStatus status = Lz4UtilsInStreamRun(
+        nullptr, out_chunk.data(), out_chunk.size(), &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+}
+
+// Tests LZ4_UTILS_ERR_INVALID_PARAM when the output buffer is NULL
+TEST_F(Lz4UtilsTest, InStreamRunNullBufferInvalidParam) {
+    std::vector<uint8_t> original_data = GenerateTestData(512);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    size_t uncompressed_size = 0;
+    // A null pointer coupled with a non-zero capacity violates memory safety,
+    // preventing the decompressor from writing its output.
+    Lz4UtilsStatus status =
+        Lz4UtilsInStreamRun(stream, nullptr, 1024, &uncompressed_size);
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_INVALID_PARAM);
+
+    Lz4UtilsInStreamClose(stream);
+}
+
+// Tests LZ4_UTILS_ERR_CORRUPT_DATA by mutating the input file mid-stream to
+// simulate corruption
+TEST_F(Lz4UtilsTest, InStreamRunCorruptDataError) {
+    std::vector<uint8_t> original_data = GenerateTestData(8192);
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Overwrite a portion of the valid compressed file with garbage to ruin
+    // block checksums. This strictly simulates data corruption mid-stream
+    // rather than a premature EOF I/O error.
+    std::vector<uint8_t> compressed_data = ReadFile(temp_compressed_file_);
+    ASSERT_GT(compressed_data.size(), 100);
+    for (size_t i = compressed_data.size() / 2; i < compressed_data.size() - 20;
+         ++i) {
+        compressed_data[i] = 0xFF;
+    }
+    ASSERT_TRUE(WriteFile(temp_compressed_file_, compressed_data));
+
+    Lz4UtilsInStream* stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(stream, nullptr);
+
+    std::vector<uint8_t> out_chunk(1024);
+    size_t uncompressed_size = 0;
+    Lz4UtilsStatus status = LZ4_UTILS_SUCCESS;
+
+    // We must read iteratively because the first few chunks might decompress
+    // successfully from the intact portion of the stream before hitting the
+    // corrupted blocks.
+    for (int i = 0; i < 10; ++i) {
+        status = Lz4UtilsInStreamRun(stream, out_chunk.data(), out_chunk.size(),
+                                     &uncompressed_size);
+        if (status != LZ4_UTILS_SUCCESS) {
+            break;
+        }
+    }
+
+    EXPECT_EQ(status, LZ4_UTILS_ERR_CORRUPT_DATA);
+
+    Lz4UtilsInStreamClose(stream);
+}
+
+// ================================ Round-Trips ================================
+
+// Tests that a single buffer compressed to a file decompresses exactly to the
+// original data
+TEST_F(Lz4UtilsTest, RoundTripSingleBufferMatchesOriginal) {
+    std::vector<uint8_t> original_data = GenerateTestData(4096);
+
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    // Pre-allocate the exact expected size to ensure no trailing garbage bytes
+    // are written
+    std::vector<uint8_t> decompressed_data(original_data.size());
+    size_t uncompressed_size = 0;
+
+    ASSERT_EQ(Lz4UtilsDecompressFileToBuffer(
+                  temp_compressed_file_.c_str(), decompressed_data.data(),
+                  decompressed_data.size(), &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(uncompressed_size, original_data.size());
+    // Verifies that the compression algorithm is strictly lossless and
+    // internal frame headers/footers do not bleed into the decompressed
+    // payload.
+    EXPECT_EQ(original_data, decompressed_data);
+}
+
+// Tests that multiple scattered buffers compressed together decompress to match
+// the concatenated original data
+TEST_F(Lz4UtilsTest, RoundTripMultipleBuffersMatchOriginal) {
+    std::vector<uint8_t> buf1 = GenerateTestData(1024);
+    std::vector<uint8_t> buf2 = GenerateTestData(2048);
+    std::vector<uint8_t> buf3 = GenerateTestData(512);
+
+    const void* in[] = {buf1.data(), buf2.data(), buf3.data()};
+    const size_t in_sizes[] = {buf1.size(), buf2.size(), buf3.size()};
+
+    ASSERT_EQ(Lz4UtilsCompressBuffersToFile(
+                  in, in_sizes, 3, 1, temp_compressed_file_.c_str(), nullptr),
+              LZ4_UTILS_SUCCESS);
+
+    // Create a ground-truth vector containing the conceptually contiguous
+    // stream
+    std::vector<uint8_t> expected_concatenated;
+    expected_concatenated.reserve(buf1.size() + buf2.size() + buf3.size());
+    expected_concatenated.insert(expected_concatenated.end(), buf1.begin(),
+                                 buf1.end());
+    expected_concatenated.insert(expected_concatenated.end(), buf2.begin(),
+                                 buf2.end());
+    expected_concatenated.insert(expected_concatenated.end(), buf3.begin(),
+                                 buf3.end());
+
+    std::vector<uint8_t> decompressed_data(expected_concatenated.size());
+    size_t uncompressed_size = 0;
+
+    // By decompressing into a single buffer, we verify that the scatter-gather
+    // inputs are treated as a single unified stream by the LZ4 framing
+    // specification.
+    ASSERT_EQ(Lz4UtilsDecompressFileToBuffer(
+                  temp_compressed_file_.c_str(), decompressed_data.data(),
+                  decompressed_data.size(), &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(uncompressed_size, expected_concatenated.size());
+    EXPECT_EQ(expected_concatenated, decompressed_data);
+}
+
+// Tests that a file compressed to another file decompresses exactly to the
+// original file's contents
+TEST_F(Lz4UtilsTest, RoundTripFileToFileMatchesOriginal) {
+    std::vector<uint8_t> original_data = GenerateTestData(8192);
+    ASSERT_TRUE(WriteFile(temp_raw_file_, original_data));
+
+    // Validates the integration between disk I/O reads and the internal
+    // compression stream
+    ASSERT_EQ(
+        Lz4UtilsCompressFileToFile(temp_raw_file_.c_str(), 1,
+                                   temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    std::vector<uint8_t> decompressed_data(original_data.size());
+    size_t uncompressed_size = 0;
+
+    ASSERT_EQ(Lz4UtilsDecompressFileToBuffer(
+                  temp_compressed_file_.c_str(), decompressed_data.data(),
+                  decompressed_data.size(), &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(uncompressed_size, original_data.size());
+    EXPECT_EQ(original_data, decompressed_data);
+}
+
+// Tests that data compressed via OutStream chunking decompresses perfectly via
+// InStream chunking
+TEST_F(Lz4UtilsTest, RoundTripStreamingMatchesOriginal) {
+    std::vector<uint8_t> original_data = GenerateTestData(10000);
+
+    Lz4UtilsOutStream* out_stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(out_stream, nullptr);
+
+    // Feed the data in arbitrary chunk sizes to simulate fragmented network
+    // packets
+    size_t write_chunk_size = 1024;
+    for (size_t offset = 0; offset < original_data.size();
+         offset += write_chunk_size) {
+        size_t current_chunk_size =
+            std::min(write_chunk_size, original_data.size() - offset);
+        ASSERT_EQ(
+            Lz4UtilsOutStreamRun(out_stream, original_data.data() + offset,
+                                 current_chunk_size, nullptr),
+            LZ4_UTILS_SUCCESS);
+    }
+    ASSERT_EQ(Lz4UtilsOutStreamClose(out_stream, nullptr), LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* in_stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(in_stream, nullptr);
+
+    std::vector<uint8_t> decompressed_data;
+    std::vector<uint8_t> read_buffer(2000);
+
+    // Using a different read chunk size than the write chunk size ensures
+    // internal framing logic doesn't rely on symmetric buffer alignments.
+    while (true) {
+        size_t bytes_read = 0;
+        ASSERT_EQ(Lz4UtilsInStreamRun(in_stream, read_buffer.data(),
+                                      read_buffer.size(), &bytes_read),
+                  LZ4_UTILS_SUCCESS);
+        if (bytes_read == 0) {
+            break;  // Standard EOF
+        }
+        decompressed_data.insert(decompressed_data.end(), read_buffer.begin(),
+                                 read_buffer.begin() + bytes_read);
+    }
+    Lz4UtilsInStreamClose(in_stream);
+
+    EXPECT_EQ(original_data.size(), decompressed_data.size());
+    EXPECT_EQ(original_data, decompressed_data);
+}
+
+// Tests cross-API integrity: compresses with OutStream, decompresses with
+// DecompressFileToBuffer
+TEST_F(Lz4UtilsTest, RoundTripStreamToBufferMatchesOriginal) {
+    std::vector<uint8_t> original_data = GenerateTestData(8192);
+
+    Lz4UtilsOutStream* out_stream =
+        Lz4UtilsOutStreamCreate(temp_compressed_file_.c_str(), 1);
+    ASSERT_NE(out_stream, nullptr);
+
+    // Simulate an application building a file incrementally over time
+    for (size_t offset = 0; offset < original_data.size(); offset += 2048) {
+        ASSERT_EQ(Lz4UtilsOutStreamRun(
+                      out_stream, original_data.data() + offset, 2048, nullptr),
+                  LZ4_UTILS_SUCCESS);
+    }
+    ASSERT_EQ(Lz4UtilsOutStreamClose(out_stream, nullptr), LZ4_UTILS_SUCCESS);
+
+    std::vector<uint8_t> decompressed_data(original_data.size());
+    size_t uncompressed_size = 0;
+
+    // A monolithic read guarantees that incremental flushes in the OutStream
+    // properly closed their data blocks and still formed a single, contiguous
+    // valid frame.
+    ASSERT_EQ(Lz4UtilsDecompressFileToBuffer(
+                  temp_compressed_file_.c_str(), decompressed_data.data(),
+                  decompressed_data.size(), &uncompressed_size),
+              LZ4_UTILS_SUCCESS);
+
+    EXPECT_EQ(uncompressed_size, original_data.size());
+    EXPECT_EQ(original_data, decompressed_data);
+}
+
+// Tests cross-API integrity: compresses with CompressBufferToFile, decompresses
+// with InStream
+TEST_F(Lz4UtilsTest, RoundTripBufferToStreamMatchesOriginal) {
+    std::vector<uint8_t> original_data = GenerateTestData(8192);
+
+    // A monolithic write creates the file in one shot
+    ASSERT_EQ(
+        Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
+                                     1, temp_compressed_file_.c_str(), nullptr),
+        LZ4_UTILS_SUCCESS);
+
+    Lz4UtilsInStream* in_stream =
+        Lz4UtilsInStreamCreate(temp_compressed_file_.c_str());
+    ASSERT_NE(in_stream, nullptr);
+
+    std::vector<uint8_t> decompressed_data;
+    std::vector<uint8_t> read_buffer(512);
+
+    // Verifies the streaming decoder can safely pause and resume state
+    // mid-frame when consuming a file that wasn't natively chunked by the
+    // encoder.
+    while (true) {
+        size_t bytes_read = 0;
+        ASSERT_EQ(Lz4UtilsInStreamRun(in_stream, read_buffer.data(),
+                                      read_buffer.size(), &bytes_read),
+                  LZ4_UTILS_SUCCESS);
+        if (bytes_read == 0) {
+            break;
+        }
+        decompressed_data.insert(decompressed_data.end(), read_buffer.begin(),
+                                 read_buffer.begin() + bytes_read);
+    }
+    Lz4UtilsInStreamClose(in_stream);
+
+    EXPECT_EQ(original_data.size(), decompressed_data.size());
+    EXPECT_EQ(original_data, decompressed_data);
+}
