@@ -23,7 +23,6 @@
 
 #include "libs/lz4_utils/lz4_utils.h"
 
-#include <assert.h>
 #include <lz4frame.h>
 #include <stdbool.h>
 #include <stddef.h>
