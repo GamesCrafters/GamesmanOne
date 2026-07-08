@@ -55,6 +55,15 @@ TEST(BitsetTest, CreateZeroBits) {
     BitsetDestroy(bs);
 }
 
+TEST(BitsetTest, CreateOutOfMemory) {
+    Bitset *bs = BitsetCreate(INT64_MAX);
+    EXPECT_EQ(bs, nullptr)
+        << "BitsetCreate should return NULL if there's not enough memory";
+    if (bs) {
+        BitsetDestroy(bs);
+    }
+}
+
 // --- State Modification and Retrieval Tests ---
 
 TEST(BitsetTest, InitialStateIsZero) {
