@@ -22,4 +22,5 @@ set(SOURCES
 
 add_library(data_structures STATIC ${HEADERS} ${SOURCES})
 target_link_libraries(data_structures PRIVATE common_flags)
+target_link_libraries(data_structures PRIVATE gamesman_memory)
 target_link_libraries(gamesman_core PRIVATE data_structures)
