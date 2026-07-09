@@ -203,7 +203,7 @@ TEST_F(Lz4UtilsTest, CompressBuffersToFileNullFilenameInvalidParam) {
 
 // Tests LZ4_UTILS_ERR_IO when the output directory does not exist or lacks
 // permissions
-TEST_F(Lz4UtilsTest, CompressBuffersToFileInvalidPathIoError) {
+TEST_F(Lz4UtilsTest, CompressBuffersToFileInvalidPath) {
     std::vector<uint8_t> buf = GenerateTestData(1024);
     const void* in[] = {buf.data()};
     const size_t in_sizes[] = {buf.size()};
@@ -280,7 +280,7 @@ TEST_F(Lz4UtilsTest, CompressBufferToFileNullFilenameInvalidParam) {
 }
 
 // Tests LZ4_UTILS_ERR_IO when writing to an invalid or restricted file path
-TEST_F(Lz4UtilsTest, CompressBufferToFileInvalidPathIoError) {
+TEST_F(Lz4UtilsTest, CompressBufferToFileInvalidPath) {
     std::vector<uint8_t> buf = GenerateTestData(1024);
     size_t compressed_size = 0;
 
@@ -365,7 +365,7 @@ TEST_F(Lz4UtilsTest, CompressFileToFileNullOutputFilenameInvalidParam) {
 }
 
 // Tests LZ4_UTILS_ERR_IO when the input file does not exist
-TEST_F(Lz4UtilsTest, CompressFileToFileMissingInputFileIoError) {
+TEST_F(Lz4UtilsTest, CompressFileToFileMissingInputFile) {
     // Explicitly delete any stale file from previous test runs to guarantee an
     // OS-level open failure
     std::remove(temp_raw_file_.c_str());
@@ -380,7 +380,7 @@ TEST_F(Lz4UtilsTest, CompressFileToFileMissingInputFileIoError) {
 }
 
 // Tests LZ4_UTILS_ERR_IO when the output path is invalid
-TEST_F(Lz4UtilsTest, CompressFileToFileInvalidOutputPathIoError) {
+TEST_F(Lz4UtilsTest, CompressFileToFileInvalidOutputPath) {
     std::vector<uint8_t> data = GenerateTestData(1024);
     ASSERT_TRUE(WriteFile(temp_raw_file_, data));
 
@@ -699,7 +699,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBuffersNullBufferPointerInvalidParam) {
 }
 
 // Tests LZ4_UTILS_ERR_IO when the compressed input file does not exist
-TEST_F(Lz4UtilsTest, DecompressFileToBuffersMissingFileIoError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersMissingFile) {
     std::vector<uint8_t> out_buf(1024);
     void* out[] = {out_buf.data()};
     const size_t out_sizes[] = {out_buf.size()};
@@ -718,7 +718,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBuffersMissingFileIoError) {
 
 // Tests LZ4_UTILS_ERR_CORRUPT_DATA when feeding random/non-LZ4 data to the
 // decompressor
-TEST_F(Lz4UtilsTest, DecompressFileToBuffersCorruptDataError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersCorruptData) {
     // Injecting non-LZ4 arbitrary data to verify the decoder validates frame
     // headers and structural integrity instead of blindly parsing memory.
     std::vector<uint8_t> garbage_data = GenerateTestData(512);
@@ -737,7 +737,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBuffersCorruptDataError) {
 
 // Tests LZ4_UTILS_ERR_INSUFFICIENT_BUF when total buffer capacity is less than
 // uncompressed size
-TEST_F(Lz4UtilsTest, DecompressFileToBuffersInsufficientCapacityError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBuffersInsufficientCapacity) {
     // Generate a payload larger than the output buffer we intend to provide.
     std::vector<uint8_t> original_data = GenerateTestData(4096);
     ASSERT_EQ(
@@ -847,7 +847,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBufferNullBufferInvalidParam) {
 }
 
 // Tests LZ4_UTILS_ERR_IO when the compressed input file cannot be found
-TEST_F(Lz4UtilsTest, DecompressFileToBufferMissingFileIoError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBufferMissingFile) {
     std::vector<uint8_t> out_buf(1024);
     size_t uncompressed_size = 0;
 
@@ -865,7 +865,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBufferMissingFileIoError) {
 
 // Tests LZ4_UTILS_ERR_CORRUPT_DATA when the LZ4 frame header is truncated or
 // malformed
-TEST_F(Lz4UtilsTest, DecompressFileToBufferCorruptDataError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBufferCorruptData) {
     // Injecting non-LZ4 arbitrary data verifies that the decoder relies on
     // frame header validation and magic numbers, failing safely instead of
     // performing undefined behavior.
@@ -884,7 +884,7 @@ TEST_F(Lz4UtilsTest, DecompressFileToBufferCorruptDataError) {
 
 // Tests LZ4_UTILS_ERR_INSUFFICIENT_BUF when the output buffer is too small for
 // the payload
-TEST_F(Lz4UtilsTest, DecompressFileToBufferInsufficientCapacityError) {
+TEST_F(Lz4UtilsTest, DecompressFileToBufferInsufficientCapacity) {
     // Generate a payload significantly larger than the output buffer we intend
     // to provide.
     std::vector<uint8_t> original_data = GenerateTestData(4096);
@@ -1093,7 +1093,7 @@ TEST_F(Lz4UtilsTest, InStreamRunNullBufferInvalidParam) {
 
 // Tests LZ4_UTILS_ERR_CORRUPT_DATA by mutating the input file mid-stream to
 // simulate corruption
-TEST_F(Lz4UtilsTest, InStreamRunCorruptDataError) {
+TEST_F(Lz4UtilsTest, InStreamRunCorruptData) {
     std::vector<uint8_t> original_data = GenerateTestData(8192);
     ASSERT_EQ(
         Lz4UtilsCompressBufferToFile(original_data.data(), original_data.size(),
