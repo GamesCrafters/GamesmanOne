@@ -9,22 +9,25 @@
 #   add_library_test(<target_name> <library_to_test>
 #                    SOURCES <source1> [<source2> ...]
 #                    [EXTRA_LIBS <lib1> ...]
+#                    [COMPILE_DEFINITIONS <def1> ...]
 #                    [LABELS <label1> ...]
 #                    [TIMEOUT <seconds>])
 #
 # Positional Arguments:
-#   <target_name>     - The name of the CMake executable target to create.
-#   <library_to_test> - The name of the internal library target being tested. 
-#                       This is automatically linked to the test executable.
+#   <target_name>       - The name of the CMake executable target to create.
+#   <library_to_test>   - The name of the internal library target being tested. 
+#                         This is automatically linked to the test executable.
 #
 # Keyword Arguments:
-#   SOURCES           - (Required) A list of C++ source files containing the tests.
-#   EXTRA_LIBS        - (Optional) Additional dependencies to link against the 
-#                       test executable (e.g., third-party libraries, mocks).
-#   LABELS            - (Optional) A list of CTest labels applied to all discovered 
-#                       tests for filtering. If omitted, defaults to "unit" and 
-#                       the name of the <library_to_test>.
-#   TIMEOUT           - (Optional) A timeout value in seconds applied to the tests.
+#   SOURCES             - (Required) A list of C++ source files containing the tests.
+#   EXTRA_LIBS          - (Optional) Additional dependencies to link against the 
+#                         test executable (e.g., third-party libraries, mocks).
+#   COMPILE_DEFINITIONS - (Optional) A list of preprocessor definitions to apply 
+#                         privately to the generated test executable.
+#   LABELS              - (Optional) A list of CTest labels applied to all discovered 
+#                         tests for filtering. If omitted, defaults to "unit" and 
+#                         the name of the <library_to_test>.
+#   TIMEOUT             - (Optional) A timeout value in seconds applied to the tests.
 #
 # Example:
 #   add_library_test(NetworkLibTests NetworkLib
@@ -33,6 +36,9 @@
 #           HttpParserTest.cpp
 #       EXTRA_LIBS
 #           OpenSSL::SSL
+#       COMPILE_DEFINITIONS
+#           ENABLE_TEST_LOGGING=1
+#           MOCK_NETWORK_LATENCY=50
 #       LABELS 
 #           "integration" "network"
 #       TIMEOUT 
@@ -43,7 +49,7 @@ function(add_library_test target_name library_to_test)
     # 1. Define the named arguments we want to accept
     set(options "") # True/False flags (e.g., NO_DEFAULT_LABELS)
     set(oneValueArgs TIMEOUT) # Arguments that take a single value
-    set(multiValueArgs SOURCES EXTRA_LIBS LABELS) # Arguments that take lists
+    set(multiValueArgs SOURCES EXTRA_LIBS LABELS COMPILE_DEFINITIONS) # Arguments that take lists
 
     # 2. Parse the arguments passed to the function
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -55,6 +61,11 @@ function(add_library_test target_name library_to_test)
 
     # 3. Create the executable
     add_executable(${target_name} ${ARG_SOURCES})
+
+    # Apply custom compile definitions if provided
+    if(ARG_COMPILE_DEFINITIONS)
+        target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})
+    endif()
 
     # 4. Link dependencies (Target Library + GTest + any extras)
     target_link_libraries(${target_name}

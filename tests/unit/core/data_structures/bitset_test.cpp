@@ -55,6 +55,9 @@ TEST(BitsetTest, CreateZeroBits) {
     BitsetDestroy(bs);
 }
 
+#ifndef GAMESMAN_TSAN_ENABLED
+// This test triggers a NULL return from malloc and should be disabled when TSan
+// is in use.
 TEST(BitsetTest, CreateOutOfMemory) {
     Bitset *bs = BitsetCreate(INT64_MAX);
     EXPECT_EQ(bs, nullptr)
@@ -63,6 +66,7 @@ TEST(BitsetTest, CreateOutOfMemory) {
         BitsetDestroy(bs);
     }
 }
+#endif  // GAMESMAN_TSAN_ENABLED
 
 // --- State Modification and Retrieval Tests ---
 
