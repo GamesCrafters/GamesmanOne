@@ -67,5 +67,13 @@ dkms.conf
 # GCC
 *.gcda
 
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest caches
+.pytest_cache/
+
 # Python venv
 .venv
