@@ -1,5 +1,5 @@
 # Define the library that contains all application logic except the main entry point (main.c).
-add_library(gamesman_core STATIC)
+add_library(gamesman_core OBJECT)
 
 # Add common flags.
 target_link_libraries(gamesman_core PRIVATE common_flags)

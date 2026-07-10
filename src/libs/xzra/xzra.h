@@ -34,12 +34,12 @@
  * @brief Return status codes for the XZRA library.
  */
 typedef enum {
-    XZRA_SUCCESS = 0,
-    XZRA_ERR_IN_FILE,
-    XZRA_ERR_OUT_FILE,
-    XZRA_ERR_CODEC,
-    XZRA_ERR_CLOSE,
-    XZRA_ERR_INVALID_PARAM,
+    XZRA_SUCCESS = 0,       /**< Success */
+    XZRA_ERR_IN_FILE,       /**< Error processing input file */
+    XZRA_ERR_OUT_FILE,      /**< Error processing output file */
+    XZRA_ERR_CODEC,         /**< LZMA encoding/decoding error */
+    XZRA_ERR_CLOSE,         /**< Error closing file. */
+    XZRA_ERR_INVALID_PARAM, /**< Invalid parameter(s) */
 } XzraStatus;
 
 /**

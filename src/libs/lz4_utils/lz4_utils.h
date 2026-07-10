@@ -4,9 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief LZ4 utilities
- * @version 0.2.1
- * @date 2024-12-22
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -28,197 +25,268 @@
 #define GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_
 
 #include <stddef.h>
-#include <stdint.h>
+
+// ============================ Types & Error Codes ============================
+
+/**
+ * @brief Error codes returned by the Lz4Utils API.
+ */
+typedef enum {
+    LZ4_UTILS_SUCCESS = 0,          /**< Success */
+    LZ4_UTILS_ERR_INVALID_PARAM,    /**< Invalid parameter(s) */
+    LZ4_UTILS_ERR_OOM,              /**< Out of memory */
+    LZ4_UTILS_ERR_IO,               /**< File I/O error */
+    LZ4_UTILS_ERR_COMPRESS,         /**< Error during compression */
+    LZ4_UTILS_ERR_CORRUPT_DATA,     /**< Corrupt data in compressed frame */
+    LZ4_UTILS_ERR_INSUFFICIENT_BUF, /**< Insufficient buffer for output */
+} Lz4UtilsStatus;
 
 // ============================== Compression API ==============================
 
 /**
- * @brief Concatenates and compresses \p n input streams using level \p level
- * LZ4 frame compression, stores the compressed result as file of name \p
- * ofname, and returns the size of the compressed file in bytes on success. If a
- * file of name \p ofname already exists, it will be overwritten.
+ * @brief Concatenates and compresses `n` input streams using level `level`
+ * LZ4 frame compression, and stores the compressed result as a file of name
+ * `ofname`. If a file of name `ofname` already exists, it will be
+ * overwritten.
  *
- * @param in Array of \p n input buffers.
- * @param in_sizes Array of \p n sizes, where in_sizes[i] is the size of the
- * i-th input buffer.
- * @param n Number of input buffers in total.
- * @param level LZ4 compression level.
- * @param ofname Output file name.
- * @return Size of the compressed file on success,
- * @return -1 if either \p in or \p in_sizes is \c NULL but \p n is non-zero OR
- * if in[i] is NULL but in_sizes[i] is non-NULL for any i in range [0, n);
- * @return -2 if failed to allocate memory for compression; or
- * @return -3 if failed to create or write to the output file.
+ * @param[in] in Array of `n` input buffers.
+ * @param[in] in_sizes Array of `n` sizes, where `in_sizes[i]` is the size of
+ * the i-th input buffer.
+ * @param[in] n Number of input buffers in total.
+ * @param[in] level LZ4 compression level.
+ * @param[in] ofname Output file name.
+ * @param[out] out_compressed_size Optional output parameter to receive the
+ * size of the compressed file in bytes on success. Unmodified on error. Pass
+ * `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if any of the parameters are invalid.
+ * Cases include:
+ *     1. Either `in` or `in_sizes` is `NULL` while `n` is non-zero;
+ *     2. `in[i]` is `NULL` but `in_sizes[i]` is non-zero for any i in range
+ *        [0, n);
+ *     3. `ofname` is `NULL`.
+ * @retval LZ4_UTILS_ERR_OOM if failed to allocate memory for compression.
+ * @retval LZ4_UTILS_ERR_IO if failed to create or write to the output file.
+ * @retval LZ4_UTILS_ERR_COMPRESS if an error occurred during compression.
  */
-int64_t Lz4UtilsCompressStreams(const void *const *in, const size_t *in_sizes,
-                                int n, int level, const char *ofname);
+Lz4UtilsStatus Lz4UtilsCompressBuffersToFile(const void *const *in,
+                                             const size_t *in_sizes, int n,
+                                             int level, const char *ofname,
+                                             size_t *out_compressed_size);
 
 /**
- * @brief Compresses \p in_size bytes of \p in using level \p level LZ4 frame
- * compression, stores the compressed stream as file of name \p ofname, and
- * returns the size of the compressed file in bytes on success. If a file of
- * name \p ofname already exists, it will be overwritten.
+ * @brief Compresses `in_size` bytes of `in` using level `level` LZ4 frame
+ * compression, and stores the compressed stream as a file of name `ofname`.
+ * If a file of name `ofname` already exists, it will be overwritten.
  *
- * @param in Input buffer.
- * @param in_size Size of the input buffer.
- * @param level LZ4 compression level.
- * @param ofname Output file name.
- * @return Size of the compressed file on success,
- * @return -1 if \p in is \c NULL but \p in_size is non-zero,
- * @return -2 if failed to allocate memory for compression, or
- * @return -3 if failed to create or write to the output file.
+ * @param[in] in Input buffer.
+ * @param[in] in_size Size of the input buffer.
+ * @param[in] level LZ4 compression level.
+ * @param[in] ofname Output file name.
+ * @param[out] out_compressed_size Optional output parameter to receive the
+ * size of the compressed file in bytes on success. Unmodified on error. Pass
+ * `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if `in` is `NULL` but `in_size` is
+ * non-zero, or if `ofname` is `NULL`.
+ * @retval LZ4_UTILS_ERR_OOM if failed to allocate memory for compression.
+ * @retval LZ4_UTILS_ERR_IO if failed to create or write to the output file.
+ * @retval LZ4_UTILS_ERR_COMPRESS if an error occurred during compression.
  */
-int64_t Lz4UtilsCompressStream(const void *in, size_t in_size, int level,
-                               const char *ofname);
+Lz4UtilsStatus Lz4UtilsCompressBufferToFile(const void *in, size_t in_size,
+                                            int level, const char *ofname,
+                                            size_t *out_compressed_size);
 
 /**
- * @brief Compresses the input file of name \p ifname using level \p level LZ4
- * frame compression, stores the compressed stream as file of name \p ofname,
- * and returns the size of the compressed file in bytes on success.
+ * @brief Compresses the input file of name `ifname` using level `level` LZ4
+ * frame compression, and stores the compressed stream as a file of name
+ * `ofname`.
  *
- * @param ifname Input file name.
- * @param level LZ4 compression level.
- * @param ofname Output file name.
- * @return Size of the compressed file on success,
- * @return -1 if failed to read from the input file,
- * @return -2 if failed to allocate memory for compression, or
- * @return -3 if failed to create or write to the output file.
+ * @param[in] ifname Input file name.
+ * @param[in] level LZ4 compression level.
+ * @param[in] ofname Output file name.
+ * @param[out] out_compressed_size Optional output parameter to receive the
+ * size of the compressed file in bytes on success. Unmodified on error. Pass
+ * `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if `ifname` or `ofname` is `NULL`.
+ * @retval LZ4_UTILS_ERR_IO if failed to read from the input file, or failed to
+ * create or write to the output file.
+ * @retval LZ4_UTILS_ERR_OOM if failed to allocate memory for compression.
+ * @retval LZ4_UTILS_ERR_COMPRESS if an error occurred during compression.
  */
-int64_t Lz4UtilsCompressFile(const char *ifname, int level, const char *ofname);
+Lz4UtilsStatus Lz4UtilsCompressFileToFile(const char *ifname, int level,
+                                          const char *ofname,
+                                          size_t *out_compressed_size);
 
 // ========================= Streaming Compression API =========================
 
 /**
  * @brief Opaque object for data passing when streaming to a Lz4Utils
- * compresssed file.
+ * compressed file for chunked compression.
  */
 typedef struct Lz4UtilsOutStream Lz4UtilsOutStream;
 
 /**
  * @brief Creates a new Lz4Utils output stream.
  *
- * @param ofname Output file name.
- * @param level LZ4 compression level.
- * @return Pointer to the new Lz4Utils output stream on success, or
- * @return \c NULL on failure.
+ * @param[in] ofname Output file name.
+ * @param[in] level LZ4 compression level.
+ *
+ * @returns Pointer to the new Lz4Utils output stream on success. `NULL` on
+ * failure (e.g., file creation or memory allocation failed).
  */
 Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
 
 /**
- * @brief Runs compression to consume \p in_size bytes of data from \p in using
- * \p stream as output stream.
+ * @brief Runs compression to consume `in_size` bytes of data from `in` using
+ * `stream` as output stream.
  *
- * @param stream Output stream.
- * @param stream Output stream.
- * @param in Pointer to the input buffer.
- * @param in_size Number of bytes to consume from the input buffer.
- * @return Number of compressed bytes generated in this run on success,
- * @return -2 if internal LZ4 compression failed, or
- * @return -3 if failed to write compressed bytes to output file.
+ * @param[in,out] stream Output stream.
+ * @param[in] in Pointer to the input buffer.
+ * @param[in] in_size Number of bytes to consume from the input buffer.
+ * @param[out] out_bytes_written Optional output parameter to receive the
+ * number of compressed bytes generated and written in this run on success.
+ * Unmodified on error. Pass `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if `stream` is `NULL`, or if `in` is
+ * `NULL` but `in_size` is greater than zero.
+ * @retval LZ4_UTILS_ERR_COMPRESS if internal LZ4 compression failed.
+ * @retval LZ4_UTILS_ERR_IO if failed to write compressed bytes to the output
+ * file.
  */
-int64_t Lz4UtilsOutStreamRun(Lz4UtilsOutStream *stream, const void *in,
-                             size_t in_size);
+Lz4UtilsStatus Lz4UtilsOutStreamRun(Lz4UtilsOutStream *stream, const void *in,
+                                    size_t in_size, size_t *out_bytes_written);
 
 /**
- * @brief Closes the output stream \p stream , finalizing the output file by
+ * @brief Closes the output stream `stream`, finalizing the output file by
  * flushing all buffered compressed bytes to disk. Does nothing and returns
- * 0 if \p stream is \c NULL .
+ * `LZ4_UTILS_SUCCESS` if `stream` is `NULL`.
  *
- * @param stream Output stream to close.
- * @return Number of compressed bytes generated in total since the creation of
- * \p stream on success,
- * @return -2 if internal LZ4 compression failed, or
- * @return -3 if failed to write compressed bytes to output file.
+ * @param[in,out] stream Output stream to close.
+ * @param[out] out_total_compressed_size Optional output parameter to receive
+ * the number of compressed bytes generated in total since the creation of
+ * `stream` on success. Unmodified on error. Pass `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_COMPRESS if internal LZ4 compression/finalization
+ * failed.
+ * @retval LZ4_UTILS_ERR_IO if failed to write finalized compressed bytes to the
+ * output file.
  */
-int64_t Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream);
+Lz4UtilsStatus Lz4UtilsOutStreamClose(Lz4UtilsOutStream *stream,
+                                      size_t *out_total_compressed_size);
 
 // ============================= Decompression API =============================
 
 /**
- * @brief Decompresses the input file of name \p ifname, which is assumed to
- * contain exactly one LZ4 frame compressed from \p n input buffers of sizes
- * specified by \p out_sizes, and stores the uncompresses streams in \p out.
+ * @brief Decompresses the input file of name `ifname`, which is assumed to
+ * contain exactly one LZ4 frame compressed from `n` input buffers of sizes
+ * specified by `out_sizes`, and stores the uncompressed streams in `out`.
  *
- * @param ifname Input compressed file name.
- * @param out (Output parameter) array of output buffers.
- * @param out_sizes Array of output buffer sizes, where out_sizes[i] is the size
- * of the i-th buffer.
- * @param n Number of output buffers.
- * @return Number of bytes of uncompressed data written to all output buffers in
- * total;
- * @return -1 if failed to open input file;
- * @return -2 if failed to allocate memory;
- * @return -3 if input file is corrupt or an error occurred when reading the
- * input file;
- * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity;
- * @return -5 if the decompressed data is larger than the size of all output
- * buffers combined.
+ * @param[in] ifname Input compressed file name.
+ * @param[out] out Array of output buffers.
+ * @param[in] out_sizes Array of output buffer sizes, where `out_sizes[i]` is
+ * the size of the i-th buffer.
+ * @param[in] n Number of output buffers.
+ * @param[out] out_uncompressed_size Optional output parameter to receive the
+ * number of bytes of uncompressed data written to all output buffers in total
+ * on success. Unmodified on error. Pass `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if
+ *     1. `n` is smaller than 0;
+ *     2. `n` is greater than 0 but `ifname`, `out`, or `out_sizes` is `NULL`;
+ *     3. `out[i]` is `NULL` when `out_sizes[i] > 0` for any i in range [0, n).
+ * @retval LZ4_UTILS_ERR_IO if failed to open the input file, or an error
+ * occurred when reading it.
+ * @retval LZ4_UTILS_ERR_OOM if failed to allocate memory.
+ * @retval LZ4_UTILS_ERR_CORRUPT_DATA if the input file is corrupt.
+ * @retval LZ4_UTILS_ERR_INSUFFICIENT_BUF if failed to decompress due to not
+ * enough output buffer capacity, or if the decompressed data is larger than
+ * the size of all output buffers combined.
  */
-int64_t Lz4UtilsDecompressFileMultistream(const char *ifname, void **out,
-                                          const size_t *out_sizes, int n);
+Lz4UtilsStatus Lz4UtilsDecompressFileToBuffers(const char *ifname,
+                                               void *const *out,
+                                               const size_t *out_sizes, int n,
+                                               size_t *out_uncompressed_size);
 
 /**
- * @brief Decompresses the input file of name \p ifname, which is assumed to
- * contain exactly one LZ4 frame, and stores the uncompresses data in \p out of
- * size \p out_size.
+ * @brief Decompresses the input file of name `ifname`, which is assumed to
+ * contain exactly one LZ4 frame, and stores the uncompressed data in `out` of
+ * capacity `out_size`.
  *
- * @param ifname Input compressed file name.
- * @param out (Output parameter) output buffer.
- * @param out_size Size of the output buffer.
- * @return Number of bytes of uncompressed data written to \p out;
- * @return -1 if failed to open input file;
- * @return -2 if failed to allocate memory;
- * @return -3 if input file is corrupt or an error occurred when reading the
- * input file;
- * @return -4 if failed to decompress due to, for example, not enough output
- * buffer capacity;
- * @return -5 if the decompressed data is larger than the size of the output
- * buffer.
+ * @param[in] ifname Input compressed file name.
+ * @param[out] out Output buffer.
+ * @param[in] out_size Size capacity of the output buffer.
+ * @param[out] out_uncompressed_size Optional output parameter to receive the
+ * number of bytes of uncompressed data written to `out` on success. Unmodified
+ * on error. Pass `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success.
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if `ifname` is `NULL`, or if `out` is
+ * `NULL` when `out_size` is greater than 0.
+ * @retval LZ4_UTILS_ERR_IO if failed to open the input file, or an error
+ * occurred when reading it.
+ * @retval LZ4_UTILS_ERR_OOM if failed to allocate memory.
+ * @retval LZ4_UTILS_ERR_CORRUPT_DATA if the input file is corrupt.
+ * @retval LZ4_UTILS_ERR_INSUFFICIENT_BUF if failed to decompress due to not
+ * enough output buffer capacity, or if the decompressed data is larger than
+ * the size of the output buffer.
  */
-int64_t Lz4UtilsDecompressFile(const char *ifname, void *out, size_t out_size);
+Lz4UtilsStatus Lz4UtilsDecompressFileToBuffer(const char *ifname, void *out,
+                                              size_t out_size,
+                                              size_t *out_uncompressed_size);
 
 // ======================== Streaming Decompression API ========================
 
 /**
  * @brief Opaque object for data passing when streaming from a Lz4Utils
- * compresssed file.
+ * compressed file for chunked decompression.
  */
 typedef struct Lz4UtilsInStream Lz4UtilsInStream;
 
 /**
  * @brief Creates a new Lz4Utils input stream.
  *
- * @param ifname Input file name.
- * @return Pointer to the new Lz4Utils input stream on success, or
- * @return \c NULL on failure.
+ * @param[in] ifname Input file name.
+ *
+ * @returns Pointer to the new Lz4Utils input stream on success. `NULL` on
+ * failure (e.g., file open or memory allocation failed).
  */
 Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname);
 
 /**
- * @brief Decompress X bytes of data to \p out using \p stream as input stream,
- * where X is \p out_size or the amount of compressed data left in \p stream ,
- * whichever is smaller.
+ * @brief Decompresses up to `out_size` bytes of data to `out` using `stream`
+ * as input stream.
  *
- * @param stream
- * @param out
- * @param out_size
- * @return Number of uncompressed bytes generated in this run on success,
- * @return 0 if no bytes are left in \p stream ,
- * @return -1 if \p stream is \c NULL ,
- * @return -3 if the compressed file associated with \p stream is malformed, or
- * @return -4 on internal LZ4 decompression failure.
+ * @param[in,out] stream Input stream.
+ * @param[out] out Output buffer to receive decompressed data.
+ * @param[in] out_size Capacity of the output buffer.
+ * @param[out] out_uncompressed_size Optional output parameter to receive the
+ * number of uncompressed bytes generated in this run on success. It is set to 0
+ * on EOF, or unmodified on error. Pass `NULL` to omit this output.
+ *
+ * @retval LZ4_UTILS_SUCCESS on success (including EOF).
+ * @retval LZ4_UTILS_ERR_INVALID_PARAM if `stream` or `out` is `NULL`.
+ * @retval LZ4_UTILS_ERR_CORRUPT_DATA if the compressed file associated with
+ * `stream` is malformed, or on internal LZ4 decompression failure.
+ * @retval LZ4_UTILS_ERR_IO if a file reading error occurs mid-stream.
  */
-int64_t Lz4UtilsInStreamRun(Lz4UtilsInStream *stream, void *out,
-                            size_t out_size);
+Lz4UtilsStatus Lz4UtilsInStreamRun(Lz4UtilsInStream *stream, void *out,
+                                   size_t out_size,
+                                   size_t *out_uncompressed_size);
 
 /**
- * @brief Closes the input stream \p stream .
+ * @brief Closes the input stream `stream` and deallocates associated
+ * resources.
  *
- * @param stream Input stream to close.
- * @return 0 on success,
- * @return -1 if on internal LZ4 context deallocation failure.
+ * @param[in,out] stream Input stream to close. Supports `NULL`.
  */
-int Lz4UtilsInStreamClose(Lz4UtilsInStream *stream);
+void Lz4UtilsInStreamClose(Lz4UtilsInStream *stream);
 
 #endif  // GAMESMANONE_LIBS_LZ4_UTILS_LZ4_UTILS_H_

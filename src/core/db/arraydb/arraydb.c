@@ -688,18 +688,19 @@ int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
     return kNoError;
 }
 
-static int ConvertLz4UtilsDecompressFileError(int64_t decomp_size) {
-    switch (decomp_size) {
-        case -1:
-        case -3:
-            return kFileSystemError;
-        case -2:
-            return kMallocFailureError;
-        case -4:
-            return kRuntimeError;
-
-        default:
+static int ConvertLz4UtilsDecompressFileError(Lz4UtilsStatus status) {
+    switch (status) {
+        case LZ4_UTILS_SUCCESS:
             return kNoError;
+        case LZ4_UTILS_ERR_INVALID_PARAM:
+        case LZ4_UTILS_ERR_INSUFFICIENT_BUF:
+            return kIllegalArgumentError;
+        case LZ4_UTILS_ERR_OOM:
+            return kMallocFailureError;
+        case LZ4_UTILS_ERR_IO:
+            return kFileSystemError;
+        default:
+            return kRuntimeError;
     }
 }
 
@@ -710,12 +711,12 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
                                           current_game.GetTierName, seg_idx);
     if (!filename) return kMallocFailureError;
 
-    int64_t decomp_size =
-        Lz4UtilsDecompressFile(filename, segments.array[buf_idx]->records,
-                               segments.array[buf_idx]->size * sizeof(Record));
+    Lz4UtilsStatus lz4_utils_status = Lz4UtilsDecompressFileToBuffer(
+        filename, segments.array[buf_idx]->records,
+        segments.array[buf_idx]->size * sizeof(Record), NULL);
     GamesmanFree(filename);
 
-    return ConvertLz4UtilsDecompressFileError(decomp_size);
+    return ConvertLz4UtilsDecompressFileError(lz4_utils_status);
 }
 
 static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
@@ -731,20 +732,25 @@ static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
         goto _bailout;
     }
 
-    int64_t compressed_size =
-        Lz4UtilsCompressStream(segments.array[buf_idx]->records,
-                               segments.array[buf_idx]->size * sizeof(Record),
-                               kDefaultLz4Level, tmp_name);
-    switch (compressed_size) {
-        case -1:
+    Lz4UtilsStatus lz4_utils_status = Lz4UtilsCompressBufferToFile(
+        segments.array[buf_idx]->records,
+        segments.array[buf_idx]->size * sizeof(Record), kDefaultLz4Level,
+        tmp_name, NULL);
+    switch (lz4_utils_status) {
+        case LZ4_UTILS_SUCCESS:
+            break;
+        case LZ4_UTILS_ERR_INVALID_PARAM:
             NotReached(
                 "ArrayDbSegmentationFlush: (BUG) malformed input array(s)");
             break;
-        case -2:
+        case LZ4_UTILS_ERR_OOM:
             error = kMallocFailureError;
             goto _bailout;
-        case -3:
+        case LZ4_UTILS_ERR_IO:
             error = kFileSystemError;
+            goto _bailout;
+        default:
+            error = kRuntimeError;
             goto _bailout;
     }
     int rename_error = GuardedRename(tmp_name, name);
@@ -881,17 +887,22 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
                             status};
     const size_t input_sizes[] = {RecordArrayGetRawSize(solving.records),
                                   status_size};
-    int64_t compressed_size = Lz4UtilsCompressStreams(
-        inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path);
-    switch (compressed_size) {
-        case -1:
+    Lz4UtilsStatus lz4_utils_status = Lz4UtilsCompressBuffersToFile(
+        inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path, NULL);
+    switch (lz4_utils_status) {
+        case LZ4_UTILS_SUCCESS:
+            break;
+        case LZ4_UTILS_ERR_INVALID_PARAM:
             NotReached("ArrayDbCheckpointSave: (BUG) malformed input array(s)");
             break;
-        case -2:
+        case LZ4_UTILS_ERR_OOM:
             error = kMallocFailureError;
             goto _bailout;
-        case -3:
+        case LZ4_UTILS_ERR_IO:
             error = kFileSystemError;
+            goto _bailout;
+        default:
+            error = kRuntimeError;
             goto _bailout;
     }
 
@@ -932,12 +943,12 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
     // Decompress the checkpoint file into the record array and status.
     void *out_buffers[] = {RecordArrayGetData(solving.records), status};
     size_t out_sizes[] = {RecordArrayGetRawSize(solving.records), status_size};
-    int64_t decomp_size =
-        Lz4UtilsDecompressFileMultistream(full_path, out_buffers, out_sizes, 2);
+    Lz4UtilsStatus lz4_utils_status = Lz4UtilsDecompressFileToBuffers(
+        full_path, out_buffers, out_sizes, 2, NULL);
     GamesmanFree(full_path);
-    if (decomp_size < 0) {
+    if (lz4_utils_status != LZ4_UTILS_SUCCESS) {
         RecordArrayDestroy(solving.records);
-        return ConvertLz4UtilsDecompressFileError(decomp_size);
+        return ConvertLz4UtilsDecompressFileError(lz4_utils_status);
     }
 
     // Add the solving tier's index to the map.

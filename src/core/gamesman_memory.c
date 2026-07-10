@@ -125,8 +125,10 @@ static size_t GetHeaderSize(size_t alignment) {
 
 static void WriteHeader(void *dest, size_t size) { *((size_t *)dest) = size; }
 
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
+#endif
 void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // If no allocator is provided, use default allocation function.
     if (allocator == NULL) return GamesmanMalloc(size);
@@ -164,7 +166,9 @@ void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // Return the space after the header.
     return (void *)((char *)space + header_size);
 }
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 
 void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
     // If no allocator is provided, use default deallocation function.

@@ -43,8 +43,9 @@ Doxygen Conventions for Gamesman
        flow. Note that there is no space after the comma in @param\[in,out\].
     e. Use @return to describe the type of data being passed back and @retval 
        directly underneath it to document specific, discrete values that carry
-       special meaning. The @returns tag may be omitted only when all possible
-       return values are enumerated using @retval.
+       special meaning. The @retval tags may be used only when all possible
+       return values are enumerated, in which case the @returns tag may be 
+       omitted.
     f. Markdown formatting of HTTP links (\[Text\](URL)) are highly encouraged
        to reduce cluttering in generated document. If a link is longer than 2
        lines, consider placing it under the @see or @sa tags.
