@@ -99,7 +99,7 @@ bool TierAnalyzerInit(const TierSolverApi *api, size_t memlimit) {
     explore_canonical = (api->GetNumberOfSymmetries != NULL);
     GamesmanAllocatorOptions options;
     GamesmanAllocatorOptionsSetDefaults(&options);
-    options.pool_size = memlimit ? memlimit : GetPhysicalMemory() / 10 * 9;
+    options.pool_size = memlimit;
     allocator = GamesmanAllocatorCreate(&options);
 
     return allocator != NULL;

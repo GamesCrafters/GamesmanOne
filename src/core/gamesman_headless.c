@@ -50,7 +50,13 @@
 static size_t ParseMemLimit(const char *str) {
     if (str == NULL || *str == '\0') return 0;
     int gigabytes = atoi(str);
-    if (gigabytes < 0) return 0;
+    if (gigabytes < 0) {
+        fprintf(stderr,
+                "ParseMemLimit: invalid memory limit %d GiB, falling back to "
+                "default\n",
+                gigabytes);
+        return 0;
+    }
 
     return (size_t)gigabytes << 30;
 }
