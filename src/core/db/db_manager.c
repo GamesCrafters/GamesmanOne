@@ -67,6 +67,10 @@ int DbManagerInitDb(const Database *db, bool read_only,
 
     char *path =
         SetupDbPath(current_db, game_name, variant, data_path, read_only);
+    if (path == NULL) {
+        return kFileSystemError;
+    }
+
     int error = current_db->Init(game_name, variant, path, GetTierName, aux);
     free(path);
 

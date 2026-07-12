@@ -22,5 +22,8 @@ if(SUPPORTS_BMI2)
     target_sources(gamesman_hash PRIVATE ${BMI2_HEADERS} ${BMI2_HEADERS})
     target_compile_definitions(gamesman_hash PRIVATE GAMESMAN_HAS_BMI2)
 endif()
+if(OpenMP_FOUND) # OpenMP (optional)
+    target_link_libraries(gamesman_hash PRIVATE OpenMP::OpenMP_C)
+endif()
 
 target_link_libraries(gamesman_core PRIVATE gamesman_hash)

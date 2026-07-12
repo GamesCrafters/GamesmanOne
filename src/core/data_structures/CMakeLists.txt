@@ -23,4 +23,7 @@ set(SOURCES
 add_library(data_structures STATIC ${HEADERS} ${SOURCES})
 target_link_libraries(data_structures PRIVATE common_flags)
 target_link_libraries(data_structures PRIVATE gamesman_memory)
+if(OpenMP_FOUND) # OpenMP (optional)
+    target_link_libraries(data_structures PRIVATE OpenMP::OpenMP_C)
+endif()
 target_link_libraries(gamesman_core PRIVATE data_structures)

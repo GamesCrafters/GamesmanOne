@@ -2,10 +2,12 @@
 add_library(gamesman_memory STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.h
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
 target_link_libraries(gamesman_memory PRIVATE common_flags)
 target_link_libraries(gamesman_memory PRIVATE lzma_wrapper)
+if(OpenMP_FOUND) # OpenMP (optional)
+  target_link_libraries(gamesman_memory PRIVATE OpenMP::OpenMP_C)
+endif()
 
 # misc library
 add_library(misc STATIC ${CMAKE_CURRENT_SOURCE_DIR}/misc.h ${CMAKE_CURRENT_SOURCE_DIR}/misc.c)
@@ -37,7 +39,6 @@ set(HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_interactive.h)
 
 set(SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.c
   ${CMAKE_CURRENT_SOURCE_DIR}/constants.c
   ${CMAKE_CURRENT_SOURCE_DIR}/game_manager.c
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_headless.c

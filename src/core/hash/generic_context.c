@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/concurrency.h"
 #include "core/misc.h"
 #include "core/types/base.h"
 
@@ -119,21 +120,27 @@ static int64_t ConfigToRearrangement(GenericHashContext *context, int *config) {
  */
 static int64_t Rearrange(GenericHashContext *context, const int *config,
                          int64_t rearrangement) {
-    if (context->rearranger_cache[rearrangement] < 0) {
-        int pieces_rearranged = 0;
-        int64_t result = 1;
-        for (int piece_index = 0; piece_index < context->num_pieces - 1;
-             ++piece_index) {
-            pieces_rearranged += config[piece_index];
-            int more_pieces = config[piece_index + 1];
-            int64_t combinations =
-                NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
-            result *= combinations;
-        }
-        context->rearranger_cache[rearrangement] = result;
+    int64_t ret =
+        ConcurrentInt64LoadExplicit(&context->rearranger_cache[rearrangement],
+                                    kConcurrencyMemoryOrderRelaxed);
+    if (ret >= 0) {
+        return ret;
     }
 
-    return context->rearranger_cache[rearrangement];
+    int pieces_rearranged = 0;
+    ret = 1;
+    for (int piece_index = 0; piece_index < context->num_pieces - 1;
+         ++piece_index) {
+        pieces_rearranged += config[piece_index];
+        int more_pieces = config[piece_index + 1];
+        int64_t combinations =
+            NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
+        ret *= combinations;
+    }
+    ConcurrentInt64StoreExplicit(&context->rearranger_cache[rearrangement], ret,
+                                 kConcurrencyMemoryOrderRelaxed);
+
+    return ret;
 }
 
 // ========================== GenericHashContextInit ==========================
@@ -343,10 +350,10 @@ static bool InitStep2_3InitSpaces(GenericHashContext *context,
     }
 
     context->rearranger_cache =
-        (int64_t *)calloc(num_rearrangements, sizeof(int64_t));
+        (ConcurrentInt64 *)malloc(num_rearrangements * sizeof(ConcurrentInt64));
     if (context->rearranger_cache == NULL) return false;
     for (int64_t i = 0; i < num_rearrangements; ++i) {
-        context->rearranger_cache[i] = -1;
+        ConcurrentInt64Init(&context->rearranger_cache[i], -1);
     }
 
     return true;

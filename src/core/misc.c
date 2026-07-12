@@ -396,8 +396,12 @@ int MkdirRecursive(ReadOnlyString path) {
     }
     SafeStrncpy(path_copy, path, path_length + 1);
 
-    for (size_t i = 0; i < path_length; ++i) {
-        if (path_copy[i] == '/') {
+    // Start at i = 1 to handle a single leading slash.
+    for (size_t i = 1; i < path_length; ++i) {
+        // Only trigger if we hit a slash AND the previous character wasn't a
+        // slash. This safely skips over consecutive slashes (e.g., "//" or
+        // "///").
+        if (path_copy[i] == '/' && path_copy[i - 1] != '/') {
             path_copy[i] = '\0';  // Temporarily truncate
             if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
             path_copy[i] = '/';

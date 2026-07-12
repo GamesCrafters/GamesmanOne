@@ -296,21 +296,38 @@ static ReadOnlyString RegularSolverExplainTestError(int error) {
            "solver's test code";
 }
 
-static int RegularSolverSolve(void *aux) {
-    RegularSolverSolveOptions default_options = {
-        .force = false,
+static size_t DefaultMemLimit(void) { return GetPhysicalMemory() / 10 * 9; }
+
+static RegularSolverSolveOptions SanitizeSolveOptions(
+    const RegularSolverSolveOptions *options) {
+    RegularSolverSolveOptions sanitized = {
         .verbose = 1,
-        .memlimit = 0,  // Use default memory limit.
+        .force = false,
+        .memlimit = DefaultMemLimit(),
     };
+    if (!options) {
+        return sanitized;
+    }
+
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+
+    return sanitized;
+}
+
+static int RegularSolverSolve(void *aux) {
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
-    if (options == NULL) options = &default_options;
+    RegularSolverSolveOptions sanitized = SanitizeSolveOptions(options);
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
     TierSolverSolveOptions tier_solver_options = {
-        .memlimit = options->memlimit,
-        .force = options->force,
-        .verbose = options->verbose,
+        .memlimit = sanitized.memlimit,
+        .force = sanitized.force,
+        .verbose = sanitized.verbose,
     };
     int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
                                 kDefaultTier, &tier_solver_options, NULL);
@@ -331,24 +348,41 @@ static int RegularSolverSolve(void *aux) {
     return error;
 }
 
-static int RegularSolverAnalyze(void *aux) {
-    static const RegularSolverAnalyzeOptions kDefaultAnalyzeOptions = {
-        .force = false,
+static RegularSolverAnalyzeOptions SanitizeAnalyzeOptions(
+    const RegularSolverAnalyzeOptions *options) {
+    RegularSolverAnalyzeOptions sanitized = {
         .verbose = 1,
-        .memlimit = 0,
+        .force = false,
+        .memlimit = GetPhysicalMemory() / 10 * 9,
     };
+    if (!options) {
+        return sanitized;
+    }
 
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+
+    return sanitized;
+}
+
+static int RegularSolverAnalyze(void *aux) {
     Analysis *analysis = (Analysis *)GamesmanMalloc(sizeof(Analysis));
     if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
 
     const RegularSolverAnalyzeOptions *options =
         (const RegularSolverAnalyzeOptions *)aux;
-    if (options == NULL) options = &kDefaultAnalyzeOptions;
-    TierAnalyzerInit(&current_api, options->memlimit);
-    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, options->force);
+    RegularSolverAnalyzeOptions sanitized = SanitizeAnalyzeOptions(options);
+    if (!TierAnalyzerInit(&current_api, sanitized.memlimit)) {
+        return kMallocFailureError;
+    }
+
+    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, sanitized.force);
     TierAnalyzerFinalize();
-    if (error == 0 && options->verbose > 0) {
+    if (error == 0 && sanitized.verbose > 0) {
         printf("\n--- Game analyzed ---\n");
         AnalysisPrintEverything(stdout, analysis);
     } else {

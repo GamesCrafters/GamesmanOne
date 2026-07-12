@@ -476,7 +476,7 @@ static TierPosition MtttierFormalPositionToTierPosition(
 }
 
 static CString MtttierTierPositionToFormalPosition(TierPosition tier_position) {
-    char board[9];
+    char board[10] = {0};
     CString ret = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);

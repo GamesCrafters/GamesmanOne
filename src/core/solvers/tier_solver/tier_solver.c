@@ -285,20 +285,24 @@ static ReadOnlyString TierSolverExplainTestError(int error) {
 
 static TierSolverSolveOptions SanitizeSolveOptions(
     const TierSolverSolveOptions *options) {
-    // If input is NULL, use the following default options
-    static const TierSolverSolveOptions default_options = {
+    TierSolverSolveOptions sanitized = {
         .force = false,
         .verbose = 1,
-        .memlimit = 0,
+        .memlimit = GetPhysicalMemory() / 10 * 9,
     };
-    if (options == NULL) options = &default_options;
 
-    return (TierSolverSolveOptions){
-        .memlimit = options->memlimit ? options->memlimit
-                                      : GetPhysicalMemory() * 10 / 9,
-        .force = options->force,
-        .verbose = options->verbose,
-    };
+    // If input is NULL, use the following default options
+    if (options == NULL) {
+        return sanitized;
+    }
+
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+
+    return sanitized;
 }
 
 static int TierSolverSolve(void *aux) {
@@ -347,6 +351,28 @@ static int TierSolverSolve(void *aux) {
 #endif  // USE_MPI
 }
 
+static TierSolverAnalyzeOptions SanitizeAnalyzeOptions(
+    const TierSolverAnalyzeOptions *options) {
+    TierSolverAnalyzeOptions sanitized = {
+        .memlimit = GetPhysicalMemory() / 10 * 9,
+        .verbose = 1,
+        .force = false,
+    };
+
+    // If input is NULL, use the following default options
+    if (options == NULL) {
+        return sanitized;
+    }
+
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+
+    return sanitized;
+}
+
 static int TierSolverAnalyze(void *aux) {
     // Disallow analysis on old databases for simplicity.
     // Need to work on old db implementation to support new analyzer API calls.
@@ -360,16 +386,10 @@ static int TierSolverAnalyze(void *aux) {
             "the game and try again.");
         return kNoError;
     }
-
-    static const TierSolverAnalyzeOptions kDefaultAnalyzeOptions = {
-        .force = false,
-        .verbose = 1,
-        .memlimit = 0,  // Use default memory limit.
-    };
     const TierSolverAnalyzeOptions *options = (TierSolverAnalyzeOptions *)aux;
-    if (options == NULL) options = &kDefaultAnalyzeOptions;
+    TierSolverAnalyzeOptions sanitized = SanitizeAnalyzeOptions(options);
 
-    return TierManagerAnalyze(&current_api, options);
+    return TierManagerAnalyze(&current_api, &sanitized);
 }
 
 static int TierSolverGetStatus(void) { return solver_status; }
