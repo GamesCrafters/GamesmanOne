@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "core/concurrency.h"
 #include "core/types/base.h"
 
 /**
@@ -185,7 +186,7 @@ typedef struct GenericHashContext {
      * @brief Rearrangement-indexed cache for the \c Rearrange function. See
      * definition of \c Rearrange in \link context.c for details.
      */
-    int64_t *rearranger_cache;
+    ConcurrentInt64 *rearranger_cache;
 } GenericHashContext;
 
 /**
