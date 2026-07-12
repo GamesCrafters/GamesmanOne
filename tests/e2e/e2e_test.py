@@ -149,7 +149,13 @@ def test_gamesman_e2e(
     # PHASE 2: ANALYZE VERIFICATION
     # ==========================================
 
-    analyze_cmd = [bin_path, "analyze", game, variant, f"--data-path={sandbox_dir}"]
+    analyze_cmd = [
+        bin_path,
+        "analyze",
+        game,
+        variant,
+        f"--data-path={sandbox_dir}",
+    ]
     analyze_result = subprocess.run(
         analyze_cmd, env=run_env, check=True, capture_output=True, text=True
     )
@@ -190,7 +196,12 @@ def test_gamesman_e2e(
         return
 
     # Get initial position
-    start_cmd = [bin_path, "getstart", game, variant]
+    start_cmd = [
+        bin_path,
+        "getstart",
+        game,
+        variant,
+    ]
     start_result = subprocess.run(
         start_cmd, env=run_env, check=True, capture_output=True, text=True
     )
@@ -204,7 +215,15 @@ def test_gamesman_e2e(
     MAX_DEPTH = 100  # Prevent infinite loops in cyclic games
 
     for _ in range(MAX_DEPTH):
-        query_cmd = [bin_path, "query", "--", game, variant, current_pos]
+        query_cmd = [
+            bin_path,
+            f"--data-path={sandbox_dir}",
+            "--",
+            "query",
+            game,
+            variant,
+            current_pos,
+        ]
         query_result = subprocess.run(
             query_cmd, env=run_env, check=True, capture_output=True, text=True
         )
