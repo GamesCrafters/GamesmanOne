@@ -51,12 +51,21 @@ jobs:
   # JOB 2: End-to-End Tests
   # ==========================================
   e2e-test:
-    name: E2E Test (${{ matrix.preset }})
+    name: E2E Test (${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         preset: [ci-asan, release]
+        # Added the game and variant combinations
+        test_case:
+          - { game: "fsvp", variant: "10" }
+          - { game: "mttt", variant: "0" }
+          - { game: "mkaooa", variant: "0" }
+          - { game: "mills", variant: "72" }
+          - { game: "mtttier", variant: "0" }
+          - { game: "quixo", variant: "1" }
+          - { game: "quixo", variant: "2" }
     
     steps:
       - name: Checkout code
@@ -86,7 +95,7 @@ jobs:
       - name: Run End-to-End Tests
         env:
           GAMESMAN_PRESET: ${{ matrix.preset }}
-        run: pytest tests/e2e/e2e_test.py -v
+        run: pytest tests/e2e/e2e_test.py -k "${{ matrix.test_case.game }}-${{ matrix.test_case.variant }}" -v
 
   # Job 2: Static Analysis (Disabled for now)
   # static-analysis:
