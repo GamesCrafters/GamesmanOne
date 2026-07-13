@@ -47,6 +47,7 @@ GAMES_TO_TEST: list[tuple[str, int, bool]] = [
     ("mkaooa", 0, True),  # Regular
     ("mills", 72, True),  # Tier
     ("mtttier", 0, True),  # Tier
+    ("quixo", 1, True),  # Tier
     ("quixo", 2, True),  # Tier
 ]
 
