@@ -99,8 +99,6 @@ char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
     return buf;
 }
 
-double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
-
 char *GetTimeStampString(void) {
     time_t rawtime = time(NULL);
     static char time_str[26];  // 26 bytes as requested by ctime_r.

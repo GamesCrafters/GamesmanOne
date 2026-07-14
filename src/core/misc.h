@@ -90,9 +90,6 @@ void PrintfAndFlush(const char *format, ...);
  */
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
-/** @brief Return the number of seconds corresponding to N clock ticks. */
-double ClockToSeconds(clock_t n);
-
 /** @brief Return the current system time stamp as a c-string. */
 char *GetTimeStampString(void);
 
