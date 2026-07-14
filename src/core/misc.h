@@ -118,21 +118,6 @@ FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream);
 int GuardedFclose(FILE *stream);
 
 /**
- * @brief Calls fclose on STREAM and returns error.
- * @details This function is typically called when an error occurred in the
- * middle of a function call and the function needs to close the given STREAM
- * before returning. This function will close the STREAM, and return the ERROR
- * code so that the caller of this function can save one line of code by
- * writting "return BailOutFclose(stream, error);" as the return statement,
- * instead of "fclose(stream); return error;".
- *
- * @param stream FILE to close.
- * @param error Error code to be returned by this function.
- * @return ERROR.
- */
-int BailOutFclose(FILE *stream, int error);
-
-/**
  * @brief Same behavior as fseek on success; calls perror and returns the error
  * code returned by fseek, which is always -1.
  * Reference: https://man7.org/linux/man-pages/man3/fseek.3.html

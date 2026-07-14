@@ -169,13 +169,6 @@ int GuardedFclose(FILE *stream) {
     return error;
 }
 
-int BailOutFclose(FILE *stream, int error) {
-    int fclose_error = fclose(stream);
-    if (fclose_error != 0) perror("fclose");
-
-    return error;
-}
-
 int GuardedFseek(FILE *stream, long off, int whence) {
     int error = fseek(stream, off, whence);
     if (error != 0) perror("fseek");
