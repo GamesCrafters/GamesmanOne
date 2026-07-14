@@ -29,7 +29,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zconf.h>
@@ -242,28 +241,6 @@ bool FileExists(ReadOnlyString filename);
  * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
  */
 int MkdirRecursive(ReadOnlyString path);
-
-/**
- * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.
- */
-int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b);
-
-/**
- * @brief Returns a+b, or -1 if either a or b is negative or if a+b overflows.
- */
-int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
-
-/**
- * @brief Returns the number of ways to choose R elements from a total of N
- * elements.
- *
- * @param n Positive integer, number of elements to choose from.
- * @param r Positive integer, number of elements to choose.
- * @return Returns nCr(N, R) if the result can be expressed as a 64-bit
- * signed integer. Returns -1 if either N or R is negative or if the result
- * overflows.
- */
-int64_t NChooseR(int n, int r);
 
 #ifdef USE_MPI
 
