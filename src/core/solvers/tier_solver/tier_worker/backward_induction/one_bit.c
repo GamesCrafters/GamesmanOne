@@ -160,6 +160,8 @@ static void Step0_0SetupChildTiers(void) {
     TierHashSetDestroy(&dedup);
 }
 
+static int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
+
 static int64_t NextMultiple(int64_t n, int64_t mult) {
     return RoundUpDivide(n, mult) * mult;
 }

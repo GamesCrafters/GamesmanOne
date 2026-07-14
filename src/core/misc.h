@@ -32,7 +32,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <time.h>
 #include <zconf.h>
 #include <zlib.h>
 
@@ -265,12 +264,6 @@ int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
  * overflows.
  */
 int64_t NChooseR(int n, int r);
-
-/**
- * @brief Returns N / D if D divides N; returns N / D + 1 otherwise.
- * @warning D must not be 0.
- */
-int64_t RoundUpDivide(int64_t n, int64_t d);
 
 /**
  * @brief Returns the number of bits set in the 32-bit integer X.
