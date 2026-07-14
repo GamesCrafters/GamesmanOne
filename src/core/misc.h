@@ -196,21 +196,6 @@ gzFile GuardedGzdopen(int fd, const char *mode);
 int GuardedGzclose(gzFile file);
 
 /**
- * @brief Calls gzclose on FILE and returns error.
- * @details This function is typically called when an error occurred in the
- * middle of a function call and the function needs to close the given FILE
- * before returning. This function will close the FILE, and return the ERROR
- * code so that the caller of this function can save one line of code by
- * writting "return BailOutGzclose(file, error);" as the return statement,
- * instead of "gzclose(file); return error;".
- *
- * @param file gzFile to close.
- * @param error Error code to be returned by this function.
- * @return ERROR.
- */
-int BailOutGzclose(gzFile file, int error);
-
-/**
  * @brief Calls gzseek and returns 0 if the value returned by gzseek matches
  * OFF; calls perror and returns -1 otherwise.
  */

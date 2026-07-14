@@ -263,13 +263,6 @@ int GuardedGzclose(gzFile file) {
     return error;
 }
 
-int BailOutGzclose(gzFile file, int error) {
-    int new_error = gzclose(file);
-    if (new_error != Z_OK) perror("gzclose");
-
-    return error;
-}
-
 int GuardedGzseek(gzFile file, off_t off, int whence) {
     off_t sought = gzseek(file, off, whence);
     if (sought != off) {
