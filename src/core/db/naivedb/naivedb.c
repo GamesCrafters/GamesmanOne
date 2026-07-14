@@ -442,12 +442,15 @@ static bool ProbeFillBuffer(DbProbe *probe, TierPosition tier_position) {
     return true;
 }
 
+static void *PointerShift(const void *p, int64_t offset) {
+    return (void *)((uint8_t *)p + offset);
+}
+
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
     int64_t offset = position * (int64_t)sizeof(NaiveDbEntry) - probe->begin;
     assert(offset >= 0);
     NaiveDbEntry entry;
-    memcpy(&entry, GenericPointerAdd(probe->buffer, offset),
-           sizeof(NaiveDbEntry));
+    memcpy(&entry, PointerShift(probe->buffer, offset), sizeof(NaiveDbEntry));
     return entry;
 }
 

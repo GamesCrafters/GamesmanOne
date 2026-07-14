@@ -99,10 +99,6 @@ char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
     return buf;
 }
 
-void *GenericPointerAdd(const void *p, int64_t offset) {
-    return (void *)((uint8_t *)p + offset);
-}
-
 double ClockToSeconds(clock_t n) { return (double)n / CLOCKS_PER_SEC; }
 
 char *GetTimeStampString(void) {
