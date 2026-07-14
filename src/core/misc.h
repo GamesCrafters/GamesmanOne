@@ -171,21 +171,6 @@ int GuardedRename(const char *oldpath, const char *newpath);
 int GuardedRemove(const char *pathname);
 
 /**
- * @brief Calls close on FD and returns error.
- * @details This function is typically called when an error occurred in the
- * middle of a function call and the function needs to close the given FD before
- * returning. This function will close the FD, and return the ERROR code so
- * that the caller of this function can save one line of code by writting
- * "return BailOutClose(fd, error);" as the return statement, instead of
- * "close(fd); return error;".
- *
- * @param fd File descriptor to close.
- * @param error Error code to be returned by this function.
- * @return ERROR.
- */
-int BailOutClose(int fd, int error);
-
-/**
  * @brief Calls lseek and returns 0 if the value returned by lseek matches
  * OFFSET; calls perror and returns -1 otherwise.
  * Reference: https://man7.org/linux/man-pages/man2/lseek.2.html

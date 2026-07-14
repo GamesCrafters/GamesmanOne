@@ -232,13 +232,6 @@ int GuardedRemove(const char *pathname) {
     return error;
 }
 
-int BailOutClose(int fd, int error) {
-    int new_error = close(fd);
-    if (new_error == -1) perror("close");
-
-    return error;
-}
-
 int GuardedLseek(int fd, off_t offset, int whence) {
     off_t sought = lseek(fd, offset, whence);
     if (sought != offset) {
