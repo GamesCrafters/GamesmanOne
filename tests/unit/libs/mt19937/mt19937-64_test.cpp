@@ -4,7 +4,6 @@
  * @author Robert Shi (robertyishi@berkeley.edu): prompts and code review
  * @brief Unit and component tests for the 64-bit Mersenne Twister pseudorandom
  * number generator.
- * @date 2026-07-04
  *
  * @copyright GamesCrafters research and development group
  * SPDX-License-Identifier: GPL-3.0-or-later
