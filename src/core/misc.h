@@ -265,16 +265,6 @@ int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b);
  */
 int64_t NChooseR(int n, int r);
 
-/**
- * @brief Returns the number of bits set in the 32-bit integer X.
- */
-int Popcount32(uint32_t x);
-
-/**
- * @brief Returns the number of bits set in the 64-bit integer X.
- */
-int Popcount64(uint64_t x);
-
 #ifdef USE_MPI
 
 /**

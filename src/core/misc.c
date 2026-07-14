@@ -445,50 +445,6 @@ int64_t NChooseR(int n, int r) {
 #undef CACHE_ROWS
 #undef CACHE_COLS
 
-#if !defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
-static int FallbackPopcount32(uint32_t x) {
-    int c = 0;
-    while (x) {
-        x &= (x - 1);
-        c++;
-    }
-    return c;
-}
-
-static int FallbackPopcount64(uint64_t x) {
-    int c = 0;
-    while (x) {
-        x &= (x - 1);
-        c++;
-    }
-    return c;
-}
-#endif
-
-int Popcount32(uint32_t x) {
-    static_assert(sizeof(unsigned int) == sizeof(uint32_t),
-                  "unsigned int is not 32 bits");
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcount(x);
-#elif defined(_MSC_VER)
-    return __popcnt(x);
-#else
-    return FallbackPopcount32(x);
-#endif
-}
-
-int Popcount64(uint64_t x) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcountll(x);
-#elif defined(_MSC_VER) && defined(_M_X64)
-    return __popcnt64(x);
-#elif defined(_MSC_VER)  // 32-bit fallback for MSVC
-    return __popcnt((uint32_t)x) + __popcnt((uint32_t)(x >> 32));
-#else
-    return FallbackPopcount64(x);
-#endif
-}
-
 #ifdef USE_MPI
 
 void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided) {
