@@ -1,3 +1,4 @@
+add_subdirectory(io)
 add_subdirectory(lz4_utils)
 add_subdirectory(math)
 add_subdirectory(mt19937)
