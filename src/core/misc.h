@@ -30,7 +30,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <zconf.h>
 #include <zlib.h>
 
