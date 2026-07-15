@@ -169,19 +169,6 @@ int GuardedRename(const char *oldpath, const char *newpath);
 int GuardedRemove(const char *pathname);
 
 /**
- * @brief Calls lseek and returns 0 if the value returned by lseek matches
- * OFFSET; calls perror and returns -1 otherwise.
- * Reference: https://man7.org/linux/man-pages/man2/lseek.2.html
- */
-int GuardedLseek(int fd, off_t offset, int whence);
-
-/**
- * @brief Same behavior as gzopen on success; calls perror and returns Z_NULL
- * otherwise.
- */
-gzFile GuardedGzopen(const char *path, const char *mode);
-
-/**
  * @brief Same behavior as gzdopen on success; calls perror and returns Z_NULL
  * otherwise.
  */
@@ -192,12 +179,6 @@ gzFile GuardedGzdopen(int fd, const char *mode);
  * non-zero error code returned by gzclose otherwise.
  */
 int GuardedGzclose(gzFile file);
-
-/**
- * @brief Calls gzseek and returns 0 if the value returned by gzseek matches
- * OFF; calls perror and returns -1 otherwise.
- */
-int GuardedGzseek(gzFile file, off_t off, int whence);
 
 /**
  * @brief Calls gzread with the given FILE, BUF, and LENGTH and returns 0 if the

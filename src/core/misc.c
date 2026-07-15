@@ -231,23 +231,6 @@ int GuardedRemove(const char *pathname) {
     return error;
 }
 
-int GuardedLseek(int fd, off_t offset, int whence) {
-    off_t sought = lseek(fd, offset, whence);
-    if (sought != offset) {
-        perror("lseek");
-        return -1;
-    }
-
-    return 0;
-}
-
-gzFile GuardedGzopen(const char *path, const char *mode) {
-    gzFile file = gzopen(path, mode);
-    if (file == Z_NULL) perror("gzopen");
-
-    return file;
-}
-
 gzFile GuardedGzdopen(int fd, const char *mode) {
     gzFile file = gzdopen(fd, mode);
     if (file == Z_NULL) perror("gzdopen");
@@ -260,16 +243,6 @@ int GuardedGzclose(gzFile file) {
     if (error != Z_OK) perror("gzclose");
 
     return error;
-}
-
-int GuardedGzseek(gzFile file, off_t off, int whence) {
-    off_t sought = gzseek(file, off, whence);
-    if (sought != off) {
-        perror("gzseek");
-        return -1;
-    }
-
-    return 0;
 }
 
 int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
