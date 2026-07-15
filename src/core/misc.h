@@ -27,11 +27,7 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <zconf.h>
-#include <zlib.h>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -95,132 +91,6 @@ char *GetTimeStampString(void);
  * y MM m DD d HH h MM m ]SS s" as a c-string.
  */
 char *SecondsToFormattedTimeString(double seconds);
-
-/**
- * @brief Same behavior as fopen on success; calls perror and returns NULL
- * otherwise.
- */
-FILE *GuardedFopen(const char *filename, const char *modes);
-
-/**
- * @brief Same behavior as freopen on success; calls perror and returns NULL
- * otherwise.
- */
-FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream);
-
-/**
- * @brief Same behavior as fclose on success; calls perror and returns a
- * non-zero error code otherwise.
- */
-int GuardedFclose(FILE *stream);
-
-/**
- * @brief Same behavior as fseek on success; calls perror and returns the error
- * code returned by fseek, which is always -1.
- * Reference: https://man7.org/linux/man-pages/man3/fseek.3.html
- */
-int GuardedFseek(FILE *stream, long off, int whence);
-
-/**
- * @brief Calls fread and returns 0 on success; prints out the error occurred
- * and returns a non-zero error code otherwise.
- * @details The fread function never sets errno and therefore perror does not
- * generate helpful error messages.
- * Reference: https://man7.org/linux/man-pages/man3/fread.3.html
- *
- * @return 0 on success; returns 2 if EOF is reached before N items are read, or
- * 3 if there is an error with STREAM.
- */
-int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok);
-
-/**
- * @brief Calls fwrite and returns 0 on success; calls perror and returns errno
- * otherwise.
- */
-int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream);
-
-/**
- * @brief Same behavior as open on success; calls perror and returns -1
- * otherwise.
- * Reference: https://man7.org/linux/man-pages/man2/open.2.html
- */
-int GuardedOpen(const char *filename, int flags);
-
-/**
- * @brief Same behavior as close on success; calls perror and returns -1
- * otherwise.
- * Reference: https://man7.org/linux/man-pages/man2/close.2.html
- */
-int GuardedClose(int fd);
-
-/**
- * @brief Same behavior as rename on success; calls perror and returns -1
- * otherwise.
- * Reference: https://man7.org/linux/man-pages/man2/rename.2.html
- */
-int GuardedRename(const char *oldpath, const char *newpath);
-
-/**
- * @brief Same behavior as remove on success; calls perror and returns -1
- * otherwise.
- * Reference: https://man7.org/linux/man-pages/man3/remove.3.html
- */
-int GuardedRemove(const char *pathname);
-
-/**
- * @brief Same behavior as gzdopen on success; calls perror and returns Z_NULL
- * otherwise.
- */
-gzFile GuardedGzdopen(int fd, const char *mode);
-
-/**
- * @brief Same behavior as gzclose on success; calls perror and returns the
- * non-zero error code returned by gzclose otherwise.
- */
-int GuardedGzclose(gzFile file);
-
-/**
- * @brief Calls gzread with the given FILE, BUF, and LENGTH and returns 0 if the
- * correct number of bytes are read or EOF_OK is set to true; returns a non-zero
- * error code otherwise.
- *
- * @param file Source gzFile.
- * @param buf Destination buffer, which is assumed to be of size at least LENGTH
- * bytes.
- * @param length Number of uncompressed bytes to read from FILE.
- * @param eof_ok Whether end-of-file is accepted as no error. Set this to false
- * if you expect FILE to contain at least LENGTH bytes of uncompressed data.
- * @return 0 on success, 2 if EOF_OK is set to false and EOF is reached before
- * LENGTH bytes are read, or 3 if gzerror returns an error on FILE.
- */
-int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok);
-
-/**
- * @brief Calls gzwrite with the given FILE, BUF, and LEN and returns 0 if the
- * correct number of bytes are written; returns the error value returned by
- * gzerror otherwise.
- */
-int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len);
-
-/**
- * @brief Returns true if the file with the given \p filename exists, or false
- * otherwise.
- */
-bool FileExists(ReadOnlyString filename);
-
-/**
- * @brief Recursively makes all directories along the given path.
- * Equivalent to "mkdir -p <path>".
- *
- * @param path Make all directories along this path.
- * @return 0 on success. On error, -1 is returned and errno is set to indicate
- * the error.
- *
- * @authors Jonathon Reinhart and Carl Norum
- * Reference: http://stackoverflow.com/a/2336245/119527,
- * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
- */
-int MkdirRecursive(ReadOnlyString path);
 
 #ifdef USE_MPI
 

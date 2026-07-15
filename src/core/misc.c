@@ -26,28 +26,20 @@
 
 #include "core/misc.h"
 
-#include <errno.h>
-#include <fcntl.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <zconf.h>
-#include <zlib.h>
 
 #include "core/types/base.h"
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
 
-#include "core/gamesman_memory.h"
 #include "core/types/gamesman_error.h"
 
 void GamesmanExit(void) {
@@ -147,217 +139,6 @@ char *SecondsToFormattedTimeString(double _seconds) {
     }
 
     return buf;
-}
-
-FILE *GuardedFopen(const char *filename, const char *modes) {
-    FILE *f = fopen(filename, modes);
-    if (f == NULL) perror("fopen");
-    return f;
-}
-
-FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream) {
-    FILE *ret = freopen(filename, modes, stream);
-    if (ret == NULL) perror("freopen");
-    return ret;
-}
-
-int GuardedFclose(FILE *stream) {
-    int error = fclose(stream);
-    if (error != 0) perror("fclose");
-
-    return error;
-}
-
-int GuardedFseek(FILE *stream, long off, int whence) {
-    int error = fseek(stream, off, whence);
-    if (error != 0) perror("fseek");
-
-    return error;
-}
-
-int GuardedFread(void *ptr, size_t size, size_t n, FILE *stream, bool eof_ok) {
-    size_t items_read = fread(ptr, size, n, stream);
-    if (items_read == n) return 0;
-    if (feof(stream)) {
-        if (eof_ok) return 0;
-
-        fprintf(
-            stderr,
-            "GuardedFread: end-of-file reached before reading %zd items, only "
-            "%zd items were actually read\n",
-            n, items_read);
-        return 2;
-    } else if (ferror(stream)) {
-        fprintf(stderr, "GuardedFread: fread() error\n");
-        return 3;
-    }
-    NotReached("GuardedFread: unknown error occurred during fread()");
-    return 4;
-}
-
-int GuardedFwrite(const void *ptr, size_t size, size_t n, FILE *stream) {
-    if (fwrite(ptr, size, n, stream) != n) {
-        perror("fwrite");
-        return errno;
-    }
-    return 0;
-}
-
-int GuardedOpen(const char *filename, int flags) {
-    int fd = open(filename, flags);
-    if (fd == -1) perror("open");
-
-    return fd;
-}
-
-int GuardedClose(int fd) {
-    int error = close(fd);
-    if (error == -1) perror("close");
-
-    return error;
-}
-
-int GuardedRename(const char *oldpath, const char *newpath) {
-    int error = rename(oldpath, newpath);
-    if (error == -1) perror("rename");
-
-    return error;
-}
-
-int GuardedRemove(const char *pathname) {
-    int error = remove(pathname);
-    if (error == -1) perror("remove");
-
-    return error;
-}
-
-gzFile GuardedGzdopen(int fd, const char *mode) {
-    gzFile file = gzdopen(fd, mode);
-    if (file == Z_NULL) perror("gzdopen");
-
-    return file;
-}
-
-int GuardedGzclose(gzFile file) {
-    int error = gzclose(file);
-    if (error != Z_OK) perror("gzclose");
-
-    return error;
-}
-
-int GuardedGzread(gzFile file, voidp buf, unsigned int length, bool eof_ok) {
-    int bytes_read = gzread(file, buf, length);
-    if ((unsigned int)bytes_read == length) return 0;
-
-    int error;
-    if (gzeof(file)) {
-        if (eof_ok) return 0;
-        fprintf(
-            stderr,
-            "GuardedGzread: end-of-file reached before reading %d bytes, only "
-            "%d bytes were actually read\n",
-            (int)length, bytes_read);
-        return 2;
-    } else if (gzerror(file, &error)) {
-        fprintf(stderr, "GuardedGzread: gzread() error code %d\n", error);
-        return 3;
-    }
-    NotReached("GuardedGzread: unknown error occurred during gzread()");
-    return 4;
-}
-
-int GuardedGzwrite(gzFile file, voidpc buf, unsigned int len) {
-    int bytes_written = gzwrite(file, buf, len);
-    if ((unsigned int)bytes_written < len) {
-        int error;
-        gzerror(file, &error);
-        fprintf(stderr, "GuardedGzwrite: failed with code %d\n", error);
-        return error;
-    }
-    return 0;
-}
-
-bool FileExists(ReadOnlyString filename) {
-    FILE *file = fopen(filename, "r");
-    if (file) {
-        fclose(file);
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * @brief Makes a directory at the given path or does nothing if the directory
- * already exists.
- *
- * @return 0 on success. On error, kFileSystemError is returned and errno is set
- * to indicate the error.
- *
- * @author Jonathon Reinhart
- * @link
- * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
- */
-static int MaybeMkdir(ReadOnlyString path, mode_t mode) {
-    errno = 0;
-
-    // Try to make the directory
-    if (mkdir(path, mode) == 0) return kNoError;
-
-    // If it fails for any reason but EEXIST, fail
-    if (errno != EEXIST) return kFileSystemError;
-
-    // Check if the existing path is a directory
-    struct stat st;
-    if (stat(path, &st) != 0) return kFileSystemError;
-
-    // If not, fail with ENOTDIR
-    if (!S_ISDIR(st.st_mode)) {
-        errno = ENOTDIR;
-        return kFileSystemError;
-    }
-
-    errno = 0;
-    return kNoError;
-}
-
-int MkdirRecursive(ReadOnlyString path) {
-    // Fail if path is NULL.
-    if (path == NULL) {
-        errno = EINVAL;
-        return kIllegalArgumentError;
-    }
-
-    int ret = kFileSystemError;
-    errno = 0;
-
-    // Copy string so it's mutable
-    size_t path_length = strlen(path);
-    char *path_copy = (char *)GamesmanMalloc((path_length + 1) * sizeof(char));
-    if (path_copy == NULL) {
-        ret = kMallocFailureError;
-        errno = ENOMEM;
-        goto _bailout;
-    }
-    SafeStrncpy(path_copy, path, path_length + 1);
-
-    // Start at i = 1 to handle a single leading slash.
-    for (size_t i = 1; i < path_length; ++i) {
-        // Only trigger if we hit a slash AND the previous character wasn't a
-        // slash. This safely skips over consecutive slashes (e.g., "//" or
-        // "///").
-        if (path_copy[i] == '/' && path_copy[i - 1] != '/') {
-            path_copy[i] = '\0';  // Temporarily truncate
-            if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
-            path_copy[i] = '/';
-        }
-    }
-    if (MaybeMkdir(path_copy, 0777) != 0) goto _bailout;
-    ret = kNoError;  // Success
-
-_bailout:
-    GamesmanFree(path_copy);
-    return ret;
 }
 
 #ifdef USE_MPI

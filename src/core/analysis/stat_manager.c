@@ -38,9 +38,9 @@
 #include "core/constants.h"
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 #include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+#include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 static char *sandbox_path;

@@ -47,6 +47,7 @@
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_map.h"
 #include "core/types/tier_hash_set.h"
+#include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 // Read-only reference to the API functions from tier_manager.

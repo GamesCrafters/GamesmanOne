@@ -4,10 +4,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "core/misc.h"
 #include "core/savio/savio.h"
 #include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+#include "libs/io/xfile.h"
 
 static int GetOmpNumThreads(int cpus_per_node, int ntasks_per_node,
                             bool bind_to_cores);

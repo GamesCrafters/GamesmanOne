@@ -43,6 +43,7 @@
 #include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_to_ptr_chained_hash_map.h"
+#include "libs/io/xfile.h"
 
 // Database API.
 

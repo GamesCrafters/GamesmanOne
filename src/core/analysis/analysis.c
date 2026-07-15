@@ -36,9 +36,9 @@
 #include <zlib.h>
 
 #include "core/constants.h"
-#include "core/misc.h"
 #include "core/types/base.h"
 #include "core/types/gamesman_error.h"
+#include "libs/io/xfile.h"
 
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
