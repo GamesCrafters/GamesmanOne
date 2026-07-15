@@ -171,8 +171,8 @@ bool FileExists(const char *filename) {
  * @return 0 on success. On error, 1 is returned and errno is set to indicate
  * the error.
  *
- * @author Jonathon Reinhart
- * @link
+ * @copyright Jonathon Reinhart
+ * Source:
  * https://gist.github.com/JonathonReinhart/8c0d90191c38af2dcadb102c4e202950
  */
 static int MaybeMkdir(const char *path, mode_t mode) {
