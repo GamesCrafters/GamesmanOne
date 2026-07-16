@@ -27,8 +27,6 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#include <stddef.h>
-
 #ifdef USE_MPI
 #include <mpi.h>
 #endif  // USE_MPI
@@ -44,19 +42,6 @@ void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
 void NotReached(ReadOnlyString message);
-
-/**
- * @brief Same behavior as strncpy if the end of SRC is found before N
- * characters are copied. Otherwise, copies N-1 characters from SRC to DEST and
- * terminates DEST with a null-terminator. Therefore, DEST will always be a null
- * terminated C string.
- *
- * @param dest Destination buffer, which is assumed to be of size at least N.
- * @param src Source buffer.
- * @param n Number of characters to copy into DEST.
- * @return DEST.
- */
-char *SafeStrncpy(char *dest, const char *src, size_t n);
 
 /**
  * @brief Equivalent to first calling printf with the given parameters and then

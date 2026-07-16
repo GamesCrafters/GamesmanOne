@@ -36,11 +36,9 @@
 
 #include "core/constants.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/io/xfile.h"
@@ -124,7 +122,6 @@ typedef struct NaiveDbEntry {
 // Probe buffer size, fixed at 1 MiB.
 static const int kBufferSize = (1 << 17) * sizeof(NaiveDbEntry);
 
-static char current_game_name[kGameNameLengthMax + 1];
 static int current_variant;
 static GetTierNameFunc CurrentGetTierName;
 static char *sandbox_path;
@@ -209,7 +206,8 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
                        void *aux) {
-    (void)aux;  // Unused.
+    (void)game_name;  // Unused.
+    (void)aux;        // Unused.
     assert(sandbox_path == NULL);
 
     sandbox_path = (char *)GamesmanMalloc((strlen(path) + 1) * sizeof(char));
@@ -219,8 +217,6 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     }
     strcpy(sandbox_path, path);
 
-    SafeStrncpy(current_game_name, game_name, kGameNameLengthMax + 1);
-    current_game_name[kGameNameLengthMax] = '\0';
     current_variant = variant;
     CurrentGetTierName = GetTierName;
     current_tier = kIllegalTier;

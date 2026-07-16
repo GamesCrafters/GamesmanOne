@@ -27,7 +27,6 @@
 #include "core/misc.h"
 
 #include <stdarg.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,12 +53,6 @@ void NotReached(ReadOnlyString message) {
             message);
     fflush(stderr);
     _exit(kNotReachedError);
-}
-
-char *SafeStrncpy(char *dest, const char *src, size_t n) {
-    char *ret = strncpy(dest, src, n);
-    dest[n - 1] = '\0';
-    return ret;
 }
 
 void PrintfAndFlush(const char *format, ...) {
