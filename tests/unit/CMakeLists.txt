@@ -62,6 +62,11 @@ function(add_library_test target_name library_to_test)
     # 3. Create the executable
     add_executable(${target_name} ${ARG_SOURCES})
 
+    # Delete previous profile data if line coverage is enabled
+    if(ENABLE_LINE_COVERAGE)
+        add_dependencies(${target_name} coverage-delete)
+    endif()
+
     # Apply custom compile definitions if provided
     if(ARG_COMPILE_DEFINITIONS)
         target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})

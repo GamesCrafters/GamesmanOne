@@ -4,6 +4,13 @@ set(LCOV_MERGED_INFO "${CMAKE_BINARY_DIR}/merged.info")
 set(LCOV_OUTPUT_INFO "${CMAKE_BINARY_DIR}/lcov.info")
 set(LCOV_SRC_FILTER "'/usr/*'" "build/*")
 
+# This target should be build before building any executable to prevent libgcov
+# from complaining about "overwriting an existing profile data with a different
+# checksum."
+add_custom_target(coverage-delete
+    COMMAND ${LCOV_PATH} --branch-coverage -z -d ${CMAKE_BINARY_DIR}
+)
+
 # For vscode CMake Tools line coverage configuration cmake.preRunCoverageTarget
 # Wipes old coverage data before tests run
 add_custom_target(coverage-clean
