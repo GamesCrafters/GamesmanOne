@@ -66,6 +66,7 @@
 #include <mpi.h>
 
 #include "core/solvers/tier_solver/tier_mpi.h"
+#include "libs/mpi/xmpi.h"
 #endif  // USE_MPI
 
 enum TierManagementType {

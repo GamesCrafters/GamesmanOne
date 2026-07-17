@@ -31,9 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#ifdef USE_MPI
-#include <mpi.h>
-#endif  // USE_MPI
 
 #include "core/headless/hanalyze.h"
 #include "core/headless/hparser.h"
@@ -42,6 +39,12 @@
 #include "core/headless/htest.h"
 #include "core/headless/hutils.h"
 #include "core/types/gamesman_error.h"
+
+#ifdef USE_MPI
+#include <mpi.h>
+
+#include "libs/mpi/xmpi.h"
+#endif  // USE_MPI
 
 /**
  * @brief Convert the input memory limit string \p str, which is in GiB, into

@@ -27,10 +27,6 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#ifdef USE_MPI
-#include <mpi.h>
-#endif  // USE_MPI
-
 #include "core/types/base.h"
 
 /**
@@ -76,74 +72,5 @@ char *GetTimeStampString(void);
  * y MM m DD d HH h MM m ]SS s" as a c-string.
  */
 char *SecondsToFormattedTimeString(double seconds);
-
-#ifdef USE_MPI
-
-/**
- * @brief Bail-on-error \c MPI_Init_thread.
- *
- * @param argc Pointer to the number of arguments.
- * @param argv Pointer to the argument vector.
- * @param required Level of desired thread support.
- * @param provided (Output parameter) level of provided thread support.
- */
-void SafeMpiInitThread(int *argc, char ***argv, int required, int *provided);
-
-/**
- * @brief Bail-on-error \c MPI_Init.
- *
- * @param argc Pointer to the number of arguments.
- * @param argv Pointer to the argument vector.
- */
-void SafeMpiInit(int *argc, char ***argv);
-
-/**
- * @brief Bail-on-error \c MPI_Finalize.
- */
-void SafeMpiFinalize(void);
-
-/**
- * @brief Bail-on-error \c MPI_Comm_size.
- *
- * @param comm Communicator (handle).
- * @return Number of processes in the group of \p comm.
- */
-int SafeMpiCommSize(MPI_Comm comm);
-
-/**
- * @brief Bail-on-error \c MPI_Comm_rank.
- *
- * @param comm Communicator (handle).
- * @return Rank of the calling process in the group of \c comm.
- */
-int SafeMpiCommRank(MPI_Comm comm);
-
-/**
- * @brief Bail-on-error \c MPI_Send.
- *
- * @param buf Initial address of send buffer (choice).
- * @param count Number of elements in send buffer (non-negative integer).
- * @param datatype Datatype of each send buffer element (handle).
- * @param dest Rank of destination (integer).
- * @param tag Message tag (integer).
- * @param comm Communicator (handle).
- */
-void SafeMpiSend(void *buf, int count, MPI_Datatype datatype, int dest, int tag,
-                 MPI_Comm comm);
-
-/**
- * @brief Bail-on-error \c MPI_Recv.
- *
- * @param buf (Output parameter) initial address of receive buffer (choice).
- * @param count Communicator (handle).
- * @param datatype Maximum number of elements in receive buffer (integer).
- * @param source Datatype of each receive buffer element (handle).
- * @param tag Rank of source (integer).
- * @param comm Message tag (integer).
- * @param status (Output parameter) status object.
- */
-void SafeMpiRecv(void *buf, int count, MPI_Datatype datatype, int source,
-                 int tag, MPI_Comm comm, MPI_Status *status);
-#endif  // USE_MPI
 
 #endif  // GAMESMANONE_CORE_MISC_H_
