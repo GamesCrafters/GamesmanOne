@@ -1,12 +1,9 @@
 /**
- * @file misc.h
+ * @file xterminal.c
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Miscellaneous utility functions.
- * @version 2.0.0
- * @date 2025-03-18
- *
+ * @brief Terminal I/O helper functions implementation.
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -24,25 +21,38 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_MISC_H_
-#define GAMESMANONE_CORE_MISC_H_
+#include "libs/io/xterminal.h"
 
-#include "core/types/base.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 
-/**
- * @brief Gracefully exits GAMESMAN.
- * @warning This function calls exit() which is not MT-safe. Do not call this
- * function in a multithreaded code section.
- */
-void GamesmanExit(void);
+void PrintfAndFlush(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    fflush(stdout);
+    va_end(args);
+}
 
-/** @brief Prints the error MESSAGE and terminates GAMESMAN. */
-void NotReached(ReadOnlyString message);
+char *PromptForInput(const char *prompt, char *buf, int max_length) {
+    printf("%s\n=> ", prompt);
+    if (fgets(buf, max_length + 1, stdin) == NULL) {
+        return NULL;
+    }
 
-/**
- * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
- * y MM m DD d HH h MM m ]SS s" as a c-string.
- */
-char *SecondsToFormattedTimeString(double seconds);
+    // Clear the stdin buffer if the input was too long
+    if (strchr(buf, '\n') == NULL) {
+        int ch = getchar();
+        while (ch != '\n' && ch != EOF) {
+            ch = getchar();
+        }
+    }
 
-#endif  // GAMESMANONE_CORE_MISC_H_
+    // Remove the trailing newline character, if it exists.
+    // Algorithm by Tim Čas,
+    // https://stackoverflow.com/a/28462221.
+    buf[strcspn(buf, "\r\n")] = '\0';
+
+    return buf;
+}

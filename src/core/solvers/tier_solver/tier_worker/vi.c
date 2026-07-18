@@ -34,12 +34,12 @@
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_set.h"
+#include "libs/io/xterminal.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP

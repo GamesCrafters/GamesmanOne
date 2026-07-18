@@ -10,11 +10,11 @@
 #include "core/game_manager.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
-#include "core/misc.h"
 #include "core/savio/savio.h"
 #include "core/savio/scriptgen.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
+#include "libs/io/xterminal.h"
 
 static SavioJobSettings settings;
 static int partition_id;

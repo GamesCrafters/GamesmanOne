@@ -26,7 +26,6 @@
 
 #include "core/misc.h"
 
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,34 +47,6 @@ void NotReached(ReadOnlyString message) {
             message);
     fflush(stderr);
     _exit(kNotReachedError);
-}
-
-void PrintfAndFlush(const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    fflush(stdout);
-    va_end(args);
-}
-
-char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
-    printf("%s\n=> ", prompt);
-    if (fgets(buf, length_max + 1, stdin) == NULL) return NULL;
-
-    // Clear the stdin buffer if the input was too long
-    if (strchr(buf, '\n') == NULL) {
-        int ch = getchar();
-        while (ch != '\n' && ch != EOF) {
-            ch = getchar();
-        }
-    }
-
-    // Remove the trailing newline character, if it exists.
-    // Algorithm by Tim Čas,
-    // https://stackoverflow.com/a/28462221.
-    buf[strcspn(buf, "\r\n")] = '\0';
-
-    return buf;
 }
 
 static void AppendIfPositive(char *buf, int val, ReadOnlyString label) {

@@ -1,6 +1,8 @@
-set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/xfile.h)
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/xfile.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/xterminal.h)
 
-set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/xfile.c)
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/xfile.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/xterminal.c)
 
 add_library(gamesman_io STATIC ${HEADERS} ${SOURCES})
 target_link_libraries(gamesman_io PRIVATE common_flags)
