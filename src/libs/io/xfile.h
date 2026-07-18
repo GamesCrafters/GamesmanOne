@@ -75,7 +75,7 @@ int GuardedFclose(FILE *stream);
  *
  * @see https://man7.org/linux/man-pages/man2/open.2.html
  */
-int GuardedOpen(const char *filename, int flags);
+int GuardedOpen(const char *filename, int flags, ...);
 
 /**
  * @brief Wrapper for `close`. Calls `perror` and returns `-1` on failure.

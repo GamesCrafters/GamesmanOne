@@ -25,6 +25,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,8 +63,27 @@ int GuardedFclose(FILE *stream) {
     return error;
 }
 
-int GuardedOpen(const char *filename, int flags) {
-    int fd = open(filename, flags);
+int GuardedOpen(const char *filename, int flags, ...) {
+    int fd;
+
+    // open() only requires the 3rd argument (mode) if O_CREAT is specified.
+    // (Note: On Linux, O_TMPFILE also requires it).
+    if (flags & O_CREAT) {
+        va_list args;
+        va_start(args, flags);
+
+        // Extract the mode argument. Because of default argument promotion
+        // in variadic functions, it is safest to extract it as an int and
+        // cast it to mode_t.
+        mode_t mode = (mode_t)va_arg(args, int);
+        va_end(args);
+
+        fd = open(filename, flags, mode);
+    } else {
+        // If O_CREAT isn't set, open() should only be called with 2 arguments.
+        fd = open(filename, flags);
+    }
+
     if (fd == -1) {
         perror("open");
     }

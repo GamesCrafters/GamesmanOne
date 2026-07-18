@@ -119,7 +119,7 @@ TEST(GuardedOpenTest, ReturnsValidDescriptorOnSuccess) {
     // Validating basic POSIX file creation confirms the wrapper respects
     // standard O_CREAT flags and yields a non-negative file descriptor.
     const char* filename = "OpenSuccess.tmp";
-    int fd = GuardedOpen(filename, O_CREAT | O_WRONLY);
+    int fd = GuardedOpen(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
 
     EXPECT_GE(fd, 0);
 
@@ -143,7 +143,7 @@ TEST(GuardedCloseTest, ReturnsZeroOnSuccess) {
     // Closing a freshly opened descriptor validates the standard success
     // contract.
     const char* filename = "CloseSuccess.tmp";
-    int fd = GuardedOpen(filename, O_CREAT | O_WRONLY);
+    int fd = GuardedOpen(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
     ASSERT_GE(fd, 0);
 
     EXPECT_EQ(GuardedClose(fd), 0);
