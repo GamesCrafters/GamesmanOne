@@ -26,13 +26,13 @@
 
 #include "core/misc.h"
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "core/types/base.h"
 #include "core/types/gamesman_error.h"
 
 void GamesmanExit(void) {
@@ -40,7 +40,7 @@ void GamesmanExit(void) {
     exit(kNoError);  // NOLINT(concurrency-mt-unsafe)
 }
 
-void NotReached(ReadOnlyString message) {
+void NotReached(const char *message) {
     fprintf(stderr,
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
@@ -49,22 +49,31 @@ void NotReached(ReadOnlyString message) {
     _exit(kNotReachedError);
 }
 
-static void AppendIfPositive(char *buf, int val, ReadOnlyString label) {
+static void AppendIfPositive(char *buf, size_t buf_size, int val,
+                             const char *label) {
     if (val <= 0) return;
-    sprintf(buf + strlen(buf), "%d %s", val, label);
+    size_t len = strlen(buf);
+    if (len < buf_size) {
+        snprintf(buf + len, buf_size - len, "%d %s", val, label);
+    }
 }
 
-char *SecondsToFormattedTimeString(double _seconds) {
-    // Format is the following or "INFINITE" if yyyy is greater than 9999.
-    static const char format[] = "[yyyy y mm m dd d hh h mm m ]ss s";
-    static char buf[sizeof(format)];
-    if (_seconds < 0.0) {
-        sprintf(buf, "NEGATIVE TIME ERROR");
+char *SecondsToFormattedTimeString(double seconds_d, char *buf,
+                                   size_t buf_size) {
+    if (!buf || buf_size == 0) {
+        return NULL;
+    }
+    if (seconds_d < 0.0) {
+        snprintf(buf, buf_size, "NEGATIVE TIME ERROR");
+        return buf;
+    }
+    if (seconds_d > (double)INT64_MAX) {
+        snprintf(buf, buf_size, "INFINITE");
         return buf;
     }
 
-    int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds;
-    int64_t remainder = (int64_t)_seconds;
+    int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
+    int64_t remainder = (int64_t)seconds_d;
     seconds = (int)(remainder % 60);
     remainder /= 60;
     minutes = (int)(remainder % 60);
@@ -73,19 +82,22 @@ char *SecondsToFormattedTimeString(double _seconds) {
     remainder /= 24;
     days = (int)(remainder % 30);
     remainder /= 30;
-    months = (int)(remainder %= 12);
+    months = (int)(remainder % 12);
     remainder /= 12;
     years = (int)(remainder > 9999 ? -1 : remainder);
     if (years < 0) {
-        sprintf(buf, "INFINITE");
+        snprintf(buf, buf_size, "INFINITE");
     } else {
         buf[0] = '\0';
-        AppendIfPositive(buf, years, "y ");
-        AppendIfPositive(buf, months, "m ");
-        AppendIfPositive(buf, days, "d ");
-        AppendIfPositive(buf, hours, "h ");
-        AppendIfPositive(buf, minutes, "m ");
-        sprintf(buf + strlen(buf), "%d %s", seconds, "s");
+        AppendIfPositive(buf, buf_size, years, "y ");
+        AppendIfPositive(buf, buf_size, months, "m ");
+        AppendIfPositive(buf, buf_size, days, "d ");
+        AppendIfPositive(buf, buf_size, hours, "h ");
+        AppendIfPositive(buf, buf_size, minutes, "m ");
+        size_t len = strlen(buf);
+        if (len < buf_size) {
+            snprintf(buf + len, buf_size - len, "%d s", seconds);
+        }
     }
 
     return buf;

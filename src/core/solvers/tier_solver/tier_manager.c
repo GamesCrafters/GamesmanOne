@@ -777,14 +777,15 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
             printf("N/A. ");
         }
 
-        ReadOnlyString time_string;
+        char time_string[32];
         if (processed_size > 0) {
             double time_remaining = time_elapsed_seconds /
                                     (double)processed_size *
                                     (double)remaining_size;
-            time_string = SecondsToFormattedTimeString(time_remaining);
+            SecondsToFormattedTimeString(time_remaining, time_string,
+                                         sizeof(time_string));
         } else {
-            time_string = "unknown";
+            sprintf(time_string, "unknown");
         }
         printf("Estimated time remaining: %s.\n", time_string);
     }

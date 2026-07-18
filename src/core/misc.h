@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#include "core/types/base.h"
+#include <stddef.h>
 
 /**
  * @brief Gracefully exits GAMESMAN.
@@ -37,12 +37,13 @@
 void GamesmanExit(void);
 
 /** @brief Prints the error MESSAGE and terminates GAMESMAN. */
-void NotReached(ReadOnlyString message);
+void NotReached(const char *message);
 
 /**
  * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
- * y MM m DD d HH h MM m ]SS s" as a c-string.
+ * y MM m DD d HH h MM m ]SS s" as a c-string. buf_size should be at least 32 to
+ * accomodate for all possible outputs (NULL-terminator included).
  */
-char *SecondsToFormattedTimeString(double seconds);
+char *SecondsToFormattedTimeString(double seconds, char *buf, size_t buf_size);
 
 #endif  // GAMESMANONE_CORE_MISC_H_
