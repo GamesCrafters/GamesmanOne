@@ -41,10 +41,16 @@ void GamesmanExit(void) {
 }
 
 void NotReached(const char *message) {
-    fprintf(stderr,
+    if (message) {
+        fprintf(
+            stderr,
             "(FATAL) You entered a branch that is marked as NotReached. The "
             "error message was %s\n",
             message);
+    } else {
+        fprintf(stderr,
+                "(FATAL) You entered a branch that is marked as NotReached.\n");
+    }
     fflush(stderr);
     _exit(kNotReachedError);
 }

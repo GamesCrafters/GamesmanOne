@@ -4,9 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Miscellaneous utility functions.
- * @version 2.0.0
- * @date 2025-03-18
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -31,18 +28,34 @@
 
 /**
  * @brief Gracefully exits GAMESMAN.
- * @warning This function calls exit() which is not MT-safe. Do not call this
+ *
+ * @warning This function calls `exit()` which is not MT-safe. Do not call this
  * function in a multithreaded code section.
  */
 void GamesmanExit(void);
 
-/** @brief Prints the error MESSAGE and terminates GAMESMAN. */
+/**
+ * @brief Prints a fatal error message and terminates GAMESMAN.
+ *
+ * @param[in] message A message to include as part of the fatal error message.
+ * If `NULL`, a generic message will be printed.
+ */
 void NotReached(const char *message);
 
 /**
- * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
- * y MM m DD d HH h MM m ]SS s" as a c-string. buf_size should be at least 32 to
- * accomodate for all possible outputs (NULL-terminator included).
+ * @brief Formats a time given in seconds into a human-readable string.
+ *
+ * Formats the time into the format "[YYYY y MM m DD d HH h MM m ]SS s",
+ * appending higher-order time units only if they are strictly positive.
+ * If `seconds` is negative, writes "NEGATIVE TIME ERROR" to `buf`.
+ * If `seconds` exceeds 9999 years or `INT64_MAX`, writes "INFINITE" to `buf`.
+ *
+ * @param[in] seconds The time in seconds to format.
+ * @param[out] buf The buffer to write the formatted string into.
+ * @param[in] buf_size The size of `buf` in bytes. Should be at least 32 to
+ * accommodate all possible outputs (including the NULL-terminator).
+ *
+ * @return A pointer to `buf`, or `NULL` if `buf` is `NULL` or `buf_size` is 0.
  */
 char *SecondsToFormattedTimeString(double seconds, char *buf, size_t buf_size);
 
