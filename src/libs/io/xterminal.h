@@ -25,27 +25,33 @@
 #define GAMESMANONE_LIBS_IO_XTERMINAL_H_
 
 /**
- * @brief Equivalent to first calling printf with the given parameters and then
- * calling fflush(stdout).
+ * @brief Equivalent to first calling `printf` with the given parameters and
+ * then calling `fflush(stdout)`.
+ *
+ * @param[in] format The format string.
+ * @param[in] ... Variadic arguments matching the format string.
  */
 void PrintfAndFlush(const char *format, ...);
 
 /**
- * @brief Prints \p prompt followed by a new line ('\n') and an arrow ("=>") to
- * \c stdout, and then reads in X characters from \c stdin until a new line or
- * EOF is encountered but only writes up to \p max_length characters to \p buf,
- * not including the trailing new line character ('\n').
+ * @brief Prints `prompt` followed by a new line (`\n`) and an arrow (`=> `) to
+ * `stdout`, and then reads characters from `stdin` until a new line or EOF is
+ * encountered. It writes up to `max_length` characters to `buf`, discards any
+ * excess input, and strips trailing carriage returns and new lines.
  *
- * @note \p buf is assumed to have enough space to hold at least \p max_length +
- * 1 characters to include the terminal '\0'.
+ * @note `buf` is assumed to have enough space to hold at least `max_length` + 1
+ * characters to include the terminal `\0`.
  *
- * @param prompt A prompt to be printed out that explains what the user input
- * should be.
- * @param buf Output parameter. The user input, up to \p max_length bytes, is
- * stored in the contiguous space that this pointer is pointing to.
- * @param max_length Maximum acceptable user input length in number of
+ * @param[in] prompt A prompt to be printed out that explains what the user
+ * input should be.
+ * @param[out] buf Output parameter. The user input, up to `max_length` bytes,
+ * is stored in the contiguous space that this pointer is pointing to.
+ * @param[in] max_length Maximum acceptable user input length in number of
  * characters.
- * @return \p buf.
+ *
+ * @returns The populated buffer `buf`.
+ * @retval NULL If `fgets` encounters an error or reaches EOF without reading
+ * any characters.
  */
 char *PromptForInput(const char *prompt, char *buf, int max_length);
 
