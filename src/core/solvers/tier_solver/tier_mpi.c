@@ -29,7 +29,7 @@
 #include <mpi.h>
 #include <stdbool.h>
 
-#include "core/misc.h"
+#include "libs/mpi/xmpi.h"
 
 static const int kMpiDefaultTag = 0;
 static const int kMpiManagerRank = 0;

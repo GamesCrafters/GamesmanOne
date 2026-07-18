@@ -21,6 +21,12 @@ endif()
 
 # Define the GAMESMAN executable
 add_executable(gamesman main.c)
+
+# Delete previous profile data if line coverage is enabled
+if(ENABLE_LINE_COVERAGE)
+  add_dependencies(gamesman coverage-delete)
+endif()
+
 target_link_libraries(gamesman PRIVATE gamesman_core)
 if(OpenMP_FOUND) # The main function also uses _OPENMP
   target_link_libraries(gamesman PRIVATE OpenMP::OpenMP_C)

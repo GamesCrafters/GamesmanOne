@@ -1,12 +1,12 @@
 #include "core/interactive/games/games.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/presolve.h"
-#include "core/misc.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
 
@@ -52,9 +52,7 @@ int InteractiveGames(ReadOnlyString key) {
     char **keys = AllocateKeys(num_items);
     HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        SafeStrncpy(items[i], all_games[i]->formal_name,
-                    kGameFormalNameLengthMax + 1);
-        items[i][kGameFormalNameLengthMax] = '\0';
+        strcpy(items[i], all_games[i]->formal_name);
         sprintf(keys[i], "%d", i);
         hooks[i] = &InteractivePresolve;
     }

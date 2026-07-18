@@ -4,6 +4,13 @@ set(LCOV_MERGED_INFO "${CMAKE_BINARY_DIR}/merged.info")
 set(LCOV_OUTPUT_INFO "${CMAKE_BINARY_DIR}/lcov.info")
 set(LCOV_SRC_FILTER "'/usr/*'" "build/*")
 
+# This target should be build before building any executable to prevent libgcov
+# from complaining about "overwriting an existing profile data with a different
+# checksum."
+add_custom_target(coverage-delete
+    COMMAND ${LCOV_PATH} --branch-coverage -z -d ${CMAKE_BINARY_DIR}
+)
+
 # For vscode CMake Tools line coverage configuration cmake.preRunCoverageTarget
 # Wipes old coverage data before tests run
 add_custom_target(coverage-clean
@@ -11,7 +18,11 @@ add_custom_target(coverage-clean
     COMMAND ${LCOV_PATH} --branch-coverage -z -d ${CMAKE_BINARY_DIR}
 
     # Capture the baseline
-    COMMAND ${LCOV_PATH} --branch-coverage -c -i -q -d ${CMAKE_BINARY_DIR} -o ${LCOV_BASELINE_INFO} --ignore-errors mismatch,mismatch
+    COMMAND ${LCOV_PATH} --branch-coverage -c -i -q -d ${CMAKE_BINARY_DIR} -o ${LCOV_BASELINE_INFO}
+    --ignore-errors mismatch,mismatch
+    --ignore-errors gcov,gcov
+    --ignore-errors source,source
+    --filter range
 
     COMMENT "Resetting counters and capturing 0% baseline..."
 )
@@ -26,7 +37,8 @@ add_custom_target(coverage-generate
     COMMAND ${LCOV_PATH} --branch-coverage -a ${LCOV_BASELINE_INFO} -a ${LCOV_TEST_INFO} -o ${LCOV_MERGED_INFO}
 
     # Filter the merged file to remove system and test files 
-    COMMAND ${LCOV_PATH} --branch-coverage --ignore-errors unused -q -r ${LCOV_MERGED_INFO} ${LCOV_SRC_FILTER} -o ${LCOV_OUTPUT_INFO} --ignore-errors mismatch,mismatch
+    COMMAND ${LCOV_PATH} --branch-coverage --ignore-errors unused -q -r ${LCOV_MERGED_INFO} ${LCOV_SRC_FILTER} -o ${LCOV_OUTPUT_INFO}
+    --ignore-errors mismatch,mismatch
 
     COMMENT "Generating, merging, and filtering coverage info..."
 )

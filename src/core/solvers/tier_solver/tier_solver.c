@@ -36,13 +36,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "core/types/base.h"
-#include "core/types/database/database.h"
-#include "core/types/solver/solver.h"
-#ifdef USE_MPI
-#include <mpi.h>
-#endif  // USE_MPI
-
 #include "core/analysis/stat_manager.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
@@ -50,11 +43,20 @@
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_manager.h"
 #include "core/solvers/tier_solver/tier_worker.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/gamesman_error.h"
+#include "core/types/solver/solver.h"
 #include "core/types/solver/solver_config.h"
 #include "core/types/solver/solver_option.h"
 #include "core/types/tier_position_hash_set.h"
+
+#ifdef USE_MPI
+#include <mpi.h>
+
+#include "libs/mpi/xmpi.h"
+#endif  // USE_MPI
 
 enum { kTierSolverNumOptions = 3 };
 

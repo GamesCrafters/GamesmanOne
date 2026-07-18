@@ -47,6 +47,7 @@
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_map.h"
 #include "core/types/tier_hash_set.h"
+#include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 // Read-only reference to the API functions from tier_manager.
@@ -159,6 +160,8 @@ static void Step0_0SetupChildTiers(void) {
     }
     TierHashSetDestroy(&dedup);
 }
+
+static int64_t RoundUpDivide(int64_t n, int64_t d) { return (n + d - 1) / d; }
 
 static int64_t NextMultiple(int64_t n, int64_t mult) {
     return RoundUpDivide(n, mult) * mult;

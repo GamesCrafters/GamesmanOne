@@ -41,6 +41,7 @@
 #include <stddef.h>
 #include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "core/analysis/analysis.h"
@@ -66,6 +67,7 @@
 #include <mpi.h>
 
 #include "core/solvers/tier_solver/tier_mpi.h"
+#include "libs/mpi/xmpi.h"
 #endif  // USE_MPI
 
 enum TierManagementType {
@@ -737,6 +739,15 @@ static bool SolveUpdateTierGraph(Tier solved_tier) {
     return true;
 }
 
+static char *GetTimeStampString(void) {
+    time_t rawtime = time(NULL);
+    static char time_str[26];  // 26 bytes as requested by ctime_r.
+    ctime_r(&rawtime, time_str);
+    time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+
+    return time_str;
+}
+
 static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
                                     bool solved, bool verbose) {
     int64_t tier_size = api_internal->GetTierSize(tier);
@@ -766,14 +777,15 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
             printf("N/A. ");
         }
 
-        ReadOnlyString time_string;
+        char time_string[32];
         if (processed_size > 0) {
             double time_remaining = time_elapsed_seconds /
                                     (double)processed_size *
                                     (double)remaining_size;
-            time_string = SecondsToFormattedTimeString(time_remaining);
+            SecondsToFormattedTimeString(time_remaining, time_string,
+                                         sizeof(time_string));
         } else {
-            time_string = "unknown";
+            sprintf(time_string, "unknown");
         }
         printf("Estimated time remaining: %s.\n", time_string);
     }

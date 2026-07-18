@@ -41,8 +41,8 @@
 #include <string.h>
 
 #include "core/concurrency.h"
-#include "core/misc.h"
 #include "core/types/base.h"
+#include "libs/math/combinatorics.h"
 
 // At most 128 pieces, 128 additional slots for pieces in the unordered section.
 #define STACK_CONFIG_SIZE 256
@@ -281,6 +281,11 @@ static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
     return InitStep1_3SetupUnorderedPieces(context, pieces_init_array);
 }
 
+static int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX / b) return -1;
+    return a * b;
+}
+
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context) {
     int64_t ret = 1;
     int num_total_pieces = context->num_pieces + context->num_unordered_pieces;
@@ -372,6 +377,11 @@ static int64_t SafeRearrange(GenericHashContext *context, const int *config) {
         result = SafeMultiplyNonNegativeInt64(result, combinations);
     }
     return result;
+}
+
+static int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX - b) return -1;
+    return a + b;
 }
 
 // Calculates the size of each valid configuration and add them up to get

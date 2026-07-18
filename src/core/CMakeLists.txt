@@ -17,8 +17,6 @@ if(USE_MPI) # MPI
   target_link_libraries(misc PRIVATE MPI::MPI_C)
 endif()
 target_link_libraries(misc PRIVATE common_flags)
-find_package(ZLIB REQUIRED)
-target_link_libraries(misc PUBLIC ZLIB::ZLIB)
 
 # Add subdirectories for each component
 add_subdirectory(analysis)

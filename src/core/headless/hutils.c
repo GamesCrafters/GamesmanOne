@@ -33,11 +33,11 @@
 
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 #include "core/solvers/solver_manager.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/gamesman_error.h"
+#include "libs/io/xfile.h"
 
 static int MakeDirectory(ReadOnlyString output);
 
@@ -87,6 +87,20 @@ int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
 
 // -----------------------------------------------------------------------------
 
+static int MkdirRecursiveStatusToGamesmanError(MkdirRecursiveStatus status) {
+    switch (status) {
+        case kMkdirRecursiveSuccess:
+            return kNoError;
+        case kMkdirRecursiveErrInvalidParam:
+            return kIllegalArgumentError;
+        case kMkdirRecursiveErrFileSystem:
+            return kFileSystemError;
+        case kMkdirRecursiveErrOom:
+            return kMallocFailureError;
+    }
+    return kNotReachedError;
+}
+
 static int MakeDirectory(ReadOnlyString output) {
     int length = (int)strlen(output);
 
@@ -100,7 +114,7 @@ static int MakeDirectory(ReadOnlyString output) {
         // Find the last '/' in path and try to make directory.
         if (path[i] == '/') {
             path[i] = '\0';
-            ret = MkdirRecursive(path);
+            ret = MkdirRecursiveStatusToGamesmanError(MkdirRecursive(path));
             break;
         }
     }
