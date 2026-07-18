@@ -144,7 +144,7 @@ TEST(PromptForInputTests, TruncatesExcessInput) {
     // Fetching the next line proves the buffer discard logic processed the
     // remainder of line one.
     char next_buffer[16];
-    fgets(next_buffer, sizeof(next_buffer), stdin);
+    ASSERT_EQ(fgets(next_buffer, sizeof(next_buffer), stdin), next_buffer);
     EXPECT_STREQ(next_buffer, "NextLine\n");
 }
 
