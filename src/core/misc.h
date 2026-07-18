@@ -64,9 +64,6 @@ void PrintfAndFlush(const char *format, ...);
  */
 char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max);
 
-/** @brief Return the current system time stamp as a c-string. */
-char *GetTimeStampString(void);
-
 /**
  * @brief Returns the time equivalent to SECONDS seconds in the format of "[YYYY
  * y MM m DD d HH h MM m ]SS s" as a c-string.

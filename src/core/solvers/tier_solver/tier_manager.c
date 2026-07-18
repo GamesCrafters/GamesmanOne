@@ -41,6 +41,7 @@
 #include <stddef.h>
 #include <stdint.h>  // IWYU pragma: keep
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "core/analysis/analysis.h"
@@ -736,6 +737,15 @@ static bool SolveUpdateTierGraph(Tier solved_tier) {
     TierArrayDestroy(&parent_tiers);
 
     return true;
+}
+
+static char *GetTimeStampString(void) {
+    time_t rawtime = time(NULL);
+    static char time_str[26];  // 26 bytes as requested by ctime_r.
+    ctime_r(&rawtime, time_str);
+    time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
+
+    return time_str;
 }
 
 static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,

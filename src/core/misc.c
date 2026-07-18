@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "core/types/base.h"
@@ -77,15 +76,6 @@ char *PromptForInput(ReadOnlyString prompt, char *buf, int length_max) {
     buf[strcspn(buf, "\r\n")] = '\0';
 
     return buf;
-}
-
-char *GetTimeStampString(void) {
-    time_t rawtime = time(NULL);
-    static char time_str[26];  // 26 bytes as requested by ctime_r.
-    ctime_r(&rawtime, time_str);
-    time_str[strlen(time_str) - 1] = '\0';  // Get rid of the trailing '\n'.
-
-    return time_str;
 }
 
 static void AppendIfPositive(char *buf, int val, ReadOnlyString label) {
