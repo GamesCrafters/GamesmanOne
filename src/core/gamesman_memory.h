@@ -187,31 +187,6 @@ void *GamesmanMalloc(size_t size);
 void *GamesmanCallocWhole(size_t nmemb, size_t size);
 
 /**
- * @brief Reallocates the space of size \p old_size and pointed to by \p ptr to
- * be of size at least \p new_size bytes. If Gamesman is built with
- * multithreading enabled, the returned memory address will also be aligned at
- * least to the \c GM_CACHE_LINE_SIZE -byte boundary. The \p ptr must be
- * previously allocated using one of the memory allocation functions provided by
- * the Gamesman memory management system. On success, \p ptr will be deallocated
- * using GamesmanFree and a pointer to the new space is returned. Otherwise, the
- * original space is unmodified and \c NULL is returned. If \p new_size is 0,
- * \c NULL will be returned and the original space will be deallocated. To
- * prevent memory leak, the returned pointer must be deallocated using the
- * GamesmanFree function.
- *
- * @note \p old_size and \p new_size do not have to be multiples of
- * \c GM_CACHE_LINE_SIZE.
- *
- * @param ptr Pointer to the original space allocated by one of the memory
- * allocation functions provided by the Gamesman memory management system.
- * @param old_size Size of the original space in bytes.
- * @param new_size Minimum size of the new space in bytes.
- * @return Pointer to the allocated space, or
- * @return \c NULL on failure.
- */
-void *GamesmanRealloc(void *ptr, size_t old_size, size_t new_size);
-
-/**
  * @brief Returns a space of size at least \p size bytes aligned to the boundary
  * of at least \p alignment bytes. If Gamesman is built with multithreading
  * enabled, the returned memory address will also be aligned at least to the
