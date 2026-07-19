@@ -187,24 +187,6 @@ void *GamesmanMalloc(size_t size);
 void *GamesmanCallocWhole(size_t nmemb, size_t size);
 
 /**
- * @brief Returns a zero-initialized space of size enough to hold at least
- * \p nmemb elements of \p size bytes each. If Gamesman is built with
- * multithreading enabled, each element will also be aligned at least to the
- * \c GM_CACHE_LINE_SIZE -byte boundary. Since this function may be called
- * with or without multithreading enabled, \p size must always be a
- * multiple of \c GM_CACHE_LINE_SIZE or the behavior is undefined. Returns
- * \c NULL on failure. To prevent memory leak, the returned pointer must be
- * deallocated using the GamesmanFree function.
- *
- * @param nmemb Number of elements.
- * @param size Size of each element. Must be a multiple of
- * \c GM_CACHE_LINE_SIZE.
- * @return Pointer to the allocated space, or
- * @return \c NULL on failure.
- */
-void *GamesmanCallocEach(size_t nmemb, size_t size);
-
-/**
  * @brief Reallocates the space of size \p old_size and pointed to by \p ptr to
  * be of size at least \p new_size bytes. If Gamesman is built with
  * multithreading enabled, the returned memory address will also be aligned at
@@ -265,27 +247,6 @@ void *GamesmanAlignedAlloc(size_t alignment, size_t size);
  * @return \c NULL on failure.
  */
 void *GamesmanAlignedCallocWhole(size_t alignment, size_t nmemb, size_t size);
-
-/**
- * @brief Returns a zero-initialized space of size enough to hold at least
- * \p nmemb \p alignemnt -byte aligned elements of \p size bytes each, where
- * \p size is assumed to be a multiple of \p alignment. If Gamesman is built
- * with multithreading enabled, each element will also be aligned at least to
- * the \c GM_CACHE_LINE_SIZE -byte boundary. Since this function may be called
- * with or without multithreading enabled, \p size must always be a multiple of
- * max( \c GM_CACHE_LINE_SIZE , \p alignment ) or the behavior is undefined.
- * Returns \c NULL on failure. To prevent memory leak, the returned pointer must
- * be deallocated using the GamesmanFree function.
- *
- * @param alignment Specifies the alignment in bytes, which must be a positive
- * integral multiple of sizeof(void *) and a power of 2.
- * @param nmemb Number of elements.
- * @param size Size of each element. Must be a multiple of max(
- * \c GM_CACHE_LINE_SIZE , \p alignment ).
- * @return Pointer to the allocated space, or
- * @return \c NULL on failure.
- */
-void *GamesmanAlignedCallocEach(size_t alignment, size_t nmemb, size_t size);
 
 /**
  * @brief Reallocates the space of size \p old_size and pointed to by \p ptr to

@@ -226,18 +226,6 @@ void *GamesmanCallocWhole(size_t nmemb, size_t size) {
 #endif  // _OPENMP
 }
 
-void *GamesmanCallocEach(size_t nmemb, size_t size) {
-    assert(size % GM_CACHE_LINE_SIZE == 0);
-#ifdef _OPENMP
-    // OpenMP is enabled.
-    return omp_aligned_calloc(GM_CACHE_LINE_SIZE, nmemb, size,
-                              omp_default_mem_alloc);
-#else
-    // OpenMP is disabled, use normal calloc.
-    return calloc(nmemb, size);
-#endif  // _OPENMP
-}
-
 void *GamesmanRealloc(void *ptr, size_t old_size, size_t new_size) {
     // Free the original space if new_size is 0.
     if (new_size == 0) {
@@ -303,28 +291,6 @@ void *GamesmanAlignedCallocWhole(size_t alignment, size_t nmemb, size_t size) {
     void *ret = aligned_alloc(alignment, required_size);
     if (ret == NULL) return ret;
     memset(ret, 0, required_size);
-
-    return ret;
-#endif  // _OPENMP
-}
-
-void *GamesmanAlignedCallocEach(size_t alignment, size_t nmemb, size_t size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-    assert(size % alignment == 0);
-    assert(size % GM_CACHE_LINE_SIZE == 0);
-#ifdef _OPENMP
-    // If OpenMP is enabled, align each element to max(GM_CACHE_LINE_SIZE,
-    // alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-
-    return omp_aligned_calloc(alignment, nmemb, size, omp_default_mem_alloc);
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    void *ret = aligned_alloc(alignment, nmemb * size);
-    if (ret == NULL) return ret;
-    memset(ret, 0, nmemb * size);
 
     return ret;
 #endif  // _OPENMP
