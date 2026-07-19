@@ -4,9 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global configuration header.
- * @version 1.1.0
- * @date 2025-04-26
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -40,8 +37,7 @@
 #define GM_DATE "@GamesmanOne_DESCRIPTION@"  // Date
 
 /**
- * @brief Size of each cache line in bytes. Either set at build time or defaults
- * to 64.
+ * @brief Size of each CPU cache line in bytes.
  */
 #define GM_CACHE_LINE_SIZE @GamesmanOne_CACHE_LINE_SIZE@
 
