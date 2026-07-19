@@ -43,7 +43,7 @@
 
 #include "core/types/game/game.h"
 
-#define X86_M128I_HASH_SET_SIZE 32ULL
+#define X86_M128I_HASH_SET_SIZE 16ULL
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/x86_m128i_hash_set.h"
 #include "core/hash/x86_simd_two_piece.h"

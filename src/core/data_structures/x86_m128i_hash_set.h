@@ -2,11 +2,7 @@
  * @file x86_m128i_hash_set.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
- *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Fixed-capacity inear-probing __m128i hash set.
- * @version 1.0.0
- * @date 2025-06-03
- *
+ * @brief Fixed-capacity linear-probing `__m128i` hash set.
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -33,65 +29,73 @@
 #include <string.h>
 
 #ifndef X86_M128I_HASH_SET_SIZE
+/** Default capacity for the hash set if not defined at compile time. */
 #define X86_M128I_HASH_SET_SIZE 1024ULL
 #endif
 
 /**
- * @brief Fixed-capacity linear probing __m128i hash set. The capacity of the
- * hash set in each translation unit can be defined at compile time by defining
- * X86_M128I_HASH_SET_SIZE to a positive integer value before including this
- * header. If X86_M128I_HASH_SET_SIZE is not defined at compile time, a default
- * capacity of 1024 will be used. X86_M128I_HASH_SET_SIZE, whether defined or
- * not before the inclusion of this header, will become undefined after the
- * inclusion.
+ * @brief Fixed-capacity linear probing `__m128i` hash set.
  *
- * @example The following example shows how to use a hash set with a fixed
- * capacity equal to 32:
+ * @details The capacity of the hash set in each translation unit can be defined
+ * at compile time by defining `X86_M128I_HASH_SET_SIZE` to a positive integer
+ * value before including this header. If `X86_M128I_HASH_SET_SIZE` is not
+ * defined at compile time, a default capacity of 1024 will be used.
+ * `X86_M128I_HASH_SET_SIZE`, whether defined or not before the inclusion of
+ * this header, will become undefined after the inclusion.
  *
- *     #define X86_M128I_HASH_SET_SIZE 32ULL
- *     #include "core/data_structures/x86_m128i_hash_set.h"
- *     void foo(void) {
- *         X86M128iHashSet set;
- *         X86M128iHashSetInit(&set);
- *         // Add elements, test contains...
- *         // No dynamic allocation and no need to deallocate set
- *     }
+ * Example usage:
+ * ```c
+ * #define X86_M128I_HASH_SET_SIZE 32ULL
+ * #include "core/data_structures/x86_m128i_hash_set.h"
+ * void foo(void) {
+ *     X86M128iHashSet set;
+ *     X86M128iHashSetInit(&set);
+ *     // Add elements, test contains...
+ *     // No dynamic allocation and no need to deallocate set
+ * }
+ * ```
  */
 typedef struct {
     /** Elements in the set. */
     __m128i keys[X86_M128I_HASH_SET_SIZE];
 
-    /** Bucket state: 0 (empty) or 1 (occupied) */
+    /** Bucket state: 0 (empty) or 1 (occupied). */
     uint8_t state[X86_M128I_HASH_SET_SIZE];
 
     /** Number of elements in the set. */
     int size;
 } X86M128iHashSet;
 
-// This function is adapted from Google CityHash
-// Copyright (c) 2011 Google, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-// CityHash, by Geoff Pike and Jyrki Alakuijala
-//
-// http://code.google.com/p/cityhash/
+/**
+ * Copyright (c) 2011 Google, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * CityHash, by Geoff Pike and Jyrki Alakuijala
+ * http://code.google.com/p/cityhash/
+ *
+ * @brief Hashes a 128-bit integer into a 64-bit integer.
+ *
+ * @param[in] v The 128-bit integer to hash.
+ *
+ * @returns The resulting 64-bit hash value.
+ */
 static inline uint64_t X86M128iHashSetInternalHash128to64(__m128i v) {
     alignas(16) uint64_t bits[2];
     _mm_store_si128((__m128i *)bits, v);
@@ -107,16 +111,28 @@ static inline uint64_t X86M128iHashSetInternalHash128to64(__m128i v) {
     return b;
 }
 
-// https://stackoverflow.com/questions/26880863/testing-equality-between-two-m128i-variables
+/**
+ * @copyright Adapted from Stack Overflow user responses.
+ * Source:
+ * https://stackoverflow.com/questions/26880863/testing-equality-between-two-m128i-variables
+ *
+ * @brief Tests two `__m128i` variables for equality.
+ *
+ * @param[in] a The first `__m128i` variable.
+ * @param[in] b The second `__m128i` variable.
+ *
+ * @retval true If `a` and `b` are strictly equal.
+ * @retval false If `a` and `b` are not equal.
+ */
 static inline bool X86M128iHashSetInternalM128Equal(__m128i a, __m128i b) {
     __m128i neq = _mm_xor_si128(a, b);
     return _mm_test_all_zeros(neq, neq);
 }
 
 /**
- * @brief Initializes the given hash set \p hs to an empty set.
+ * @brief Initializes the given hash set `hs` to an empty set.
  *
- * @param hs Hash set to initialize.
+ * @param[out] hs Hash set to initialize.
  */
 static inline void X86M128iHashSetInit(X86M128iHashSet *hs) {
     hs->size = 0;
@@ -124,15 +140,17 @@ static inline void X86M128iHashSetInit(X86M128iHashSet *hs) {
 }
 
 /**
- * @brief Adds \p key as a new key in \p hs and returns \c true , or does
- * nothing and returns \c false if \p hs already contains \p key . If \p hs
- * already contains \c X86_M128I_HASH_SET_SIZE elements (1024 by default), the
- * behavior is undefined.
+ * @brief Adds `key` as a new key in `hs`.
  *
- * @param hs Destination hash set.
- * @param key Key to add.
- * @return \c true if \p key is added as a new key, or
- * @return \c false if \p hs already contains \p key .
+ * @details Does nothing and returns `false` if `hs` already contains `key`. If
+ * `hs` already contains `X86_M128I_HASH_SET_SIZE` elements (1024 by default),
+ * the behavior is undefined.
+ *
+ * @param[in,out] hs Destination hash set.
+ * @param[in] key Key to add to the hash set.
+ *
+ * @retval true If `key` is successfully added as a new key.
+ * @retval false If `hs` already contains `key`.
  */
 static inline bool X86M128iHashSetAdd(X86M128iHashSet *hs, __m128i key) {
     uint64_t capacity_mask = X86_M128I_HASH_SET_SIZE - 1ULL;
@@ -149,20 +167,33 @@ static inline bool X86M128iHashSetAdd(X86M128iHashSet *hs, __m128i key) {
 }
 
 /**
- * @brief Tests if \p hs contains \p key .
+ * @brief Tests if `hs` contains `key`.
  *
- * @param hs Hash set.
- * @param key Key to test.
- * @return \c true if \p hs contains \c key ,
- * @return \c false otherwise.
+ * @param[in] hs Hash set to evaluate.
+ * @param[in] key Key to look for.
+ *
+ * @retval true If `hs` contains `key`.
+ * @retval false If `hs` does not contain `key`.
  */
 static inline bool X86M128iHashSetContains(const X86M128iHashSet *hs,
                                            __m128i key) {
     uint64_t capacity_mask = X86_M128I_HASH_SET_SIZE - 1ULL;
-    uint64_t idx = X86M128iHashSetInternalHash128to64(key) & capacity_mask;
+    uint64_t start_idx =
+        X86M128iHashSetInternalHash128to64(key) & capacity_mask;
+    uint64_t idx = start_idx;
+
     while (hs->state[idx]) {
-        if (X86M128iHashSetInternalM128Equal(hs->keys[idx], key)) return true;
+        if (X86M128iHashSetInternalM128Equal(hs->keys[idx], key)) {
+            return true;
+        }
+
         idx = (idx + 1ULL) & capacity_mask;
+
+        // Break to avoid an infinite loop if the set is completely full
+        // and we have checked every single bucket.
+        if (idx == start_idx) {
+            break;
+        }
     }
 
     return false;
