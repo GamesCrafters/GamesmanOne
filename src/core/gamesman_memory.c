@@ -296,44 +296,6 @@ void *GamesmanAlignedCallocWhole(size_t alignment, size_t nmemb, size_t size) {
 #endif  // _OPENMP
 }
 
-void *GamesmanAlignedRealloc(size_t alignment, void *ptr, size_t old_size,
-                             size_t new_size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-
-    // Free the original space if new_size is 0.
-    if (new_size == 0) {
-        GamesmanFree(ptr);
-        return NULL;
-    }
-
-    // Perform plain allocation if ptr is NULL.
-    if (ptr == NULL) return GamesmanAlignedAlloc(alignment, new_size);
-
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-    size_t required_size = NextMultiple(new_size, alignment);
-    void *ret =
-        omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
-    if (ret == NULL) return ret;
-    memcpy(ret, ptr, (old_size < new_size) ? old_size : new_size);
-    omp_free(ptr, omp_default_mem_alloc);
-
-    return ret;
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    size_t required_size = NextMultiple(new_size, alignment);
-    void *ret = aligned_alloc(alignment, required_size);
-    if (ret == NULL) return ret;
-    memcpy(ret, ptr, (old_size < new_size) ? old_size : new_size);
-    free(ptr);
-
-    return ret;
-#endif  // _OPENMP
-}
-
 void GamesmanFree(void *ptr) {
 #ifdef _OPENMP
     omp_free(ptr, omp_default_mem_alloc);
