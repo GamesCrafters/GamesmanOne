@@ -76,7 +76,7 @@ static bool IsValidAlignment(size_t alignment) {
 
     // Alignment must be a power of 2; this formula works because we already
     // verified alignment != 0
-    if (alignment & (alignment - 1) != 0) {
+    if ((alignment & (alignment - 1)) != 0) {
         return false;
     }
 
