@@ -28,6 +28,7 @@
 #                         tests for filtering. If omitted, defaults to "unit" and 
 #                         the name of the <library_to_test>.
 #   TIMEOUT             - (Optional) A timeout value in seconds applied to the tests.
+#                         If omitted, defaults to 60.
 #
 # Example:
 #   add_library_test(NetworkLibTests NetworkLib
@@ -94,9 +95,11 @@ function(add_library_test target_name library_to_test)
         list(APPEND TEST_PROPERTIES LABELS "unit" LABELS "${library_to_test}")
     endif()
 
-    # Apply timeout if provided
+    # Apply provided or default timeout
     if(ARG_TIMEOUT)
         list(APPEND TEST_PROPERTIES TIMEOUT ${ARG_TIMEOUT})
+    else()
+        list(APPEND TEST_PROPERTIES TIMEOUT 60) # 60 seconds
     endif()
 
     # 6. Discover tests and apply the dynamically built properties
