@@ -63,10 +63,10 @@ struct GamesmanAllocator {
     ConcurrentSizeType ref_count;
 };
 
-static bool IsValidAlignment(size_t alignment) {
+static bool IsValidAlignmentForAllocatorOptions(size_t alignment) {
     // Alignment must be strictly positive
     if (alignment == 0) {
-        return false;
+        return true;
     }
 
     // Alignment must be a multiple of pointer size
@@ -86,7 +86,7 @@ static bool IsValidAlignment(size_t alignment) {
 GamesmanAllocator *GamesmanAllocatorCreate(
     const GamesmanAllocatorOptions *options) {
     // Verify alignment if provided by the caller
-    if (options && !IsValidAlignment(options->alignment)) {
+    if (options && !IsValidAlignmentForAllocatorOptions(options->alignment)) {
         return NULL;
     }
 
