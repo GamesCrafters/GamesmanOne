@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Concurrency convenience library (Header-Only).
+ * @brief Header-only concurrency convenience library.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,28 +30,47 @@
 #include <stdint.h>
 
 #ifdef _OPENMP
-
 #include <omp.h>
+#ifdef __cplusplus
+#include <atomic>
+#define ATOMIC_NS std::
+#else  // Compiling as C
 #include <stdatomic.h>
+#define ATOMIC_NS
+#endif  // __cplusplus
+#endif  // _OPENMP
 
-#define PRAGMA(X) _Pragma(#X)
-#define PRAGMA_OMP(expression) PRAGMA(omp expression)
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
+#ifdef _OPENMP
+
+#ifdef __cplusplus
+typedef std::atomic<bool> ConcurrentBool;
+typedef std::atomic<int> ConcurrentInt;
+typedef std::atomic<int64_t> ConcurrentInt64;
+typedef std::atomic<size_t> ConcurrentSizeType;
+#else   // Compiling as C
 typedef atomic_bool ConcurrentBool;
 typedef atomic_int ConcurrentInt;
 typedef _Atomic int64_t ConcurrentInt64;
 typedef atomic_size_t ConcurrentSizeType;
+#endif  // __cplusplus
+
+#define PRAGMA(X) _Pragma(#X)
+#define PRAGMA_OMP(expression) PRAGMA(omp expression)
 
 /**
  * @brief Memory order for API of this library.
  */
 typedef enum {
-    kConcurrencyMemoryOrderRelaxed = memory_order_relaxed,
-    kConcurrencyMemoryOrderConsume = memory_order_consume,
-    kConcurrencyMemoryOrderAcquire = memory_order_acquire,
-    kConcurrencyMemoryOrderRelease = memory_order_release,
-    kConcurrencyMemoryOrderAcqRel = memory_order_acq_rel,
-    kConcurrencyMemoryOrderSeqCst = memory_order_seq_cst,
+    kConcurrencyMemoryOrderRelaxed = ATOMIC_NS memory_order_relaxed,
+    kConcurrencyMemoryOrderConsume = ATOMIC_NS memory_order_consume,
+    kConcurrencyMemoryOrderAcquire = ATOMIC_NS memory_order_acquire,
+    kConcurrencyMemoryOrderRelease = ATOMIC_NS memory_order_release,
+    kConcurrencyMemoryOrderAcqRel = ATOMIC_NS memory_order_acq_rel,
+    kConcurrencyMemoryOrderSeqCst = ATOMIC_NS memory_order_seq_cst,
 } ConcurrencyMemoryOrder;
 
 #else  // _OPENMP not defined.
@@ -90,7 +109,7 @@ typedef enum {
  */
 static inline void ConcurrentBoolInit(ConcurrentBool *cb, bool val) {
 #ifdef _OPENMP
-    atomic_init(cb, val);
+    ATOMIC_NS atomic_init(cb, val);
 #else
     *cb = val;
 #endif
@@ -106,7 +125,7 @@ static inline void ConcurrentBoolInit(ConcurrentBool *cb, bool val) {
  */
 static inline bool ConcurrentBoolLoad(const ConcurrentBool *cb) {
 #ifdef _OPENMP
-    return atomic_load(cb);
+    return ATOMIC_NS atomic_load(cb);
 #else
     return *cb;
 #endif
@@ -119,7 +138,7 @@ static inline bool ConcurrentBoolLoad(const ConcurrentBool *cb) {
 static inline bool ConcurrentBoolLoadExplicit(const ConcurrentBool *cb,
                                               ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_load_explicit(cb, order);
+    return ATOMIC_NS atomic_load_explicit(cb, order);
 #else
     (void)order;
     return *cb;
@@ -136,7 +155,7 @@ static inline bool ConcurrentBoolLoadExplicit(const ConcurrentBool *cb,
  */
 static inline void ConcurrentBoolStore(ConcurrentBool *cb, bool val) {
 #ifdef _OPENMP
-    atomic_store(cb, val);
+    ATOMIC_NS atomic_store(cb, val);
 #else
     *cb = val;
 #endif
@@ -149,7 +168,7 @@ static inline void ConcurrentBoolStore(ConcurrentBool *cb, bool val) {
 static inline void ConcurrentBoolStoreExplicit(ConcurrentBool *cb, bool val,
                                                ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    atomic_store_explicit(cb, val, order);
+    ATOMIC_NS atomic_store_explicit(cb, val, order);
 #else
     (void)order;
     *cb = val;
@@ -168,7 +187,7 @@ static inline void ConcurrentBoolStoreExplicit(ConcurrentBool *cb, bool val,
  */
 static inline void ConcurrentIntInit(ConcurrentInt *ci, int val) {
 #ifdef _OPENMP
-    atomic_init(ci, val);
+    ATOMIC_NS atomic_init(ci, val);
 #else
     *ci = val;
 #endif
@@ -184,7 +203,7 @@ static inline void ConcurrentIntInit(ConcurrentInt *ci, int val) {
  */
 static inline int ConcurrentIntLoad(const ConcurrentInt *ci) {
 #ifdef _OPENMP
-    return atomic_load(ci);
+    return ATOMIC_NS atomic_load(ci);
 #else
     return *ci;
 #endif
@@ -197,7 +216,7 @@ static inline int ConcurrentIntLoad(const ConcurrentInt *ci) {
 static inline int ConcurrentIntLoadExplicit(const ConcurrentInt *ci,
                                             ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_load_explicit(ci, order);
+    return ATOMIC_NS atomic_load_explicit(ci, order);
 #else
     (void)order;
     return *ci;
@@ -214,7 +233,7 @@ static inline int ConcurrentIntLoadExplicit(const ConcurrentInt *ci,
  */
 static inline void ConcurrentIntStore(ConcurrentInt *ci, int val) {
 #ifdef _OPENMP
-    atomic_store(ci, val);
+    ATOMIC_NS atomic_store(ci, val);
 #else
     *ci = val;
 #endif
@@ -227,7 +246,7 @@ static inline void ConcurrentIntStore(ConcurrentInt *ci, int val) {
 static inline void ConcurrentIntStoreExplicit(ConcurrentInt *ci, int val,
                                               ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    atomic_store_explicit(ci, val, order);
+    ATOMIC_NS atomic_store_explicit(ci, val, order);
 #else
     (void)order;
     *ci = val;
@@ -246,9 +265,9 @@ static inline void ConcurrentIntStoreExplicit(ConcurrentInt *ci, int val,
  */
 static inline int ConcurrentIntMax(ConcurrentInt *ci, int val) {
 #ifdef _OPENMP
-    int old = atomic_load(ci);
+    int old = ATOMIC_NS atomic_load(ci);
     while (val > old) {
-        if (atomic_compare_exchange_weak(ci, &old, val)) {
+        if (ATOMIC_NS atomic_compare_exchange_weak(ci, &old, val)) {
             break;
         }
     }
@@ -268,10 +287,10 @@ static inline int ConcurrentIntMaxExplicit(ConcurrentInt *ci, int val,
                                            ConcurrencyMemoryOrder success,
                                            ConcurrencyMemoryOrder failure) {
 #ifdef _OPENMP
-    int old = atomic_load_explicit(ci, failure);
+    int old = ATOMIC_NS atomic_load_explicit(ci, failure);
     while (val > old) {
-        if (atomic_compare_exchange_weak_explicit(ci, &old, val, success,
-                                                  failure)) {
+        if (ATOMIC_NS atomic_compare_exchange_weak_explicit(ci, &old, val,
+                                                            success, failure)) {
             break;
         }
     }
@@ -291,7 +310,7 @@ static inline int ConcurrentIntMaxExplicit(ConcurrentInt *ci, int val,
 
 static inline void ConcurrentInt64Init(ConcurrentInt64 *ci64, int64_t val) {
 #ifdef _OPENMP
-    atomic_init(ci64, val);
+    ATOMIC_NS atomic_init(ci64, val);
 #else
     *ci64 = val;
 #endif
@@ -299,7 +318,7 @@ static inline void ConcurrentInt64Init(ConcurrentInt64 *ci64, int64_t val) {
 
 static inline int64_t ConcurrentInt64Load(const ConcurrentInt64 *ci64) {
 #ifdef _OPENMP
-    return atomic_load(ci64);
+    return ATOMIC_NS atomic_load(ci64);
 #else
     return *ci64;
 #endif
@@ -308,7 +327,7 @@ static inline int64_t ConcurrentInt64Load(const ConcurrentInt64 *ci64) {
 static inline int64_t ConcurrentInt64LoadExplicit(
     const ConcurrentInt64 *ci64, ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_load_explicit(ci64, order);
+    return ATOMIC_NS atomic_load_explicit(ci64, order);
 #else
     (void)order;
     return *ci64;
@@ -317,7 +336,7 @@ static inline int64_t ConcurrentInt64LoadExplicit(
 
 static inline void ConcurrentInt64Store(ConcurrentInt64 *ci64, int64_t val) {
 #ifdef _OPENMP
-    atomic_store(ci64, val);
+    ATOMIC_NS atomic_store(ci64, val);
 #else
     *ci64 = val;
 #endif
@@ -327,7 +346,7 @@ static inline void ConcurrentInt64StoreExplicit(ConcurrentInt64 *ci64,
                                                 int64_t val,
                                                 ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    atomic_store_explicit(ci64, val, order);
+    ATOMIC_NS atomic_store_explicit(ci64, val, order);
 #else
     (void)order;
     *ci64 = val;
@@ -346,7 +365,7 @@ static inline void ConcurrentInt64StoreExplicit(ConcurrentInt64 *ci64,
  */
 static inline void ConcurrentSizeTypeInit(ConcurrentSizeType *cs, size_t val) {
 #ifdef _OPENMP
-    atomic_init(cs, val);
+    ATOMIC_NS atomic_init(cs, val);
 #else
     *cs = val;
 #endif  // _OPENMP
@@ -362,7 +381,7 @@ static inline void ConcurrentSizeTypeInit(ConcurrentSizeType *cs, size_t val) {
  */
 static inline size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs) {
 #ifdef _OPENMP
-    return atomic_load(cs);
+    return ATOMIC_NS atomic_load(cs);
 #else
     return *cs;
 #endif  // _OPENMP
@@ -375,7 +394,7 @@ static inline size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs) {
 static inline size_t ConcurrentSizeTypeLoadExplicit(
     const ConcurrentSizeType *cs, ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_load_explicit(cs, order);
+    return ATOMIC_NS atomic_load_explicit(cs, order);
 #else
     (void)order;
     return *cs;
@@ -396,10 +415,10 @@ static inline size_t ConcurrentSizeTypeLoadExplicit(
 static inline bool ConcurrentSizeTypeSubtractIfGreaterEqual(
     ConcurrentSizeType *cs, size_t val) {
 #ifdef _OPENMP
-    size_t cur_size = atomic_load(cs);
+    size_t cur_size = ATOMIC_NS atomic_load(cs);
     while (cur_size >= val) {
-        bool success =
-            atomic_compare_exchange_weak(cs, &cur_size, cur_size - val);
+        bool success = ATOMIC_NS atomic_compare_exchange_weak(cs, &cur_size,
+                                                              cur_size - val);
         if (success) return true;
     }
     return false;
@@ -419,9 +438,9 @@ static inline bool ConcurrentSizeTypeSubtractIfGreaterEqualExplicit(
     ConcurrentSizeType *cs, size_t val, ConcurrencyMemoryOrder success,
     ConcurrencyMemoryOrder failure) {
 #ifdef _OPENMP
-    size_t cur_size = atomic_load_explicit(cs, failure);
+    size_t cur_size = ATOMIC_NS atomic_load_explicit(cs, failure);
     while (cur_size >= val) {
-        bool op_success = atomic_compare_exchange_weak_explicit(
+        bool op_success = ATOMIC_NS atomic_compare_exchange_weak_explicit(
             cs, &cur_size, cur_size - val, success, failure);
         if (op_success) return true;
     }
@@ -446,7 +465,7 @@ static inline bool ConcurrentSizeTypeSubtractIfGreaterEqualExplicit(
  */
 static inline size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
 #ifdef _OPENMP
-    return atomic_fetch_add(cs, val);
+    return ATOMIC_NS atomic_fetch_add(cs, val);
 #else
     size_t ret = *cs;
     *cs += val;
@@ -461,7 +480,7 @@ static inline size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
 static inline size_t ConcurrentSizeTypeAddExplicit(
     ConcurrentSizeType *cs, size_t val, ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_fetch_add_explicit(cs, val, order);
+    return ATOMIC_NS atomic_fetch_add_explicit(cs, val, order);
 #else
     (void)order;
     size_t ret = *cs;
@@ -483,7 +502,7 @@ static inline size_t ConcurrentSizeTypeAddExplicit(
 static inline size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs,
                                                 size_t val) {
 #ifdef _OPENMP
-    return atomic_fetch_sub(cs, val);
+    return ATOMIC_NS atomic_fetch_sub(cs, val);
 #else
     size_t ret = *cs;
     *cs -= val;
@@ -498,7 +517,7 @@ static inline size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs,
 static inline size_t ConcurrentSizeTypeSubtractExplicit(
     ConcurrentSizeType *cs, size_t val, ConcurrencyMemoryOrder order) {
 #ifdef _OPENMP
-    return atomic_fetch_sub_explicit(cs, val, order);
+    return ATOMIC_NS atomic_fetch_sub_explicit(cs, val, order);
 #else
     (void)order;
     size_t ret = *cs;
@@ -538,5 +557,9 @@ static inline int ConcurrencyGetOmpThreadId(void) {
     return 0;
 #endif  // _OPENMP
 }
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
 
 #endif  // GAMESMANONE_CORE_CONCURRENCY_H_
