@@ -31,7 +31,7 @@ add_custom_target(coverage-clean
 # Captures new data and merges with baseline after tests run
 add_custom_target(coverage-generate
     # Capture the actual test execution data
-    COMMAND ${LCOV_PATH} --branch-coverage -q -c -d ${CMAKE_BINARY_DIR} -o ${LCOV_TEST_INFO} --ignore-errors mismatch,mismatch
+    COMMAND ${LCOV_PATH} --branch-coverage -q -c -d ${CMAKE_BINARY_DIR} -o ${LCOV_TEST_INFO} --ignore-errors mismatch,mismatch --rc geninfo_unexecuted_blocks=1
 
     # Merge the 0% baseline with the actual test data
     COMMAND ${LCOV_PATH} --branch-coverage -a ${LCOV_BASELINE_INFO} -a ${LCOV_TEST_INFO} -o ${LCOV_MERGED_INFO}
