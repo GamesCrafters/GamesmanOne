@@ -108,6 +108,16 @@ else()
   set(GamesmanOne_CACHE_LINE_SIZE 64) # fallback
 endif()
 
+# Detect system processor count
+include(ProcessorCount)
+ProcessorCount(GamesmanOne_NUM_CPUS)
+if(GamesmanOne_NUM_CPUS GREATER 0)
+  message(STATUS "Automatically detected processor count: ${GamesmanOne_NUM_CPUS}.")
+else()
+  message(WARNING "Failed to automatically detect processor count, falling back to 1.")
+  set(GamesmanOne_NUM_CPUS 1)
+endif()
+
 # Check and enable link-time optimizations for "Release" builds if possible.
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_support_error)
