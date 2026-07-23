@@ -49,10 +49,6 @@
 #endif  // __cplusplus
 #endif  // _OPENMP
 
-#ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
-
 #ifdef _OPENMP
 
 #ifdef __cplusplus
@@ -76,7 +72,26 @@ typedef std::atomic<int64_t> ConcurrentInt64;
  * @brief Concurrent size type.
  */
 typedef std::atomic<size_t> ConcurrentSizeType;
-#else   // Compiling as C
+
+/**
+ * @brief Memory order for the API of this library (C++).
+ */
+using ConcurrencyMemoryOrder = std::memory_order;
+
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderRelaxed =
+    std::memory_order_relaxed;
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderConsume =
+    std::memory_order_consume;
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderAcquire =
+    std::memory_order_acquire;
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderRelease =
+    std::memory_order_release;
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderAcqRel =
+    std::memory_order_acq_rel;
+constexpr ConcurrencyMemoryOrder kConcurrencyMemoryOrderSeqCst =
+    std::memory_order_seq_cst;
+
+#else  // Compiling as C
 
 /**
  * @brief Concurrent boolean type.
@@ -97,21 +112,6 @@ typedef _Atomic int64_t ConcurrentInt64;
  * @brief Concurrent size type.
  */
 typedef atomic_size_t ConcurrentSizeType;
-#endif  // __cplusplus
-
-/**
- * @brief Wrapper for the `_Pragma` operator.
- *
- * @param[in] X The expression to pass to `_Pragma`.
- */
-#define PRAGMA(X) _Pragma(#X)
-
-/**
- * @brief Convenience macro for OpenMP pragmas.
- *
- * @param[in] expression The OpenMP expression.
- */
-#define PRAGMA_OMP(expression) PRAGMA(omp expression)
 
 /**
  * @brief Memory order for the API of this library.
@@ -135,6 +135,22 @@ typedef enum {
     /** Sequentially consistent operation. */
     kConcurrencyMemoryOrderSeqCst = ATOMIC_NS memory_order_seq_cst,
 } ConcurrencyMemoryOrder;
+
+#endif  // __cplusplus
+
+/**
+ * @brief Wrapper for the `_Pragma` operator.
+ *
+ * @param[in] X The expression to pass to `_Pragma`.
+ */
+#define PRAGMA(X) _Pragma(#X)
+
+/**
+ * @brief Convenience macro for OpenMP pragmas.
+ *
+ * @param[in] expression The OpenMP expression.
+ */
+#define PRAGMA_OMP(expression) PRAGMA(omp expression)
 
 #else  // _OPENMP not defined.
 
@@ -777,9 +793,5 @@ static inline int ConcurrencyGetOmpThreadId(void) {
     return 0;
 #endif  // _OPENMP
 }
-
-#ifdef __cplusplus
-}
-#endif  // __cplusplus
 
 #endif  // GAMESMANONE_CORE_CONCURRENCY_H_
