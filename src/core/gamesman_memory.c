@@ -64,7 +64,7 @@ struct GamesmanAllocator {
 };
 
 static bool IsValidAlignmentForAllocatorOptions(size_t alignment) {
-    // Alignment must be strictly positive
+    // Explicitly allow the case where alignment == 0 as default
     if (alignment == 0) {
         return true;
     }
