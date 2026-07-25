@@ -736,7 +736,9 @@ TEST(GamesmanAlignedAllocTest, ValidAlignmentReturnsCorrectlyAlignedPointer) {
     GamesmanFree(ptr);
 }
 
-// Verifies that a valid alignment smaller than the cache line is upgraded.
+#ifdef _OPENMP
+// Verifies that a valid alignment smaller than the cache line is upgraded when
+// compiled with multithreading.
 TEST(GamesmanAlignedAllocTest, SubCacheLineAlignmentUpgradesToCacheLine) {
     // Requesting a valid, small power-of-two alignment (e.g., 8 or 16 bytes).
     // While valid from a C-standard perspective, the library specification
@@ -770,6 +772,7 @@ TEST(GamesmanAlignedAllocTest, SubCacheLineAlignmentUpgradesToCacheLine) {
 
     GamesmanFree(ptr);
 }
+#endif  // _OPENMP
 
 // Verifies that providing an alignment that is not a power of 2 (e.g., 24)
 // returns NULL.
