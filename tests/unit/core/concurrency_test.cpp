@@ -7,11 +7,11 @@
 #include <limits>
 #include <vector>
 
-#ifdef _OPENMP  // Tests for multi-threaded build
+extern "C" {
+#include "config.h"
+}
 
-#ifndef GM_NUM_CPUS
-#define GM_NUM_CPUS 1
-#endif  // GM_NUM_CPUS
+#ifdef _OPENMP  // Tests for multi-threaded build
 
 // ============================== ConcurrentBool ==============================
 
@@ -53,8 +53,8 @@ TEST(ConcurrentBoolTest, MultithreadedVisibility) {
                      << GM_NUM_CPUS << " are available. Skipping.";
     }
 
-    ConcurrentBool readyFlag;
-    ConcurrentBoolInit(&readyFlag, false);
+    ConcurrentBool ready_flag;
+    ConcurrentBoolInit(&ready_flag, false);
 
     ConcurrentBool timeoutFlag;
     ConcurrentBoolInit(&timeoutFlag, false);
@@ -63,7 +63,7 @@ TEST(ConcurrentBoolTest, MultithreadedVisibility) {
 #pragma omp parallel num_threads(GM_NUM_CPUS)
     {
         if (omp_get_thread_num() == 0) {
-            ConcurrentBoolStoreExplicit(&readyFlag, true,
+            ConcurrentBoolStoreExplicit(&ready_flag, true,
                                         kConcurrencyMemoryOrderRelease);
         } else {
             int attempts = 0;
@@ -71,7 +71,7 @@ TEST(ConcurrentBoolTest, MultithreadedVisibility) {
             // A bounded loop is used here to prevent the test suite from
             // hanging infinitely if atomic synchronization fails.
             while (!ConcurrentBoolLoadExplicit(
-                       &readyFlag, kConcurrencyMemoryOrderAcquire) &&
+                       &ready_flag, kConcurrencyMemoryOrderAcquire) &&
                    attempts < max_attempts) {
                 attempts++;
             }
@@ -83,7 +83,7 @@ TEST(ConcurrentBoolTest, MultithreadedVisibility) {
     }
 
     EXPECT_FALSE(ConcurrentBoolLoad(&timeoutFlag));
-    EXPECT_TRUE(ConcurrentBoolLoad(&readyFlag));
+    EXPECT_TRUE(ConcurrentBoolLoad(&ready_flag));
 }
 
 // Verifies that multiple threads concurrently storing the same boolean value do

@@ -24,6 +24,8 @@
 #ifndef GAMESMANONE_CONFIG_H_
 #define GAMESMANONE_CONFIG_H_
 
+#include <assert.h>
+
 // clang-format off
 
 /**
@@ -40,5 +42,23 @@
  * @brief Size of each CPU cache line in bytes.
  */
 #define GM_CACHE_LINE_SIZE @GamesmanOne_CACHE_LINE_SIZE@
+
+// clang-format on
+static_assert(GM_CACHE_LINE_SIZE > 0,
+              "Invalid GM_CACHE_LINE_SIZE detected. This is very likely the "
+              "result of a bug in the cache line size detection program.");
+// clang-format off
+
+/**
+ * @brief Number of logical CPUs available.
+ */
+#define GM_NUM_CPUS @GamesmanOne_NUM_CPUS@
+
+// clang-format on
+static_assert(
+    GM_NUM_CPUS > 0,
+    "Invalid GM_NUM_CPUS detected. This is very likely the result "
+    "of a bug in the CPU count detection step during project configuration.");
+// clang-format off
 
 #endif  // GAMESMANONE_CONFIG_H_
