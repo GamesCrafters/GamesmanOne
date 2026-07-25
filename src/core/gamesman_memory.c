@@ -25,20 +25,19 @@
  */
 #include "core/gamesman_memory.h"
 
-#include <assert.h>
 #include <lzma.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "config.h"  // IWYU pragma: keep
 
 #ifdef _OPENMP
 #include <omp.h>
+#include <string.h>
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
