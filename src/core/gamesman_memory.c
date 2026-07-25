@@ -166,6 +166,37 @@ static void WriteHeader(void *dest, const AllocHeader *header) {
     *((AllocHeader *)dest) = *header;
 }
 
+// Assumes alignment is valid.
+static void *UnsafeAlignedAlloc(size_t alignment, size_t size) {
+#ifdef _OPENMP
+    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
+    if (GM_CACHE_LINE_SIZE > alignment) {
+        alignment = GM_CACHE_LINE_SIZE;
+    }
+
+    // Check for alignment padding overflow
+    if (size > SIZE_MAX - (alignment - 1)) {
+        return NULL;
+    }
+
+    // omp_aligned_alloc requires allocation size to be a multiple of alignment
+    size_t required_size = NextMultiple(size, alignment);
+
+    return omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
+#else
+    // Check for alignment padding overflow
+    if (size > SIZE_MAX - (alignment - 1)) {
+        return NULL;
+    }
+
+    // If OpenMP is disabled, use normal aligned_alloc, which requires
+    // allocation size to be a multiple of alignment
+    size_t required_size = NextMultiple(size, alignment);
+
+    return aligned_alloc(alignment, required_size);
+#endif  // _OPENMP
+}
+
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
@@ -201,7 +232,7 @@ void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // the specified size and a header.
     void *space;
     if (allocator->alignment) {  // Alignment amount specified.
-        space = GamesmanAlignedAlloc(allocator->alignment, alloc_size);
+        space = UnsafeAlignedAlloc(allocator->alignment, alloc_size);
     } else {  // Use default alignment.
         space = GamesmanMalloc(alloc_size);
     }
@@ -319,33 +350,7 @@ void *GamesmanAlignedAlloc(size_t alignment, size_t size) {
         return NULL;
     }
 
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) {
-        alignment = GM_CACHE_LINE_SIZE;
-    }
-
-    // Check for alignment padding overflow
-    if (size > SIZE_MAX - (alignment - 1)) {
-        return NULL;
-    }
-
-    // omp_aligned_alloc requires allocation size to be a multiple of alignment
-    size_t required_size = NextMultiple(size, alignment);
-
-    return omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
-#else
-    // Check for alignment padding overflow
-    if (size > SIZE_MAX - (alignment - 1)) {
-        return NULL;
-    }
-
-    // If OpenMP is disabled, use normal aligned_alloc, which requires
-    // allocation size to be a multiple of alignment
-    size_t required_size = NextMultiple(size, alignment);
-
-    return aligned_alloc(alignment, required_size);
-#endif  // _OPENMP
+    return UnsafeAlignedAlloc(alignment, size);
 }
 
 void GamesmanFree(void *ptr) {
