@@ -1,10 +1,20 @@
 add_subdirectory(data_structures)
+
+add_library_test(gamesman_memory_test gamesman_memory
+    SOURCES
+    gamesman_memory_test.cpp
+    EXTRA_LIBS
+    $<$<BOOL:${OpenMP_FOUND}>:OpenMP::OpenMP_CXX>
+)
+
 add_library_test(misc_test misc
     SOURCES
     misc_test.cpp
 )
 
 # Tests for concurrency.h
+# TODO: move these tests to a different category and keep unit tests
+# deterministic.
 add_executable(gamesman_concurrency_test concurrency_test.cpp)
 target_link_libraries(gamesman_concurrency_test PRIVATE
     common_flags
@@ -25,8 +35,6 @@ gtest_add_tests(
 set_tests_properties(${discovered_tests}
     PROPERTIES LABELS "unit;gamesman_concurrency"
 )
-
-target_compile_definitions(gamesman_concurrency_test PRIVATE GM_NUM_CPUS=${GamesmanOne_NUM_CPUS})
 
 # Apply the PROCESSORS property exclusively to the multithreaded tests
 set_tests_properties(
