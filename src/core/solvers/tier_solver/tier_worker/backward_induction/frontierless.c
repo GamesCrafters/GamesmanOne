@@ -28,7 +28,6 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/frontierless.h"
 
 #include <assert.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -46,9 +45,9 @@
 #include "core/types/gamesman_error.h"
 #include "core/types/tier_hash_set.h"
 
-// Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
 #include <omp.h>
+#include <stdatomic.h>
 #endif  // _OPENMP
 
 // Note on multithreading:

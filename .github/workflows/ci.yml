@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [ci-asan, ci-coverage]
+        preset: [ci-asan, ci-asan-st, ci-coverage, ci-coverage-st]
     
     steps:
       - name: Checkout code

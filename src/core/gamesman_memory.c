@@ -25,20 +25,19 @@
  */
 #include "core/gamesman_memory.h"
 
-#include <assert.h>
 #include <lzma.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "config.h"  // IWYU pragma: keep
 
 #ifdef _OPENMP
 #include <omp.h>
+#include <string.h>
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
@@ -63,14 +62,42 @@ struct GamesmanAllocator {
     ConcurrentSizeType ref_count;
 };
 
+static bool IsValidAlignmentForAllocatorOptions(size_t alignment) {
+    // Explicitly allow the case where alignment == 0 as default
+    if (alignment == 0) {
+        return true;
+    }
+
+    // Alignment must be a multiple of pointer size
+    if ((alignment % sizeof(void *)) != 0) {
+        return false;
+    }
+
+    // Alignment must be a power of 2; this formula works because we already
+    // verified alignment != 0
+    if ((alignment & (alignment - 1)) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
 GamesmanAllocator *GamesmanAllocatorCreate(
     const GamesmanAllocatorOptions *options) {
-    //
+    // Verify alignment if provided by the caller
+    if (options && !IsValidAlignmentForAllocatorOptions(options->alignment)) {
+        return NULL;
+    }
+
     GamesmanAllocator *ret =
         (GamesmanAllocator *)GamesmanMalloc(sizeof(GamesmanAllocator));
-    if (ret == NULL) return ret;
+    if (!ret) {
+        return NULL;
+    }
 
-    if (options == NULL) options = &kDefaultAllocatorOptions;
+    if (!options) {
+        options = &kDefaultAllocatorOptions;
+    }
     ret->alignment = options->alignment;
     ConcurrentSizeTypeInit(&ret->pool_size, options->pool_size);
     ConcurrentSizeTypeInit(&ret->ref_count, 1);
@@ -79,15 +106,23 @@ GamesmanAllocator *GamesmanAllocatorCreate(
 }
 
 GamesmanAllocator *GamesmanAllocatorAddRef(GamesmanAllocator *allocator) {
-    if (allocator == NULL) return NULL;
-    ConcurrentSizeTypeAdd(&allocator->ref_count, 1);
+    if (!allocator) {
+        return NULL;
+    }
+
+    ConcurrentSizeTypeAddExplicit(&allocator->ref_count, 1,
+                                  kConcurrencyMemoryOrderRelaxed);
 
     return allocator;
 }
 
 void GamesmanAllocatorRelease(GamesmanAllocator *allocator) {
-    if (allocator == NULL) return;
-    if (ConcurrentSizeTypeSubtract(&allocator->ref_count, 1) == 1) {
+    if (!allocator) {
+        return;
+    }
+
+    if (ConcurrentSizeTypeSubtractExplicit(
+            &allocator->ref_count, 1, kConcurrencyMemoryOrderRelaxed) == 1) {
         GamesmanFree(allocator);
     }
 }
@@ -95,7 +130,8 @@ void GamesmanAllocatorRelease(GamesmanAllocator *allocator) {
 size_t GamesmanAllocatorGetRemainingPoolSize(
     const GamesmanAllocator *allocator) {
     //
-    return ConcurrentSizeTypeLoad(&allocator->pool_size);
+    return ConcurrentSizeTypeLoadExplicit(&allocator->pool_size,
+                                          kConcurrencyMemoryOrderRelaxed);
 }
 
 typedef struct AllocHeader {
@@ -108,10 +144,13 @@ static size_t NextMultiple(size_t n, size_t mult) {
     return (n + mult - 1) / mult * mult;
 }
 
+// Assumes alignment is either 0 or a valid amount.
 static size_t GetHeaderSize(size_t alignment) {
 #ifdef _OPENMP
-    // This also deals with the case where alignment is 0.
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
+    // This also handles the case when alignment is 0.
+    if (GM_CACHE_LINE_SIZE > alignment) {
+        alignment = GM_CACHE_LINE_SIZE;
+    }
 
     return NextMultiple(sizeof(AllocHeader), alignment);
 #else
@@ -123,7 +162,40 @@ static size_t GetHeaderSize(size_t alignment) {
 #endif  // _OPENMP
 }
 
-static void WriteHeader(void *dest, size_t size) { *((size_t *)dest) = size; }
+static void WriteHeader(void *dest, const AllocHeader *header) {
+    *((AllocHeader *)dest) = *header;
+}
+
+// Assumes alignment is valid.
+static void *UnsafeAlignedAlloc(size_t alignment, size_t size) {
+#ifdef _OPENMP
+    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
+    if (GM_CACHE_LINE_SIZE > alignment) {
+        alignment = GM_CACHE_LINE_SIZE;
+    }
+
+    // Check for alignment padding overflow
+    if (size > SIZE_MAX - (alignment - 1)) {
+        return NULL;
+    }
+
+    // omp_aligned_alloc requires allocation size to be a multiple of alignment
+    size_t required_size = NextMultiple(size, alignment);
+
+    return omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
+#else
+    // Check for alignment padding overflow
+    if (size > SIZE_MAX - (alignment - 1)) {
+        return NULL;
+    }
+
+    // If OpenMP is disabled, use normal aligned_alloc, which requires
+    // allocation size to be a multiple of alignment
+    size_t required_size = NextMultiple(size, alignment);
+
+    return aligned_alloc(alignment, required_size);
+#endif  // _OPENMP
+}
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
@@ -131,37 +203,49 @@ static void WriteHeader(void *dest, size_t size) { *((size_t *)dest) = size; }
 #endif
 void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
     // If no allocator is provided, use default allocation function.
-    if (allocator == NULL) return GamesmanMalloc(size);
+    if (!allocator) {
+        return GamesmanMalloc(size);
+    }
 
-    // If size is 0, return NULL.
-    if (size == 0) return NULL;
+    if (size == 0) {
+        return NULL;
+    }
 
     // Make an attempt to reserve space from the memory pool. We must also take
     // the header into account.
     size_t header_size = GetHeaderSize(allocator->alignment);
-    if (size > SIZE_MAX - header_size) return NULL;  // Overflow prevention.
+
+    // Prevent overflow when calculating (header_size + size)
+    if (size > SIZE_MAX - header_size) {
+        return NULL;
+    }
+
     size_t alloc_size = header_size + size;  // Total amount to allocate.
-    bool success = ConcurrentSizeTypeSubtractIfGreaterEqual(
-        &allocator->pool_size, alloc_size);
-    if (!success) return NULL;  // Allocation failed due to pool OOM.
+    bool success = ConcurrentSizeTypeSubtractIfGreaterEqualExplicit(
+        &allocator->pool_size, alloc_size, kConcurrencyMemoryOrderRelaxed,
+        kConcurrencyMemoryOrderRelaxed);
+    if (!success) {
+        return NULL;  // Not enough memory left in the pool
+    }
 
     // There is enough space in the pool. Make an allocation large enough for
     // the specified size and a header.
     void *space;
     if (allocator->alignment) {  // Alignment amount specified.
-        space = GamesmanAlignedAlloc(allocator->alignment, alloc_size);
+        space = UnsafeAlignedAlloc(allocator->alignment, alloc_size);
     } else {  // Use default alignment.
         space = GamesmanMalloc(alloc_size);
     }
 
     // Roll back the pool subtraction on underlying allocation failure.
-    if (space == NULL) {
-        ConcurrentSizeTypeAdd(&allocator->pool_size, alloc_size);
+    if (!space) {
+        ConcurrentSizeTypeAddExplicit(&allocator->pool_size, alloc_size,
+                                      kConcurrencyMemoryOrderRelaxed);
         return NULL;
     }
 
-    // Write the header at the beginning of the allocated space.
-    WriteHeader(space, alloc_size);
+    // Write the header to the beginning of the allocated space.
+    WriteHeader(space, &(AllocHeader){.size = alloc_size});
 
     // Return the space after the header.
     return (void *)((char *)space + header_size);
@@ -172,13 +256,15 @@ void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size) {
 
 void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
     // If no allocator is provided, use default deallocation function.
-    if (allocator == NULL) {
+    if (!allocator) {
         GamesmanFree(ptr);
         return;
     }
 
     // Do nothing if ptr is NULL.
-    if (ptr == NULL) return;
+    if (!ptr) {
+        return;
+    }
 
     // Read allocation size from header.
     size_t header_size = GetHeaderSize(allocator->alignment);
@@ -190,7 +276,8 @@ void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
     GamesmanFree(space);
 
     // Add size back to the memory pool after the space has been deallocated.
-    ConcurrentSizeTypeAdd(&allocator->pool_size, alloc_size);
+    ConcurrentSizeTypeAddExplicit(&allocator->pool_size, alloc_size,
+                                  kConcurrencyMemoryOrderRelaxed);
 }
 
 ///////////////////////////
@@ -199,6 +286,11 @@ void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
 
 void *GamesmanMalloc(size_t size) {
 #ifdef _OPENMP
+    // Check for alignment padding overflow
+    if (size > SIZE_MAX - (GM_CACHE_LINE_SIZE - 1)) {
+        return NULL;
+    }
+
     // If OpenMP is enabled, align to GM_CACHE_LINE_SIZE.
     size_t required_size = NextMultiple(size, GM_CACHE_LINE_SIZE);
 
@@ -212,160 +304,53 @@ void *GamesmanMalloc(size_t size) {
 
 void *GamesmanCallocWhole(size_t nmemb, size_t size) {
 #ifdef _OPENMP
-    // If OpenMP is enabled, align to GM_CACHE_LINE_SIZE.
-    size_t required_size = NextMultiple(nmemb * size, GM_CACHE_LINE_SIZE);
+    // Check for multiplication overflow
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+        return NULL;
+    }
+
+    size_t raw_size = nmemb * size;
+
+    // Check for alignment padding overflow
+    if (raw_size > SIZE_MAX - (GM_CACHE_LINE_SIZE - 1)) {
+        return NULL;
+    }
+
+    size_t required_size = NextMultiple(raw_size, GM_CACHE_LINE_SIZE);
     void *ret = omp_aligned_alloc(GM_CACHE_LINE_SIZE, required_size,
                                   omp_default_mem_alloc);
-    if (ret == NULL) return ret;
+    if (!ret) {
+        return ret;
+    }
+
     memset(ret, 0, required_size);
 
     return ret;
 #else
     // OpenMP is disabled, use normal calloc.
+    // calloc natively handles overflow checking, but our explicit check
+    // above guarantees it's absolutely safe before we even call it.
     return calloc(nmemb, size);
-#endif  // _OPENMP
-}
-
-void *GamesmanCallocEach(size_t nmemb, size_t size) {
-    assert(size % GM_CACHE_LINE_SIZE == 0);
-#ifdef _OPENMP
-    // OpenMP is enabled.
-    return omp_aligned_calloc(GM_CACHE_LINE_SIZE, nmemb, size,
-                              omp_default_mem_alloc);
-#else
-    // OpenMP is disabled, use normal calloc.
-    return calloc(nmemb, size);
-#endif  // _OPENMP
-}
-
-void *GamesmanRealloc(void *ptr, size_t old_size, size_t new_size) {
-    // Free the original space if new_size is 0.
-    if (new_size == 0) {
-        GamesmanFree(ptr);
-        return NULL;
-    }
-
-    // Perform plain allocation if ptr is NULL.
-    if (ptr == NULL) return GamesmanMalloc(new_size);
-
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to GM_CACHE_LINE_SIZE.
-    size_t required_size = NextMultiple(new_size, GM_CACHE_LINE_SIZE);
-    void *ret = omp_aligned_alloc(GM_CACHE_LINE_SIZE, required_size,
-                                  omp_default_mem_alloc);
-    if (ret == NULL) return ret;
-    memcpy(ret, ptr, (old_size < new_size) ? old_size : new_size);
-    omp_free(ptr, omp_default_mem_alloc);
-
-    return ret;
-#else
-    // OpenMP is disabled, use normal malloc.
-    (void)old_size;
-    return realloc(ptr, new_size);
 #endif  // _OPENMP
 }
 
 void *GamesmanAlignedAlloc(size_t alignment, size_t size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-    size_t required_size = NextMultiple(size, alignment);
-
-    return omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    size_t required_size = NextMultiple(size, alignment);
-
-    return aligned_alloc(alignment, required_size);
-#endif  // _OPENMP
-}
-
-void *GamesmanAlignedCallocWhole(size_t alignment, size_t nmemb, size_t size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-    size_t required_size = NextMultiple(nmemb * size, alignment);
-    void *ret =
-        omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
-    if (ret == NULL) return ret;
-    memset(ret, 0, required_size);
-
-    return ret;
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    size_t required_size = NextMultiple(nmemb * size, alignment);
-    void *ret = aligned_alloc(alignment, required_size);
-    if (ret == NULL) return ret;
-    memset(ret, 0, required_size);
-
-    return ret;
-#endif  // _OPENMP
-}
-
-void *GamesmanAlignedCallocEach(size_t alignment, size_t nmemb, size_t size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-    assert(size % alignment == 0);
-    assert(size % GM_CACHE_LINE_SIZE == 0);
-#ifdef _OPENMP
-    // If OpenMP is enabled, align each element to max(GM_CACHE_LINE_SIZE,
-    // alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-
-    return omp_aligned_calloc(alignment, nmemb, size, omp_default_mem_alloc);
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    void *ret = aligned_alloc(alignment, nmemb * size);
-    if (ret == NULL) return ret;
-    memset(ret, 0, nmemb * size);
-
-    return ret;
-#endif  // _OPENMP
-}
-
-void *GamesmanAlignedRealloc(size_t alignment, void *ptr, size_t old_size,
-                             size_t new_size) {
-    assert(alignment > 0);
-    assert(alignment % sizeof(void *) == 0);
-    assert((alignment & (alignment - 1)) == 0);
-
-    // Free the original space if new_size is 0.
-    if (new_size == 0) {
-        GamesmanFree(ptr);
+    // Alignment must be strictly positive.
+    if (alignment == 0) {
         return NULL;
     }
 
-    // Perform plain allocation if ptr is NULL.
-    if (ptr == NULL) return GamesmanAlignedAlloc(alignment, new_size);
+    // Alignment must be a multiple of pointer size.
+    if (alignment % sizeof(void *) != 0) {
+        return NULL;
+    }
 
-#ifdef _OPENMP
-    // If OpenMP is enabled, align to max(GM_CACHE_LINE_SIZE, alignment).
-    if (GM_CACHE_LINE_SIZE > alignment) alignment = GM_CACHE_LINE_SIZE;
-    size_t required_size = NextMultiple(new_size, alignment);
-    void *ret =
-        omp_aligned_alloc(alignment, required_size, omp_default_mem_alloc);
-    if (ret == NULL) return ret;
-    memcpy(ret, ptr, (old_size < new_size) ? old_size : new_size);
-    omp_free(ptr, omp_default_mem_alloc);
+    // Alignment must be a power of 2.
+    if ((alignment & (alignment - 1)) != 0) {
+        return NULL;
+    }
 
-    return ret;
-#else
-    // If OpenMP is disabled, use normal aligned_alloc
-    size_t required_size = NextMultiple(new_size, alignment);
-    void *ret = aligned_alloc(alignment, required_size);
-    if (ret == NULL) return ret;
-    memcpy(ret, ptr, (old_size < new_size) ? old_size : new_size);
-    free(ptr);
-
-    return ret;
-#endif  // _OPENMP
+    return UnsafeAlignedAlloc(alignment, size);
 }
 
 void GamesmanFree(void *ptr) {
@@ -380,7 +365,7 @@ size_t GetPhysicalMemory(void) { return (size_t)lzma_physmem(); }
 
 void *SafeMalloc(size_t size) {
     void *ret = GamesmanMalloc(size);
-    if (ret == NULL) {
+    if (!ret) {
         fprintf(stderr,
                 "SafeMalloc: failed to allocate %zd bytes. This ususally "
                 "indicates a bug.\n",
@@ -388,12 +373,13 @@ void *SafeMalloc(size_t size) {
         fflush(stderr);
         _exit(kMallocFailureError);
     }
+
     return ret;
 }
 
 void *SafeCalloc(size_t n, size_t size) {
     void *ret = GamesmanCallocWhole(n, size);
-    if (ret == NULL) {
+    if (!ret) {
         fprintf(stderr,
                 "SafeCalloc: failed to allocate %zd elements each of %zd "
                 "bytes. This ususally indicates a bug.\n",
@@ -401,5 +387,6 @@ void *SafeCalloc(size_t n, size_t size) {
         fflush(stderr);
         _exit(kMallocFailureError);
     }
+
     return ret;
 }

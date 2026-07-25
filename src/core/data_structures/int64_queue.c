@@ -37,10 +37,19 @@
 
 static bool Expand(Int64Queue *queue) {
     int64_t new_capacity = queue->capacity == 0 ? 1 : queue->capacity * 2;
-    int64_t *new_array = (int64_t *)GamesmanRealloc(
-        queue->array, queue->capacity * sizeof(int64_t),
-        new_capacity * sizeof(int64_t));
-    if (new_array == NULL) return false;
+    int64_t *new_array =
+        (int64_t *)GamesmanMalloc(new_capacity * sizeof(int64_t));
+    if (!new_array) {
+        return false;
+    }
+
+    if (queue->array) {
+        memcpy(new_array, queue->array, queue->capacity * sizeof(int64_t));
+        GamesmanFree(queue->array);
+    }
+
+    // Copy wrapped-around elements in the original array. This is safe if
+    // the capacity is at least doubled.
     memcpy(&new_array[queue->capacity], new_array,
            queue->front * sizeof(int64_t));
     queue->array = new_array;

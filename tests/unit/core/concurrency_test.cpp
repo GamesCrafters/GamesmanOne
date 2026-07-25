@@ -1,0 +1,495 @@
+#include "core/concurrency.h"
+
+#include <gtest/gtest.h>
+
+#include <atomic>
+#include <cstdint>
+#include <limits>
+#include <vector>
+
+extern "C" {
+#include "config.h"
+}
+
+#ifdef _OPENMP  // Tests for multi-threaded build
+
+// ============================== ConcurrentBool ==============================
+
+// Verifies that a ConcurrentBool initializes to the correct state and processes
+// standard load and store operations.
+TEST(ConcurrentBoolTest, BasicInitializationAndStateChange) {
+    ConcurrentBool cb;
+    ConcurrentBoolInit(&cb, false);
+
+    EXPECT_FALSE(ConcurrentBoolLoad(&cb));
+
+    ConcurrentBoolStore(&cb, true);
+    EXPECT_TRUE(ConcurrentBoolLoad(&cb));
+
+    ConcurrentBoolStore(&cb, false);
+    EXPECT_FALSE(ConcurrentBoolLoad(&cb));
+}
+
+// Verifies that explicit memory order flags are handled correctly without
+// altering fundamental store and load correctness.
+TEST(ConcurrentBoolTest, ExplicitMemoryOrderOperations) {
+    ConcurrentBool cb;
+    ConcurrentBoolInit(&cb, false);
+
+    ConcurrentBoolStoreExplicit(&cb, true, kConcurrencyMemoryOrderRelease);
+    EXPECT_TRUE(
+        ConcurrentBoolLoadExplicit(&cb, kConcurrencyMemoryOrderAcquire));
+
+    ConcurrentBoolStoreExplicit(&cb, false, kConcurrencyMemoryOrderRelaxed);
+    EXPECT_FALSE(
+        ConcurrentBoolLoadExplicit(&cb, kConcurrencyMemoryOrderRelaxed));
+}
+
+// Verifies that changes to a ConcurrentBool are correctly published and visible
+// across multiple concurrent OpenMP threads.
+TEST(ConcurrentBoolTest, MultithreadedVisibility) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentBool ready_flag;
+    ConcurrentBoolInit(&ready_flag, false);
+
+    ConcurrentBool timeoutFlag;
+    ConcurrentBoolInit(&timeoutFlag, false);
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    {
+        if (omp_get_thread_num() == 0) {
+            ConcurrentBoolStoreExplicit(&ready_flag, true,
+                                        kConcurrencyMemoryOrderRelease);
+        } else {
+            int attempts = 0;
+            int max_attempts = 10000000;
+            // A bounded loop is used here to prevent the test suite from
+            // hanging infinitely if atomic synchronization fails.
+            while (!ConcurrentBoolLoadExplicit(
+                       &ready_flag, kConcurrencyMemoryOrderAcquire) &&
+                   attempts < max_attempts) {
+                attempts++;
+            }
+
+            if (attempts == max_attempts) {
+                ConcurrentBoolStore(&timeoutFlag, true);
+            }
+        }
+    }
+
+    EXPECT_FALSE(ConcurrentBoolLoad(&timeoutFlag));
+    EXPECT_TRUE(ConcurrentBoolLoad(&ready_flag));
+}
+
+// Verifies that multiple threads concurrently storing the same boolean value do
+// not corrupt the internal state.
+TEST(ConcurrentBoolTest, IdempotentConcurrentWrites) {
+    if (GM_NUM_CPUS < 2) {
+        // Skip the test and log the reason
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentBool cb;
+    ConcurrentBoolInit(&cb, false);
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    {
+        // Forcing a simultaneous write across multiple threads tests the
+        // underlying atomic store implementation for idempotency.
+        ConcurrentBoolStore(&cb, true);
+    }
+
+    EXPECT_TRUE(ConcurrentBoolLoad(&cb));
+}
+
+// =============================== ConcurrentInt ===============================
+
+// Verifies that a ConcurrentInt initializes correctly and processes standard
+// load and store operations across positive, negative, and zero values.
+TEST(ConcurrentIntTest, BasicInitializationAndStateChange) {
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 0);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 0);
+
+    ConcurrentIntStore(&ci, 42);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 42);
+
+    ConcurrentIntStore(&ci, -100);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), -100);
+}
+
+// Verifies that explicit memory order flags are handled correctly for integer
+// load and store operations.
+TEST(ConcurrentIntTest, ExplicitMemoryOrderOperations) {
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 10);
+
+    ConcurrentIntStoreExplicit(&ci, 25, kConcurrencyMemoryOrderRelease);
+    EXPECT_EQ(ConcurrentIntLoadExplicit(&ci, kConcurrencyMemoryOrderAcquire),
+              25);
+
+    ConcurrentIntStoreExplicit(&ci, -5, kConcurrencyMemoryOrderRelaxed);
+    EXPECT_EQ(ConcurrentIntLoadExplicit(&ci, kConcurrencyMemoryOrderRelaxed),
+              -5);
+}
+
+// Verifies that the Max operation correctly updates the integer only if the new
+// value is greater, and accurately returns the previous value.
+TEST(ConcurrentIntTest, MaxFunctionUpdatesCorrectly) {
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 10);
+
+    int old_val = ConcurrentIntMax(&ci, 5);
+    EXPECT_EQ(old_val, 10);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 10);
+
+    old_val = ConcurrentIntMax(&ci, 20);
+    EXPECT_EQ(old_val, 10);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 20);
+
+    // Verifies that signed integer comparison is strictly utilized rather than
+    // unsigned.
+    old_val = ConcurrentIntMax(&ci, -5);
+    EXPECT_EQ(old_val, 20);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 20);
+}
+
+// Verifies the explicit memory order implementation of the Max operation
+// correctly applies updates and returns the original value.
+TEST(ConcurrentIntTest, ExplicitMaxFunctionUpdatesCorrectly) {
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 50);
+
+    int old_val =
+        ConcurrentIntMaxExplicit(&ci, 100, kConcurrencyMemoryOrderAcqRel,
+                                 kConcurrencyMemoryOrderRelaxed);
+    EXPECT_EQ(old_val, 50);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 100);
+
+    old_val = ConcurrentIntMaxExplicit(&ci, 100, kConcurrencyMemoryOrderAcqRel,
+                                       kConcurrencyMemoryOrderRelaxed);
+    EXPECT_EQ(old_val, 100);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), 100);
+}
+
+// Verifies that concurrent calls to the Max function from multiple OpenMP
+// threads safely resolve to the global maximum without data loss due to race
+// conditions.
+TEST(ConcurrentIntTest, MultithreadedMaxCalculation) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 0);
+
+    int expected_max = GM_NUM_CPUS * 100;
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    {
+        int thread_id = omp_get_thread_num();
+        int thread_local_max = (thread_id + 1) * 100;
+
+        // Forces multiple threads to hit the underlying compare-and-exchange
+        // loop simultaneously to test robustness.
+        ConcurrentIntMax(&ci, thread_local_max);
+    }
+
+    EXPECT_EQ(ConcurrentIntLoad(&ci), expected_max);
+}
+
+// Verifies that the maximum and minimum boundaries of standard integers are
+// handled gracefully without overflow errors.
+TEST(ConcurrentIntTest, ExtremeBoundaryValues) {
+    ConcurrentInt ci;
+    ConcurrentIntInit(&ci, 0);
+
+    ConcurrentIntMax(&ci, std::numeric_limits<int>::max());
+    EXPECT_EQ(ConcurrentIntLoad(&ci), std::numeric_limits<int>::max());
+
+    // Asserts that pushing the absolute lowest boundary against the peak limit
+    // is discarded correctly.
+    ConcurrentIntMax(&ci, std::numeric_limits<int>::min());
+    EXPECT_EQ(ConcurrentIntLoad(&ci), std::numeric_limits<int>::max());
+
+    ConcurrentIntStore(&ci, std::numeric_limits<int>::min());
+    EXPECT_EQ(ConcurrentIntLoad(&ci), std::numeric_limits<int>::min());
+
+    ConcurrentIntMax(&ci, -1);
+    EXPECT_EQ(ConcurrentIntLoad(&ci), -1);
+}
+
+// ============================== ConcurrentInt64 ==============================
+
+// Verifies that a ConcurrentInt64 initializes correctly and processes standard
+// load and store operations across positive, negative, and zero values.
+TEST(ConcurrentInt64Test, BasicInitializationAndStateChange) {
+    ConcurrentInt64 ci64;
+    ConcurrentInt64Init(&ci64, 0);
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), 0);
+
+    // A value explicitly exceeding the standard 32-bit integer limit (2^33) is
+    // used to verify true 64-bit storage capacity.
+    int64_t large_pos = 8589934592LL;
+    ConcurrentInt64Store(&ci64, large_pos);
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), large_pos);
+
+    int64_t large_neg = -8589934592LL;
+    ConcurrentInt64Store(&ci64, large_neg);
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), large_neg);
+}
+
+// Verifies that explicit memory order flags are handled correctly for 64-bit
+// integer load and store operations.
+TEST(ConcurrentInt64Test, ExplicitMemoryOrderOperations) {
+    ConcurrentInt64 ci64;
+    ConcurrentInt64Init(&ci64, 10LL);
+
+    ConcurrentInt64StoreExplicit(&ci64, 25LL, kConcurrencyMemoryOrderRelease);
+    EXPECT_EQ(
+        ConcurrentInt64LoadExplicit(&ci64, kConcurrencyMemoryOrderAcquire),
+        25LL);
+
+    ConcurrentInt64StoreExplicit(&ci64, -5LL, kConcurrencyMemoryOrderRelaxed);
+    EXPECT_EQ(
+        ConcurrentInt64LoadExplicit(&ci64, kConcurrencyMemoryOrderRelaxed),
+        -5LL);
+}
+
+// Verifies that the maximum and minimum boundaries of 64-bit signed integers
+// are handled gracefully without truncation or undefined behavior.
+TEST(ConcurrentInt64Test, ExtremeBoundaryValues) {
+    ConcurrentInt64 ci64;
+
+    ConcurrentInt64Init(&ci64, INT64_MAX);
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), INT64_MAX);
+
+    ConcurrentInt64Store(&ci64, INT64_MIN);
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), INT64_MIN);
+}
+
+// Verifies that multiple threads concurrently storing the same large 64-bit
+// value do not corrupt the internal state via partial writes or thread tearing.
+TEST(ConcurrentInt64Test, IdempotentConcurrentWrites) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentInt64 ci64;
+    ConcurrentInt64Init(&ci64, 0);
+
+    // This specific hex pattern uses alternating bits across all 64 bits to
+    // aggressively expose word-tearing if the underlying architecture lacks
+    // native 64-bit atomics.
+    int64_t target_val = 0xAAAA5555AAAA5555LL;
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    { ConcurrentInt64Store(&ci64, target_val); }
+
+    EXPECT_EQ(ConcurrentInt64Load(&ci64), target_val);
+}
+
+// ============================ ConcurrentSizeType ============================
+
+// Verifies that a ConcurrentSizeType initializes correctly and processes
+// standard atomic addition and subtraction.
+TEST(ConcurrentSizeTypeTest, BasicArithmeticAndStateChange) {
+    ConcurrentSizeType cs;
+    ConcurrentSizeTypeInit(&cs, 100);
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 100);
+
+    size_t old_val = ConcurrentSizeTypeAdd(&cs, 50);
+    EXPECT_EQ(old_val, 100);
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 150);
+
+    old_val = ConcurrentSizeTypeSubtract(&cs, 25);
+    EXPECT_EQ(old_val, 150);
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 125);
+}
+
+// Verifies that explicit memory order flags are handled correctly for size type
+// load, add, and subtract operations.
+TEST(ConcurrentSizeTypeTest, ExplicitMemoryOrderOperations) {
+    ConcurrentSizeType cs;
+    ConcurrentSizeTypeInit(&cs, 200);
+
+    size_t old_val =
+        ConcurrentSizeTypeAddExplicit(&cs, 100, kConcurrencyMemoryOrderAcqRel);
+    EXPECT_EQ(old_val, 200);
+    EXPECT_EQ(
+        ConcurrentSizeTypeLoadExplicit(&cs, kConcurrencyMemoryOrderAcquire),
+        300);
+
+    old_val = ConcurrentSizeTypeSubtractExplicit(
+        &cs, 50, kConcurrencyMemoryOrderRelaxed);
+    EXPECT_EQ(old_val, 300);
+    EXPECT_EQ(
+        ConcurrentSizeTypeLoadExplicit(&cs, kConcurrencyMemoryOrderRelaxed),
+        250);
+}
+
+// Verifies the conditional subtraction logic strictly prevents underflow and
+// accurately reports operation success or failure.
+TEST(ConcurrentSizeTypeTest, ConditionalSubtractionGuardsUnderflow) {
+    ConcurrentSizeType cs;
+    ConcurrentSizeTypeInit(&cs, 50);
+
+    EXPECT_TRUE(ConcurrentSizeTypeSubtractIfGreaterEqual(&cs, 20));
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 30);
+
+    EXPECT_TRUE(ConcurrentSizeTypeSubtractIfGreaterEqualExplicit(
+        &cs, 30, kConcurrencyMemoryOrderAcqRel,
+        kConcurrencyMemoryOrderRelaxed));
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 0);
+
+    // Attempting to subtract from a depleted counter should fail safely without
+    // altering the underlying state.
+    EXPECT_FALSE(ConcurrentSizeTypeSubtractIfGreaterEqual(&cs, 1));
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 0);
+}
+
+// Verifies that concurrent increments and decrements from multiple threads
+// safely resolve without lost updates.
+TEST(ConcurrentSizeTypeTest, MultithreadedArithmeticConsistency) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentSizeType cs;
+    ConcurrentSizeTypeInit(&cs, 0);
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    {
+        // Distributing exactly 10,000 additions and subtractions per thread to
+        // guarantee a net zero change while maximizing lock-free contention.
+        for (int i = 0; i < 10000; i++) {
+            ConcurrentSizeTypeAdd(&cs, 5);
+            ConcurrentSizeTypeSubtract(&cs, 5);
+        }
+    }
+
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 0);
+}
+
+// Verifies that concurrent conditional subtractions safely distribute a limited
+// pool of resources without over-allocation.
+TEST(ConcurrentSizeTypeTest, MultithreadedResourceAllocation) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    ConcurrentSizeType pool;
+    ConcurrentSizeTypeInit(&pool, 10000);
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(GM_NUM_CPUS)
+    {
+        // Each thread greedily drains the pool until exhaustion to stress-test
+        // the compare-and-exchange loop for race conditions.
+        while (ConcurrentSizeTypeSubtractIfGreaterEqual(&pool, 7)) {
+            // Simulated work loop
+        }
+    }
+
+    // Since 10,000 is not perfectly divisible by 7, the remainder (10,000 % 7)
+    // dictates the final guaranteed resting state.
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&pool), 4);
+}
+
+// Verifies that the maximum boundary of size_t wraps correctly for standard
+// operations, while conditional logic respects unsigned limits.
+TEST(ConcurrentSizeTypeTest, ExtremeBoundaryValues) {
+    ConcurrentSizeType cs;
+    ConcurrentSizeTypeInit(&cs, std::numeric_limits<size_t>::max());
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), std::numeric_limits<size_t>::max());
+
+    // Unsigned integer overflow is mathematically well-defined in C/C++; atomic
+    // operations should mirror this wrapping behavior.
+    ConcurrentSizeTypeAdd(&cs, 1);
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 0);
+
+    ConcurrentSizeTypeSubtract(&cs, 1);
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), std::numeric_limits<size_t>::max());
+
+    ConcurrentSizeTypeInit(&cs, 0);
+
+    // A conditional subtraction larger than the current state (even if within
+    // the size_t domain) must strictly fail.
+    EXPECT_FALSE(ConcurrentSizeTypeSubtractIfGreaterEqual(
+        &cs, std::numeric_limits<size_t>::max()));
+    EXPECT_EQ(ConcurrentSizeTypeLoad(&cs), 0);
+}
+
+// Verifies that the reported maximum number of OpenMP threads is a valid,
+// positive integer.
+TEST(OpenMpThreadUtilitiesTest, ValidMaxThreadsReporting) {
+    int max_threads = ConcurrencyGetOmpNumThreads();
+    EXPECT_GE(max_threads, 1);
+}
+
+// Verifies that outside of a parallel region, the execution strictly defaults
+// to the master thread.
+TEST(OpenMpThreadUtilitiesTest, MasterThreadIdOutsideParallelRegion) {
+    // By OpenMP convention, a sequential execution block is treated as a team
+    // of one thread where the master ID is always 0.
+    EXPECT_EQ(ConcurrencyGetOmpThreadId(), 0);
+}
+
+// Verifies that thread IDs assigned within a parallel region are strictly
+// zero-indexed, contiguous, and unique to each active thread.
+TEST(OpenMpThreadUtilitiesTest, UniqueThreadIdsInParallelRegion) {
+    if (GM_NUM_CPUS < 2) {
+        GTEST_SKIP() << "Test requires at least 2 CPUs, but only "
+                     << GM_NUM_CPUS << " are available. Skipping.";
+    }
+
+    int max_threads = ConcurrencyGetOmpNumThreads();
+    ASSERT_LE(max_threads, GM_NUM_CPUS)
+        << "Number of OpenMP threads available should never exceed the number "
+           "of CPUs.";
+
+    // USE std::vector<char> or std::vector<int> INSTEAD OF std::vector<bool>
+    // std::vector<bool> packs bits, causing a read-modify-write data race
+    // when multiple threads update adjacent indices concurrently.
+    std::vector<int> id_seen(max_threads, 0);
+    std::atomic<int> actual_threads_spawned{0};
+
+    omp_set_dynamic(0);
+#pragma omp parallel num_threads(max_threads)
+    {
+        int thread_id = ConcurrencyGetOmpThreadId();
+        actual_threads_spawned++;
+
+        // Validates that the assigned thread ID falls strictly within the
+        // allowed architectural boundaries.
+        EXPECT_GE(thread_id, 0);
+        EXPECT_LT(thread_id, max_threads);
+
+        // Since OpenMP guarantees unique IDs per thread within a team, and
+        // id_seen is byte-addressable, this is now race-condition free.
+        id_seen[thread_id] = 1;
+    }
+
+    // Asserts that every ID from 0 up to the actual number of spawned threads
+    // was successfully claimed exactly once.
+    for (int i = 0; i < actual_threads_spawned.load(); i++) {
+        EXPECT_TRUE(id_seen[i]) << "Thread ID " << i << " was not seen.";
+    }
+}
+
+#else  // Tests for single-threaded build
+
+#endif  // _OPENMP
