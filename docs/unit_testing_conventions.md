@@ -50,3 +50,6 @@ Always aim to test the boundaries and limitations of the API's contract to ensur
 * **Invalid or Missing Data**: Query for non-existent elements, provide malformed inputs, or simulate missing dependencies. Confirm that the system fails safely and returns the correct error states, default values, or boolean flags.
 * **Duplicates and Idempotency**: Verify the behavior when identical inputs or operations are submitted multiple times. Ensure this does not result in duplicated internal state, memory corruption, or unintended side effects.
 * **Initialization and Lifecycle**: Confirm that newly initialized objects are structurally sound and in their correct default state before any operations occur, and that state behaves predictably throughout the object's entire lifecycle.
+
+## 5. Notes
+Unit tests should be fast, single-threaded, and deterministic. MT-safety tests belong to a different category that should not be included in unit testing.
