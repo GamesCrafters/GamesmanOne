@@ -52,7 +52,7 @@ static_assert((GM_CACHE_LINE_SIZE & (GM_CACHE_LINE_SIZE - 1)) == 0,
 #define GM_CACHE_LINE_PAD(n)                                    \
     ((((n) + (GM_CACHE_LINE_SIZE) - 1) / (GM_CACHE_LINE_SIZE) * \
       (GM_CACHE_LINE_SIZE)) -                                   \
-     n)
+     (n))
 
 // ================================= Allocator =================================
 
@@ -60,14 +60,18 @@ static_assert((GM_CACHE_LINE_SIZE & (GM_CACHE_LINE_SIZE - 1)) == 0,
  * @brief Options for configuring a `GamesmanAllocator`.
  */
 typedef struct GamesmanAllocatorOptions {
-    size_t alignment; /**< Alignment in bytes, or 0 for default alignment. */
-    size_t pool_size; /**< Maximum memory pool size in bytes. */
+    /** Alignment in bytes, or 0 for default alignment. */
+    size_t alignment;
+
+    /** Maximum memory pool size in bytes. */
+    size_t pool_size;
 } GamesmanAllocatorOptions;
 
 /**
- * @brief Populates the given allocator options with default values.
+ * @brief Populates the given allocator options with the following default
+ * values: `alignment` = 0, `pool_size` = `SIZE_MAX`.
  *
- * @note This function is not MT-safe.
+ * @note This function is not MT-safe when called on the same `options`.
  *
  * @param[out] options Pointer to the options struct to be populated.
  */
@@ -84,8 +88,10 @@ typedef struct GamesmanAllocator GamesmanAllocator;
  *
  * @details If `options` is `NULL`, the default settings will be used. If an
  * alignment is provided, it must be a positive integral multiple of pointer
- * size and a power of 2. To prevent memory leaks, the returned object must be
- * deallocated using the `GamesmanAllocatorRelease` function.
+ * size and a power of 2. If a zero `pool_size` is provided, an allocator with
+ * zero pool size will be created. To prevent memory leaks, the returned object,
+ * including the ones when zero pool size, must be deallocated using the
+ * `GamesmanAllocatorRelease` function.
  *
  * @param[in] options Allocator options, or `NULL` for defaults.
  *
@@ -135,15 +141,14 @@ size_t GamesmanAllocatorGetRemainingPoolSize(
     const GamesmanAllocator *allocator);
 
 /**
- * @brief Allocates a space of size at least `size` bytes using the given
- * `allocator`.
+ * @brief Allocates a space of size `size` bytes using the given `allocator`.
  *
  * @details If `allocator` is `NULL`, the call is equivalent to
  * `GamesmanMalloc(size)`. To prevent memory leaks, the returned pointer must be
  * deallocated using `GamesmanAllocatorDeallocate` with the same `allocator`.
  *
  * @param[in,out] allocator Allocator to use, or `NULL` for default allocation.
- * @param[in] size Minimum number of bytes to allocate.
+ * @param[in] size Number of bytes to allocate.
  *
  * @return Pointer to the allocated space.
  * @retval NULL If `size` is 0, the memory pool is exhausted, or allocation
@@ -153,10 +158,7 @@ void *GamesmanAllocatorAllocate(GamesmanAllocator *allocator, size_t size);
 
 /**
  * @brief Deallocates the space at `ptr`, adding its size back to the memory
- * pool.
- *
- * @details The space is assumed to be previously allocated by the given
- * `allocator`. If `allocator` is `NULL`, the call is equivalent to
+ * pool. If `allocator` is `NULL`, the call is equivalent to
  * `GamesmanFree(ptr)`. Does nothing if `ptr` is `NULL`.
  *
  * @param[in,out] allocator Allocator that was used to allocate the space.
@@ -167,7 +169,7 @@ void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr);
 // =========================== Memory Allocation API ===========================
 
 /**
- * @brief Returns a space of size at least `size` bytes.
+ * @brief Returns a space of size `size` bytes.
  *
  * @details If Gamesman is built with multithreading enabled, the requested size
  * is padded to a multiple of `GM_CACHE_LINE_SIZE` and the returned memory
@@ -185,8 +187,8 @@ void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr);
 void *GamesmanMalloc(size_t size);
 
 /**
- * @brief Returns a zero-initialized space of size enough to hold at least
- * `nmemb` elements of `size` bytes each.
+ * @brief Returns a zero-initialized space of size enough to hold `nmemb`
+ * elements of `size` bytes each.
  *
  * @details If Gamesman is built with multithreading enabled, the requested size
  * is padded to a multiple of `GM_CACHE_LINE_SIZE` and the returned memory
@@ -208,8 +210,8 @@ void *GamesmanMalloc(size_t size);
 void *GamesmanCallocWhole(size_t nmemb, size_t size);
 
 /**
- * @brief Returns a space of size at least `size` bytes aligned to the boundary
- * of at least `alignment` bytes.
+ * @brief Returns a space of size `size` bytes aligned to the boundary of at
+ * least `alignment` bytes.
  *
  * @details If Gamesman is built with multithreading enabled, the returned
  * memory address will be aligned to `GM_CACHE_LINE_SIZE` if the provided
@@ -225,28 +227,6 @@ void *GamesmanCallocWhole(size_t nmemb, size_t size);
  * @retval NULL On failure.
  */
 void *GamesmanAlignedAlloc(size_t alignment, size_t size);
-
-/**
- * @brief Returns an `alignment` byte aligned zero-initialized space of size
- * enough to hold at least `nmemb` elements of `size` bytes each.
- *
- * @details If Gamesman is built with multithreading enabled, the returned
- * memory address will be aligned to `GM_CACHE_LINE_SIZE` if the provided
- * `alignment` is smaller. To prevent memory leaks, the returned pointer must be
- * deallocated using `GamesmanFree`.
- *
- * @note The allocated space is aligned as a whole - there is no guarantee that
- * each element is aligned to the given `alignment`.
- *
- * @param[in] alignment Specifies the alignment in bytes, which must be a
- * positive integral multiple of `sizeof(void *)` and a power of 2.
- * @param[in] nmemb Number of elements.
- * @param[in] size Size of each element in bytes.
- *
- * @return Pointer to the allocated space.
- * @retval NULL On failure.
- */
-void *GamesmanAlignedCallocWhole(size_t alignment, size_t nmemb, size_t size);
 
 /**
  * @brief Deallocates the space pointed to by `ptr`.
