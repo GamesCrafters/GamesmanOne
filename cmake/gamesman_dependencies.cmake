@@ -58,9 +58,12 @@ FetchContent_Declare(
 ####################################################################################################
 
 # Pull the above dependencies from their sources.
-FetchContent_MakeAvailable(googletest json-c liblzma lz4)
+FetchContent_MakeAvailable(json-c liblzma lz4)
 if(ENABLE_BENCHMARKS)
     FetchContent_MakeAvailable(googlebenchmark)
+endif()
+if(GAMESMAN_ENABLE_TESTING)
+    FetchContent_MakeAvailable(googletest)
 endif()
 
 # Re-enable testing for GAMESMAN tests.

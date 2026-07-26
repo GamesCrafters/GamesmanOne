@@ -21,7 +21,8 @@
       "displayName": "Release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin"
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+        "GAMESMAN_ENABLE_TESTING": "OFF"
       }
     },
     {
@@ -30,7 +31,8 @@
       "displayName": "Release + Benchmark",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "ENABLE_BENCHMARKS": "ON"
+        "ENABLE_BENCHMARKS": "ON",
+        "GAMESMAN_ENABLE_TESTING": "OFF"
       }
     },
     {

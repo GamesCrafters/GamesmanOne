@@ -26,6 +26,7 @@ option(ENABLE_ASAN_UBSAN "Enable address sanitizer and undefined behavior saniti
 option(ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to enable TSan
 option(ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
 option(ENABLE_BENCHMARKS "Build targets for benchmarking." OFF) # Set this to ON to enable benchmarks
+option(GAMESMAN_ENABLE_TESTING "Build test targets." ON) # Set this to OFF to disable testing
 
 ########################
 # Library Dependencies #
@@ -146,9 +147,11 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 # Add source.
 add_subdirectory(src)
 
-# Necessary for line coverage generation. Calls enable_testing() internally.
-include(CTest)
-add_subdirectory(tests)
+if(GAMESMAN_ENABLE_TESTING)
+  # Necessary for line coverage generation. Calls enable_testing() internally.
+  include(CTest)
+  add_subdirectory(tests)
+endif()
 
 # Benchmarks
 if(ENABLE_BENCHMARKS)
