@@ -26,6 +26,6 @@ set(MPI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_mpi.c
 )
 
-if(USE_MPI)
+if(GAMESMAN_ENABLE_MPI)
     target_sources(gamesman_core PRIVATE ${MPI_HEADERS} ${MPI_SOURCES})
 endif()

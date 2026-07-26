@@ -11,7 +11,7 @@ endif()
 
 # misc library
 add_library(misc STATIC ${CMAKE_CURRENT_SOURCE_DIR}/misc.h ${CMAKE_CURRENT_SOURCE_DIR}/misc.c)
-if(USE_MPI) # MPI
+if(GAMESMAN_ENABLE_MPI) # MPI
   find_package(MPI REQUIRED)
   target_compile_definitions(misc PRIVATE USE_MPI)
   target_link_libraries(misc PRIVATE MPI::MPI_C)

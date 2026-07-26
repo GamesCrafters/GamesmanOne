@@ -59,7 +59,7 @@ FetchContent_Declare(
 
 # Pull the above dependencies from their sources.
 FetchContent_MakeAvailable(json-c liblzma lz4)
-if(ENABLE_BENCHMARKS)
+if(GAMESMAN_ENABLE_BENCHMARKS)
     FetchContent_MakeAvailable(googlebenchmark)
 endif()
 if(GAMESMAN_ENABLE_TESTING)
@@ -79,7 +79,7 @@ target_include_directories(lzma_wrapper INTERFACE
 
 ############################################## OpenMP ##############################################
 
-if(NOT DISABLE_OPENMP) # OpenMP
+if(GAMESMAN_ENABLE_OPENMP) # OpenMP
     find_package(OpenMP)
     if(OpenMP_FOUND)
         message(STATUS "OpenMP multithreading enabled")
@@ -92,7 +92,7 @@ endif()
 
 ################################################ MPI ###############################################
 
-if(USE_MPI) # MPI
+if(GAMESMAN_ENABLE_MPI) # MPI
     find_package(MPI REQUIRED)
     message(STATUS "MPI enabled")
 endif()

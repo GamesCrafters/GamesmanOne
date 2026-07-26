@@ -14,7 +14,7 @@ target_link_libraries(gamesman_core PRIVATE json-c) # json-c
 if(OpenMP_FOUND) # OpenMP (optional)
   target_link_libraries(gamesman_core PRIVATE OpenMP::OpenMP_C)
 endif()
-if(USE_MPI) # MPI (optional)
+if(GAMESMAN_ENABLE_MPI) # MPI (optional)
   target_compile_definitions(gamesman_core PRIVATE USE_MPI)
   target_link_libraries(gamesman_core PRIVATE MPI::MPI_C)
 endif()
@@ -23,7 +23,7 @@ endif()
 add_executable(gamesman main.c)
 
 # Delete previous profile data if line coverage is enabled
-if(ENABLE_LINE_COVERAGE)
+if(GAMESMAN_ENABLE_LINE_COVERAGE)
   add_dependencies(gamesman coverage-delete)
 endif()
 
