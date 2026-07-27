@@ -73,7 +73,7 @@ void Int64ArrayDestroy(Int64Array *array) {
     array->capacity = 0;
 }
 
-bool Int64ArrayExpand(Int64Array *array) {
+static bool Int64ArrayExpand(Int64Array *array) {
     int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
     int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
         array->allocator, new_capacity * sizeof(int64_t));
@@ -119,13 +119,6 @@ bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     return false;
 }
 
-static int Int64Comp(const void *a, const void *b) {
-    int64_t aa = *(const int64_t *)a;
-    int64_t bb = *(const int64_t *)b;
-
-    return (aa > bb) - (aa < bb);
-}
-
 void Int64ArraySortExplicit(Int64Array *array,
                             int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
@@ -133,7 +126,7 @@ void Int64ArraySortExplicit(Int64Array *array,
 
 bool Int64ArrayResize(Int64Array *array, int64_t size) {
     if (size <= 0) {
-        Int64ArrayDestroy(array);
+        array->size = 0;
         return true;
     }
 
