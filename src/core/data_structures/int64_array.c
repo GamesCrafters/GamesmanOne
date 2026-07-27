@@ -164,20 +164,15 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
     return true;
 }
 
-bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index) {
-    if (index < 0 || index >= array->size) return false;
-
-    int64_t move_size = (array->size - index - 1) * (int64_t)sizeof(int64_t);
-    memmove(&array->array[index], &array->array[index + 1], move_size);
-    --array->size;
-
-    return true;
+static void Int64ArrayRemoveIndexUnordered(Int64Array *array, int64_t index) {
+    array->array[index] = array->array[--array->size];
 }
 
-bool Int64ArrayRemove(Int64Array *array, int64_t item) {
+bool Int64ArrayRemoveUnordered(Int64Array *array, int64_t item) {
     for (int64_t i = 0; i < array->size; ++i) {
         if (array->array[i] == item) {
-            return Int64ArrayRemoveIndex(array, i);
+            Int64ArrayRemoveIndexUnordered(array, i);
+            return true;
         }
     }
 

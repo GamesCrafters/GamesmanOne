@@ -62,7 +62,7 @@ bool TierArrayAppend(TierArray *array, Tier tier);
  * @return true if TIER exists in ARRAY, or
  * @return false otherwise.
  */
-bool TierArrayRemove(TierArray *array, Tier tier);
+bool TierArrayRemoveUnordered(TierArray *array, Tier tier);
 
 /**
  * @brief Pops the item at the back of the ARRAY. Calling this function on an

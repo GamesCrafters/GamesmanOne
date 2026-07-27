@@ -159,16 +159,6 @@ void Int64ArraySortExplicit(Int64Array *array,
 bool Int64ArrayResize(Int64Array *array, int64_t size);
 
 /**
- * @brief Removes the item at index INDEX in ARRAY, if exists.
- *
- * @param array Array of int64_t.
- * @param index Index of the item to remove.
- * @return true if INDEX exists in ARRAY, or
- * @return false otherwise.
- */
-bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index);
-
-/**
  * @brief Removes the first occurrence of ITEM from ARRAY, if exists.
  *
  * @param array Array of int64_t.
@@ -176,6 +166,6 @@ bool Int64ArrayRemoveIndex(Int64Array *array, int64_t index);
  * @return true if ITEM exists in ARRAY, or
  * @return false otherwise.
  */
-bool Int64ArrayRemove(Int64Array *array, int64_t item);
+bool Int64ArrayRemoveUnordered(Int64Array *array, int64_t item);
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
