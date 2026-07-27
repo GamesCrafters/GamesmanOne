@@ -26,6 +26,7 @@
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_ARRAY_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "core/gamesman_memory.h"
