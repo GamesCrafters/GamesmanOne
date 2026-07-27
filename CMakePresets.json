@@ -1,8 +1,8 @@
 {
-  "version": 3,
+  "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 22,
+    "minor": 25,
     "patch": 0
   },
   "configurePresets": [
@@ -198,6 +198,76 @@
       "name": "ci-coverage-st-test",
       "inherits": "ci-coverage-test",
       "configurePreset": "ci-coverage-st"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ci-asan",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-asan"
+        },
+        {
+          "type": "build",
+          "name": "ci-asan-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-asan-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-asan-st",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-asan-st"
+        },
+        {
+          "type": "build",
+          "name": "ci-asan-st-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-asan-st-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-coverage",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-coverage"
+        },
+        {
+          "type": "build",
+          "name": "ci-coverage-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-coverage-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-coverage-st",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-coverage-st"
+        },
+        {
+          "type": "build",
+          "name": "ci-coverage-st-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-coverage-st-test"
+        }
+      ]
     }
   ]
 }
