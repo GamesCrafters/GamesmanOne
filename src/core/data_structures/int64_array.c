@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "core/gamesman_memory.h"
 
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
@@ -52,10 +53,16 @@ bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
 }
 
 bool Int64ArrayInternalExpand(Int64Array *array) {
-    int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
+    // The minimum capacity should at least fill up a cache line.
+    static const int64_t kMinimumCapacity =
+        GM_CACHE_LINE_SIZE / sizeof(int64_t);
+    int64_t new_capacity =
+        array->capacity == 0 ? kMinimumCapacity : array->capacity * 2;
     int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
         array->allocator, new_capacity * sizeof(int64_t));
-    if (!new_array) return false;
+    if (!new_array) {
+        return false;
+    }
 
     // Copy contents over.
     memcpy(new_array, array->array, array->capacity * sizeof(int64_t));
