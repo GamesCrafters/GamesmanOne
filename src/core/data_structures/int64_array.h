@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t array.
- * @version 2.1.0
- * @date 2025-04-04
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -33,22 +31,7 @@
 #include "core/gamesman_memory.h"
 
 /**
- * @brief Dynamic int64_t array.
- *
- * @example
- * #include <stdio.h>
- * #include <inttypes.h>
- *
- * Int64Array array;
- * Int64ArrayInit(&array);
- * Int64ArrayPushBack(&array, 0);
- * Int64ArrayPushBack(&array, -3);
- * Int64ArrayPushBack(&array, 5);
- * for (int64_t i = 0; i < array.size; ++i) {
- *     printf("%" PRId64, array.array[i]);  // 0 -3 5
- * }
- * printf("\n");
- * Int64ArrayDestroy(&array);
+ * @brief Dynamic `int64_t` array.
  */
 typedef struct Int64Array {
     GamesmanAllocator *allocator; /**< Allocator to use. */
@@ -58,83 +41,106 @@ typedef struct Int64Array {
 } Int64Array;
 
 /**
- * @brief Initializes ARRAY.
+ * @brief Initializes `array`.
  *
- * @param array Array to initialize.
+ * @param[out] array Array to initialize.
  */
 void Int64ArrayInit(Int64Array *array);
 
 /**
- * @brief Initializes \p array using \p allocator as the underlying memory
- * allocator. If \p allocator is \c NULL, the function call is equivalent to
- * Int64ArrayInit(array). Note that this function does not transfer the
- * ownership of \p allocator to the new array object. The caller is responsible
+ * @brief Initializes `array` using `allocator` as the underlying memory
+ * allocator.
+ *
+ * @details If `allocator` is `NULL`, the function call is equivalent to
+ * `Int64ArrayInit(array)`. Note that this function does not transfer the
+ * ownership of `allocator` to the new array object. The caller is responsible
  * for releasing its own copy of the allocator.
  *
- * @param array Array to initialize.
- * @param allocator Memory allocator to use.
+ * @param[out] array Array to initialize.
+ * @param[in,out] allocator Memory allocator to use.
  */
 void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator);
 
 /**
- * @brief Initializes \p dest array to be a copy of the \p src array. If \p src
- * uses a custom memory allocator, a new reference will be copied to the \p dest
- * array.
+ * @brief Initializes `dest` array to be a copy of the `src` array.
  *
- * @param dest Array to initialize.
- * @param src Source array to copy from.
- * @return \c true on success, or
- * @return \c false otherwise.
+ * @details If `src` uses a custom memory allocator, a new reference will be
+ * copied to the `dest` array.
+ *
+ * @param[out] dest Array to initialize.
+ * @param[in] src Source array to copy from.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src);
 
 /**
- * @brief Deallocates ARRAY.
+ * @brief Deallocates `array`.
  *
- * @param array Array to deallocate.
+ * @param[in,out] array Array to deallocate.
  */
 void Int64ArrayDestroy(Int64Array *array);
 
 /**
- * @brief Pushes a new ITEM to the back of the ARRAY.
+ * @brief Pushes a new `item` to the back of the `array`.
  *
- * @param array Destination.
- * @param item New item.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] array Destination array.
+ * @param[in] item New item.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 bool Int64ArrayPushBack(Int64Array *array, int64_t item);
 
 /**
- * @brief Pops the item at the back of the ARRAY. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Pops the item at the back of the `array`.
  *
- * @param array Array to pop the item from.
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in,out] array Array to pop the item from.
  */
 void Int64ArrayPopBack(Int64Array *array);
 
 /**
- * @brief Returns the item at the back of ARRAY. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Returns the item at the back of `array`.
  *
- * @param array Array to get the item from.
- * @return Item at the back of ARRAY.
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in] array Array to get the item from.
+ *
+ * @return Item at the back of `array`.
  */
 int64_t Int64ArrayBack(const Int64Array *array);
 
-/** @brief Returns true if the given ARRAY is empty, or false otherwise. */
+/**
+ * @brief Returns whether the given `array` is empty.
+ *
+ * @param[in] array Array to check.
+ *
+ * @retval true if the array is empty.
+ * @retval false otherwise.
+ */
 bool Int64ArrayEmpty(const Int64Array *array);
 
 /**
- * @brief Returns true if the given ARRAY contains the given ITEM, or false
- * otherwise.
+ * @brief Returns whether the given `array` contains the given `item`.
+ *
+ * @param[in] array Array to check.
+ * @param[in] item Item to look for.
+ *
+ * @retval true if the array contains the item.
+ * @retval false otherwise.
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
 /**
- * @brief Sorts the given ARRAY according to the given comparison function.
- * @param array The array to be sorted.
- * @param comp 	Comparison function which returns ​a negative integer value if
+ * @brief Sorts the given `array` according to the given comparison function.
+ *
+ * @param[in,out] array The array to be sorted.
+ * @param[in] comp Comparison function which returns a negative integer value if
  * the first argument is less than the second, a positive integer value if the
  * first argument is greater than the second, and zero if the arguments are
  * equivalent.
@@ -143,25 +149,28 @@ void Int64ArraySortExplicit(Int64Array *array,
                             int (*comp)(const void *, const void *));
 
 /**
- * @brief Resizes ARRAY to have SIZE elements. If the current size of ARRAY is
- * greater than SIZE, the content is reduced to its first SIZE elements. If the
- * current size of ARRAY is less than SIZE, zeros shall be inserted to the back
- * of the array.
+ * @brief Resizes `array` to have `size` elements.
  *
- * @param array Array to resize, assumed to be initialized.
- * @param size New size of the array.
- * @return true on success,
- * @return false otherwise.
+ * @details If the current size of `array` is greater than `size`, the content
+ * is reduced to its first `size` elements. If the current size of `array` is
+ * less than `size`, zeros shall be inserted to the back of the array.
+ *
+ * @param[in,out] array Array to resize, assumed to be initialized.
+ * @param[in] size New size of the array.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 bool Int64ArrayResize(Int64Array *array, int64_t size);
 
 /**
- * @brief Removes the first occurrence of ITEM from ARRAY, if exists.
+ * @brief Removes the first occurrence of `item` from `array`, if it exists.
  *
- * @param array Array of int64_t.
- * @param item Value to remove.
- * @return true if ITEM exists in ARRAY, or
- * @return false otherwise.
+ * @param[in,out] array Array of `int64_t`.
+ * @param[in] item Value to remove.
+ *
+ * @retval true if `item` exists in `array` and was removed.
+ * @retval false otherwise.
  */
 bool Int64ArrayRemoveUnordered(Int64Array *array, int64_t item);
 
