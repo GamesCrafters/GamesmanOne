@@ -24,7 +24,6 @@
 
 #include "core/data_structures/int64_array.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,18 +31,6 @@
 #include <string.h>
 
 #include "core/gamesman_memory.h"
-
-void Int64ArrayInit(Int64Array *array) { Int64ArrayInitAllocator(array, NULL); }
-
-void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator) {
-    array->array = NULL;
-    array->size = 0;
-    array->capacity = 0;
-
-    // Creates a new reference of the allocator.
-    GamesmanAllocatorAddRef(allocator);
-    array->allocator = allocator;
-}
 
 bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
     if (src->size == 0) {
@@ -64,16 +51,7 @@ bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
     return true;
 }
 
-void Int64ArrayDestroy(Int64Array *array) {
-    GamesmanAllocatorDeallocate(array->allocator, array->array);
-    GamesmanAllocatorRelease(array->allocator);
-    array->allocator = NULL;
-    array->array = NULL;
-    array->size = 0;
-    array->capacity = 0;
-}
-
-static bool Int64ArrayExpand(Int64Array *array) {
+bool Int64ArrayInternalExpand(Int64Array *array) {
     int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
     int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
         array->allocator, new_capacity * sizeof(int64_t));
@@ -87,30 +65,6 @@ static bool Int64ArrayExpand(Int64Array *array) {
 
     return true;
 }
-
-bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
-    // Expand the array if necessary.
-    if (array->size == array->capacity) {
-        if (!Int64ArrayExpand(array)) {
-            return false;
-        }
-    }
-    assert(array->size < array->capacity);
-    array->array[array->size++] = item;
-    return true;
-}
-
-void Int64ArrayPopBack(Int64Array *array) {
-    assert(array->size > 0);
-    --array->size;
-}
-
-int64_t Int64ArrayBack(const Int64Array *array) {
-    assert(array->array && array->size > 0);
-    return array->array[array->size - 1];
-}
-
-bool Int64ArrayEmpty(const Int64Array *array) { return array->size == 0; }
 
 bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     for (int64_t i = 0; i < array->size; ++i) {

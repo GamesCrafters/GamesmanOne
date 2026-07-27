@@ -41,13 +41,6 @@ typedef struct Int64Array {
 } Int64Array;
 
 /**
- * @brief Initializes `array`.
- *
- * @param[out] array Array to initialize.
- */
-void Int64ArrayInit(Int64Array *array);
-
-/**
  * @brief Initializes `array` using `allocator` as the underlying memory
  * allocator.
  *
@@ -59,7 +52,25 @@ void Int64ArrayInit(Int64Array *array);
  * @param[out] array Array to initialize.
  * @param[in,out] allocator Memory allocator to use.
  */
-void Int64ArrayInitAllocator(Int64Array *array, GamesmanAllocator *allocator);
+static inline void Int64ArrayInitAllocator(Int64Array *array,
+                                           GamesmanAllocator *allocator) {
+    array->array = NULL;
+    array->size = 0;
+    array->capacity = 0;
+
+    // Creates a new reference of the allocator.
+    GamesmanAllocatorAddRef(allocator);
+    array->allocator = allocator;
+}
+
+/**
+ * @brief Initializes `array`.
+ *
+ * @param[out] array Array to initialize.
+ */
+static inline void Int64ArrayInit(Int64Array *array) {
+    Int64ArrayInitAllocator(array, NULL);
+}
 
 /**
  * @brief Initializes `dest` array to be a copy of the `src` array.
@@ -80,7 +91,25 @@ bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src);
  *
  * @param[in,out] array Array to deallocate.
  */
-void Int64ArrayDestroy(Int64Array *array);
+static inline void Int64ArrayDestroy(Int64Array *array) {
+    GamesmanAllocatorDeallocate(array->allocator, array->array);
+    GamesmanAllocatorRelease(array->allocator);
+    array->allocator = NULL;
+    array->array = NULL;
+    array->size = 0;
+    array->capacity = 0;
+}
+
+/**
+ * @brief [INTERNAL] Expands `array` to a strictly larger `capacity`.
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
+ *
+ * @param array Array to expand.
+ * @retval true on success.
+ * @retval false otherwise.
+ */
+bool Int64ArrayInternalExpand(Int64Array *array);
 
 /**
  * @brief Pushes a new `item` to the back of the `array`.
@@ -91,7 +120,17 @@ void Int64ArrayDestroy(Int64Array *array);
  * @retval true on success.
  * @retval false otherwise.
  */
-bool Int64ArrayPushBack(Int64Array *array, int64_t item);
+static inline bool Int64ArrayPushBack(Int64Array *array, int64_t item) {
+    // Expand the array if necessary.
+    if (array->size == array->capacity) {
+        if (!Int64ArrayInternalExpand(array)) {
+            return false;
+        }
+    }
+
+    array->array[array->size++] = item;
+    return true;
+}
 
 /**
  * @brief Pops the item at the back of the `array`.
@@ -101,7 +140,7 @@ bool Int64ArrayPushBack(Int64Array *array, int64_t item);
  *
  * @param[in,out] array Array to pop the item from.
  */
-void Int64ArrayPopBack(Int64Array *array);
+static inline void Int64ArrayPopBack(Int64Array *array) { --array->size; }
 
 /**
  * @brief Returns the item at the back of `array`.
@@ -113,7 +152,9 @@ void Int64ArrayPopBack(Int64Array *array);
  *
  * @return Item at the back of `array`.
  */
-int64_t Int64ArrayBack(const Int64Array *array);
+static inline int64_t Int64ArrayBack(const Int64Array *array) {
+    return array->array[array->size - 1];
+}
 
 /**
  * @brief Returns whether the given `array` is empty.
@@ -123,7 +164,9 @@ int64_t Int64ArrayBack(const Int64Array *array);
  * @retval true if the array is empty.
  * @retval false otherwise.
  */
-bool Int64ArrayEmpty(const Int64Array *array);
+static inline bool Int64ArrayEmpty(const Int64Array *array) {
+    return array->size == 0;
+}
 
 /**
  * @brief Returns whether the given `array` contains the given `item`.
