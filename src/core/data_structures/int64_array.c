@@ -41,7 +41,9 @@ bool Int64ArrayInitCopy(Int64Array *dest, const Int64Array *src) {
 
     dest->array = (int64_t *)GamesmanAllocatorAllocate(
         src->allocator, src->size * sizeof(int64_t));
-    if (dest->array == NULL) return false;
+    if (dest->array == NULL) {
+        return false;
+    }
 
     memcpy(dest->array, src->array, src->size * sizeof(int64_t));
     dest->size = src->size;
@@ -75,7 +77,9 @@ bool Int64ArrayInternalExpand(Int64Array *array) {
 
 bool Int64ArrayContains(const Int64Array *array, int64_t item) {
     for (int64_t i = 0; i < array->size; ++i) {
-        if (array->array[i] == item) return true;
+        if (array->array[i] == item) {
+            return true;
+        }
     }
     return false;
 }
@@ -95,7 +99,9 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
     if (array->capacity < size) {
         int64_t *new_array = (int64_t *)GamesmanAllocatorAllocate(
             array->allocator, size * sizeof(int64_t));
-        if (new_array == NULL) return false;
+        if (new_array == NULL) {
+            return false;
+        }
 
         memcpy(new_array, array->array, array->size * sizeof(int64_t));
         GamesmanAllocatorDeallocate(array->allocator, array->array);
