@@ -37,14 +37,8 @@ jobs:
           chmod +x gamesman_setup.sh 
           ./gamesman_setup.sh --install-deps
 
-      - name: Configure CMake
-        run: cmake --preset ${{ matrix.preset }}
-
-      - name: Build
-        run: cmake --build --preset ${{ matrix.preset }}-build
-
-      - name: Run Unit Tests
-        run: ctest --preset ${{ matrix.preset }}-test
+      - name: Run CMake Workflow
+        run: cmake --workflow --preset ${{ matrix.preset }}
 
 
   # ==========================================

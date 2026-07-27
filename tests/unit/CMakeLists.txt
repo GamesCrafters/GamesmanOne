@@ -64,7 +64,7 @@ function(add_library_test target_name library_to_test)
     add_executable(${target_name} ${ARG_SOURCES})
 
     # Delete previous profile data if line coverage is enabled
-    if(ENABLE_LINE_COVERAGE)
+    if(GAMESMAN_ENABLE_LINE_COVERAGE)
         add_dependencies(${target_name} coverage-delete)
     endif()
 

@@ -2,7 +2,7 @@
 # Initialization #
 ##################
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.25)
 project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # Add the 'cmake' directory to the module search path
@@ -16,21 +16,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CheckCCompilerFlag)
 
 ########################
+# Options and Settings #
+########################
+
+option(GAMESMAN_ENABLE_OPENMP "Enable OpenMP." ON) # Set this to OFF to disable OpenMP
+option(GAMESMAN_ENABLE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI
+option(GAMESMAN_ENABLE_STATIC_ANALYZER "Enable compiler static analyzer." OFF) # Set this to ON to enable compile-time static code analysis
+option(GAMESMAN_ENABLE_ASAN_UBSAN "Enable address sanitizer and undefined behavior sanitizer." OFF) # Set this to ON to enable ASan and UBSan
+option(GAMESMAN_ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to enable TSan
+option(GAMESMAN_ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
+option(GAMESMAN_ENABLE_BENCHMARKS "Build targets for benchmarking." OFF) # Set this to ON to enable benchmarks
+option(GAMESMAN_ENABLE_TESTING "Build test targets." ON) # Set this to OFF to disable testing
+
+########################
 # Library Dependencies #
 ########################
 
 include(gamesman_dependencies)
-
-########################
-# Options and Settings #
-########################
-
-option(DISABLE_OPENMP "Disable OpenMP." OFF) # Set this to ON to disable OpenMP
-option(USE_MPI "Enable MPI." OFF) # Set this to ON to enable MPI
-option(ENABLE_STATIC_ANALYZER "Enable compiler static analyzer." OFF) # Set this to ON to enable compile-time static code analysis
-option(ENABLE_ASAN_UBSAN "Enable address sanitizer and undefined behavior sanitizer." OFF) # Set this to ON to enable ASan and UBSan
-option(ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to enable TSan
-option(ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
 
 # ccache (optional)
 find_program(CCACHE_PROGRAM ccache)
@@ -59,23 +61,23 @@ endif()
 add_library(common_flags INTERFACE)
 target_compile_options(common_flags INTERFACE -Wall -Wextra -Wpedantic -march=native)
 
-if(ENABLE_STATIC_ANALYZER)
+if(GAMESMAN_ENABLE_STATIC_ANALYZER)
   include(gamesman_static_analyzer) # Modifies common_flags internally
 endif()
 
-if(ENABLE_ASAN)
+if(GAMESMAN_ENABLE_ASAN)
   message(STATUS "Sanitizers enabled: ASan, LSan")
   target_compile_options(common_flags INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
   target_link_options(common_flags INTERFACE -fsanitize=address)
 endif()
 
-if(ENABLE_TSAN)
+if(GAMESMAN_ENABLE_TSAN)
   message(STATUS "Sanitizers enabled: TSan")
   target_compile_options(common_flags INTERFACE -fsanitize=thread)
   target_link_options(common_flags INTERFACE -fsanitize=thread)
 endif()
 
-if(ENABLE_LINE_COVERAGE)
+if(GAMESMAN_ENABLE_LINE_COVERAGE)
   find_program(LCOV_PATH lcov)
   if(LCOV_PATH)
     message(STATUS "Found lcov: ${LCOV_PATH}")
@@ -145,6 +147,13 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 # Add source.
 add_subdirectory(src)
 
-# Necessary for line coverage generation. Calls enable_testing() internally.
-include(CTest)
-add_subdirectory(tests)
+if(GAMESMAN_ENABLE_TESTING)
+  # Necessary for line coverage generation. Calls enable_testing() internally.
+  include(CTest)
+  add_subdirectory(tests)
+endif()
+
+# Benchmarks
+if(GAMESMAN_ENABLE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

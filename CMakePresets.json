@@ -1,8 +1,8 @@
 {
-  "version": 3,
+  "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 22,
+    "minor": 25,
     "patch": 0
   },
   "configurePresets": [
@@ -21,7 +21,18 @@
       "displayName": "Release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin"
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+        "GAMESMAN_ENABLE_TESTING": "OFF"
+      }
+    },
+    {
+      "name": "benchmark",
+      "inherits": "base",
+      "displayName": "Release + Benchmark",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GAMESMAN_ENABLE_BENCHMARKS": "ON",
+        "GAMESMAN_ENABLE_TESTING": "OFF"
       }
     },
     {
@@ -30,7 +41,7 @@
       "displayName": "RelWithDebInfo + ASan + UBSan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "ENABLE_ASAN_UBSAN": "ON"
+        "GAMESMAN_ENABLE_ASAN_UBSAN": "ON"
       }
     },
     {
@@ -38,7 +49,7 @@
       "inherits": "ci-asan",
       "displayName": "RelWithDebInfo + ASan + UBSan (Single-Threaded)",
       "cacheVariables": {
-        "DISABLE_OPENMP": "ON"
+        "GAMESMAN_ENABLE_OPENMP": "OFF"
       }
     },
     {
@@ -51,7 +62,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "ENABLE_TSAN": "ON"
+        "GAMESMAN_ENABLE_TSAN": "ON"
       }
     },
     {
@@ -60,7 +71,7 @@
       "displayName": "Debug + Coverage",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ENABLE_LINE_COVERAGE": "ON"
+        "GAMESMAN_ENABLE_LINE_COVERAGE": "ON"
       }
     },
     {
@@ -68,7 +79,7 @@
       "inherits": "ci-coverage",
       "displayName": "Debug + Coverage (Single-Threaded)",
       "cacheVariables": {
-        "DISABLE_OPENMP": "ON"
+        "GAMESMAN_ENABLE_OPENMP": "OFF"
       }
     },
     {
@@ -81,7 +92,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ENABLE_STATIC_ANALYZER": "ON"
+        "GAMESMAN_ENABLE_STATIC_ANALYZER": "ON"
       }
     },
     {
@@ -94,7 +105,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ENABLE_STATIC_ANALYZER": "ON"
+        "GAMESMAN_ENABLE_STATIC_ANALYZER": "ON"
       }
     }
   ],
@@ -108,6 +119,12 @@
       "inherits": "base-build",
       "configurePreset": "release",
       "targets": "gamesman"
+    },
+    {
+      "name": "benchmark-build",
+      "inherits": "base-build",
+      "configurePreset": "benchmark",
+      "targets": "data_structures_bench"
     },
     {
       "name": "ci-asan-build",
@@ -181,6 +198,76 @@
       "name": "ci-coverage-st-test",
       "inherits": "ci-coverage-test",
       "configurePreset": "ci-coverage-st"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ci-asan",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-asan"
+        },
+        {
+          "type": "build",
+          "name": "ci-asan-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-asan-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-asan-st",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-asan-st"
+        },
+        {
+          "type": "build",
+          "name": "ci-asan-st-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-asan-st-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-coverage",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-coverage"
+        },
+        {
+          "type": "build",
+          "name": "ci-coverage-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-coverage-test"
+        }
+      ]
+    },
+    {
+      "name": "ci-coverage-st",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ci-coverage-st"
+        },
+        {
+          "type": "build",
+          "name": "ci-coverage-st-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-coverage-st-test"
+        }
+      ]
     }
   ]
 }
