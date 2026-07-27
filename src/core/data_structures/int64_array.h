@@ -131,9 +131,6 @@ bool Int64ArrayEmpty(const Int64Array *array);
  */
 bool Int64ArrayContains(const Int64Array *array, int64_t item);
 
-/** @brief Sorts the given ARRAY in ascending order. */
-void Int64ArraySortAscending(Int64Array *array);
-
 /**
  * @brief Sorts the given ARRAY according to the given comparison function.
  * @param array The array to be sorted.

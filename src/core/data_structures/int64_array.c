@@ -128,10 +128,6 @@ static int Int64Comp(const void *a, const void *b) {
     return (aa > bb) - (aa < bb);
 }
 
-void Int64ArraySortAscending(Int64Array *array) {
-    qsort(array->array, array->size, sizeof(int64_t), Int64Comp);
-}
-
 void Int64ArraySortExplicit(Int64Array *array,
                             int (*comp)(const void *, const void *)) {
     qsort(array->array, array->size, sizeof(int64_t), comp);
