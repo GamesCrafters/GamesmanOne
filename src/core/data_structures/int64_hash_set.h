@@ -28,7 +28,11 @@
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#include "core/data_structures/hash.h"
+#include "core/gamesman_memory.h"
 
 /**
  * @brief Entry object of an \c Int64HashSet. This struct is not meant to be
@@ -65,7 +69,57 @@ typedef struct Int64HashSet {
  * factor is capped at 0.25 and 0.75 respectively if the user passes a value
  * that is smaller than 0.25 or greater than 0.75.
  */
-void Int64HashSetInit(Int64HashSet *set, double max_load_factor);
+static inline void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
+    set->entries = NULL;
+    set->capacity_mask = -1;
+    set->size = 0;
+    if (max_load_factor > 0.75) max_load_factor = 0.75;
+    if (max_load_factor < 0.25) max_load_factor = 0.25;
+    set->max_load_factor = max_load_factor;
+}
+
+static inline int64_t Hash(int64_t key, int64_t capacity_mask) {
+    return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
+}
+
+static inline int64_t NextIndex(int64_t index, int64_t capacity_mask) {
+    return (index + 1) & capacity_mask;
+}
+
+static inline bool Expand(Int64HashSet *set, int64_t new_mask) {
+    Int64HashSetEntry *new_entries = (Int64HashSetEntry *)GamesmanCallocWhole(
+        new_mask + 1, sizeof(Int64HashSetEntry));
+    if (new_entries == NULL) return false;
+
+    for (int64_t i = 0; i <= set->capacity_mask; ++i) {
+        if (set->entries[i].used) {
+            int64_t new_index = Hash(set->entries[i].key, new_mask);
+            while (new_entries[new_index].used) {
+                new_index = NextIndex(new_index, new_mask);
+            }
+            new_entries[new_index] = set->entries[i];
+        }
+    }
+    GamesmanFree(set->entries);
+    set->entries = new_entries;
+    set->capacity_mask = new_mask;
+
+    return true;
+}
+
+static inline int64_t MinCapacityMask(int64_t capacity) {
+    if (capacity <= 0) return -1;
+
+    capacity--;
+    capacity |= capacity >> 1;
+    capacity |= capacity >> 2;
+    capacity |= capacity >> 4;
+    capacity |= capacity >> 8;
+    capacity |= capacity >> 16;
+    capacity |= capacity >> 32;
+
+    return capacity;
+}
 
 /**
  * @brief Attempts to reserve space for \p size elements in \p set. If \c true
@@ -78,10 +132,22 @@ void Int64HashSetInit(Int64HashSet *set, double max_load_factor);
  * @return \c true on success,
  * @return \c false otherwise.
  */
-bool Int64HashSetReserve(Int64HashSet *set, int64_t size);
+static inline bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
+    int64_t target_capacity_mask =
+        MinCapacityMask((int64_t)((double)size / set->max_load_factor));
+    if (target_capacity_mask <= set->capacity_mask) return true;
+
+    return Expand(set, target_capacity_mask);
+}
 
 /** @brief Deallocates the given \p set. */
-void Int64HashSetDestroy(Int64HashSet *set);
+static inline void Int64HashSetDestroy(Int64HashSet *set) {
+    GamesmanFree(set->entries);
+    set->entries = NULL;
+    set->capacity_mask = -1;
+    set->size = 0;
+    set->max_load_factor = 0.0;
+}
 
 /**
  * @brief Adds \p key to \p set or does nothing if \p set already contains
@@ -92,7 +158,28 @@ void Int64HashSetDestroy(Int64HashSet *set);
  * @return \c true if \p key was added to \p set as a new key, or
  * @return \c false if \p set already contains \p key or an error occurred.
  */
-bool Int64HashSetAdd(Int64HashSet *set, int64_t key);
+static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
+    // Check if resizing is needed.
+    if (set->capacity_mask < 0) {
+        if (!Expand(set, 1)) return false;
+    } else if ((double)(set->size + 1) >
+               (double)(set->capacity_mask + 1) * set->max_load_factor) {
+        int64_t new_capacity_mask = (set->capacity_mask << 1) | 1;
+        if (!Expand(set, new_capacity_mask)) return false;
+    }
+
+    // Set value at key.
+    int64_t index = Hash(key, set->capacity_mask);
+    while (set->entries[index].used) {
+        if (set->entries[index].key == key) return false;
+        index = NextIndex(index, set->capacity_mask);
+    }
+    set->entries[index].key = key;
+    set->entries[index].used = true;
+    ++set->size;
+
+    return true;
+}
 
 /**
  * @brief Tests if \p key is in \p set.
@@ -102,6 +189,17 @@ bool Int64HashSetAdd(Int64HashSet *set, int64_t key);
  * @return true if \p set contains \p key, or
  * @return false otherwise.
  */
-bool Int64HashSetContains(const Int64HashSet *set, int64_t key);
+static inline bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
+    // Edge case: return false if set is empty.
+    if (set->capacity_mask < 0) return false;
+
+    int64_t index = Hash(key, set->capacity_mask);
+    while (set->entries[index].used) {
+        if (set->entries[index].key == key) return true;
+        index = NextIndex(index, set->capacity_mask);
+    }
+
+    return false;
+}
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_

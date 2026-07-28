@@ -16,7 +16,6 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/cstring.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_to_ptr_chained_hash_map.c)
 
