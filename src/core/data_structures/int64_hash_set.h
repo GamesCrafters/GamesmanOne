@@ -42,20 +42,6 @@ typedef struct Int64HashSetEntry {
 
 /**
  * @brief Linear-probing int64_t hash set.
- *
- * @example
- * Int64HashSet myset;
- * Int64HashSetInit(&myset, 0.5);  // Sets max_load_factor to 0.5.
- * Int64HashSetAdd(&myset, 42);
- * Int64HashSetAdd(&myset, 43);
- * Int64HashSetAdd(&myset, 55);
- * if (Int64HashSetContains(&myset, 42)) {  // returns true
- *     printf("myset contains 42\n");
- * }
- * if (!Int64HashSetContains(&myset, 0)) {  // returns false
- *     printf("myset does not contain 0\n");
- * }
- * Int64HashSetDestroy(&myset);
  */
 typedef struct Int64HashSet {
     Int64HashSetEntry *entries; /**< Dynamic array of buckets. */
