@@ -178,8 +178,9 @@ static inline void Int64HashSetDestroy(Int64HashSet *set) {
  */
 static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     // Check if resizing is needed.
+    static const int kInitialCapacity = 16;
     if (set->capacity_mask < 0) {
-        if (!Int64HashSetInternalExpand(set, 16 - 1)) {
+        if (!Int64HashSetInternalExpand(set, kInitialCapacity - 1)) {
             return false;
         }
     } else if (set->size >= set->max_size) {
