@@ -41,8 +41,8 @@ bool TierArrayAppend(TierArray *array, Tier tier) {
     return Int64ArrayPushBack(array, tier);
 }
 
-bool TierArrayRemove(TierArray *array, Tier tier) {
-    return Int64ArrayRemove(array, tier);
+bool TierArrayRemoveUnordered(TierArray *array, Tier tier) {
+    return Int64ArrayRemoveUnordered(array, tier);
 }
 
 void TierArrayPopBack(TierArray *array) { Int64ArrayPopBack(array); }

@@ -657,7 +657,7 @@ static void SolveTierGraphMpiSolveAll(time_t begin_time,
                 SolveUpdateTierGraph(tier);
                 ++processed_tiers;
             }
-            TierArrayRemove(&solving_tiers, tier);
+            TierArrayRemoveUnordered(&solving_tiers, tier);
 
             double time_elapsed = difftime(time(NULL), begin_time);
             SolveTierGraphPrintTime(tier, time_elapsed, solved,
