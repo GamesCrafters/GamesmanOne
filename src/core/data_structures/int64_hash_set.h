@@ -121,7 +121,9 @@ static inline bool Int64HashSetInternalExpand(Int64HashSet *set,
 }
 
 static inline int64_t MinCapacityMask(int64_t capacity) {
-    if (capacity <= 0) return -1;
+    if (capacity <= 0) {
+        return -1;
+    }
 
     capacity--;
     capacity |= capacity >> 1;
@@ -148,7 +150,9 @@ static inline int64_t MinCapacityMask(int64_t capacity) {
 static inline bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
     int64_t target_capacity_mask =
         MinCapacityMask((int64_t)((double)size / set->max_load_factor));
-    if (target_capacity_mask <= set->capacity_mask) return true;
+    if (target_capacity_mask <= set->capacity_mask) {
+        return true;
+    }
 
     return Int64HashSetInternalExpand(set, target_capacity_mask);
 }
@@ -186,13 +190,19 @@ static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     }
 
     // Set value at key.
-    int64_t index = Int64HashSetInternalHash(key, set->capacity_mask);
-    while (set->entries[index].used) {
-        if (set->entries[index].key == key) return false;
-        index = Int64HashSetInternalNextIndex(index, set->capacity_mask);
+    // Hoist pointers and values to locals so the compiler
+    // doesn't worry about memory aliasing during the loop.
+    Int64HashSetEntry *entries = set->entries;
+    int64_t capacity_mask = set->capacity_mask;
+    int64_t index = Int64HashSetInternalHash(key, capacity_mask);
+    while (entries[index].used) {
+        if (entries[index].key == key) {
+            return false;
+        }
+        index = Int64HashSetInternalNextIndex(index, capacity_mask);
     }
-    set->entries[index].key = key;
-    set->entries[index].used = true;
+    entries[index].key = key;
+    entries[index].used = true;
     ++set->size;
 
     return true;
@@ -208,11 +218,15 @@ static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
  */
 static inline bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
     // Edge case: return false if set is empty.
-    if (set->capacity_mask < 0) return false;
+    if (set->capacity_mask < 0) {
+        return false;
+    }
 
     int64_t index = Int64HashSetInternalHash(key, set->capacity_mask);
     while (set->entries[index].used) {
-        if (set->entries[index].key == key) return true;
+        if (set->entries[index].key == key) {
+            return true;
+        }
         index = Int64HashSetInternalNextIndex(index, set->capacity_mask);
     }
 
