@@ -1,10 +1,11 @@
 /**
  * @file int64_hash_set.h
- * @author Robert Shi (robertyishi@berkeley.edu): adapted to C.
+ * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamically-sized linear probing 64-bit integer hash set with sentinel
  * value optimization.
+ *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
