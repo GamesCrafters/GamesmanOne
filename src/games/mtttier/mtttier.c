@@ -343,11 +343,9 @@ static int MtttierGetCanonicalParentPositions(
                 continue;  // Illegal.
             }
             parent.position = MtttierGetCanonicalPosition(parent);
-            if (PositionHashSetContains(&deduplication_set, parent.position)) {
-                continue;  // Already included.
+            if (PositionHashSetAdd(&deduplication_set, parent.position)) {
+                parents[ret++] = parent.position;
             }
-            PositionHashSetAdd(&deduplication_set, parent.position);
-            parents[ret++] = parent.position;
         }
     }
     PositionHashSetDestroy(&deduplication_set);

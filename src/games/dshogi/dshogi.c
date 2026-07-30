@@ -538,8 +538,7 @@ static void AddIfNotDuplicate(
     int *num_positions, PositionHashSet *dedup_set, Position pos) {
     //
     pos = DobutsuShogiGetCanonicalPosition(pos);
-    if (!PositionHashSetContains(dedup_set, pos)) {
-        PositionHashSetAdd(dedup_set, pos);
+    if (PositionHashSetAdd(dedup_set, pos)) {
         array[(*num_positions)++] = pos;
     }
 }

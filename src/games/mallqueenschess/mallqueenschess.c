@@ -528,8 +528,7 @@ static int MallqueenschessGetCanonicalParentPositions(
             GenericHashUnhash(child, board);
             child = GenericHashHash(board, oppT);  // Now it's opponent's turn
             child = MallqueenschessGetCanonicalPosition(child);
-            if (!PositionHashSetContains(&deduplication_set, child)) {
-                PositionHashSetAdd(&deduplication_set, child);
+            if (PositionHashSetAdd(&deduplication_set, child)) {
                 parents[ret++] = child;
             }
         }

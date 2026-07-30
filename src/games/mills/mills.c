@@ -731,8 +731,7 @@ static void AddCanonicalParent(
         .position = X86SimdTwoPieceHashHashMem(patterns, opp_turn),
     };
     parent.position = MillsGetCanonicalPosition(parent);
-    if (!PositionHashSetContains(dedup, parent.position)) {
-        PositionHashSetAdd(dedup, parent.position);
+    if (PositionHashSetAdd(dedup, parent.position)) {
         parents[(*ret)++] = parent.position;
     }
 }

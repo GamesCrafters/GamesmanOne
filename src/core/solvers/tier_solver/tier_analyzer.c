@@ -121,8 +121,7 @@ static int GetCanonicalChildTiers(
     int ret = 0;
     for (int i = 0; i < num_children; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(children[i]);
-        if (!TierHashSetContains(&dedup, canonical)) {
-            TierHashSetAdd(&dedup, canonical);
+        if (TierHashSetAdd(&dedup, canonical)) {
             canonical_children[ret++] = canonical;
         }
     }

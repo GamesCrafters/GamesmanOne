@@ -417,9 +417,9 @@ static int DeduplicateTierArray(Tier *dest, const Tier *src, int size) {
     TierHashSetInit(&dedup, 0.5);
     int ret = 0;
     for (int i = 0; i < size; ++i) {
-        if (TierHashSetContains(&dedup, src[i])) continue;
-        TierHashSetAdd(&dedup, src[i]);
-        dest[ret++] = src[i];
+        if (TierHashSetAdd(&dedup, src[i])) {
+            dest[ret++] = src[i];
+        }
     }
     TierHashSetDestroy(&dedup);
 

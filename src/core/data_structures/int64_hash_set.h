@@ -25,7 +25,6 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 
-#include <immintrin.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -76,7 +75,8 @@ static inline void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
 
 /**
  * @brief [INTERNAL] Expands the internal capacity of the hash set
- * automatically.
+ * automatically, assuming either `set` has not been lazily initialized or
+ * doubling its capacity would satisfy the needs for this expansion..
  *
  * @warning This is an internal function exposed for optimization purposes.
  * Users of this library should never call this function directly.
@@ -119,12 +119,13 @@ static inline bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
 
     uint64_t required_capacity =
         (uint64_t)((double)size * set->inv_max_load_factor);
-    uint64_t target_capacity = set->mask + 1;
-    while (target_capacity <= required_capacity) {
-        target_capacity <<= 1;
-    }
 
-    return Int64HashSetInternalExpandExplicit(set, target_capacity - 1);
+    // Calculate the next power of 2 strictly greater than required_capacity
+    // Subtracting from 64 gives the position of the highest set bit + 1.
+    uint64_t needed_capacity = 1ULL
+                               << (64 - __builtin_clzll(required_capacity));
+
+    return Int64HashSetInternalExpandExplicit(set, needed_capacity - 1);
 }
 
 /**
@@ -145,12 +146,13 @@ static inline void Int64HashSetDestroy(Int64HashSet *set) {
  * @brief Adds a 64-bit integer key to the hash set.
  *
  * @param[in,out] set The `Int64HashSet` to add the key to.
- * @param[in] key The 64-bit integer value to add.
+ * @param[in] key The 64-bit integer value to add. Must not be equal to
+ * `INT64_MIN` (`INT64_HASH_SET_EMPTY_KEY`).
  *
  * @retval true The `key` was successfully added.
  * @retval false The `key` already exists, or memory allocation failed.
  */
-static inline bool Int64HashSetAdd(Int64HashSet *__restrict set, int64_t key) {
+static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     if (set->size >= set->max_size) {
         if (!Int64HashSetInternalExpand(set)) {
             return false;
@@ -174,6 +176,30 @@ static inline bool Int64HashSetAdd(Int64HashSet *__restrict set, int64_t key) {
     ++set->size;
 
     return true;
+}
+
+static inline bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
+    const int64_t *__restrict keys = set->keys;
+
+    // Return false if set has not been lazily initialized
+    if (!keys) {
+        return false;
+    }
+
+    const uint64_t mask = set->mask;
+
+    // Look for key in the set
+    uint64_t index = Splitmix64(key) & mask;
+    while (keys[index] != INT64_HASH_SET_EMPTY_KEY) {
+        if (keys[index] == key) {
+            return true;
+        }
+        index = (index + 1) & mask;
+        // We don't need to worry about infinite loop here because
+        // max_load_factor is strictly less than 0.8.
+    }
+
+    return false;
 }
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
