@@ -3,6 +3,7 @@ add_library_test(data_structures_test data_structures
     bitset_test.cpp
     hash_test.cpp
     int64_array_test.cpp
+    int64_hash_set_test.cpp
     x86_m128i_hash_set_test.cpp
     COMPILE_DEFINITIONS
     $<$<BOOL:${GAMESMAN_ENABLE_TSAN}>:GAMESMAN_TSAN_ENABLED>

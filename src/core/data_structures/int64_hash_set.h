@@ -120,6 +120,12 @@ static inline bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
     uint64_t required_capacity =
         (uint64_t)((double)size * set->inv_max_load_factor);
 
+    // Prevents UB (shifting left by 64). No need to check of required_capacity
+    // == 0 here because size is strictly positive and inv_max_load_factor > 1.
+    if (required_capacity >= (1ULL << 63)) {
+        return false;
+    }
+
     // Calculate the next power of 2 strictly greater than required_capacity
     // Subtracting from 64 gives the position of the highest set bit + 1.
     uint64_t needed_capacity = 1ULL
