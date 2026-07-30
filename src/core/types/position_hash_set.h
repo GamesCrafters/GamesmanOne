@@ -52,7 +52,10 @@ typedef Int64HashSet PositionHashSet;
  * factor is capped at 0.25 and 0.75 respectively if the user passes a value
  * that is smaller than 0.25 or greater than 0.75.
  */
-void PositionHashSetInit(PositionHashSet *set, double max_load_factor);
+static inline void PositionHashSetInit(PositionHashSet *set,
+                                       double max_load_factor) {
+    Int64HashSetInit(set, max_load_factor);
+}
 
 /**
  * @brief Attempts to reserve space for \p size Position in \p set. If \c true
@@ -65,10 +68,14 @@ void PositionHashSetInit(PositionHashSet *set, double max_load_factor);
  * @return \c true on success,
  * @return \c false otherwise.
  */
-bool PositionHashSetReserve(PositionHashSet *set, int64_t size);
+static inline bool PositionHashSetReserve(PositionHashSet *set, int64_t size) {
+    return Int64HashSetReserve(set, size);
+}
 
 /** @brief Deallocates the given \p set. */
-void PositionHashSetDestroy(PositionHashSet *set);
+static inline void PositionHashSetDestroy(PositionHashSet *set) {
+    Int64HashSetDestroy(set);
+}
 
 /**
  * @brief Tests if \p position is in \p set.
@@ -78,7 +85,10 @@ void PositionHashSetDestroy(PositionHashSet *set);
  * @return true if \p set contains \p position, or
  * @return false otherwise.
  */
-bool PositionHashSetContains(PositionHashSet *set, Position position);
+static inline bool PositionHashSetContains(PositionHashSet *set,
+                                           Position position) {
+    return Int64HashSetContains(set, position);
+}
 
 /**
  * @brief Adds \p position to the given \p set or does nothing if \p set already
@@ -89,6 +99,8 @@ bool PositionHashSetContains(PositionHashSet *set, Position position);
  * @return \c true if \p position was added into \p set as a new key, or
  * @return \c false if \p set already contains \p position or an error occurred.
  */
-bool PositionHashSetAdd(PositionHashSet *set, Position position);
+static inline bool PositionHashSetAdd(PositionHashSet *set, Position position) {
+    return Int64HashSetAdd(set, position);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_POSITION_HASH_SET_H_

@@ -23,10 +23,8 @@ set(HEADERS
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/move_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/position_array.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/position_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_hash_map.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/tier_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_position_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_position_hash_set.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_queue.c
