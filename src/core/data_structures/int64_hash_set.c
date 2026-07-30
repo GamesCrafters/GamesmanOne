@@ -34,12 +34,13 @@ bool Int64HashSetInternalExpandExplicit(Int64HashSet *set, uint64_t new_mask) {
     if (old_keys != NULL) {
         uint64_t old_mask = set->mask;
         for (uint64_t i = 0; i <= old_mask; ++i) {
-            if (old_keys[i] != INT64_HASH_SET_EMPTY_KEY) {
-                uint64_t new_index = Splitmix64(old_keys[i]) & new_mask;
+            int64_t key = old_keys[i];
+            if (key != INT64_HASH_SET_EMPTY_KEY) {
+                uint64_t new_index = Splitmix64(key) & new_mask;
                 while (new_keys[new_index] != INT64_HASH_SET_EMPTY_KEY) {
                     new_index = (new_index + 1) & new_mask;
                 }
-                new_keys[new_index] = old_keys[i];
+                new_keys[new_index] = key;
             }
         }
     }
@@ -48,7 +49,7 @@ bool Int64HashSetInternalExpandExplicit(Int64HashSet *set, uint64_t new_mask) {
     GamesmanFree(old_keys);
     set->keys = new_keys;
     set->mask = new_mask;
-    set->max_size = (int64_t)((new_mask + 1) * set->max_load_factor);
+    set->max_size = (int64_t)((new_mask + 1) / set->inv_max_load_factor);
 
     return true;
 }
