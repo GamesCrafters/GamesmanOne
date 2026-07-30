@@ -103,6 +103,7 @@ static inline void Int64ArrayDestroy(Int64Array *array) {
 
 /**
  * @brief [INTERNAL] Expands `array` to a strictly larger `capacity`.
+ *
  * @warning This is an internal function exposed for optimization purposes.
  * Users of this library should never call this function directly.
  *
