@@ -9,8 +9,8 @@
 bool Int64HashSetInternalExpand(Int64HashSet *set) {
     // If old_keys is non-NULL, this is a normal expansion step;
     // if old_keys in NULL, this is the lazy initialization step.
-    // Initial capacity is 16, so the mask is 0xF.
-    uint64_t new_mask = set->keys ? ((set->mask << 1) | 1ULL) : 0xFULL;
+    // Initial capacity is 128, so the mask 127 (0x7F).
+    uint64_t new_mask = set->keys ? ((set->mask << 1) | 1ULL) : 0x7F;
 
     return Int64HashSetInternalExpandExplicit(set, new_mask);
 }
