@@ -3,9 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing int64_t hash set.
- * @version 2.0.0
- * @date 2025-05-11
+ * @brief Dynamically-sized linear probing 64-bit integer hash set with sentinel
+ * value optimization.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,94 +27,186 @@
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
-/**
- * @brief Entry object of an \c Int64HashSet. This struct is not meant to be
- * used by the user of this library. Always use accessor and mutator functions
- * instead.
- */
-typedef struct Int64HashSetEntry {
-    int64_t key; /**< Key to the entry. */
-    bool used;   /**< True iff this bucket contains an actual record. */
-} Int64HashSetEntry;
+#include "core/data_structures/hash.h"
+#include "core/gamesman_memory.h"
 
 /**
- * @brief Linear-probing int64_t hash set.
+ * @brief Sentinel value used to represent an empty slot in the hash set.
  *
- * @example
- * Int64HashSet myset;
- * Int64HashSetInit(&myset, 0.5);  // Sets max_load_factor to 0.5.
- * Int64HashSetAdd(&myset, 42);
- * Int64HashSetAdd(&myset, 43);
- * Int64HashSetAdd(&myset, 55);
- * if (Int64HashSetContains(&myset, 42)) {  // returns true
- *     printf("myset contains 42\n");
- * }
- * if (!Int64HashSetContains(&myset, 0)) {  // returns false
- *     printf("myset does not contain 0\n");
- * }
- * Int64HashSetDestroy(&myset);
+ * The user of Int64HashSet is responsible for making sure that `INT64_MIN` is
+ * never inserted as a key. The library is aggressively optimized and will not
+ * check for such insertions.
+ */
+#define INT64_HASH_SET_EMPTY_KEY INT64_MIN
+
+/**
+ * @brief A hash set optimized for storing 64-bit integer keys.
  */
 typedef struct Int64HashSet {
-    Int64HashSetEntry *entries; /**< Dynamic array of buckets. */
-    int64_t
-        capacity_mask; /**< Number of buckets - 1, for fast bucket indexing. */
-    int64_t size;      /**< Number of entries in the hash set. */
-    double max_load_factor; /**< Hash set will automatically expand if
-                            (double)size/capacity is greater than this value. */
+    int64_t *keys;    /**< Array of keys in the hash set. */
+    uint64_t mask;    /**< Bitmask used for indexing into the keys. */
+    int64_t size;     /**< Current number of elements in the set. */
+    int64_t max_size; /**< Maximum elements before expansion is needed. */
+    double inv_max_load_factor; /**< Equals to `1.0 / max_load_factor`. */
 } Int64HashSet;
 
 /**
- * @brief Initializes the given \p set to an empty set with maximum load
- * factor \p max_load_factor.
+ * @brief Initializes a 64-bit integer hash set.
  *
- * @param set Set to initialize.
- * @param max_load_factor Set maximum load factor of \p set to this value. The
- * hash set will automatically expand its capacity if (double)size/capacity is
- * greater than \p max_load_factor. A small value trades memory for speed
- * whereas a large value trades speed for memory. This value is restricted to be
- * in the range [0.25, 0.75] to provide optimal performance. The actual max load
- * factor is capped at 0.25 and 0.75 respectively if the user passes a value
- * that is smaller than 0.25 or greater than 0.75.
+ * @param[out] set The `Int64HashSet` to initialize.
+ * @param[in] max_load_factor The maximum load factor, clamped to [0.5, 0.8].
  */
-void Int64HashSetInit(Int64HashSet *set, double max_load_factor);
+static inline void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
+    // Clamp max_load_factor to [0.5, 0.8]
+    if (max_load_factor < 0.5) {
+        max_load_factor = 0.5;
+    } else if (max_load_factor > 0.8) {
+        max_load_factor = 0.8;
+    }
+
+    set->keys = NULL;
+    set->mask = 0x0ULL;
+    set->size = 0L;
+    set->max_size = 0L;
+    set->inv_max_load_factor = 1.0 / max_load_factor;
+}
 
 /**
- * @brief Attempts to reserve space for \p size elements in \p set. If \c true
- * is returned, the target hash set \p set is guaranteed to have space for at
- * least \p size elements before it expands internally. If \c false is returned,
- * the hash set remains unchanged.
+ * @brief [INTERNAL] Expands the internal capacity of the hash set
+ * automatically, assuming either `set` has not been lazily initialized or
+ * doubling its capacity would satisfy the needs for this expansion..
  *
- * @param set Target hash set.
- * @param size Number of elements to reserve space for.
- * @return \c true on success,
- * @return \c false otherwise.
- */
-bool Int64HashSetReserve(Int64HashSet *set, int64_t size);
-
-/** @brief Deallocates the given \p set. */
-void Int64HashSetDestroy(Int64HashSet *set);
-
-/**
- * @brief Adds \p key to \p set or does nothing if \p set already contains
- * \p key.
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
  *
- * @param set Set to add \p key to.
- * @param key Key to add to \p set.
- * @return \c true if \p key was added to \p set as a new key, or
- * @return \c false if \p set already contains \p key or an error occurred.
+ * @param[in,out] set The `Int64HashSet` to expand.
+ *
+ * @retval true The hash set was successfully expanded.
+ * @retval false Memory allocation failed during expansion.
  */
-bool Int64HashSetAdd(Int64HashSet *set, int64_t key);
+bool Int64HashSetInternalExpand(Int64HashSet *set);
 
 /**
- * @brief Tests if \p key is in \p set.
+ * @brief [INTERNAL] Expands the hash set to a specific capacity derived from a
+ * new mask.
  *
- * @param set Set from which the given \p key is looked up.
- * @param key Key to look for.
- * @return true if \p set contains \p key, or
- * @return false otherwise.
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
+ *
+ * @param[in,out] set The `Int64HashSet` to expand.
+ * @param[in] new_mask The new mask defining the target capacity.
+ *
+ * @retval true The hash set was successfully expanded.
+ * @retval false Memory allocation failed during expansion.
  */
-bool Int64HashSetContains(const Int64HashSet *set, int64_t key);
+bool Int64HashSetInternalExpandExplicit(Int64HashSet *set, uint64_t new_mask);
+
+/**
+ * @brief Reserves space in the hash set for at least the specified size.
+ *
+ * @param[in,out] set The `Int64HashSet` to modify.
+ * @param[in] size The minimum number of elements to reserve space for.
+ *
+ * @retval true The capacity is sufficient or was successfully expanded.
+ * @retval false Memory allocation failed during expansion.
+ */
+static inline bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
+    if (size <= set->max_size) {
+        return true;
+    }
+
+    uint64_t required_capacity =
+        (uint64_t)((double)size * set->inv_max_load_factor);
+
+    // Prevents UB (shifting left by 64). No need to check of required_capacity
+    // == 0 here because size is strictly positive and inv_max_load_factor > 1.
+    if (required_capacity >= (1ULL << 63)) {
+        return false;
+    }
+
+    // Calculate the next power of 2 strictly greater than required_capacity
+    // Subtracting from 64 gives the position of the highest set bit + 1.
+    uint64_t needed_capacity = 1ULL
+                               << (64 - __builtin_clzll(required_capacity));
+
+    return Int64HashSetInternalExpandExplicit(set, needed_capacity - 1);
+}
+
+/**
+ * @brief Frees the memory associated with the hash set and resets its state.
+ *
+ * @param[in,out] set The `Int64HashSet` to destroy.
+ */
+static inline void Int64HashSetDestroy(Int64HashSet *set) {
+    GamesmanFree(set->keys);  // NULL-safe
+    set->keys = NULL;
+    set->mask = 0x0ULL;
+    set->size = 0L;
+    set->max_size = 0L;
+    set->inv_max_load_factor = 0.0;
+}
+
+/**
+ * @brief Adds a 64-bit integer key to the hash set.
+ *
+ * @param[in,out] set The `Int64HashSet` to add the key to.
+ * @param[in] key The 64-bit integer value to add. Must not be equal to
+ * `INT64_MIN` (`INT64_HASH_SET_EMPTY_KEY`).
+ *
+ * @retval true The `key` was successfully added.
+ * @retval false The `key` already exists, or memory allocation failed.
+ */
+static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
+    if (set->size >= set->max_size) {
+        if (!Int64HashSetInternalExpand(set)) {
+            return false;
+        }
+    }
+
+    // Hoist pointers and values to locals so the compiler
+    // doesn't worry about memory aliasing during the loop.
+    int64_t *__restrict keys = set->keys;
+    uint64_t mask = set->mask;
+
+    // Add key to the set
+    uint64_t index = Splitmix64(key) & mask;
+    while (keys[index] != INT64_HASH_SET_EMPTY_KEY) {
+        if (keys[index] == key) {
+            return false;
+        }
+        index = (index + 1) & mask;
+    }
+    keys[index] = key;
+    ++set->size;
+
+    return true;
+}
+
+static inline bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
+    const int64_t *__restrict keys = set->keys;
+
+    // Return false if set has not been lazily initialized
+    if (!keys) {
+        return false;
+    }
+
+    const uint64_t mask = set->mask;
+
+    // Look for key in the set
+    uint64_t index = Splitmix64(key) & mask;
+    while (keys[index] != INT64_HASH_SET_EMPTY_KEY) {
+        if (keys[index] == key) {
+            return true;
+        }
+        index = (index + 1) & mask;
+        // We don't need to worry about infinite loop here because
+        // max_load_factor is strictly less than 0.8.
+    }
+
+    return false;
+}
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_HASH_SET_H_

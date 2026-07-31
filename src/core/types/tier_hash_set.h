@@ -49,10 +49,14 @@ typedef Int64HashSet TierHashSet;
  * factor is capped at 0.25 and 0.75 respectively if the user passes a value
  * that is smaller than 0.25 or greater than 0.75.
  */
-void TierHashSetInit(TierHashSet *set, double max_load_factor);
+static inline void TierHashSetInit(TierHashSet *set, double max_load_factor) {
+    Int64HashSetInit(set, max_load_factor);
+}
 
 /** @brief Deallocates the given \p set. */
-void TierHashSetDestroy(TierHashSet *set);
+static inline void TierHashSetDestroy(TierHashSet *set) {
+    Int64HashSetDestroy(set);
+}
 
 /**
  * @brief Tests if \p tier is in \p set.
@@ -62,7 +66,9 @@ void TierHashSetDestroy(TierHashSet *set);
  * @return true if \p set contains \p tier, or
  * @return false otherwise.
  */
-bool TierHashSetContains(const TierHashSet *set, Tier tier);
+static inline bool TierHashSetContains(const TierHashSet *set, Tier tier) {
+    return Int64HashSetContains(set, tier);
+}
 
 /**
  * @brief Adds \p tier to the given \p set or does nothing if \p set
@@ -73,6 +79,8 @@ bool TierHashSetContains(const TierHashSet *set, Tier tier);
  * @return \c true if \p tier was added into \p set as a new key, or
  * @return \c false if \p set already contains \p tier or an error occurred.
  */
-bool TierHashSetAdd(TierHashSet *set, Tier tier);
+static inline bool TierHashSetAdd(TierHashSet *set, Tier tier) {
+    return Int64HashSetAdd(set, tier);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_SET_H_

@@ -446,8 +446,7 @@ static int NeutronGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         Position child = NeutronDoMoveInternal(board, turn, moves[i]);
         child = NeutronGetCanonicalPosition(child);
-        if (!PositionHashSetContains(&dedup, child)) {
-            PositionHashSetAdd(&dedup, child);
+        if (PositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
@@ -507,8 +506,7 @@ static void GenerateParentsByReversingNeutron(
         while (dest != prev_dest) {
             Position parent = GenericHashHash(board, prev_turn);
             parent = GetCanonicalPositionInternal(parent, board, prev_turn);
-            if (!PositionHashSetContains(dedup, parent)) {
-                PositionHashSetAdd(dedup, parent);
+            if (PositionHashSetAdd(dedup, parent)) {
                 parents[(*num_parents)++] = parent;
             }
             prev_dest = dest;

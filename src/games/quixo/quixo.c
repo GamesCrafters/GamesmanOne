@@ -719,8 +719,7 @@ static int QuixoGetCanonicalParentPositions(
             __m128i new_board = DoMoveShiftRight(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
-            if (!PositionHashSetContains(&dedup, new_pos)) {
-                PositionHashSetAdd(&dedup, new_pos);
+            if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -733,8 +732,7 @@ static int QuixoGetCanonicalParentPositions(
             __m128i new_board = DoMoveShiftLeft(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
-            if (!PositionHashSetContains(&dedup, new_pos)) {
-                PositionHashSetAdd(&dedup, new_pos);
+            if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -747,8 +745,7 @@ static int QuixoGetCanonicalParentPositions(
             __m128i new_board = DoMoveShiftDown(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
-            if (!PositionHashSetContains(&dedup, new_pos)) {
-                PositionHashSetAdd(&dedup, new_pos);
+            if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -761,8 +758,7 @@ static int QuixoGetCanonicalParentPositions(
             __m128i new_board = DoMoveShiftUp(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos = X86SimdTwoPieceHashHash(new_board, opp_turn);
-            if (!PositionHashSetContains(&dedup, new_pos)) {
-                PositionHashSetAdd(&dedup, new_pos);
+            if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }

@@ -323,11 +323,9 @@ static int MtttGetCanonicalParentPositions(
             Position parent = position - (int)prev_turn * three_to_the[i];
             parent = MtttGetCanonicalPosition(parent);
             if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
-            if (PositionHashSetContains(&dedup, parent)) {
-                continue;  // Already included.
+            if (PositionHashSetAdd(&dedup, parent)) {
+                parents[ret++] = parent;
             }
-            PositionHashSetAdd(&dedup, parent);
-            parents[ret++] = parent;
         }
     }
     PositionHashSetDestroy(&dedup);

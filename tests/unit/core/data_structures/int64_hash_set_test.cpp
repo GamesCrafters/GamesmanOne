@@ -1,0 +1,476 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <limits>
+
+extern "C" {
+#include "core/data_structures/int64_hash_set.h"
+}
+
+// ====================== Initialization and Destruction ======================
+
+// Verifies that the hash set initializes correctly when provided with a
+// standard load factor within the accepted [0.5, 0.8] range.
+TEST(Int64HashSetTest, InitializesWithStandardLoadFactor) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.65);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 42))
+        << "The set should initialize correctly and allow a basic addition "
+           "when initialized with a safe 0.65 load factor.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, 42))
+        << "The set should correctly identify and reject a duplicate addition.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that initializing with a load factor below the 0.5 minimum does
+// not cause errors, as the library should implicitly clamp it up to 0.5.
+TEST(Int64HashSetTest, ClampsLoadFactorBelowMinimum) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.1);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 100))
+        << "The set should be functional and allow insertions despite the "
+           "below-minimum load factor input.";
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 200))
+        << "The set should allow multiple unique insertions.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, 100))
+        << "The set should still correctly identify duplicates when the load "
+           "factor is clamped up.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that initializing with a load factor above the 0.8 maximum is
+// handled safely, implicitly clamping it down to 0.8.
+TEST(Int64HashSetTest, ClampsLoadFactorAboveMaximum) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.99);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, -999))
+        << "The set should be functional and handle insertions safely despite "
+           "the above-maximum load factor input.";
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 999))
+        << "The set should allow multiple unique insertions.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, -999))
+        << "The set should still correctly identify duplicates when the load "
+           "factor is clamped down.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that destroying a newly initialized, completely empty set does
+// not cause null pointer dereferences or memory corruption.
+TEST(Int64HashSetTest, DestroysEmptySet) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    SUCCEED();
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that destroying a populated set correctly frees allocated buckets
+// and internal arrays without crashing.
+TEST(Int64HashSetTest, DestroysPopulatedSet) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 1))
+        << "Failed to add the first element to the set.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 2))
+        << "Failed to add the second element to the set.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 3))
+        << "Failed to add the third element to the set.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that after a set is destroyed, its internal state is cleanly
+// reset and it can be safely re-initialized and used again.
+TEST(Int64HashSetTest, AllowsReuseAfterDestruction) {
+    Int64HashSet set;
+
+    Int64HashSetInit(&set, 0.75);
+    EXPECT_TRUE(Int64HashSetAdd(&set, 50))
+        << "Failed to add an element during the first initialization "
+           "lifecycle.";
+    Int64HashSetDestroy(&set);
+
+    Int64HashSetInit(&set, 0.75);
+    EXPECT_TRUE(Int64HashSetAdd(&set, 50))
+        << "The set should act completely empty and allow adding '50' again "
+           "after being destroyed and re-initialized.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, 50))
+        << "The set should correctly reject duplicates during its second "
+           "lifecycle.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// ================================= Addition =================================
+
+// Verifies that a single, valid 64-bit integer can be successfully added
+// to an empty hash set.
+TEST(Int64HashSetTest, AddsSingleElementSuccessfully) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 42))
+        << "The set should successfully add a new, unique element and return "
+           "true.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that multiple distinct elements can be sequentially added
+// to the hash set without any false rejections.
+TEST(Int64HashSetTest, AddsMultipleDistinctElements) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 10))
+        << "The set should successfully add the first unique element.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 20))
+        << "The set should successfully add the second unique element.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 30))
+        << "The set should successfully add the third unique element.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that the set correctly identifies when an element already exists
+// and returns false to reject the duplicate insertion.
+TEST(Int64HashSetTest, RejectsDuplicateElement) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 99))
+        << "The initial insertion of the element should succeed.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, 99))
+        << "The second insertion attempt of the exact same element should be "
+           "rejected and return false.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that the set correctly maintains its internal state and rejects
+// duplicates even when multiple existing elements are added again.
+TEST(Int64HashSetTest, RejectsMultipleDuplicates) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 100))
+        << "First unique insertion should succeed.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 200))
+        << "Second unique insertion should succeed.";
+    EXPECT_TRUE(Int64HashSetAdd(&set, 300))
+        << "Third unique insertion should succeed.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, 100))
+        << "The set should reject the first duplicate.";
+    EXPECT_FALSE(Int64HashSetAdd(&set, 200))
+        << "The set should reject the second duplicate.";
+    EXPECT_FALSE(Int64HashSetAdd(&set, 300))
+        << "The set should reject the third duplicate.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// =============================== Value Lookups ===============================
+
+// Verifies that calling contains on a completely empty set correctly returns
+// false without crashing or reading uninitialized memory.
+TEST(Int64HashSetTest, ContainsReturnsFalseForEmptySet) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_FALSE(Int64HashSetContains(&set, 42))
+        << "The set should safely return false when checking for an element "
+           "in a newly initialized, empty set.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that the contains method correctly identifies elements that have
+// been successfully added to the set.
+TEST(Int64HashSetTest, ContainsFindsAddedElements) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    Int64HashSetAdd(&set, 10);
+    Int64HashSetAdd(&set, 20);
+
+    EXPECT_TRUE(Int64HashSetContains(&set, 10))
+        << "The set should return true for the first element that was added.";
+    EXPECT_TRUE(Int64HashSetContains(&set, 20))
+        << "The set should return true for the second element that was added.";
+
+    EXPECT_FALSE(Int64HashSetContains(&set, 30))
+        << "The set should return false for an element that was never added.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// ============================= Edge Case Values =============================
+
+// Define a test fixture for parameterized edge case testing
+class Int64HashSetEdgeCaseTest : public ::testing::TestWithParam<int64_t> {};
+
+// The parameterized test that will run for each defined edge case value
+TEST_P(Int64HashSetEdgeCaseTest, HandlesEdgeCaseValues) {
+    int64_t test_val = GetParam();
+
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_FALSE(Int64HashSetContains(&set, test_val))
+        << "The set should not contain the value " << test_val
+        << " when it's empty.";
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, test_val))
+        << "The set should successfully add " << test_val << ".";
+
+    EXPECT_TRUE(Int64HashSetContains(&set, test_val))
+        << "The set should correctly report that it contains " << test_val
+        << " after insertion.";
+
+    EXPECT_FALSE(Int64HashSetAdd(&set, test_val))
+        << "The set should correctly identify " << test_val
+        << " as a duplicate on a second insertion.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Instantiate the test suite with the specific edge case values
+INSTANTIATE_TEST_SUITE_P(EdgeCases, Int64HashSetEdgeCaseTest,
+                         ::testing::Values(0, -1,
+                                           std::numeric_limits<int64_t>::max(),
+                                           std::numeric_limits<int64_t>::min() +
+                                               1));
+
+// ================================ Reservation ================================
+
+// Verifies that requesting to reserve a capacity of zero is handled gracefully,
+// returning true without causing a crash or corrupting the set.
+TEST(Int64HashSetTest, ReservesZeroCapacity) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetReserve(&set, 0))
+        << "Reserving zero capacity should be treated as a no-op or valid "
+           "small allocation and return true.";
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 1))
+        << "The set should still be fully functional after reserving zero "
+           "capacity.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that reserving a typical, small capacity succeeds and the set
+// operates normally afterward.
+TEST(Int64HashSetTest, ReservesSmallCapacity) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    EXPECT_TRUE(Int64HashSetReserve(&set, 100))
+        << "Reserving capacity for 100 elements should succeed.";
+
+    EXPECT_TRUE(Int64HashSetAdd(&set, 42))
+        << "The set should allow insertions normally after reserving a small "
+           "capacity.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that reserving space for a large number of elements allows those
+// elements to be added successfully without failing. This ensures the internal
+// arrays properly scale to accommodate bulk inserts.
+TEST(Int64HashSetTest, ReservesBeforeAddingElements) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    const int64_t num_elements = 1000;
+
+    EXPECT_TRUE(Int64HashSetReserve(&set, num_elements))
+        << "Reserving capacity for 1000 elements should succeed.";
+
+    for (int64_t i = 0; i < num_elements; ++i) {
+        EXPECT_TRUE(Int64HashSetAdd(&set, i))
+            << "Adding element " << i
+            << " should succeed after reserving adequate capacity.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that attempting to reserve an impossibly large amount of memory
+// gracefully fails by returning false instead of crashing or aborting the
+// program.
+TEST(Int64HashSetTest, ReturnsFalseOnMemoryAllocationFailure) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    // std::numeric_limits<int64_t>::max() is virtually guaranteed to fail
+    // memory allocation on any current system.
+    EXPECT_FALSE(Int64HashSetReserve(&set, std::numeric_limits<int64_t>::max()))
+        << "Reserving an impossible amount of capacity should fail and return "
+           "false, rather than crashing.";
+
+    // Ensure the set is still in a valid state and can be destroyed cleanly
+    Int64HashSetDestroy(&set);
+}
+
+// ======================= Stress Testing and Rehashing =======================
+
+// Verifies that inserting a large number of elements without explicitly
+// reserving capacity successfully triggers natural rehashing and array growth.
+TEST(Int64HashSetTest, TriggersNaturalRehashing) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.75);
+
+    constexpr int64_t num_elements = 10000;
+
+    for (int64_t i = 0; i < num_elements; ++i) {
+        EXPECT_TRUE(Int64HashSetAdd(&set, i))
+            << "The set should dynamically grow and successfully add element "
+            << i << " during natural rehashing.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that after the internal arrays are resized during natural rehashing,
+// no previously inserted data is lost or orphaned.
+TEST(Int64HashSetTest, PreservesDataAfterRehashing) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.75);
+
+    constexpr int64_t num_elements = 10000;
+
+    // First pass: insert elements to trigger rehashing
+    for (int64_t i = 0; i < num_elements; ++i) {
+        Int64HashSetAdd(&set, i);
+    }
+
+    // Second pass: attempt to insert the exact same elements
+    for (int64_t i = 0; i < num_elements; ++i) {
+        EXPECT_FALSE(Int64HashSetAdd(&set, i))
+            << "The set should remember element " << i
+            << " and reject it as a duplicate after internal reallocations.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that elements can still be found using Contains after the set has
+// undergone significant natural rehashing and internal array growth.
+TEST(Int64HashSetTest, ContainsFindsElementsAfterRehashing) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.75);
+
+    constexpr int64_t num_elements = 10000;
+
+    // Trigger natural rehashing
+    for (int64_t i = 0; i < num_elements; ++i) {
+        Int64HashSetAdd(&set, i);
+    }
+
+    // Verify all inserted elements are still retrievable
+    for (int64_t i = 0; i < num_elements; ++i) {
+        EXPECT_TRUE(Int64HashSetContains(&set, i))
+            << "The set should successfully find element " << i
+            << " even after internal reallocations and rehashing.";
+    }
+
+    // Verify a handful of out-of-bounds elements return false
+    EXPECT_FALSE(Int64HashSetContains(&set, num_elements + 1))
+        << "The set should return false for an unadded positive element "
+           "post-rehashing.";
+    EXPECT_FALSE(Int64HashSetContains(&set, -500))
+        << "The set should return false for an unadded negative element "
+           "post-rehashing.";
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that checking for a large number of non-existent elements across
+// different hash buckets gracefully returns false without triggering infinite
+// loops or crashing, particularly in a densely populated set.
+TEST(Int64HashSetTest, ContainsGracefullyHandlesMissingKeysInDenseSet) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    // Insert a dense block of even numbers
+    for (int64_t i = 0; i < 2000; i += 2) {
+        Int64HashSetAdd(&set, i);
+    }
+
+    // Check for odd numbers that fall within the same numeric range
+    for (int64_t i = 1; i < 2000; i += 2) {
+        EXPECT_FALSE(Int64HashSetContains(&set, i))
+            << "The set should accurately report that the unadded key " << i
+            << " is missing, even amid a dense cluster of collisions.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that the internal hash function and collision resolution strategy
+// (e.g., linear probing) handle a dense, contiguous cluster of keys safely.
+TEST(Int64HashSetTest, HandlesDenseClusters) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    // Insert a dense block of 5000 contiguous integers across the zero boundary
+    for (int64_t i = -2500; i <= 2500; ++i) {
+        EXPECT_TRUE(Int64HashSetAdd(&set, i))
+            << "The set should successfully add contiguous element " << i
+            << " without catastrophic clustering failures.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
+
+// Verifies that keys with massive numerical gaps between them are handled
+// correctly, ensuring the hash function effectively mixes high and low bits.
+TEST(Int64HashSetTest, HandlesSparseClusters) {
+    Int64HashSet set;
+    Int64HashSetInit(&set, 0.7);
+
+    const int64_t sparse_keys[] = {
+        0,
+        1LL << 20,
+        -(1LL << 30),
+        1LL << 40,
+        -(1LL << 50),
+        std::numeric_limits<int64_t>::max(),
+        std::numeric_limits<int64_t>::min() + 1,
+    };
+
+    const size_t num_keys = sizeof(sparse_keys) / sizeof(sparse_keys[0]);
+
+    // Add sparse keys
+    for (size_t i = 0; i < num_keys; ++i) {
+        EXPECT_TRUE(Int64HashSetAdd(&set, sparse_keys[i]))
+            << "The set should successfully add sparse key " << sparse_keys[i]
+            << ".";
+    }
+
+    // Verify they are retained
+    for (size_t i = 0; i < num_keys; ++i) {
+        EXPECT_FALSE(Int64HashSetAdd(&set, sparse_keys[i]))
+            << "The set should correctly reject sparse key " << sparse_keys[i]
+            << " on second insertion.";
+    }
+
+    Int64HashSetDestroy(&set);
+}
