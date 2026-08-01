@@ -34,10 +34,10 @@ class TwoPieceHashFixture : public benchmark::Fixture {
     std::vector<int> random_turns;
     X86SimdTwoPieceHashContext context;
 
-    void SetUp(const ::benchmark::State& state) override {
-        (void)state;
+    void SetUp(::benchmark::State& state) override {
         if (X86SimdTwoPieceHashContextInit(&context, kRows, kCols) != 0) {
-            // TODO: state is used here if initialization fails
+            state.SkipWithError(
+                "Failed to initialize hash context. Skipping...");
             return;
         }
 
