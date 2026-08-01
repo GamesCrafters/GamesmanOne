@@ -10,8 +10,6 @@
  * @brief Implementation of the x86 SIMD hash system for tier games with
  * rectangular boards of size 32 or less and using no more than two types of
  * pieces.
- * @version 2.0.0
- * @date 2025-04-28
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -56,8 +54,12 @@
 enum { kBoardSizeMax = 32 };
 
 static bool nCrInitialized;
+
+// TODO: convert this to an integer 2D array for better cache locality;
+// extern this so that functions can be inlined; hard-code this.
 static int64_t nCr[kBoardSizeMax + 1][kBoardSizeMax + 1];
 
+// TODO: wrap in a context struct and define it in the header
 static bool system_initialized;
 static int curr_board_size;
 static uint64_t hash_mask;
@@ -144,7 +146,10 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
     }
 
     // Clear previous system state if exists.
-    if (system_initialized) X86SimdTwoPieceHashFinalize();
+    if (system_initialized) {
+        X86SimdTwoPieceHashFinalize();
+        system_initialized = false;
+    }
 
     curr_board_size = board_size;
     MakeTriangle();
@@ -152,8 +157,12 @@ int X86SimdTwoPieceHashInit(int rows, int cols) {
 
     // Initialize the tables
     int error = InitTables();
-    if (error != kNoError) X86SimdTwoPieceHashFinalize();
-    system_initialized = true;
+    if (error != kNoError) {
+        X86SimdTwoPieceHashFinalize();
+        system_initialized = false;
+    } else {
+        system_initialized = true;
+    }
 
     return error;
 }
@@ -170,7 +179,10 @@ int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
     }
 
     // Clear previous system state if exists.
-    if (system_initialized) X86SimdTwoPieceHashFinalize();
+    if (system_initialized) {
+        X86SimdTwoPieceHashFinalize();
+        system_initialized = false;
+    }
 
     curr_board_size = board_size;
     MakeTriangle();
@@ -178,8 +190,12 @@ int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
 
     // Initialize the tables
     int error = InitTables();
-    if (error != kNoError) X86SimdTwoPieceHashFinalize();
-    system_initialized = true;
+    if (error != kNoError) {
+        X86SimdTwoPieceHashFinalize();
+        system_initialized = false;
+    } else {
+        system_initialized = true;
+    }
 
     return error;
 }
@@ -205,22 +221,27 @@ void X86SimdTwoPieceHashFinalize(void) {
     hash_mask = 0;
 }
 
+// TODO: static inline this in the header
 int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o) {
     return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o) * 2;
 }
 
+// TODO: static inline this in the header
 int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o) {
     return nCr[curr_board_size - num_o][num_x] * nCr[curr_board_size][num_o];
 }
 
+// TODO: static inline this in the header
 Position X86SimdTwoPieceHashHash(__m128i board, int turn) {
     return (X86SimdTwoPieceHashHashFixedTurn(board) << 1) | turn;
 }
 
+// TODO: static inline this in the header
 Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn) {
     return (X86SimdTwoPieceHashHashFixedTurnMem(patterns) << 1) | turn;
 }
 
+// TODO: static inline this in the header
 Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
     // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
     // required by _mm_store_si128
@@ -230,6 +251,7 @@ Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
     return X86SimdTwoPieceHashHashFixedTurnMem(s);
 }
 
+// TODO: static inline this in the header
 Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
     // Convert the 8x8 padded pattern to tightly packed pattern
     uint64_t patterns[2] = {
@@ -247,11 +269,13 @@ Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
            pattern_to_order[patterns[0]];
 }
 
+// TODO: static inline this in the header
 __m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {
     // Get rid of the turn bit and then use the same algorithm.
     return X86SimdTwoPieceHashUnhashFixedTurn(hash >> 1, num_x, num_o);
 }
 
+// TODO: static inline this in the header
 __m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
                                            int num_o) {
     alignas(16) uint64_t s[2];
@@ -260,12 +284,14 @@ __m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
     return _mm_load_si128((const __m128i *)s);
 }
 
+// TODO: static inline this in the header
 void X86SimdTwoPieceHashUnhashMem(Position hash, int num_x, int num_o,
                                   uint64_t patterns[2]) {
     // Get rid of the turn bit and then use the same algorithm.
     X86SimdTwoPieceHashUnhashFixedTurnMem(hash >> 1, num_x, num_o, patterns);
 }
 
+// TODO: static inline this in the header
 void X86SimdTwoPieceHashUnhashFixedTurnMem(Position hash, int num_x, int num_o,
                                            uint64_t patterns[2]) {
     int64_t offset = nCr[curr_board_size - num_o][num_x];

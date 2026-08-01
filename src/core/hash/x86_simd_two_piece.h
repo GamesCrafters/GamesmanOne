@@ -187,9 +187,6 @@
  *     };
  *     __m128i board = _mm_loadu_si128(raw);
  *
- * @version 2.0.0
- * @date 2025-04-28
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -206,6 +203,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 #define GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 
