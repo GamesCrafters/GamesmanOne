@@ -20,7 +20,7 @@ class TwoPieceHashFixture : public benchmark::Fixture {
     static constexpr int kCols = 5;
     static constexpr int kNumX = 10;
     static constexpr int kNumO = 10;
-    static constexpr size_t kNumSamples = 65536;
+    static constexpr size_t kNumSamples = 1 << 20;
     static constexpr size_t kSampleMask = kNumSamples - 1;
 
     // Wrapper to avoid -Wignored-attributes
