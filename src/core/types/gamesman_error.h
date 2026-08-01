@@ -27,7 +27,7 @@
 #ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
 #define GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
 
-enum GamesmanError {
+typedef enum GamesmanStatus {
     kNoError = 0,              /**< No error should always be 0. */
     kMallocFailureError,       /**< Malloc-like function returned NULL. */
     kNotImplementedError,      /**< Feature not implemented. */
@@ -51,6 +51,6 @@ enum GamesmanError {
     kHeadlessError,                 /**< Headless command parsing error. */
     kGenericHashError,              /**< Generic Hash system error. */
     kRuntimeError,                  /**< Generic runtime error. */
-};
+} Status;
 
 #endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_

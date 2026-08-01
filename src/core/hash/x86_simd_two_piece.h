@@ -208,215 +208,128 @@
 #define GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 
 #include <emmintrin.h>
+#include <immintrin.h>
 #include <smmintrin.h>
 #include <stdalign.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <xmmintrin.h>
 
+#include "config.h"
 #include "core/types/base.h"
+#include "core/types/gamesman_error.h"
 
-/**
- * @brief Returns the amount of memory in bytes required to initialize the hash
- * system for a game using a board with \p num_slots effective slots. Use this
- * function to check memory usage before calling X86SimdTwoPieceHashInit or
- * X86SimdTwoPieceHashInitIrregular to avoid running out of memory.
- *
- * @param slots Number of effective slots.
- * @return Amount of memory required to initialize the hash system.
- */
-size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots);
+enum { kX86SimdTwoPieceHashBoardSizeMax = 32 };
 
-/**
- * @brief Initializes the hash system for a rectangular board with \p rows rows
- * and \p cols columns. The number of effective rows and columns are also
- * \p rows and \p cols , respectively.
- *
- * @param rows Number of board rows.
- * @param cols Number of board columns.
- * @return \c kNoError on success,
- * @return \c kIllegalArgumentError if either \p rows or \p cols is less than 1
- * or greater than 8; or if \p rows * \p cols is greater than 32.
- */
-int X86SimdTwoPieceHashInit(int rows, int cols);
+typedef struct {
+    // Aligned to the beginning of a cache line ensures that the first few
+    // elements are on the same cache line
+    alignas(GM_CACHE_LINE_SIZE) uint64_t hash_mask;
+    int32_t *__restrict pattern_to_order;
+    int32_t board_size;
+    uint32_t padding;  // Explicit padding; included by compiler anyway
+    uint32_t
+        *__restrict pop_order_to_pattern[kX86SimdTwoPieceHashBoardSizeMax + 1];
+    int32_t nCr[kX86SimdTwoPieceHashBoardSizeMax + 1]
+               [kX86SimdTwoPieceHashBoardSizeMax + 1];
+} X86SimdTwoPieceHashContext;
 
-/**
- * @brief Initializes the hash system for an irregular board specified through
- * the \p board_mask parameter.
- *
- * @param board_mask A bit mask where set bits specify effective board slots.
- * See the instruction manual at the beginning of this header for a detailed
- * explanation.
- * @return \c kNoError on success,
- * @return \c kIllegalArgumentError if the mask contains no set bits.
- */
-int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask);
+Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
+                                      int rows, int cols);
 
-/**
- * @brief Finalizes the hash system and clears frees allocated space.
- */
-void X86SimdTwoPieceHashFinalize(void);
+Status X86SimdTwoPieceHashContextInitIrregular(
+    X86SimdTwoPieceHashContext *context, uint64_t board_mask);
 
-/**
- * @brief Returns the total number of positions with \p num_x X's and \p num_o
- * O's on the board, including both player's turns.
- * @note X is the first player, and O is the second player.
- *
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @return Total number of positions in the tier with \p num_x X's and
- * \p num_o O's on the board, including either player's turn.
- */
-int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o);
+void X86SimdTwoPieceHashContextDestroy(X86SimdTwoPieceHashContext *context);
 
-/**
- * @brief Returns the total number of positions with \p num_x X's and \p num_o
- * O's on the board, assuming it is always one of the players' turn.
- * @note X is the first player, and O is the second player.
- *
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @return Total number of positions in the tier with \p num_x X's and
- * \p num_o O's on the board, assuming it is always one of the players' turn.
- */
-int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o);
+static inline int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(
+    const X86SimdTwoPieceHashContext *context, int num_x, int num_o) {
+    const int32_t board_size = context->board_size;
+    return context->nCr[board_size - num_o][num_x] *
+           context->nCr[board_size][num_o];
+}
 
-/**
- * @brief Returns the hash for the given position represented as 64-bit piece
- * patterns packed in a 128-bit XMM register \p board with the given \p turn .
- * The \p board must be packed in the following way:
- *     board[63:0] := bit pattern of X
- *     board[127:64] := bit pattern of O
- *
- * @param board Board to hash.
- * @param turn 0 if it is the first player's turn, 1 if it is the second
- * player's turn.
- * @return Hash value of the given position.
- */
-Position X86SimdTwoPieceHashHash(__m128i board, int turn);
+static inline int64_t X86SimdTwoPieceHashGetNumPositions(
+    const X86SimdTwoPieceHashContext *context, int num_x, int num_o) {
+    return X86SimdTwoPieceHashGetNumPositionsFixedTurn(context, num_x, num_o) *
+           2;
+}
 
-/**
- * @brief Returns the hash for the given position represented as two 64-bit
- * piece patterns packed in a uint64_t array \p patterns with the given \p turn
- * . The \p patterns must be packed in the following way:
- *     patterns[0] := bit pattern of X
- *     patterns[1] := bit pattern of O
- *
- * @param patterns Board represented as bit patterns.
- * @param turn 0 if it is the first player's turn, 1 if it is the second
- * player's turn.
- * @return Hash value of the given position.
- */
-Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn);
+static inline Position X86SimdTwoPieceHashHashFixedTurnMem(
+    const X86SimdTwoPieceHashContext *context, const uint64_t _patterns[2]) {
+    // Convert the 8x8 padded pattern to tightly packed pattern
+    const uint64_t hash_mask = context->hash_mask;
+    uint64_t patterns[2] = {
+        _pext_u64(_patterns[0], hash_mask),
+        _pext_u64(_patterns[1], hash_mask),
+    };
 
-/**
- * @brief Returns the hash for the given position represented as 64-bit piece
- * patterns packed in a 128-bit XMM register \p board , assuming the given
- * position is from a tier in which all positions are one of the players' turn.
- * The \p board must be packed in the following way:
- *     board[63:0] := bit pattern of X
- *     board[127:64] := bit pattern of O
- *
- * @param board Board to hash.
- * @return Hash value of the given position.
- */
-Position X86SimdTwoPieceHashHashFixedTurn(__m128i board);
+    // Perform the normal hashing procedure.
+    patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
+    int pop_x = __builtin_popcountll(patterns[0]);
+    int pop_o = __builtin_popcountll(patterns[1]);
+    int64_t offset = context->nCr[context->board_size - pop_o][pop_x];
 
-/**
- * @brief Returns the hash for the given position represented as two 64-bit
- * piece patterns packed in a uint64_t array \p patterns , assuming the given
- * position is from a tier in which all positions are one of the players' turn.
- * The \p patterns must be packed in the following way:
- *     patterns[0] := bit pattern of X
- *     patterns[1] := bit pattern of O
- *
- * @param board Board to hash.
- * @return Hash value of the given position.
- */
-Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t patterns[2]);
+    return offset * context->pattern_to_order[patterns[1]] +
+           context->pattern_to_order[patterns[0]];
+}
 
-/**
- * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to a __m128i register, assuming \p hash was
- * previously obtained using X86SimdTwoPieceHashHash that accounts for turns.
- * The format for the return value matches the format of the input to
- * X86SimdTwoPieceHashHash.
- * @note X is the first player, and O is the second player.
- * @note Use X86SimdTwoPieceHashUnhashMem instead to unhash to a 128-bit space
- * in memory.
- *
- * @param hash Hash value of the position to unhash.
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @return Unhashed board represented as two 64-bit piece patterns packed into a
- * 128-bit XMM register.
- */
-__m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o);
+static inline Position X86SimdTwoPieceHashHashFixedTurn(
+    const X86SimdTwoPieceHashContext *context, __m128i board) {
+    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
+    // required by _mm_store_si128
+    alignas(16) uint64_t s[2];
+    _mm_store_si128((__m128i *)s, board);
 
-/**
- * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to a __m128i register, assuming \p hash was
- * previously obtained using X86SimdTwoPieceHashHashFixedTurn that does not
- * account for turns. The format for the return value matches the format of the
- * input to X86SimdTwoPieceHashHashFixedTurn.
- * @note X is the first player, and O is the second player.
- * @note Use X86SimdTwoPieceHashUnhashFixedTurnMem instead to unhash to a
- * 128-bit space in memory.
- *
- * @param hash Hash value of the position to unhash.
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @return Unhashed board represented as two 64-bit piece patterns packed into a
- * 128-bit XMM register.
- */
-__m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x, int num_o);
+    return X86SimdTwoPieceHashHashFixedTurnMem(context, s);
+}
 
-/**
- * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to the 128-bit space at \p patterns . This
- * function is equivalent to first calling X86SimdTwoPieceHashUnhash and then
- * storing the contents of the return value to \p patterns , but is more
- * efficient.
- * @note X is the first player, and O is the second player.
- * @note Use X86SimdTwoPieceHashUnhash instead to unhash to a __m128i register.
- *
- * @param hash Hash value of the position to unhash.
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @param patterns Output parameter, unhashed piece patterns.
- */
-void X86SimdTwoPieceHashUnhashMem(Position hash, int num_x, int num_o,
-                                  uint64_t patterns[2]);
+static inline Position X86SimdTwoPieceHashHashMem(
+    const X86SimdTwoPieceHashContext *context, const uint64_t patterns[2],
+    int turn) {
+    return (X86SimdTwoPieceHashHashFixedTurnMem(context, patterns) << 1) | turn;
+}
 
-/**
- * @brief Unhash the given position with \p num_x X's and \p num_o O's and whose
- * hash value is given by \p hash to the 128-bit space at \p patterns , assuming
- * \p hash was previously obtained using X86SimdTwoPieceHashHashFixedTurn that
- * does not account for turns. This function is equivalent to first calling
- * X86SimdTwoPieceHashUnhashFixedTurn and then storing the contents of the
- * return value to \p patterns , but is more efficient.
- * @note X is the first player, and O is the second player.
- * @note Use X86SimdTwoPieceHashUnhashFixedTurn instead to unhash to a __m128i
- * register.
- *
- * @param hash Hash value of the position to unhash.
- * @param num_x Number of X's on the board.
- * @param num_o Number of O's on the board.
- * @param patterns Output parameter, unhashed piece patterns.
- */
-void X86SimdTwoPieceHashUnhashFixedTurnMem(Position hash, int num_x, int num_o,
-                                           uint64_t patterns[2]);
+static inline Position X86SimdTwoPieceHashHash(
+    const X86SimdTwoPieceHashContext *context, __m128i board, int turn) {
+    return (X86SimdTwoPieceHashHashFixedTurn(context, board) << 1) | turn;
+}
 
-/**
- * @brief Returns whose turn it is (0-indexed) at the given position with hash
- * value \p hash, assuming it was previously obtained from
- * X86SimdTwoPieceHashHash that accounts for turns.
- *
- * @param hash Hash value of the position.
- * @return 0 if it is the first player's turn, or
- * @return 1 if it is the second player's turn.
- */
+static inline void X86SimdTwoPieceHashUnhashFixedTurnMem(
+    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
+    int num_o, uint64_t patterns[2]) {
+    int64_t offset = context->nCr[context->board_size - num_o][num_x];
+    patterns[0] = context->pop_order_to_pattern[num_x][hash % offset];
+    patterns[1] = context->pop_order_to_pattern[num_o][hash / offset];
+    patterns[0] = _pdep_u64(patterns[0], ~patterns[1]);
+    patterns[0] = _pdep_u64(patterns[0], context->hash_mask);
+    patterns[1] = _pdep_u64(patterns[1], context->hash_mask);
+}
+
+static inline __m128i X86SimdTwoPieceHashUnhashFixedTurn(
+    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
+    int num_o) {
+    alignas(16) uint64_t s[2];
+    X86SimdTwoPieceHashUnhashFixedTurnMem(context, hash, num_x, num_o, s);
+
+    return _mm_load_si128((const __m128i *)s);
+}
+
+static inline void X86SimdTwoPieceHashUnhashMem(
+    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
+    int num_o, uint64_t patterns[2]) {
+    // Get rid of the turn bit and then use the same algorithm.
+    X86SimdTwoPieceHashUnhashFixedTurnMem(context, hash >> 1, num_x, num_o,
+                                          patterns);
+}
+
+static inline __m128i X86SimdTwoPieceHashUnhash(
+    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
+    int num_o) {
+    // Get rid of the turn bit and then use the same algorithm.
+    return X86SimdTwoPieceHashUnhashFixedTurn(context, hash >> 1, num_x, num_o);
+}
+
 static inline int X86SimdTwoPieceHashGetTurn(Position hash) { return hash & 1; }
 
 /**

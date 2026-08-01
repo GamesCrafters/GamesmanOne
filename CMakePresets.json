@@ -124,7 +124,7 @@
       "name": "benchmark-build",
       "inherits": "base-build",
       "configurePreset": "benchmark",
-      "targets": "data_structures_bench"
+      "targets": "gamesman_benchmark"
     },
     {
       "name": "ci-asan-build",

@@ -1,1 +1,4 @@
 add_subdirectory(core)
+
+add_custom_target(gamesman_benchmark)
+add_dependencies(gamesman_benchmark data_structures_bench hash_bench)
