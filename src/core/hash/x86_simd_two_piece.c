@@ -36,6 +36,14 @@
 #include "core/gamesman_memory.h"
 #include "core/types/gamesman_error.h"
 
+size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots) {
+    const size_t num_patterns = 1ULL << num_slots;
+    const size_t pattern_to_order_size = num_patterns * sizeof(int32_t);
+    const size_t pop_order_to_pattern_size = num_patterns * sizeof(uint32_t);
+
+    return pattern_to_order_size + pop_order_to_pattern_size;
+}
+
 static Status ValidateRowsCols(int rows, int cols) {
     if (rows <= 0 || rows > 8 || cols <= 0 || cols > 8) {
         fprintf(stderr,
@@ -169,6 +177,10 @@ _bailout:
 }
 
 void X86SimdTwoPieceHashContextDestroy(X86SimdTwoPieceHashContext *context) {
+    if (!context) {
+        return;
+    }
+
     GamesmanFree(context->pattern_to_order);
     GamesmanFree(context->pop_order_to_pattern[0]);
     memset(context, 0, sizeof(*context));
