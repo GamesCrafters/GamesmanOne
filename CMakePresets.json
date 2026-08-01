@@ -27,12 +27,10 @@
     },
     {
       "name": "benchmark",
-      "inherits": "base",
+      "inherits": "release",
       "displayName": "Release + Benchmark",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "GAMESMAN_ENABLE_BENCHMARKS": "ON",
-        "GAMESMAN_ENABLE_TESTING": "OFF"
+        "GAMESMAN_ENABLE_BENCHMARKS": "ON"
       }
     },
     {
