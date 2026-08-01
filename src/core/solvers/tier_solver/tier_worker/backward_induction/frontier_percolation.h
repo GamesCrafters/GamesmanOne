@@ -52,7 +52,7 @@
  * contains the options.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true on success. Otherwise it remains unmodified.
- * @return kNoError on success, or
+ * @return kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int TierWorkerBIFrontierPercolation(const TierSolverApi *api,

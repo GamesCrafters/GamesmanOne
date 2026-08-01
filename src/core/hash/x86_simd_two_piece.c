@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots) {
     const size_t num_patterns = 1ULL << num_slots;
@@ -52,7 +52,7 @@ static Status ValidateRowsCols(int rows, int cols) {
         return kIllegalArgumentError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static Status ValidateBoardSize(int board_size) {
@@ -65,7 +65,7 @@ static Status ValidateBoardSize(int board_size) {
         return kIllegalArgumentError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void InitTriangle(X86SimdTwoPieceHashContext *context) {
@@ -108,7 +108,7 @@ static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
         context->pop_order_to_pattern[pop][order] = i;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static uint64_t BuildRectangularHashMask(int rows, int cols) {
@@ -125,25 +125,25 @@ Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
     memset(context, 0, sizeof(*context));
 
     Status status = ValidateRowsCols(rows, cols);
-    if (status != kNoError) {
+    if (status != kSuccess) {
         goto _bailout;
     }
 
     context->board_size = rows * cols;
     status = ValidateBoardSize(context->board_size);
-    if (status != kNoError) {
+    if (status != kSuccess) {
         goto _bailout;
     }
 
     status = InitTables(context, context->board_size);
-    if (status != kNoError) {
+    if (status != kSuccess) {
         goto _bailout;
     }
 
     context->hash_mask = BuildRectangularHashMask(rows, cols);
 
 _bailout:
-    if (status != kNoError) {
+    if (status != kSuccess) {
         X86SimdTwoPieceHashContextDestroy(context);
     }
 
@@ -157,19 +157,19 @@ Status X86SimdTwoPieceHashContextInitIrregular(
     // Board size is the number of set bits in board_mask
     context->board_size = __builtin_popcountll(board_mask);
     Status status = ValidateBoardSize(context->board_size);
-    if (status != kNoError) {
+    if (status != kSuccess) {
         goto _bailout;
     }
 
     status = InitTables(context, context->board_size);
-    if (status != kNoError) {
+    if (status != kSuccess) {
         goto _bailout;
     }
 
     context->hash_mask = board_mask;
 
 _bailout:
-    if (status != kNoError) {
+    if (status != kSuccess) {
         X86SimdTwoPieceHashContextDestroy(context);
     }
 

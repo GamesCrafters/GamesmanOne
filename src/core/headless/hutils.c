@@ -36,7 +36,7 @@
 #include "core/solvers/solver_manager.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "libs/io/xfile.h"
 
 static int MakeDirectory(ReadOnlyString output);
@@ -49,7 +49,7 @@ int HeadlessGetVerbosity(bool verbose, bool quiet) {
 }
 
 int HeadlessRedirectOutput(ReadOnlyString output) {
-    if (output == NULL) return kNoError;
+    if (output == NULL) return kSuccess;
 
     int error = MakeDirectory(output);
     if (error != 0) {
@@ -65,7 +65,7 @@ int HeadlessRedirectOutput(ReadOnlyString output) {
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
 
-    return kNoError;
+    return kSuccess;
 }
 
 int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
@@ -90,7 +90,7 @@ int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
 static int MkdirRecursiveStatusToGamesmanError(MkdirRecursiveStatus status) {
     switch (status) {
         case kMkdirRecursiveSuccess:
-            return kNoError;
+            return kSuccess;
         case kMkdirRecursiveErrInvalidParam:
             return kIllegalArgumentError;
         case kMkdirRecursiveErrFileSystem:
@@ -107,7 +107,7 @@ static int MakeDirectory(ReadOnlyString output) {
     // Path is not valid for a file if it's empty or its last character is '/'.
     if (length == 0 || output[length - 1] == '/') return -1;
 
-    int ret = kNoError;
+    int ret = kSuccess;
     char *path = (char *)SafeCalloc(length + 1, sizeof(char));
     strcpy(path, output);
     for (int i = length; i >= 0; --i) {

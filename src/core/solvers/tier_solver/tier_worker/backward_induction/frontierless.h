@@ -48,7 +48,7 @@
  * @param tier Tier to solve.
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true on success. Otherwise it remains unmodified.
- * @return kNoError on success, or
+ * @return kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,

@@ -41,7 +41,7 @@
 #include "core/solvers/solver_manager.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/uwapi/partmove.h"
 #include "core/types/uwapi/partmove_array.h"
@@ -149,7 +149,7 @@ static int InitAndCheckGame(ReadOnlyString game_name, int variant_id,
     }
 
     *is_tier_game = implements_tier;
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ImplementsRegularUwapi(const Game *game) {

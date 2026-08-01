@@ -14,7 +14,7 @@
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/game/game_variant_option.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/solver/solver_option.h"
 
 static char **items;
@@ -58,7 +58,7 @@ int InteractiveGameOptions(ReadOnlyString key) {
 
     // Reinitialize the solver.
     int error = SolverManagerInit(NULL);  // TODO: custom datapath.
-    if (error != kNoError) {
+    if (error != kSuccess) {
         NotReached("failed to initialize solver for the current game variant");
     }
 

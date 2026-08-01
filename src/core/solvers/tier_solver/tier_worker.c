@@ -43,7 +43,7 @@
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_array.h"
 
 static const TierSolverApi *api_internal;
@@ -121,7 +121,7 @@ int TierWorkerMpiServe(const TierSolverSolveOptions *options) {
             bool solved;
             TierType type = api_internal->GetTierType(msg.tier);
             int error = TierWorkerSolve(type, msg.tier, options, &solved);
-            if (error != kNoError) {
+            if (error != kSuccess) {
                 TierMpiWorkerSendReportError(error);
             } else if (solved) {
                 TierMpiWorkerSendReportSolved();
@@ -131,7 +131,7 @@ int TierWorkerMpiServe(const TierSolverSolveOptions *options) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 #endif  // USE_MPI
 

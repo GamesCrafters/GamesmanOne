@@ -38,7 +38,7 @@
  * test the default variant.
  * @param seed Seed for PRNGs.
  * @param verbose Currently has no effect regardless of the value passed in.
- * @return kNoError if all tests are passed,
+ * @return kSuccess if all tests are passed,
  * @return non-zero error code otherwise.
  */
 int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,

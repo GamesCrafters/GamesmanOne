@@ -49,7 +49,7 @@
  * @param solved (Output parameter) If non-NULL, its value will be set to
  * \c true if \p tier is actually solved, or \p false if \p tier is loaded from
  * an existing database.
- * @return kNoError on success, or
+ * @return kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,

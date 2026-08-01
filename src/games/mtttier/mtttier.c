@@ -49,7 +49,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/uwapi/uwapi.h"
@@ -209,7 +209,7 @@ static int MtttierInit(void *aux) {
     return !InitGenericHash();
 }
 
-static int MtttierFinalize(void) { return kNoError; }
+static int MtttierFinalize(void) { return kSuccess; }
 
 static const GameVariant *MtttierGetCurrentVariant(void) {
     return NULL;  // No other variants implemented.
@@ -371,7 +371,7 @@ static TierType MtttierGetTierType(Tier tier) {
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
     sprintf(name, "%" PRITier "p", tier);
-    return kNoError;
+    return kSuccess;
 }
 
 static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position) {
@@ -413,7 +413,7 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
         return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttierMoveToString(Move move, char *buffer) {
@@ -427,7 +427,7 @@ static int MtttierMoveToString(Move move, char *buffer) {
         return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MtttierIsValidMoveString(ReadOnlyString move_string) {

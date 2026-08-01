@@ -221,7 +221,7 @@
 
 #include "config.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 enum {
     kX86SimdTwoPieceHashBoardSizeMax = 32 /**< Maximum supported board size. */
@@ -294,7 +294,7 @@ size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots);
  * @param[in] rows Number of board rows.
  * @param[in] cols Number of board columns.
  *
- * @retval kNoError On success.
+ * @retval kSuccess On success.
  * @retval kIllegalArgumentError If either `rows` or `cols` is less than 1 or
  * greater than 8, or if `rows` * `cols` is greater than 32.
  * @retval kMallocFailureError On memory allocation failure.
@@ -311,7 +311,7 @@ Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
  * slots. See the instruction manual at the beginning of this header for a
  * detailed explanation.
  *
- * @retval kNoError On success.
+ * @retval kSuccess On success.
  * @retval kIllegalArgumentError If the mask contains no set bits.
  * @retval kMallocFailureError On memory allocation failure.
  */

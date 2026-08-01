@@ -43,7 +43,7 @@
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/position_array.h"
 #include "core/types/tier_hash_map.h"
 #include "core/types/tier_hash_set.h"
@@ -696,7 +696,7 @@ static bool Step3SaveAndDeallocateChildMaps(void) {
 // Step4Analyze
 
 static bool Step4Analyze(Analysis *dest) {
-    if (DbManagerLoadTier(this_tier, this_tier_size) != kNoError) return false;
+    if (DbManagerLoadTier(this_tier, this_tier_size) != kSuccess) return false;
 
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (parts == NULL) {
@@ -741,7 +741,7 @@ static bool Step4Analyze(Analysis *dest) {
     MergePartialAnalysisCounts(dest, parts);
     GamesmanAllocatorDeallocate(allocator, parts);
 
-    if (DbManagerUnloadTier(this_tier) != kNoError) {
+    if (DbManagerUnloadTier(this_tier) != kSuccess) {
         ConcurrentBoolStore(&success, false);
     }
     ConcurrentBitsetDestroy(this_tier_map);

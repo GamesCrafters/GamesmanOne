@@ -37,7 +37,7 @@
 
 #include "core/constants.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "libs/io/xfile.h"
 
 static const int kFirstLineReservedRemotness = -1;
@@ -193,7 +193,7 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                     is_canonical ? "canonical" : "non-canonical");
             return kIllegalGamePositionValueError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
 int AnalysisCountGroup(Analysis *analysis, TierPosition canonical,
@@ -224,7 +224,7 @@ int AnalysisCountGroup(Analysis *analysis, TierPosition canonical,
                 value, canonical.position, canonical.tier);
             return kIllegalGamePositionValueError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
 static void MergeWinCounts(Analysis *dest, const Analysis *part) {

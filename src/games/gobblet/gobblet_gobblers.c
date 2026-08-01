@@ -45,7 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/uwapi/autogui.h"
@@ -457,7 +457,7 @@ static int GobbletGobblersGetTierName(Tier tier, char *name) {
             t.configs[1].count[0], t.configs[1].count[1], t.configs[2].count[0],
             t.configs[2].count[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kGobbletGobblersSolverApi = {
@@ -528,7 +528,7 @@ static int GobbletGobblersTierPositionToString(TierPosition tier_position,
             p.board[1][6], faces[7], p.board[1][7], faces[8], p.board[1][8],
             p.board[0][6], p.board[0][7], p.board[0][8]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int GobbletGobblersMoveToString(Move move, char *buffer) {
@@ -540,7 +540,7 @@ static int GobbletGobblersMoveToString(Move move, char *buffer) {
                 m.unpacked.dest + 1);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool GobbletGobblersIsValidMoveString(ReadOnlyString move_string) {
@@ -621,12 +621,12 @@ static int GobbletGobblersInit(void *aux) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ========================== GobbletGobblersFinalize ==========================
 
-static int GobbletGobblersFinalize(void) { return kNoError; }
+static int GobbletGobblersFinalize(void) { return kSuccess; }
 
 // =========================== kGobbletGobblersUwapi ===========================
 

@@ -48,7 +48,7 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/reverse_graph.h"
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/position_array.h"
 #include "core/types/tier_hash_set.h"
 
@@ -294,7 +294,7 @@ static bool Step1LoadChildren(void) {
  */
 static bool Step2SetupSolverArray(void) {
     return DbManagerCreateConcurrentSolvingTier(this_tier, this_tier_size) ==
-           kNoError;
+           kSuccess;
 }
 
 // ------------------------------- Step3ScanTier -------------------------------
@@ -360,7 +360,7 @@ static bool Step3ScanTier(void) {
             // undecided children.
             int num_children = Step3_0CountChildren(position);
             if (num_children <= 0 ||
-                DbManagerSetRemoteness(position, num_children) != kNoError) {
+                DbManagerSetRemoteness(position, num_children) != kSuccess) {
                 ConcurrentBoolStore(&success, false);
             }
         }
@@ -637,7 +637,7 @@ int TierWorkerBIFrontierPercolation(const TierSolverApi *api,
 
     // Success
     if (solved != NULL) *solved = true;
-    ret = kNoError;
+    ret = kSuccess;
 
 _bailout:
     Step7Cleanup();

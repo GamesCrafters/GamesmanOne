@@ -447,7 +447,7 @@ typedef struct TierSolverApi {
      *
      * @param tier Get name of this tier.
      * @param name Tier name output buffer.
-     * @return \c kNoError on success, or
+     * @return \c kSuccess on success, or
      * @return non-zero error code on failure.
      */
     int (*GetTierName)(Tier tier, char name[static kDbFileNameLengthMax + 1]);

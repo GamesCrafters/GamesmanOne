@@ -42,7 +42,7 @@
 #include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/solver/solver.h"
 
 static const Solver *current_solver;

@@ -46,7 +46,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
@@ -337,7 +337,7 @@ static int TeekoGetTierName(Tier tier,
         sprintf(name, "moving_phase");
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kTeekoSolverApi = {
@@ -409,7 +409,7 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
         offset += sprintf(buffer + offset, "\n");
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int TeekoMoveToString(Move move, char *buffer) {
@@ -421,7 +421,7 @@ static int TeekoMoveToString(Move move, char *buffer) {
         sprintf(buffer, "%d %d", src + 1, dest + 1);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool TeekoIsValidMoveString(ReadOnlyString move_string) {
@@ -496,7 +496,7 @@ static int TeekoSetVariantOption(int option, int selection) {
     teeko_variant_option_selections[0] = selection;
     advanced = (selection == 1);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================= TeekoInit =================================
@@ -573,7 +573,7 @@ static int TeekoInit(void *aux) {
 
 // =============================== TeekoFinalize ===============================
 
-static int TeekoFinalize(void) { return kNoError; }
+static int TeekoFinalize(void) { return kSuccess; }
 
 // ================================ kTeekoUwapi ================================
 

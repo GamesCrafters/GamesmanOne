@@ -51,7 +51,7 @@
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/solver/solver.h"
 #include "core/types/solver/solver_config.h"
 #include "core/types/solver/solver_option.h"
@@ -233,7 +233,7 @@ static int RegularSolverFinalize(void) {
     current_variant_id = kIllegalVariantIndex;
     num_options = 0;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int RegularSolverTest(void *aux) {
@@ -331,14 +331,14 @@ static int RegularSolverSolve(void *aux) {
     };
     int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
                                 kDefaultTier, &tier_solver_options, NULL);
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
                 error);
         return error;
     }
 
     error = DbManagerSetGameSolved();
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr,
                 "RegularSolverSolve: DB manager failed to set current game as "
                 "solved (code %d)\n",
@@ -422,7 +422,7 @@ static int RegularSolverSetOption(int option, int selection) {
     } else {
         ToggleRetrogradeAnalysis(!selection);
     }
-    return kNoError;
+    return kSuccess;
 }
 
 static Value RegularSolverGetValue(TierPosition tier_position) {
@@ -699,5 +699,5 @@ static int DefaultGetTierName(Tier tier,
     (void)tier;  // Unused.
     sprintf(name, "%s_%d", current_game_name, current_variant_id);
 
-    return kNoError;
+    return kSuccess;
 }

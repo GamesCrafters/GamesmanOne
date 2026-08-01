@@ -52,7 +52,7 @@ enum AnalysisTierStatus {
  * @param variant Index of the game variant as an integer.
  * @param data_path Absolute or relative path to the data directory if non-NULL.
  * The default path "data" will be used if set to NULL.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return non-zero otherwise.
  */
 int StatManagerInit(ReadOnlyString game_name, int variant,
@@ -76,14 +76,14 @@ int StatManagerGetStatus(Tier tier);
 
 /**
  * @brief Stores the \p analysis for \p tier to disk.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return non-zero error code otherwise.
  */
 int StatManagerSaveAnalysis(Tier tier, const Analysis *analysis);
 
 /**
  * @brief Loads the Analysis for \p tier to DEST.
- * @return \c kNoError on success
+ * @return \c kSuccess on success
  * @return non-zero error code otherwise.
  */
 int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
@@ -100,7 +100,7 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier);
  * @param allocator Memory allocator to use for \p dest.
  * @param dest Pointer to the pointer that will be modified to point to the
  * destination bitset on success. Not modified on failure.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kFileSystemError if the discovery map is not found on disk, or
  * @return non-zero error code otherwise.
  */
@@ -117,7 +117,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
  *
  * @param stream Discovery map of \p tier as a ConcurrentBitset.
  * @param tier Tier being discovered.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return non-zero error code otherwise.
  */
 int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier);
@@ -126,7 +126,7 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier);
  * @brief Removes the discovery map of \p tier from disk.
  *
  * @param tier Tier whose discovery map should be removed.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return non-zero error code otherwise.
  */
 int StatManagerRemoveDiscoveryMap(Tier tier);

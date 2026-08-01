@@ -36,7 +36,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
@@ -413,12 +413,12 @@ static int TestParentToChildMatching(Tier tier, Position position,
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void TestPrintError(Tier tier, Position position) {
     char name[kDbFileNameLengthMax + 1];
-    if (api_internal->GetTierName(tier, name) != kNoError) {
+    if (api_internal->GetTierName(tier, name) != kSuccess) {
         fprintf(stderr, "TestPrintError: (WARNING) GetTierName failed\n");
         sprintf(name, "GetTierName ERROR");
     }

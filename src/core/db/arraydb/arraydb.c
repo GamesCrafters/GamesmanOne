@@ -50,7 +50,7 @@
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/game/game.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
@@ -272,7 +272,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     TierToPtrChainedHashMapInit(&loaded_tiers, 0.75);
     memset(&segments, 0, sizeof(segments));
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void ArrayDbFinalize(void) {
@@ -303,7 +303,7 @@ static int CheckExistingSolvingTier(const char *caller) {
         return kRuntimeError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
@@ -321,7 +321,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
     current_game.tier = tier;
     solving.is_concurrent = false;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
@@ -340,7 +340,7 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
     current_game.tier = tier;
     solving.is_concurrent = true;
 
-    return kNoError;
+    return kSuccess;
 #else
     return ArrayDbCreateSolvingTier(tier, size);
 #endif
@@ -438,7 +438,7 @@ static char *GetFullPathToFinishFlag(void) {
 
 static int FlushSolvingTierConcurrent(void) {
     // Allocate memory and create db file.
-    int error = kNoError;
+    int error = kSuccess;
     char *full_path =
         GetFullPathToFile(current_game.tier, current_game.GetTierName);
     char *tmp_full_path =
@@ -495,7 +495,7 @@ _bailout:
 
 static int FlushSolvingTierNormal(void) {
     // Create db file.
-    int error = kNoError;
+    int error = kSuccess;
     char *full_path =
         GetFullPathToFile(current_game.tier, current_game.GetTierName);
     char *tmp_full_path =
@@ -548,7 +548,7 @@ static int ArrayDbFlushSolvingTier(void *aux) {
 }
 
 static int ArrayDbFreeSolvingTier(void) {
-    if (current_game.tier == kIllegalTier) return kNoError;
+    if (current_game.tier == kIllegalTier) return kSuccess;
 
     if (solving.is_concurrent) {
         AtomicRecordArrayDestroy(solving.atomic_records);
@@ -560,7 +560,7 @@ static int ArrayDbFreeSolvingTier(void) {
     TierToPtrChainedHashMapRemove(&loaded_tiers, current_game.tier);
     current_game.tier = kIllegalTier;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbSetGameSolved(void) {
@@ -574,7 +574,7 @@ static int ArrayDbSetGameSolved(void) {
     int error = GuardedFclose(flag_file);
     if (error != 0) return kFileSystemError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbSetValue(Position position, Value value) {
@@ -584,7 +584,7 @@ static int ArrayDbSetValue(Position position, Value value) {
         RecordArraySetValue(solving.records, position, value);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbSetRemoteness(Position position, int remoteness) {
@@ -595,7 +595,7 @@ static int ArrayDbSetRemoteness(Position position, int remoteness) {
         RecordArraySetRemoteness(solving.records, position, remoteness);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbSetValueRemoteness(Position position, Value value,
@@ -608,7 +608,7 @@ static int ArrayDbSetValueRemoteness(Position position, Value value,
                                       remoteness);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ArrayDbMaximizeValueRemoteness(Position position, Value value,
@@ -686,13 +686,13 @@ int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
     current_game.tier = tier;
     segments.num_active = num_segments;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ConvertLz4UtilsDecompressFileError(Lz4UtilsStatus status) {
     switch (status) {
         case LZ4_UTILS_SUCCESS:
-            return kNoError;
+            return kSuccess;
         case LZ4_UTILS_ERR_INVALID_PARAM:
         case LZ4_UTILS_ERR_INSUFFICIENT_BUF:
             return kIllegalArgumentError;
@@ -723,7 +723,7 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
 static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
     if (buf_idx >= segments.num_active) return kIllegalArgumentError;
 
-    int error = kNoError;
+    int error = kSuccess;
     char *tmp_name = GetFullPathToTempSegment(
         current_game.tier, current_game.GetTierName, seg_idx);
     char *name = GetFullPathToSegment(current_game.tier,
@@ -773,7 +773,7 @@ static int ArrayDbSegmentationFreeBuffers(void) {
     }
     segments.num_active = 0;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static Value ArrayDbSegmentationGetValue(int buf_idx, int64_t offset) {
@@ -806,7 +806,7 @@ static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
 }
 
 int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
-    int error = kNoError;
+    int error = kSuccess;
     char *tmp_full_path =
         GetFullPathToTempFile(current_game.tier, current_game.GetTierName);
     char *full_path =
@@ -874,7 +874,7 @@ bool ArrayDbCheckpointExists(Tier tier) {
 }
 
 int ArrayDbCheckpointSave(const void *status, size_t status_size) {
-    int error = kNoError;
+    int error = kSuccess;
     char *full_path =
         GetFullPathToCheckpoint(current_game.tier, current_game.GetTierName);
     char *tmp_full_path = GetFullPathToTempCheckpoint(current_game.tier,
@@ -959,7 +959,7 @@ int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
     }
     current_game.tier = tier;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbCheckpointRemove(Tier tier) {
@@ -968,7 +968,7 @@ static int ArrayDbCheckpointRemove(Tier tier) {
     GamesmanFree(full_path);
     if (error != 0) return kFileSystemError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static size_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
@@ -1019,7 +1019,7 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbUnloadTier(Tier tier) {
@@ -1031,7 +1031,7 @@ static int ArrayDbUnloadTier(Tier tier) {
         TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ArrayDbIsTierLoaded(Tier tier) {
@@ -1080,7 +1080,7 @@ static int ArrayDbProbeInit(DbProbe *probe) {
     probe->tier = kIllegalTier;
     // probe->begin and probe->size are unused.
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int ArrayDbProbeDestroy(DbProbe *probe) {
@@ -1089,7 +1089,7 @@ static int ArrayDbProbeDestroy(DbProbe *probe) {
     GamesmanFree(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ProbeSameFile(const DbProbe *probe, TierPosition tier_position) {
@@ -1112,7 +1112,7 @@ static int ProbeLoadNewTier(DbProbe *probe, Tier tier) {
     if (probe_internal->file == NULL) return kFileSystemError;
 
     probe->tier = tier;
-    return kNoError;
+    return kSuccess;
 }
 
 static Record ProbeGetRecord(const DbProbe *probe, Position position) {
@@ -1131,7 +1131,7 @@ static Record ProbeGetRecord(const DbProbe *probe, Position position) {
 static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position) {
     if (!ProbeSameFile(probe, tier_position)) {
         int error = ProbeLoadNewTier(probe, tier_position.tier);
-        if (error != kNoError) {
+        if (error != kSuccess) {
             fprintf(stderr,
                     "ArrayDbProbeValue: failed to load tier %" PRITier "\n",
                     tier_position.tier);
@@ -1146,7 +1146,7 @@ static Value ArrayDbProbeValue(DbProbe *probe, TierPosition tier_position) {
 static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
     if (!ProbeSameFile(probe, tier_position)) {
         int error = ProbeLoadNewTier(probe, tier_position.tier);
-        if (error != kNoError) {
+        if (error != kSuccess) {
             fprintf(stderr,
                     "ArrayDbProbeRemoteness: failed to load tier %" PRITier
                     "\n",

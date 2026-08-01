@@ -10,7 +10,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_hash_set.h"
 
 // ====================== GatesTierGetSymmetryMatrixEntry ======================
@@ -535,6 +535,6 @@ int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     if (t.n[G] > 0) count += sprintf(name + count, "_%" PRIField, t.G1);
     if (t.n[G] > 1) sprintf(name + count, "_%" PRIField, t.G2);
 
-    return kNoError;
+    return kSuccess;
 }
 #undef PRIField

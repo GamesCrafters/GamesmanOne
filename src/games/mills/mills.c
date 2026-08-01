@@ -54,7 +54,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
@@ -728,7 +728,7 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
             t.unpacked.remaining[1], t.unpacked.on_board[1]);
     printf("it is %d's turn\n", turn);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void AddCanonicalParent(
@@ -1096,7 +1096,7 @@ static int MillsGetTierName(Tier tier,
             t.unpacked.remaining[1], t.unpacked.on_board[0],
             t.unpacked.on_board[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kMillsSolverApi = {
@@ -1157,7 +1157,7 @@ static int MillsMoveToString(Move move, char *buffer) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MillsIsValidMoveString(ReadOnlyString move_string) {
@@ -1244,7 +1244,7 @@ static int MillsSetVariantOption(int option, int selection) {
             X86SimdTwoPieceHashContextDestroy(&hash_context);
             int error = X86SimdTwoPieceHashContextInitIrregular(
                 &hash_context, kBoardMasks[selection]);
-            assert(error == kNoError);
+            assert(error == kSuccess);
             (void)error;
             break;
         }
@@ -1277,7 +1277,7 @@ static int MillsSetVariantOption(int option, int selection) {
     variant_option_selections.array[option] = selection;
     if (option == 0) UpdateSecondLaskerTier();
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================= MillsInit =================================
@@ -1289,7 +1289,7 @@ static int MillsInit(void *aux) {
     // Initialize the default variant.
     for (int i = 1; i < 5; ++i) {
         int ret = MillsSetVariantOption(i, i == 1 ? 1 : 0);
-        assert(ret == kNoError);
+        assert(ret == kSuccess);
         (void)ret;
     }
 
@@ -1301,7 +1301,7 @@ static int MillsInit(void *aux) {
 static int MillsFinalize(void) {
     X86SimdTwoPieceHashContextDestroy(&hash_context);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================ kMillsUwapi ================================

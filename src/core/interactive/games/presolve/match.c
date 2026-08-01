@@ -11,7 +11,7 @@
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/tier_position_array.h"
 
@@ -49,7 +49,7 @@ int InteractiveMatchSetGame(const Game *game) {
     } else {
         return kIncompleteGameplayApiError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
 bool InteractiveMatchRestart(void) {

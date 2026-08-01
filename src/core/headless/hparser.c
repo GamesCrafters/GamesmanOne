@@ -35,7 +35,7 @@
 
 #include "config.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 static HeadlessArguments arguments;
 static ConstantReadOnlyString HeadlessCommands[] = {

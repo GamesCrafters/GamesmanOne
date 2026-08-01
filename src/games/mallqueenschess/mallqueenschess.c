@@ -42,7 +42,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 
@@ -174,10 +174,10 @@ static int MallqueenschessInit(void *aux) {
         GenericHashReinitialize();
         return kRuntimeError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
-static int MallqueenschessFinalize(void) { return kNoError; }
+static int MallqueenschessFinalize(void) { return kSuccess; }
 
 static const GameVariant *MallqueenschessGetCurrentVariant(void) {
     return NULL;  // Not implemented.

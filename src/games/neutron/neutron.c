@@ -45,7 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/uwapi/autogui.h"
@@ -615,7 +615,7 @@ static int NeutronPositionToString(Position position, char *buffer) {
             board[15], board[16], board[17], board[18], board[19], board[20],
             board[21], board[22], board[23], board[24]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NeutronMoveToString(Move move, char *buffer) {
@@ -632,7 +632,7 @@ static int NeutronMoveToString(Move move, char *buffer) {
                 kDirectionStr[m.unpacked.p_dir]);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int8_t DirectionStrToDir(const char *dir_str) {
@@ -1034,14 +1034,14 @@ static int NeutronInit(void *aux) {
         PositionHashSetAdd(&kChildrenOfInitialPosition, child);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ============================== NeutronFinalize ==============================
 
 static int NeutronFinalize(void) {
     PositionHashSetDestroy(&kChildrenOfInitialPosition);
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================= kNeutron =================================

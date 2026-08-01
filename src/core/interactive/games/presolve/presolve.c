@@ -21,7 +21,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 #ifndef USE_MPI
 static const char title_format[] = "Main (Pre-Solved) Menu for %s (variant %d)";
@@ -99,7 +99,7 @@ static int SetCurrentGame(ReadOnlyString key) {
 static int SolveAndStart(ReadOnlyString key) {
     // Auxiliary variable currently unused.
     int error = SolverManagerSolve(NULL);
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr, "Solver manager failed to solve game\n");
         return 0;  // Go back to previous menu.
     }

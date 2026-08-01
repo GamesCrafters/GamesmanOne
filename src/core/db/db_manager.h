@@ -89,7 +89,7 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
  *
  * @param tier Tier to create.
  * @param size Number of positions in \p tier.
- * @return kNoError on success,
+ * @return kSuccess on success,
  * @return non-zero error code otherwise.
  */
 int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
@@ -122,7 +122,7 @@ int DbManagerFreeSolvingTier(void);
  *
  * @note This function is not thread-safe.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerSetGameSolved(void);
@@ -160,7 +160,7 @@ int DbManagerSetRemoteness(Position position, int remoteness);
  * @note This function is thread-safe if the solving tier is created via
  * DbManagerCreateConcurrentSolvingTier.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
@@ -284,7 +284,7 @@ int DbManagerSegmentationMaxNumBuffers(void);
  * @param tier Tier to be solved.
  * @param num_segments Number of segment buffers to create.
  * @param size Number of positions in each segment.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kMallocFailureError on memory allocation failure, or
  * @return other non-zero error code otherwise.
  */
@@ -297,7 +297,7 @@ int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
  *
  * @param buf_idx Index of the destination segment buffer.
  * @param seg_idx Index of the segment to load.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kIllegalArgumentError if \p buf_idx is not active,
  * @return \c kFileSystemError if \p seg_idx does not exist on disk or
  * failed to read the segment from disk, or
@@ -311,7 +311,7 @@ int DbManagerSegmentationLoad(int buf_idx, int seg_idx);
  *
  * @param buf_idx Index of the source segment buffer.
  * @param seg_idx Index of the segment.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kIllegalArgument if \p buf_idx is not active,
  * @return \c kFileSystemError if failed to write to disk, or
  * @return other non-zero error code otherwise.
@@ -321,7 +321,7 @@ int DbManagerSegmentationFlush(int buf_idx, int seg_idx);
 /**
  * @brief Deallocates all active segment buffers.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return other non-zero error code otherwise.
  */
 int DbManagerSegmentationFreeBuffers(void);
@@ -380,7 +380,7 @@ void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
  * @param tier_size Number of positions in the solving tier.
  * @param num_segments Total number of segments, where all segments are
  * assumed to have been solved and flushed to disk.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kFileSystemError if any file operation such as reading a
  * segment or saving the output failed, or
  * @return other non-zero error code otherwise.
@@ -408,7 +408,7 @@ bool DbManagerCheckpointExists(Tier tier);
  * @param status Pointer to data that stores the current solving status.
  * @param status_size Size of \p status in bytes.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerCheckpointSave(const void *status, size_t status_size);
@@ -428,7 +428,7 @@ int DbManagerCheckpointSave(const void *status, size_t status_size);
  * checkpoint was saved with \c Database::CheckpointSave.
  * @param status_size Size of \p status in bytes.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
@@ -440,7 +440,7 @@ int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
  * @note This function is not thread-safe.
  *
  * @param tier Remove the checkpoint for this tier.
- * @return \c kNoError on success,
+ * @return \c kSuccess on success,
  * @return \c kFileSystemError if no checkpoint is found for \p tier, or
  * @return any other non-zero error code on failure.
  */
@@ -480,7 +480,7 @@ size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size);
  * @param tier Tier to be loaded.
  * @param size Size of \p tier in number of positions.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerLoadTier(Tier tier, int64_t size);
@@ -490,7 +490,7 @@ int DbManagerLoadTier(Tier tier, int64_t size);
  *
  * @note This function is not thread-safe.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int DbManagerUnloadTier(Tier tier);
@@ -500,7 +500,7 @@ int DbManagerUnloadTier(Tier tier);
  *
  * @note This function is thread-safe.
  *
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 bool DbManagerIsTierLoaded(Tier tier);

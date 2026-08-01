@@ -1,11 +1,9 @@
 /**
- * @file base.h
+ * @file gamesman_status.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Enumeration of errors.
- * @version 2.0.0
- * @date 2025-05-26
+ * @brief Canonical status.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,11 +22,11 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
-#define GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
+#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_
+#define GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_
 
 typedef enum GamesmanStatus {
-    kNoError = 0,              /**< No error should always be 0. */
+    kSuccess = 0,              /**< No error should always be 0. */
     kMallocFailureError,       /**< Malloc-like function returned NULL. */
     kNotImplementedError,      /**< Feature not implemented. */
     kNotReachedError,          /**< Reaching a branch marked as unreached. */
@@ -53,4 +51,4 @@ typedef enum GamesmanStatus {
     kRuntimeError,                  /**< Generic runtime error. */
 } Status;
 
-#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_ERROR_H_
+#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_

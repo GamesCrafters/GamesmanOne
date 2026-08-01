@@ -43,7 +43,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_hash_map.h"
 #include "core/types/tier_hash_set.h"
 #include "libs/io/xfile.h"
@@ -228,7 +228,7 @@ static bool Step0_1AllocateMemory(size_t memlimit) {
     // Allocate DB and sequential access bitset rolling buffers
     if (DbManagerSegmentationMaxNumBuffers() < 3) return false;
     if (DbManagerSegmentationCreateBuffers(game.tier, 3, chunking.size) !=
-        kNoError) {
+        kSuccess) {
         return false;
     }
     chunking.seq_buf[0] = BitsetCreate(chunking.size);
@@ -792,14 +792,14 @@ int TierWorkerBIOneBit(const TierSolverApi *api, int64_t db_chunk_size,
     Step1ScanTierAndInitDb();
     Step2IterateWinLose();
     Step3IterateTie();
-    if (Step4ConsolidateDb() != kNoError) {
+    if (Step4ConsolidateDb() != kSuccess) {
         ret = kFileSystemError;
         goto _bailout;
     }
 
     // Success
     if (solved != NULL) *solved = true;
-    ret = kNoError;
+    ret = kSuccess;
 
 _bailout:
     Step5Cleanup();

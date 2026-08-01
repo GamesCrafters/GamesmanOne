@@ -39,7 +39,7 @@
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 ///////////////
 // ALLOCATOR //

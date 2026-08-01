@@ -332,7 +332,7 @@ static int KaooaGetTierName(Tier tier,
         sprintf(name, "moving_phase");
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kKaooaSolverApi = {
@@ -405,7 +405,7 @@ static int KaooaTierPositionToString(TierPosition tier_position, char *buffer) {
             board[5], board[1], board[8], board[6], board[7], board[3],
             board[2]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int KaooaMoveToString(Move move, char *buffer) {
@@ -416,7 +416,7 @@ static int KaooaMoveToString(Move move, char *buffer) {
         sprintf(buffer, "%d %d", m.unpacked.src + 1, m.unpacked.dest + 1);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool KaooaIsValidMoveString(ReadOnlyString move_string) {
@@ -491,12 +491,12 @@ static int KaooaInit(void *aux) {
     }
     if (!success) return kGenericHashError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 // =============================== KaooaFinalize ===============================
 
-static int KaooaFinalize(void) { return kNoError; }
+static int KaooaFinalize(void) { return kSuccess; }
 
 // ================================== kKaooa ==================================
 

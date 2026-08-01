@@ -37,7 +37,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_hash_set.h"
 #include "libs/io/xterminal.h"
 
@@ -147,7 +147,7 @@ static bool Step1LoadChildren(void) {
         Tier child_tier = child_tiers[i];
         int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
-        if (error != kNoError) return false;
+        if (error != kSuccess) return false;
 
         // Scan for largest remotenesses
         PRAGMA_OMP(parallel for schedule(dynamic, 16))
@@ -191,12 +191,12 @@ static bool Step2SetupSolvingTier(CheckpointStatus *ct) {
         if (verbose > 1) PrintfAndFlush("Loading checkpoint...");
         int error =
             DbManagerCheckpointLoad(this_tier, this_tier_size, ct, sizeof(*ct));
-        if (verbose > 1) puts(error == kNoError ? "done" : "failed");
-        return (error == kNoError);
+        if (verbose > 1) puts(error == kSuccess ? "done" : "failed");
+        return (error == kSuccess);
     }
 
     int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
-    if (error != kNoError) return false;
+    if (error != kSuccess) return false;
 
     return true;
 }
@@ -326,7 +326,7 @@ static bool Step4_0IterateWinLose(int initial_remoteness) {
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
         if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
-            if (CheckpointSave(kIteratingWinLose, i) != kNoError) return false;
+            if (CheckpointSave(kIteratingWinLose, i) != kSuccess) return false;
             prev_checkpoint = time(NULL);
         }
 
@@ -398,7 +398,7 @@ static bool Step4_1IterateTie(int initial_remoteness) {
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
         if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
-            if (CheckpointSave(kIteratingTie, i) != kNoError) return false;
+            if (CheckpointSave(kIteratingTie, i) != kSuccess) return false;
             prev_checkpoint = time(NULL);
         }
 
@@ -446,7 +446,7 @@ static bool Step4Iterate(int step, int remoteness) {
 static bool Step5MarkDrawPositions(void) {
     // Save a checkpoint if needed.
     if (CheckpointNeeded(prev_checkpoint, time(NULL))) {
-        if (CheckpointSave(kMarkingDraw, 0) != kNoError) return false;
+        if (CheckpointSave(kMarkingDraw, 0) != kSuccess) return false;
         prev_checkpoint = time(NULL);
     }
 
@@ -491,7 +491,7 @@ static void Step6FlushDb(void) {
 // ------------------------------- Step7Cleanup -------------------------------
 
 static bool Step7Cleanup(void) {
-    int error = kNoError;
+    int error = kSuccess;
     if (DbManagerCheckpointExists(this_tier)) {
         error = DbManagerCheckpointRemove(this_tier);
     }
@@ -504,7 +504,7 @@ static bool Step7Cleanup(void) {
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
 
-    return error == kNoError;
+    return error == kSuccess;
 }
 
 // -----------------------------------------------------------------------------
@@ -517,7 +517,7 @@ int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
     if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
-        ret = kNoError;  // Success.
+        ret = kSuccess;  // Success.
         goto _bailout;
     }
 
@@ -535,7 +535,7 @@ int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
     if (!Step5MarkDrawPositions()) goto _bailout;
     Step6FlushDb();
     if (solved != NULL) *solved = true;
-    ret = kNoError;  // Success.
+    ret = kSuccess;  // Success.
 
 _bailout:
     if (!Step7Cleanup()) {

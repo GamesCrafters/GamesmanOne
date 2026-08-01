@@ -56,7 +56,7 @@
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_map.h"
 #include "core/types/tier_hash_set.h"
@@ -526,12 +526,12 @@ static int EnqueuePrimitiveTiers(void) {
                 "primitive tiers.\n");
         return kIllegalGameTierGraphError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
 static void CreateTierGraphPrintError(int error) {
     switch (error) {
-        case kNoError:
+        case kSuccess:
             break;
 
         case kTierGraphOutOfMemory:
@@ -583,7 +583,7 @@ static int SolveTierGraph(const TierSolverSolveOptions *options) {
     if (options->verbose > 0) PrintSolverResult(time_elapsed);
     if (failed_tiers == 0) {
         int error = DbManagerSetGameSolved();
-        if (error != kNoError) {
+        if (error != kSuccess) {
             fprintf(stderr,
                     "SolveTierGraph: DB manager failed to set current game as "
                     "solved (code %d)\n",
@@ -592,7 +592,7 @@ static int SolveTierGraph(const TierSolverSolveOptions *options) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 #else  // USE_MPI
@@ -611,7 +611,7 @@ static int SolveTierGraphMpi(const TierSolverSolveOptions *options) {
     if (options->verbose > 0) PrintSolverResult(time_elapsed);
     if (failed_tiers == 0) {
         int error = DbManagerSetGameSolved();
-        if (error != kNoError) {
+        if (error != kSuccess) {
             fprintf(
                 stderr,
                 "SolveTierGraphMpi: DB manager failed to set current game as "
@@ -621,7 +621,7 @@ static int SolveTierGraphMpi(const TierSolverSolveOptions *options) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void SolveTierGraphMpiTerminateWorkers(void) {
@@ -896,7 +896,7 @@ static int DiscoverTierGraph(bool force, int verbose, size_t memlimit) {
 
     if (verbose > 0) PrintAnalyzerResult();
     TierAnalyzerFinalize();
-    return kNoError;
+    return kSuccess;
 }
 
 static void PrintAnalyzed(Tier tier, const Analysis *analysis, int verbose) {
@@ -970,7 +970,7 @@ static int TestTierGraph(long seed, int64_t test_size) {
 
         time_t begin = time(NULL);
         int error = api_internal->GetTierName(tier, tier_name);
-        if (error != kNoError) {
+        if (error != kSuccess) {
             printf("Failed to get name of tier %" PRITier "\n", tier);
             return kTierSolverTestGetTierNameError;
         }

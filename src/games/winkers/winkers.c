@@ -46,7 +46,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/uwapi/autogui.h"
@@ -368,7 +368,7 @@ static int WinkersGetTierName(Tier tier,
     sprintf(name, "%dX_%dO_%dCX_%dCO", t.placed.winks[0], t.placed.winks[1],
             t.placed.neutrals[0], t.placed.neutrals[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kWinkersSolverApi = {
@@ -436,13 +436,13 @@ static int WinkersTierPositionToString(TierPosition tier_position,
             10 - t.placed.neutrals[0], 10 - t.placed.winks[0],
             10 - t.placed.neutrals[1], 10 - t.placed.winks[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int WinkersMoveToString(Move move, char *buffer) {
     sprintf(buffer, "%d", (int)move + 1);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool WinkersIsValidMoveString(ReadOnlyString move_string) {
@@ -699,12 +699,12 @@ static int WinkersInit(void *aux) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ============================== WinkersFinalize ==============================
 
-static int WinkersFinalize(void) { return kNoError; }
+static int WinkersFinalize(void) { return kSuccess; }
 
 // =============================== kWinkersUwapi ===============================
 

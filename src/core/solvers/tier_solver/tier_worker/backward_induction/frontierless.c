@@ -42,7 +42,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_hash_set.h"
 
 #ifdef _OPENMP
@@ -514,7 +514,7 @@ int TierWorkerBIFrontierless(const TierSolverApi *api, int64_t db_chunk_size,
 
     // Success
     if (solved != NULL) *solved = true;
-    ret = kNoError;
+    ret = kSuccess;
 
 _bailout:
     Step6Cleanup();

@@ -55,7 +55,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
@@ -834,7 +834,7 @@ static int QuixoGetTierName(Tier tier,
     sprintf(name, "%dBlank_%dX_%dO", GetNumBlanks(t), t.unpacked[0],
             t.unpacked[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kQuixoSolverApi = {
@@ -927,7 +927,7 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
         offset += sprintf(buffer + offset, "\n");
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int QuixoMoveToString(Move move, char *buffer) {
@@ -937,7 +937,7 @@ static int QuixoMoveToString(Move move, char *buffer) {
         kDirIndexToSrc[curr_variant_idx][m.unpacked.dir][m.unpacked.idx] + 1,
         kDirToChar[m.unpacked.dir]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool QuixoIsValidMoveString(ReadOnlyString move_string) {
@@ -1061,7 +1061,7 @@ static int QuixoInit(void *aux) {
 static int QuixoFinalize(void) {
     X86SimdTwoPieceHashContextDestroy(&hash_context);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================ kQuixoUwapi ================================

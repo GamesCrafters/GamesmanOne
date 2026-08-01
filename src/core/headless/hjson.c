@@ -32,7 +32,7 @@
 
 #include "core/constants.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 static int AddStringHelper(json_object *dest, ReadOnlyString key,
                            ReadOnlyString value) {

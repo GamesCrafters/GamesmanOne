@@ -40,7 +40,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_set.h"
 
@@ -106,7 +106,7 @@ static bool Step0Initialize(const TierSolverApi *api, Tier tier,
     // Setup the solving tier.
     mem -= DbManagerTierMemUsage(this_tier, this_tier_size);
     int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
-    if (error != kNoError) return false;
+    if (error != kSuccess) return false;
 
     if (canonical_child_tiers.size > 0) {
         // Make sure that there is enough memory to load the largest child tier.
@@ -140,7 +140,7 @@ static bool Step1_0LoadChildTiers(Bitset *processed) {
         mem -= required;
         BitsetSet(processed, i);
         int error = DbManagerLoadTier(child_tier, size);
-        if (error != kNoError) return false;
+        if (error != kSuccess) return false;
     }
 
     return true;
@@ -358,7 +358,7 @@ int TierWorkerSolveITInternal(const TierSolverApi *api, Tier tier,
     if (solved != NULL) *solved = true;
 
 _done:
-    ret = kNoError;  // Success.
+    ret = kSuccess;  // Success.
 
 _bailout:
     Step3Cleanup();
