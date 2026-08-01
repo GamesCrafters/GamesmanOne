@@ -256,22 +256,22 @@ static inline int64_t X86SimdTwoPieceHashGetNumPositions(
 }
 
 static inline Position X86SimdTwoPieceHashHashFixedTurnMem(
-    const X86SimdTwoPieceHashContext *context, const uint64_t _patterns[2]) {
+    const X86SimdTwoPieceHashContext *context, const uint64_t patterns[2]) {
     // Convert the 8x8 padded pattern to tightly packed pattern
     const uint64_t hash_mask = context->hash_mask;
-    uint64_t patterns[2] = {
-        _pext_u64(_patterns[0], hash_mask),
-        _pext_u64(_patterns[1], hash_mask),
+    uint64_t extracted[2] = {
+        _pext_u64(patterns[0], hash_mask),
+        _pext_u64(patterns[1], hash_mask),
     };
 
     // Perform the normal hashing procedure.
-    patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
-    int pop_x = __builtin_popcountll(patterns[0]);
-    int pop_o = __builtin_popcountll(patterns[1]);
+    extracted[0] = _pext_u64(extracted[0], ~extracted[1]);
+    int pop_x = __builtin_popcountll(extracted[0]);
+    int pop_o = __builtin_popcountll(extracted[1]);
     int64_t offset = context->nCr[context->board_size - pop_o][pop_x];
 
-    return offset * context->pattern_to_order[patterns[1]] +
-           context->pattern_to_order[patterns[0]];
+    return offset * context->pattern_to_order[extracted[1]] +
+           context->pattern_to_order[extracted[0]];
 }
 
 static inline Position X86SimdTwoPieceHashHashFixedTurn(
