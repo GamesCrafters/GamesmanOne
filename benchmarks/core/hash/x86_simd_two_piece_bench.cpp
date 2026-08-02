@@ -139,3 +139,48 @@ BENCHMARK_F(TwoPieceHashFixture, BM_UnhashMem)(benchmark::State& state) {
     }
     state.SetItemsProcessed(state.iterations());
 }
+
+// ============================================================================
+// 5. Benchmark: X86SimdTwoPieceHashFlipDiag (Diagonal Flip)
+// ============================================================================
+BENCHMARK_F(TwoPieceHashFixture, BM_FlipDiag)(benchmark::State& state) {
+    size_t idx = 0;
+    for (auto _ : state) {
+        __m128i result =
+            X86SimdTwoPieceHashFlipDiag(random_boards_simd[idx].vec);
+        benchmark::DoNotOptimize(result);
+
+        idx = (idx + 1) & kSampleMask;
+    }
+    state.SetItemsProcessed(state.iterations());
+}
+
+// ============================================================================
+// 6. Benchmark: X86SimdTwoPieceHashFlipVertical (Vertical Flip)
+// ============================================================================
+BENCHMARK_F(TwoPieceHashFixture, BM_FlipVertical)(benchmark::State& state) {
+    size_t idx = 0;
+    for (auto _ : state) {
+        __m128i result =
+            X86SimdTwoPieceHashFlipVertical(random_boards_simd[idx].vec, kRows);
+        benchmark::DoNotOptimize(result);
+
+        idx = (idx + 1) & kSampleMask;
+    }
+    state.SetItemsProcessed(state.iterations());
+}
+
+// ============================================================================
+// 7. Benchmark: X86SimdTwoPieceHashMirrorHorizontal (Horizontal Mirror)
+// ============================================================================
+BENCHMARK_F(TwoPieceHashFixture, BM_MirrorHorizontal)(benchmark::State& state) {
+    size_t idx = 0;
+    for (auto _ : state) {
+        __m128i result = X86SimdTwoPieceHashMirrorHorizontal(
+            random_boards_simd[idx].vec, kCols);
+        benchmark::DoNotOptimize(result);
+
+        idx = (idx + 1) & kSampleMask;
+    }
+    state.SetItemsProcessed(state.iterations());
+}
