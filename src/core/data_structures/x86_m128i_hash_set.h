@@ -140,6 +140,12 @@ static inline void X86M128iHashSetInit(X86M128iHashSet *hs) {
     memset(hs->state, 0, sizeof(hs->state));
 }
 
+// Suppress a analyzer warning about hs->keys being uninitialized;
+// hs->keys are never used when the corresponding states are 0.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 /**
  * @brief Adds `key` as a new key in `hs`.
  *
@@ -166,6 +172,9 @@ static inline bool X86M128iHashSetAdd(X86M128iHashSet *hs, __m128i key) {
 
     return true;
 }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 /**
  * @brief Tests if `hs` contains `key`.
