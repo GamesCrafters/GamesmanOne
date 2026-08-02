@@ -37,6 +37,10 @@
 #include "core/types/gamesman_status.h"
 
 size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots) {
+    if (num_slots <= 0 || num_slots > kX86SimdTwoPieceHashBoardSizeMax) {
+        return SIZE_MAX;
+    }
+
     const size_t num_patterns = 1ULL << num_slots;
     const size_t pattern_to_order_size = num_patterns * sizeof(int32_t);
     const size_t pop_order_to_pattern_size = num_patterns * sizeof(uint32_t);
@@ -57,11 +61,10 @@ static Status ValidateRowsCols(int rows, int cols) {
 
 static Status ValidateBoardSize(int board_size) {
     if (board_size <= 0 || board_size > kX86SimdTwoPieceHashBoardSizeMax) {
-        fprintf(
-            stderr,
-            "X86SimdTwoPieceHashContextInit: invalid board size (%d) provided. "
-            "Valid range: [1, %d]\n",
-            board_size, kX86SimdTwoPieceHashBoardSizeMax);
+        fprintf(stderr,
+                "ValidateBoardSize: invalid board size (%d) provided. "
+                "Valid range: [1, %d]\n",
+                board_size, kX86SimdTwoPieceHashBoardSizeMax);
         return kIllegalArgumentError;
     }
 
@@ -80,7 +83,7 @@ static void InitTriangle(X86SimdTwoPieceHashContext *context) {
 
 static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
     InitTriangle(context);
-    const uint32_t num_patterns = 1U << board_size;
+    const size_t num_patterns = 1ULL << board_size;
 
     // 1. Allocate space
     context->pattern_to_order =
@@ -93,7 +96,7 @@ static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
     }
 
     // 2. Wire the embedded struct pointers to offsets in the single flat array
-    uint64_t current_offset = 0;
+    size_t current_offset = 0;
     for (int i = 0; i <= board_size; ++i) {
         context->pop_order_to_pattern[i] = flat_pop_array + current_offset;
         current_offset += context->nCr[board_size][i];
@@ -101,11 +104,11 @@ static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
 
     // 3. Initialize tables
     int32_t order_count[kX86SimdTwoPieceHashBoardSizeMax + 1] = {0};
-    for (uint32_t i = 0; i < num_patterns; ++i) {
-        int pop = __builtin_popcount(i);
+    for (size_t i = 0; i < num_patterns; ++i) {
+        int pop = __builtin_popcountll(i);
         int32_t order = order_count[pop]++;
         context->pattern_to_order[i] = order;
-        context->pop_order_to_pattern[pop][order] = i;
+        context->pop_order_to_pattern[pop][order] = (uint32_t)i;
     }
 
     return kSuccess;
