@@ -45,7 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/uwapi/uwapi.h"
@@ -212,12 +212,12 @@ static BlankOX WhoseTurn(BlankOX *board);
 static int MtttInit(void *aux) {
     (void)aux;  // Unused.
     InitSymmetryMatrix();
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttFinalize(void) {
     // Nothing to deallocate.
-    return kNoError;
+    return kSuccess;
 }
 
 static const GameVariant *MtttGetCurrentVariant(void) {
@@ -368,7 +368,7 @@ static int MtttPositionToString(Position position, char *buffer) {
         return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttMoveToString(Move move, char *buffer) {
@@ -382,7 +382,7 @@ static int MtttMoveToString(Move move, char *buffer) {
         return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MtttIsValidMoveString(ReadOnlyString move_string) {

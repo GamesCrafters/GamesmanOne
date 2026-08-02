@@ -41,7 +41,7 @@
 #include "core/solvers/tier_solver/tier_worker/backward_induction/types.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 static bool GetParentsAvailable(const TierSolverApi *api) {
     return api->GetCanonicalParentPositions != NULL;
@@ -81,7 +81,7 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
 
     // If we are not force-resolving and the tier has been solved, skip it.
     if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
-        return kNoError;
+        return kSuccess;
     }
 
     // Analyze memory usage and decide the best solving strategy.
@@ -91,7 +91,7 @@ int TierWorkerBackwardInduction(const TierSolverApi *api, int64_t db_chunk_size,
     // If we don't have enough memory to solve the tier, report failure.
     if (strategy == kUnsolvable) return kMallocFailureError;
 
-    int error = kNoError;
+    int error = kSuccess;
     switch (strategy) {
         case kFrontierPercolation:
         case kFrontierless:

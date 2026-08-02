@@ -35,7 +35,7 @@
 #include "core/solvers/solver_manager.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 static int TestOneVariant(ReadOnlyString game_name, int variant_id, long seed) {
     printf("TESTING VARIANT %d OF GAME %s\n", variant_id, game_name);
@@ -100,5 +100,5 @@ int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
         "***** ALL TESTS PASSED *****\n"
         "****************************\n");
 
-    return kNoError;
+    return kSuccess;
 }

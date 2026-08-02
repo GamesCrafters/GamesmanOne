@@ -34,7 +34,7 @@
 #include "core/interactive/main_menu.h"
 #include "core/opening_credits.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 #ifdef NDEBUG  // Release
 #include <unistd.h>
@@ -173,5 +173,5 @@ int GamesmanInteractiveMain(void) {
     PromptForContinue();
     InteractiveMainMenu(NULL);
 
-    return kNoError;
+    return kSuccess;
 }

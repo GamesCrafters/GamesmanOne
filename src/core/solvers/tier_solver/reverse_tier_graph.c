@@ -37,7 +37,7 @@
 #include <string.h>
 
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_array.h"
 #include "core/types/tier_hash_map.h"
 
@@ -65,13 +65,13 @@ void ReverseTierGraphDestroy(ReverseTierGraph *graph) {
 int ReverseTierGraphAdd(ReverseTierGraph *graph, Tier child, Tier parent) {
     if (!TierHashMapContains(&graph->index_of, child)) {
         int error = AddNewTier(graph, child);
-        if (error != kNoError) return error;
+        if (error != kSuccess) return error;
     }
 
     TierHashMapIterator it = TierHashMapGet(&graph->index_of, child);
     int64_t index = TierHashMapIteratorValue(&it);
     bool success = TierArrayAppend(&graph->parents_of[index], parent);
-    if (success) return kNoError;
+    if (success) return kSuccess;
     return kMallocFailureError;
 }
 
@@ -112,14 +112,14 @@ TierArray ReverseTierGraphGetParentsOf(ReverseTierGraph *graph, Tier child) {
 static int AddNewTier(ReverseTierGraph *graph, Tier child) {
     if (graph->size == graph->capacity) {
         int error = ReverseTierGraphExpand(graph);
-        if (error != kNoError) return error;
+        if (error != kSuccess) return error;
     }
 
     assert(graph->capacity > graph->size);
     TierHashMapSet(&graph->index_of, child, graph->size);
     TierArrayInit(&graph->parents_of[graph->size]);
     ++graph->size;
-    return kNoError;
+    return kSuccess;
 }
 
 static int ReverseTierGraphExpand(ReverseTierGraph *graph) {
@@ -131,5 +131,5 @@ static int ReverseTierGraphExpand(ReverseTierGraph *graph) {
     graph->parents_of = new_parents_of;
     graph->capacity = new_capacity;
 
-    return kNoError;
+    return kSuccess;
 }

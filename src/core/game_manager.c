@@ -36,7 +36,7 @@
 #include "core/types/base.h"
 #include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "games/game_list.h"
 
 static const Game *current_game;
@@ -64,7 +64,7 @@ const Game *GameManagerInitGameIndex(int index, void *aux) {
     assert(index >= 0 && index < GameManagerNumGames());
     const Game *const *all_games = GameListGetAllGames();
     int error = all_games[index]->Init(aux);
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr,
                 "GameManagerInitGameIndex: failed to initialize game [%s], "
                 "code %d.\n",
@@ -99,7 +99,7 @@ int GameManagerSetVariant(int variant_id) {
     if (variant == NULL) {
         // If variants are not implemented, 0 is the only valid default variant
         // id.
-        if (variant_id == 0) return kNoError;
+        if (variant_id == 0) return kSuccess;
         fprintf(stderr,
                 "GameManagerSetVariant: game [%s] has no variant [%d] (only "
                 "variant 0 is available)\n",
@@ -135,7 +135,7 @@ int GameManagerSetVariant(int variant_id) {
     }
     Int64ArrayDestroy(&selections);
 
-    return kNoError;
+    return kSuccess;
 }
 
 void GameManagerFinalize(void) {

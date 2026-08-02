@@ -6,5 +6,6 @@ add_executable(data_structures_bench
 
 target_link_libraries(data_structures_bench PRIVATE
     benchmark::benchmark_main
+    common_flags
     data_structures
 )

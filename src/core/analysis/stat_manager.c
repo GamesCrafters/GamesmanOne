@@ -39,7 +39,7 @@
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
@@ -63,7 +63,7 @@ int StatManagerInit(ReadOnlyString game_name, int variant,
     sandbox_path = SetupStatPath(game_name, variant, data_path);
     if (sandbox_path == NULL) return kMallocFailureError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 void StatManagerFinalize(void) {
@@ -133,7 +133,7 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
-    int error = kNoError;
+    int error = kSuccess;
     char buf[2][BUFSIZ];  // Double-buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
     ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
@@ -223,7 +223,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
 
 _bailout:
     GamesmanFree(filename);
-    if (error != kNoError) ConcurrentBitsetDestroy(s);
+    if (error != kSuccess) ConcurrentBitsetDestroy(s);
     Lz4UtilsInStreamClose(lz4_istream);
 
     return error;
@@ -275,7 +275,7 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
 
     Lz4UtilsStatus close_status = Lz4UtilsOutStreamClose(lz4_ostream, NULL);
     int error = ReportLz4UtilsError(close_status);
-    if (error != kNoError) return error;
+    if (error != kSuccess) return error;
 
     return ReportLz4UtilsError(status);
 }
@@ -288,7 +288,7 @@ int StatManagerRemoveDiscoveryMap(Tier tier) {
     GamesmanFree(filename);
     if (error != 0) return kFileSystemError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 // -----------------------------------------------------------------------------
@@ -363,7 +363,7 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
 static int ReportLz4UtilsError(Lz4UtilsStatus status) {
     switch (status) {
         case LZ4_UTILS_SUCCESS:
-            return kNoError;
+            return kSuccess;
         case LZ4_UTILS_ERR_INVALID_PARAM:
         case LZ4_UTILS_ERR_INSUFFICIENT_BUF:
             return kIllegalArgumentError;

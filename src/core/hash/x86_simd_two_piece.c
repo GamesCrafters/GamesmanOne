@@ -10,8 +10,6 @@
  * @brief Implementation of the x86 SIMD hash system for tier games with
  * rectangular boards of size 32 or less and using no more than two types of
  * pieces.
- * @version 2.0.0
- * @date 2025-04-28
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,61 +29,89 @@
  */
 #include "core/hash/x86_simd_two_piece.h"
 
-#include <assert.h>
-#include <immintrin.h>
-#include <stdalign.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "core/gamesman_memory.h"
-#include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
-/**
- * @brief Maximum supported board size.
- * @details The current implementation supports at most 32 board slots. It is
- * possible to expand this to 64 in theory, which would require a
- * reimplementation of the system using 64-bit tables. However, the amount of
- * memory required to cache the piece patterns doubles for each additional board
- * slot and it is not likely in the near future that we will have enough memory
- * to efficiently support common board sizes such as 36 slots, which would
- * cost ~256 GiB memory with 64-bit tables.
- */
-enum { kBoardSizeMax = 32 };
+size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots) {
+    if (num_slots <= 0 || num_slots > kX86SimdTwoPieceHashBoardSizeMax) {
+        return SIZE_MAX;
+    }
 
-static bool nCrInitialized;
-static int64_t nCr[kBoardSizeMax + 1][kBoardSizeMax + 1];
+    const size_t num_patterns = 1ULL << num_slots;
+    const size_t pattern_to_order_size = num_patterns * sizeof(int32_t);
+    const size_t pop_order_to_pattern_size = num_patterns * sizeof(uint32_t);
 
-static bool system_initialized;
-static int curr_board_size;
-static uint64_t hash_mask;
-static int32_t *pattern_to_order;
-static uint32_t **pop_order_to_pattern;
-
-size_t X86SimdTwoPieceHashGetMemoryRequired(int num_slots) {
-    // pattern_to_order
-    size_t ret = (1ULL << num_slots) * sizeof(int32_t);
-
-    // pop_order_to_pattern second level pointers
-    ret += (num_slots + 1) * sizeof(uint32_t *);
-
-    // pop_order_to_pattern contents, derived from the binomial theorem
-    ret += (1ULL << num_slots) * sizeof(int32_t);
-
-    return ret;
+    return pattern_to_order_size + pop_order_to_pattern_size;
 }
 
-static void MakeTriangle(void) {
-    if (nCrInitialized) return;
-    for (int i = 0; i <= kBoardSizeMax; ++i) {
-        nCr[i][0] = 1;
+static Status ValidateRowsCols(int rows, int cols) {
+    if (rows <= 0 || rows > 8 || cols <= 0 || cols > 8) {
+        fprintf(stderr,
+                "ValidateRowsCols: invalid number of rows or columns "
+                "provided. Valid range: [1, 8]\n");
+        return kIllegalArgumentError;
+    }
+
+    return kSuccess;
+}
+
+static Status ValidateBoardSize(int board_size) {
+    if (board_size <= 0 || board_size > kX86SimdTwoPieceHashBoardSizeMax) {
+        fprintf(stderr,
+                "ValidateBoardSize: invalid board size (%d) provided. "
+                "Valid range: [1, %d]\n",
+                board_size, kX86SimdTwoPieceHashBoardSizeMax);
+        return kIllegalArgumentError;
+    }
+
+    return kSuccess;
+}
+
+static void InitTriangle(X86SimdTwoPieceHashContext *context) {
+    for (int i = 0; i <= kX86SimdTwoPieceHashBoardSizeMax; ++i) {
+        context->nCr[i][0] = 1;
         for (int j = 1; j <= i; ++j) {
-            nCr[i][j] = nCr[i - 1][j - 1] + nCr[i - 1][j];
+            context->nCr[i][j] =
+                context->nCr[i - 1][j - 1] + context->nCr[i - 1][j];
         }
     }
-    nCrInitialized = true;
+}
+
+static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
+    InitTriangle(context);
+    const size_t num_patterns = 1ULL << board_size;
+
+    // 1. Allocate space
+    context->pattern_to_order =
+        (int32_t *)GamesmanCallocWhole(num_patterns, sizeof(int32_t));
+    uint32_t *flat_pop_array =
+        (uint32_t *)GamesmanCallocWhole(num_patterns, sizeof(uint32_t));
+
+    if (!context->pattern_to_order || !flat_pop_array) {
+        return kMallocFailureError;
+    }
+
+    // 2. Wire the embedded struct pointers to offsets in the single flat array
+    size_t current_offset = 0;
+    for (int i = 0; i <= board_size; ++i) {
+        context->pop_order_to_pattern[i] = flat_pop_array + current_offset;
+        current_offset += context->nCr[board_size][i];
+    }
+
+    // 3. Initialize tables
+    int32_t order_count[kX86SimdTwoPieceHashBoardSizeMax + 1] = {0};
+    for (size_t i = 0; i < num_patterns; ++i) {
+        int pop = __builtin_popcountll(i);
+        int32_t order = order_count[pop]++;
+        context->pattern_to_order[i] = order;
+        context->pop_order_to_pattern[pop][order] = (uint32_t)i;
+    }
+
+    return kSuccess;
 }
 
 static uint64_t BuildRectangularHashMask(int rows, int cols) {
@@ -97,181 +123,68 @@ static uint64_t BuildRectangularHashMask(int rows, int cols) {
     return mask;
 }
 
-static int InitTables(void) {
-    // Allocate space
-    pattern_to_order = (int32_t *)GamesmanCallocWhole((1ULL << curr_board_size),
-                                                      sizeof(int32_t));
-    pop_order_to_pattern = (uint32_t **)GamesmanCallocWhole(
-        (curr_board_size + 1), sizeof(uint32_t *));
-    if (!pattern_to_order || !pop_order_to_pattern) return kMallocFailureError;
+Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
+                                      int rows, int cols) {
+    memset(context, 0, sizeof(*context));
 
-    for (int i = 0; i <= curr_board_size; ++i) {
-        pop_order_to_pattern[i] = (uint32_t *)GamesmanMalloc(
-            nCr[curr_board_size][i] * sizeof(uint32_t));
-        if (!pop_order_to_pattern[i]) return kMallocFailureError;
+    Status status = ValidateRowsCols(rows, cols);
+    if (status != kSuccess) {
+        goto _bailout;
     }
 
-    // Initialize tables
-    int32_t order_count[kBoardSizeMax] = {0};
-    for (uint32_t i = 0; i < (1U << curr_board_size); ++i) {
-        int pop = __builtin_popcount(i);
-        assert(pop <= curr_board_size);
-        int32_t order = order_count[pop]++;
-        pattern_to_order[i] = order;
-        pop_order_to_pattern[pop][order] = i;
+    context->board_size = rows * cols;
+    status = ValidateBoardSize(context->board_size);
+    if (status != kSuccess) {
+        goto _bailout;
     }
 
-    return kNoError;
-}
-
-int X86SimdTwoPieceHashInit(int rows, int cols) {
-    // Validate rows and cols
-    if (rows <= 0 || rows > 8 || cols <= 0 || cols > 8) {
-        fprintf(stderr,
-                "X86SimdTwoPieceHashInit: invalid number of rows or columns "
-                "provided. Valid range: [1, 8]\n");
-        return kIllegalArgumentError;
+    status = InitTables(context, context->board_size);
+    if (status != kSuccess) {
+        goto _bailout;
     }
 
-    // Validate board size
-    int board_size = rows * cols;
-    if (board_size <= 0 || board_size > kBoardSizeMax) {
-        fprintf(stderr,
-                "X86SimdTwoPieceHashInit: invalid board size (%d) provided. "
-                "Valid range: [1, %d]\n",
-                board_size, kBoardSizeMax);
-        return kIllegalArgumentError;
+    context->hash_mask = BuildRectangularHashMask(rows, cols);
+
+_bailout:
+    if (status != kSuccess) {
+        X86SimdTwoPieceHashContextDestroy(context);
     }
 
-    // Clear previous system state if exists.
-    if (system_initialized) X86SimdTwoPieceHashFinalize();
-
-    curr_board_size = board_size;
-    MakeTriangle();
-    hash_mask = BuildRectangularHashMask(rows, cols);
-
-    // Initialize the tables
-    int error = InitTables();
-    if (error != kNoError) X86SimdTwoPieceHashFinalize();
-    system_initialized = true;
-
-    return error;
+    return status;
 }
 
-int X86SimdTwoPieceHashInitIrregular(uint64_t board_mask) {
-    // Validate board size
-    int board_size = __builtin_popcountll(board_mask);
-    if (board_size == 0 || board_size > kBoardSizeMax) {
-        fprintf(stderr,
-                "X86SimdTwoPieceHashInitIrregular: invalid board size (%d) "
-                "provided. Valid range: [1, %d]\n",
-                board_size, kBoardSizeMax);
-        return kIllegalArgumentError;
+Status X86SimdTwoPieceHashContextInitIrregular(
+    X86SimdTwoPieceHashContext *context, uint64_t board_mask) {
+    memset(context, 0, sizeof(*context));
+
+    // Board size is the number of set bits in board_mask
+    context->board_size = __builtin_popcountll(board_mask);
+    Status status = ValidateBoardSize(context->board_size);
+    if (status != kSuccess) {
+        goto _bailout;
     }
 
-    // Clear previous system state if exists.
-    if (system_initialized) X86SimdTwoPieceHashFinalize();
-
-    curr_board_size = board_size;
-    MakeTriangle();
-    hash_mask = board_mask;
-
-    // Initialize the tables
-    int error = InitTables();
-    if (error != kNoError) X86SimdTwoPieceHashFinalize();
-    system_initialized = true;
-
-    return error;
-}
-
-void X86SimdTwoPieceHashFinalize(void) {
-    // pattern_to_order
-    GamesmanFree(pattern_to_order);
-    pattern_to_order = NULL;
-
-    // pop_order_to_pattern
-    if (pop_order_to_pattern != NULL) {
-        for (int i = 0; i <= curr_board_size; ++i) {
-            GamesmanFree(pop_order_to_pattern[i]);
-        }
-        GamesmanFree(pop_order_to_pattern);
-        pop_order_to_pattern = NULL;
+    status = InitTables(context, context->board_size);
+    if (status != kSuccess) {
+        goto _bailout;
     }
 
-    // Reset the board size
-    curr_board_size = 0;
+    context->hash_mask = board_mask;
 
-    // Reset the hash mask
-    hash_mask = 0;
+_bailout:
+    if (status != kSuccess) {
+        X86SimdTwoPieceHashContextDestroy(context);
+    }
+
+    return status;
 }
 
-int64_t X86SimdTwoPieceHashGetNumPositions(int num_x, int num_o) {
-    return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o) * 2;
-}
+void X86SimdTwoPieceHashContextDestroy(X86SimdTwoPieceHashContext *context) {
+    if (!context) {
+        return;
+    }
 
-int64_t X86SimdTwoPieceHashGetNumPositionsFixedTurn(int num_x, int num_o) {
-    return nCr[curr_board_size - num_o][num_x] * nCr[curr_board_size][num_o];
-}
-
-Position X86SimdTwoPieceHashHash(__m128i board, int turn) {
-    return (X86SimdTwoPieceHashHashFixedTurn(board) << 1) | turn;
-}
-
-Position X86SimdTwoPieceHashHashMem(const uint64_t patterns[2], int turn) {
-    return (X86SimdTwoPieceHashHashFixedTurnMem(patterns) << 1) | turn;
-}
-
-Position X86SimdTwoPieceHashHashFixedTurn(__m128i board) {
-    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
-    // required by _mm_store_si128
-    alignas(16) uint64_t s[2];
-    _mm_store_si128((__m128i *)s, board);
-
-    return X86SimdTwoPieceHashHashFixedTurnMem(s);
-}
-
-Position X86SimdTwoPieceHashHashFixedTurnMem(const uint64_t _patterns[2]) {
-    // Convert the 8x8 padded pattern to tightly packed pattern
-    uint64_t patterns[2] = {
-        _pext_u64(_patterns[0], hash_mask),
-        _pext_u64(_patterns[1], hash_mask),
-    };
-
-    // Perform the normal hashing procedure.
-    patterns[0] = _pext_u64(patterns[0], ~patterns[1]);
-    int pop_x = __builtin_popcountll(patterns[0]);
-    int pop_o = __builtin_popcountll(patterns[1]);
-    int64_t offset = nCr[curr_board_size - pop_o][pop_x];
-
-    return offset * pattern_to_order[patterns[1]] +
-           pattern_to_order[patterns[0]];
-}
-
-__m128i X86SimdTwoPieceHashUnhash(Position hash, int num_x, int num_o) {
-    // Get rid of the turn bit and then use the same algorithm.
-    return X86SimdTwoPieceHashUnhashFixedTurn(hash >> 1, num_x, num_o);
-}
-
-__m128i X86SimdTwoPieceHashUnhashFixedTurn(Position hash, int num_x,
-                                           int num_o) {
-    alignas(16) uint64_t s[2];
-    X86SimdTwoPieceHashUnhashFixedTurnMem(hash, num_x, num_o, s);
-
-    return _mm_load_si128((const __m128i *)s);
-}
-
-void X86SimdTwoPieceHashUnhashMem(Position hash, int num_x, int num_o,
-                                  uint64_t patterns[2]) {
-    // Get rid of the turn bit and then use the same algorithm.
-    X86SimdTwoPieceHashUnhashFixedTurnMem(hash >> 1, num_x, num_o, patterns);
-}
-
-void X86SimdTwoPieceHashUnhashFixedTurnMem(Position hash, int num_x, int num_o,
-                                           uint64_t patterns[2]) {
-    int64_t offset = nCr[curr_board_size - num_o][num_x];
-    patterns[0] = pop_order_to_pattern[num_x][hash % offset];
-    patterns[1] = pop_order_to_pattern[num_o][hash / offset];
-    patterns[0] = _pdep_u64(patterns[0], ~patterns[1]);
-    patterns[0] = _pdep_u64(patterns[0], hash_mask);
-    patterns[1] = _pdep_u64(patterns[1], hash_mask);
+    GamesmanFree(context->pattern_to_order);
+    GamesmanFree(context->pop_order_to_pattern[0]);
+    memset(context, 0, sizeof(*context));
 }

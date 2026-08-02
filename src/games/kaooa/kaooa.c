@@ -45,7 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_regular.h"
@@ -176,10 +176,10 @@ static int MkaooaInit(void *aux) {
         GenericHashReinitialize();
         return kRuntimeError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
-static int MkaooaFinalize(void) { return kNoError; }
+static int MkaooaFinalize(void) { return kSuccess; }
 
 // static const GameVariant *MkaooaGetCurrentVariant(void)
 // {

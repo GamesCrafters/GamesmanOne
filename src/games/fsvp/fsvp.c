@@ -43,7 +43,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 
 static int FsvpInit(void *aux);
@@ -191,10 +191,10 @@ static int FsvpInit(void *aux) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
-static int FsvpFinalize(void) { return kNoError; }
+static int FsvpFinalize(void) { return kSuccess; }
 
 static const GameVariant *FsvpGetCurrentVariant(void) {
     return &current_variant;
@@ -208,7 +208,7 @@ static int FsvpSetVariantOption(int option, int selection) {
     selections[0] = selection;
     variant_size = atoi(kFsvpGameSizeChoices[selection]);
     printf("setting size to %d\n", variant_size);
-    return kNoError;
+    return kSuccess;
 }
 
 static int64_t FsvpGetNumPositions(void) {
@@ -322,7 +322,7 @@ static int FsvpPositionToString(Position position, char *buffer) {
     }
     sprintf(buffer + size, "}");
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int FsvpMoveToString(Move move, char *buffer) {
@@ -337,7 +337,7 @@ static int FsvpMoveToString(Move move, char *buffer) {
     size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
     sprintf(buffer + size, "%" PRId64, move % variant_size);              // y
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool FsvpIsValidMoveString(ReadOnlyString move_string) {

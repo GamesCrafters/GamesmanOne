@@ -135,7 +135,7 @@ typedef struct Database {
      * @param tier Tier to be solved and stored in memory.
      * @param size Size of \p tier in number of positions.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*CreateSolvingTier)(Tier tier, int64_t size);
@@ -149,7 +149,7 @@ typedef struct Database {
      * @param tier Tier to be solved and stored in memory.
      * @param size Size of \p tier in number of positions.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*CreateConcurrentSolvingTier)(Tier tier, int64_t size);
@@ -160,7 +160,7 @@ typedef struct Database {
      *
      * @param aux Auxiliary parameter.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*FlushSolvingTier)(void *aux);
@@ -170,7 +170,7 @@ typedef struct Database {
      * been created.
      * @note This function is part of the Solving API.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*FreeSolvingTier)(void);
@@ -178,7 +178,7 @@ typedef struct Database {
     /**
      * @brief Sets the current game as solved.
      *
-     * @return \c kNoError on success, or
+     * @return \c kSuccess on success, or
      * @return non-zero error code otherwise.
      */
     int (*SetGameSolved)(void);
@@ -187,7 +187,7 @@ typedef struct Database {
      * @brief Sets the value of POSITION to VALUE.
      * @note This function is part of the Solving API.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*SetValue)(Position position, Value value);
@@ -196,7 +196,7 @@ typedef struct Database {
      * @brief Sets the remoteness of POSITION to REMOTENESS.
      * @note This function is part of the Solving API.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*SetRemoteness)(Position position, int remoteness);
@@ -205,7 +205,7 @@ typedef struct Database {
      * @brief Sets the \p value and \p remoteness of \p position .
      * @note This function is part of the Solving API.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*SetValueRemoteness)(Position position, Value value, int remoteness);
@@ -320,7 +320,7 @@ typedef struct Database {
          * @param tier Tier to be solved.
          * @param num_segments Number of segment buffers to create.
          * @param size Number of positions in each segment.
-         * @return \c kNoError on success,
+         * @return \c kSuccess on success,
          * @return \c kMallocFailureError on memory allocation failure, or
          * @return other non-zero error code otherwise.
          */
@@ -332,7 +332,7 @@ typedef struct Database {
          *
          * @param buf_idx Index of the destination segment buffer.
          * @param seg_idx Index of the segment to load.
-         * @return \c kNoError on success,
+         * @return \c kSuccess on success,
          * @return \c kIllegalArgumentError if \p buf_idx is not active,
          * @return \c kFileSystemError if \p seg_idx does not exist on disk or
          * failed to read the segment from disk, or
@@ -346,7 +346,7 @@ typedef struct Database {
          *
          * @param buf_idx Index of the source segment buffer.
          * @param seg_idx Index of the segment.
-         * @return \c kNoError on success,
+         * @return \c kSuccess on success,
          * @return \c kIllegalArgument if \p buf_idx is not active,
          * @return \c kFileSystemError if failed to write to disk, or
          * @return other non-zero error code otherwise.
@@ -356,7 +356,7 @@ typedef struct Database {
         /**
          * @brief Deallocates all active segment buffers.
          *
-         * @return \c kNoError on success, or
+         * @return \c kSuccess on success, or
          * @return other non-zero error code otherwise.
          */
         int (*FreeBuffers)(void);
@@ -415,7 +415,7 @@ typedef struct Database {
          * @param tier_size Number of positions in the solving tier.
          * @param num_segments Total number of segments, where all segments are
          * assumed to have been solved and flushed to disk.
-         * @return \c kNoError on success,
+         * @return \c kSuccess on success,
          * @return \c kFileSystemError if any file operation such as reading a
          * segment or saving the output failed, or
          * @return other non-zero error code otherwise.
@@ -436,7 +436,7 @@ typedef struct Database {
      * @param status Pointer to data that stores the current solving status.
      * @param status_size Size of \p status in bytes.
      *
-     * @return \c kNoError on success, or
+     * @return \c kSuccess on success, or
      * @return non-zero error code otherwise.
      */
     int (*CheckpointSave)(const void *status, size_t status_size);
@@ -454,7 +454,7 @@ typedef struct Database {
      * checkpoint was saved with \c Database::CheckpointSave.
      * @param status_size Size of \p status in bytes.
      *
-     * @return \c kNoError on success, or
+     * @return \c kSuccess on success, or
      * @return non-zero error code otherwise.
      */
     int (*CheckpointLoad)(Tier tier, int64_t size, void *status,
@@ -464,7 +464,7 @@ typedef struct Database {
      * @brief Removes the checkpoint for \p tier if exists.
      *
      * @param tier Remove the checkpoint for this tier.
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return \c kFileSystemError if no checkpoint is found for \p tier, or
      * @return any other non-zero error code on failure.
      */
@@ -498,7 +498,7 @@ typedef struct Database {
      * @param tier Tier to be loaded.
      * @param size Size of \p tier in number of positions.
      *
-     * @return \c kNoError on success, or
+     * @return \c kSuccess on success, or
      * @return non-zero error code otherwise.
      */
     int (*LoadTier)(Tier tier, int64_t size);
@@ -510,7 +510,7 @@ typedef struct Database {
      * @note \c kIllegalArgumentError will be returned if this function is used
      * to unload the solving tier.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return \c kIllegalArgumentError if \p tier is the solving tier, which
      * can only be unloaded using Database::FreeSolvingTier, or
      * @return any other non-zero error code otherwise.
@@ -559,7 +559,7 @@ typedef struct Database {
     /**
      * @brief Initializes the given Database PROBE.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*ProbeInit)(DbProbe *probe);
@@ -567,7 +567,7 @@ typedef struct Database {
     /**
      * @brief Frees the given Database PROBE.
      *
-     * @return \c kNoError on success,
+     * @return \c kSuccess on success,
      * @return non-zero error code otherwise.
      */
     int (*ProbeDestroy)(DbProbe *probe);

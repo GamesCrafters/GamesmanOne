@@ -45,7 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_regular.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/uwapi/uwapi.h"
@@ -672,7 +672,7 @@ static int DobutsuShogiPositionToString(Position position, char *buffer) {
             p1_captured[0], p1_captured[1], p1_captured[2], p1_captured[3],
             p1_captured[4], p1_captured[5]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int DobutsuShogiMoveToString(Move move, char *buffer) {
@@ -687,7 +687,7 @@ static int DobutsuShogiMoveToString(Move move, char *buffer) {
 
     sprintf(buffer, "%s %d", src_str, dest + 1);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool DobutsuShogiIsValidMoveString(ReadOnlyString move_string) {
@@ -988,12 +988,12 @@ static int DobutsuShogiInit(void *aux) {
 
     DobutsuShogiInitGlobalVariables();
 
-    return kNoError;
+    return kSuccess;
 }
 
 // =========================== DobutsuShogiFinalize ===========================
 
-static int DobutsuShogiFinalize(void) { return kNoError; }
+static int DobutsuShogiFinalize(void) { return kSuccess; }
 
 // =============================== kDobutsuShogi ===============================
 

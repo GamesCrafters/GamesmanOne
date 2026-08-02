@@ -19,7 +19,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
@@ -1174,7 +1174,7 @@ static int GatesTierPositionToString(TierPosition tier_position, char *buffer) {
             board[9], board[10], board[11], board[12], board[13], board[14],
             board[15], board[16], board[17]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int GatesMoveToString(Move move, char *buffer) {
@@ -1205,7 +1205,7 @@ static int GatesMoveToString(Move move, char *buffer) {
         sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool GatesIsValidMoveString(ReadOnlyString move_string) {
@@ -1370,7 +1370,7 @@ static int InitGenericHashPlacement(void) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void MovementIndexToGatesTier(int i, GatesTier *dest) {
@@ -1433,7 +1433,7 @@ static int InitGenericHashMovement(void) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int InitGenericHash(void) {
@@ -1443,7 +1443,7 @@ static int InitGenericHash(void) {
     error = InitGenericHashMovement();
     if (error) return error;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int GatesInit(void *aux) {
@@ -1468,7 +1468,7 @@ static int GatesInit(void *aux) {
 
 static int GatesFinalize(void) {
     TierHashSetDestroy(&kChildDedupTiers);
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================== kGates ==================================

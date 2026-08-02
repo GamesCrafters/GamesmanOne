@@ -81,6 +81,7 @@ TEST(GuardedFreopenTest, ReturnsNullOnFailure) {
 
     EXPECT_EQ(reopened, nullptr);
 
+    GuardedFclose(stream);
     GuardedRemove(filename);
 }
 

@@ -39,7 +39,7 @@
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/io/xfile.h"
 
@@ -200,7 +200,7 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
         perror("fclose");
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbInit(ReadOnlyString game_name, int variant,
@@ -224,7 +224,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     assert(records == NULL);
     TierToPtrChainedHashMapInit(&loaded_tiers, 0.5);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void NaiveDbFinalize(void) {
@@ -257,7 +257,7 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
     current_tier = tier;
     current_tier_size = size;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbFlushSolvingTier(void *aux) {
@@ -285,7 +285,7 @@ static int NaiveDbFlushSolvingTier(void *aux) {
     }
 
     fclose(file);
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbFreeSolvingTier(void) {
@@ -295,7 +295,7 @@ static int NaiveDbFreeSolvingTier(void) {
     current_tier = kIllegalTier;
     current_tier_size = kIllegalSize;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbSetGameSolved(void) {
@@ -308,17 +308,17 @@ static int NaiveDbSetGameSolved(void) {
 
     if (fclose(f) != 0) return kFileSystemError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbSetValue(Position position, Value value) {
     records[position].value = value;
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbSetRemoteness(Position position, int remoteness) {
     records[position].remoteness = remoteness;
-    return kNoError;
+    return kSuccess;
 }
 
 static Value NaiveDbGetValue(Position position) {
@@ -358,7 +358,7 @@ static int NaiveDbLoadTier(Tier tier, int64_t size) {
         return kMallocFailureError;
     }
 
-    return n == (size_t)size ? kNoError : kFileSystemError;
+    return n == (size_t)size ? kSuccess : kFileSystemError;
 }
 
 static int NaiveDbUnloadTier(Tier tier) {
@@ -369,7 +369,7 @@ static int NaiveDbUnloadTier(Tier tier) {
         TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool NaiveDbIsTierLoaded(Tier tier) {
@@ -408,14 +408,14 @@ static int NaiveDbProbeInit(DbProbe *probe) {
     probe->begin = 0;
     probe->size = kBufferSize;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NaiveDbProbeDestroy(DbProbe *probe) {
     GamesmanFree(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ProbeBufferHit(DbProbe *probe, TierPosition tier_position) {

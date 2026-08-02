@@ -31,11 +31,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 void GamesmanExit(void) {
     printf("Thanks for using GAMESMAN!\n");
-    exit(kNoError);  // NOLINT(concurrency-mt-unsafe)
+    exit(kSuccess);  // NOLINT(concurrency-mt-unsafe)
 }
 
 void NotReached(const char *message) {

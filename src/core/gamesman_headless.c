@@ -38,7 +38,7 @@
 #include "core/headless/hsolve.h"
 #include "core/headless/htest.h"
 #include "core/headless/hutils.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 
 #ifdef USE_MPI
 #include <mpi.h>

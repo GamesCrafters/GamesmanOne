@@ -6,7 +6,7 @@
 
 #include "core/savio/savio.h"
 #include "core/types/base.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "libs/io/xfile.h"
 
 static int GetOmpNumThreads(int cpus_per_node, int ntasks_per_node,
@@ -75,7 +75,7 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
         "to submit the job.\n\n",
         file_name, file_name);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // -----------------------------------------------------------------------------

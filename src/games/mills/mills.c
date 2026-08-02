@@ -54,7 +54,7 @@
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
 #include "core/types/gameplay_api/gameplay_api_tier.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
@@ -207,6 +207,10 @@ static int8_t GetBoardIndex(int8_t grid_index) {
     return grid_idx_to_board_idx[BoardId()][grid_index];
 }
 
+// =============================== Hash Context ===============================
+
+static X86SimdTwoPieceHashContext hash_context;
+
 // ============================== kMillsSolverApi ==============================
 
 static Tier MillsGetInitialTier(void) {
@@ -225,7 +229,7 @@ static Tier MillsGetInitialTier(void) {
 static Position MillsGetInitialPosition(void) {
     // The initial board is always empty, which by definition is the bit board
     // filled with all zeros.
-    return X86SimdTwoPieceHashHashFixedTurn(_mm_setzero_si128());
+    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, _mm_setzero_si128());
 }
 
 static int GetTurnFromPlacementTier(MillsTier t) {
@@ -269,21 +273,23 @@ static int64_t MillsGetTierSize(Tier tier) {
     int num_x = t.unpacked.on_board[0];
     int num_o = t.unpacked.on_board[1];
     if (GetTurnFromTier(t) >= 0) {
-        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(num_x, num_o);
+        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(&hash_context, num_x,
+                                                           num_o);
     }
 
-    return X86SimdTwoPieceHashGetNumPositions(num_x, num_o);
+    return X86SimdTwoPieceHashGetNumPositions(&hash_context, num_x, num_o);
 }
 
 static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
     MillsTier t = {.hash = tp.tier};
     int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(t)) >= 0) {
-        X86SimdTwoPieceHashUnhashFixedTurnMem(tp.position, num_x, num_o,
-                                              patterns);
+        X86SimdTwoPieceHashUnhashFixedTurnMem(&hash_context, tp.position, num_x,
+                                              num_o, patterns);
     } else {
         *turn = X86SimdTwoPieceHashGetTurn(tp.position);
-        X86SimdTwoPieceHashUnhashMem(tp.position, num_x, num_o, patterns);
+        X86SimdTwoPieceHashUnhashMem(&hash_context, tp.position, num_x, num_o,
+                                     patterns);
     }
 
     return t;
@@ -295,12 +301,13 @@ static __m128i UnhashSimd(TierPosition tp, MillsTier *t, int *turn,
     int num_x = t->unpacked.on_board[0], num_o = t->unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(*t)) >= 0) {
         *not_fixed_turn = false;
-        return X86SimdTwoPieceHashUnhashFixedTurn(tp.position, num_x, num_o);
+        return X86SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
+                                                  num_x, num_o);
     }
 
     *turn = X86SimdTwoPieceHashGetTurn(tp.position);
     *not_fixed_turn = true;
-    return X86SimdTwoPieceHashUnhash(tp.position, num_x, num_o);
+    return X86SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
 }
 
 /**
@@ -521,9 +528,11 @@ static TierPosition DoMoveInternal(MillsTier t, const uint64_t _patterns[2],
 
     TierPosition ret = {.tier = t.hash};
     if (GetTurnFromTier(t) >= 0) {
-        ret.position = X86SimdTwoPieceHashHashFixedTurnMem(patterns);
+        ret.position =
+            X86SimdTwoPieceHashHashFixedTurnMem(&hash_context, patterns);
     } else {
-        ret.position = X86SimdTwoPieceHashHashMem(patterns, !turn);
+        ret.position =
+            X86SimdTwoPieceHashHashMem(&hash_context, patterns, !turn);
     }
 
     return ret;
@@ -612,8 +621,9 @@ static Position MillsGetCanonicalPosition(TierPosition tier_position) {
     __m128i canonical = GetCanonicalBoardRotationRingSwap(board);
 
     // Hash
-    if (not_fixed_turn) return X86SimdTwoPieceHashHash(canonical, turn);
-    return X86SimdTwoPieceHashHashFixedTurn(canonical);
+    if (not_fixed_turn)
+        return X86SimdTwoPieceHashHash(&hash_context, canonical, turn);
+    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, canonical);
 }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
@@ -718,7 +728,7 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
             t.unpacked.remaining[1], t.unpacked.on_board[1]);
     printf("it is %d's turn\n", turn);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static void AddCanonicalParent(
@@ -728,7 +738,8 @@ static void AddCanonicalParent(
     //
     TierPosition parent = {
         .tier = pt.hash,
-        .position = X86SimdTwoPieceHashHashMem(patterns, opp_turn),
+        .position =
+            X86SimdTwoPieceHashHashMem(&hash_context, patterns, opp_turn),
     };
     parent.position = MillsGetCanonicalPosition(parent);
     if (PositionHashSetAdd(dedup, parent.position)) {
@@ -1085,7 +1096,7 @@ static int MillsGetTierName(Tier tier,
             t.unpacked.remaining[1], t.unpacked.on_board[0],
             t.unpacked.on_board[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kMillsSolverApi = {
@@ -1146,7 +1157,7 @@ static int MillsMoveToString(Move move, char *buffer) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MillsIsValidMoveString(ReadOnlyString move_string) {
@@ -1230,9 +1241,10 @@ static int MillsSetVariantOption(int option, int selection) {
             if (selection >= (int)NUM_BOARD_AND_PIECES_CHOICES) {
                 return kIllegalArgumentError;
             }
-            int error =
-                X86SimdTwoPieceHashInitIrregular(kBoardMasks[selection]);
-            assert(error == kNoError);
+            X86SimdTwoPieceHashContextDestroy(&hash_context);
+            int error = X86SimdTwoPieceHashContextInitIrregular(
+                &hash_context, kBoardMasks[selection]);
+            assert(error == kSuccess);
             (void)error;
             break;
         }
@@ -1265,7 +1277,7 @@ static int MillsSetVariantOption(int option, int selection) {
     variant_option_selections.array[option] = selection;
     if (option == 0) UpdateSecondLaskerTier();
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================= MillsInit =================================
@@ -1277,7 +1289,7 @@ static int MillsInit(void *aux) {
     // Initialize the default variant.
     for (int i = 1; i < 5; ++i) {
         int ret = MillsSetVariantOption(i, i == 1 ? 1 : 0);
-        assert(ret == kNoError);
+        assert(ret == kSuccess);
         (void)ret;
     }
 
@@ -1287,9 +1299,9 @@ static int MillsInit(void *aux) {
 // =============================== MillsFinalize ===============================
 
 static int MillsFinalize(void) {
-    X86SimdTwoPieceHashFinalize();
+    X86SimdTwoPieceHashContextDestroy(&hash_context);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================ kMillsUwapi ================================
@@ -1381,9 +1393,11 @@ static TierPosition MillsFormalPositionToTierPosition(
     TierPosition ret = {.tier = t.hash};
     int turn = formal_position[0] - '1';
     if (GetTurnFromTier(t) >= 0) {
-        ret.position = X86SimdTwoPieceHashHashFixedTurnMem(patterns);
+        ret.position =
+            X86SimdTwoPieceHashHashFixedTurnMem(&hash_context, patterns);
     } else {
-        ret.position = X86SimdTwoPieceHashHashMem(patterns, turn);
+        ret.position =
+            X86SimdTwoPieceHashHashMem(&hash_context, patterns, turn);
     }
 
     return ret;

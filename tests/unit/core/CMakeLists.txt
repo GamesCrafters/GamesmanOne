@@ -1,4 +1,5 @@
 add_subdirectory(data_structures)
+add_subdirectory(hash)
 
 add_library_test(gamesman_memory_test gamesman_memory
     SOURCES

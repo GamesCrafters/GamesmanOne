@@ -154,7 +154,7 @@ int TierWorkerSolve(int method, Tier tier,
  *
  * @param options Non-null pointer to a \c TierSolverSolveOptions object which
  * contains the options.
- * @return kNoError on success, or
+ * @return kSuccess on success, or
  * @return non-zero error code otherwise.
  */
 int TierWorkerMpiServe(const TierSolverSolveOptions *options);

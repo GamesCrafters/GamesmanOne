@@ -76,7 +76,7 @@ void PartmoveArrayDestroy(PartmoveArray *pa);
  * @param full When this part-move is the last part of the full move, this
  * parameter should be set to the formal move string of the full move.
  * Otherwise, it should be set to \c NULL .
- * @return \c kNoError on success, or
+ * @return \c kSuccess on success, or
  * @return \c kMallocFailureError on memory allocation failure.
  */
 int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,

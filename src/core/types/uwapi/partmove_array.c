@@ -32,7 +32,7 @@
 #include <string.h>
 
 #include "core/data_structures/cstring.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/uwapi/partmove.h"
 
 void PartmoveArrayInit(PartmoveArray *pa) { memset(pa, 0, sizeof(*pa)); }
@@ -74,5 +74,5 @@ int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
     CStringInitMove(&pa->array[pa->size].full, full);
     ++pa->size;
 
-    return kNoError;
+    return kSuccess;
 }

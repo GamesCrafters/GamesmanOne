@@ -46,7 +46,7 @@
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
-#include "core/types/gamesman_error.h"
+#include "core/types/gamesman_status.h"
 #include "core/types/solver/solver.h"
 #include "core/types/solver/solver_config.h"
 #include "core/types/solver/solver_option.h"
@@ -194,16 +194,16 @@ static int TierSolverInit(ReadOnlyString game_name, int variant,
     bool success = SetCurrentApi((const TierSolverApi *)solver_api);
     if (!success) goto _bailout;
     error = SetDb(game_name, variant, data_path);
-    if (error != kNoError) goto _bailout;
+    if (error != kSuccess) goto _bailout;
 
     error = StatManagerInit(game_name, variant, data_path);
-    if (error != kNoError) goto _bailout;
+    if (error != kSuccess) goto _bailout;
 
     // Success.
     error = 0;
 
 _bailout:
-    if (error != kNoError) {
+    if (error != kSuccess) {
         DbManagerFinalizeDb();
         StatManagerFinalize();
         TierSolverFinalize();
@@ -222,7 +222,7 @@ static int TierSolverFinalize(void) {
     memset(&current_selections, 0, sizeof(current_selections));
     num_options = 0;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int TierSolverTest(void *aux) {
@@ -315,7 +315,7 @@ static int TierSolverSolve(void *aux) {
             "skipped the solving process to prevent damage to the existing "
             "database. To re-solve the current game, remove the old database "
             "or use a different data path and try again.");
-        return kNoError;
+        return kSuccess;
     }
     const TierSolverSolveOptions *options = (TierSolverSolveOptions *)aux;
     TierSolverSolveOptions sanitized = SanitizeSolveOptions(options);
@@ -325,7 +325,7 @@ static int TierSolverSolve(void *aux) {
             "TierSolverSolve: the current game variant has already been "
             "solved. Use the -f flag in headless mode to force re-solve the "
             "game variant.");
-        return kNoError;
+        return kSuccess;
     }
 #ifndef USE_MPI  // If not using MPI
     TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
@@ -386,7 +386,7 @@ static int TierSolverAnalyze(void *aux) {
             "original database implementation. To analyze the current game, "
             "remove the old database or use a different data path to resolve "
             "the game and try again.");
-        return kNoError;
+        return kSuccess;
     }
     const TierSolverAnalyzeOptions *options = (TierSolverAnalyzeOptions *)aux;
     TierSolverAnalyzeOptions sanitized = SanitizeAnalyzeOptions(options);
@@ -426,7 +426,7 @@ static int TierSolverSetOption(int option, int selection) {
         ToggleRetrogradeAnalysis(!selection);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static Value TierSolverGetValue(TierPosition tier_position) {
@@ -579,7 +579,7 @@ static int SetDb(ReadOnlyString game_name, int variant,
     // Initialize a R/W array database.
     int error = DbManagerInitDb(&kArrayDb, false, game_name, variant, data_path,
                                 current_api.GetTierName, NULL);
-    if (error != kNoError) return error;
+    if (error != kSuccess) return error;
 
     int arraydb_status = DbManagerGameStatus();
     if (arraydb_status == kDbGameStatusCheckError) return kRuntimeError;
@@ -588,7 +588,7 @@ static int SetDb(ReadOnlyString game_name, int variant,
                         ? kTierSolverSolveStatusSolved
                         : kTierSolverSolveStatusNotSolved;
 
-    return kNoError;
+    return kSuccess;
 }
 
 static TierPosition GetCanonicalTierPosition(TierPosition tier_position) {
@@ -673,5 +673,5 @@ static int DefaultGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
     sprintf(name, "%" PRITier, tier);
 
-    return kNoError;
+    return kSuccess;
 }
