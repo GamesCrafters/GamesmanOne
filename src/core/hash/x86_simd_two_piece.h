@@ -27,7 +27,8 @@
  *
  * @note This library only provides minimal safety checks on input values for
  * performance.
- * @note This library requires Intel SSE2, SSE4.1 and BMI2 instruction sets.
+ * @note This library requires Intel SSE2, SSSE3, SSE4.1 and BMI2 instruction
+ * sets.
  *
  * @details Usage guide: this hash system provides functions to convert board
  * representations to position hash values within each tier (hashing) and to
@@ -217,6 +218,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <tmmintrin.h>
 #include <xmmintrin.h>
 
 #include "config.h"
@@ -269,6 +271,11 @@ typedef struct {
                [kX86SimdTwoPieceHashBoardSizeMax + 1];
 } X86SimdTwoPieceHashContext;
 
+// Adding this exclusion here because some intrisic functions report to have
+// branches when compiled with -O0.
+
+// LCOV_EXCL_BR_START
+
 /**
  * @brief Returns the amount of memory in bytes required to initialize the hash
  * system for a game using a board with `num_slots` effective slots.
@@ -280,6 +287,8 @@ typedef struct {
  * @param[in] num_slots Number of effective slots.
  *
  * @returns Amount of memory required to initialize the hash system.
+ * @retval SIZE_MAX if `num_slots` is negative, zero, or greater than
+ * `kX86SimdTwoPieceHashBoardSizeMax`.
  */
 size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots);
 
@@ -386,10 +395,12 @@ static inline Position X86SimdTwoPieceHashHashFixedTurnMem(
     const X86SimdTwoPieceHashContext *context, const uint64_t patterns[2]) {
     // Convert the 8x8 padded pattern to tightly packed pattern
     const uint64_t hash_mask = context->hash_mask;
+    // LCOV_EXCL_START
     uint64_t extracted[2] = {
         _pext_u64(patterns[0], hash_mask),
         _pext_u64(patterns[1], hash_mask),
     };
+    // LCOV_EXCL_STOP
 
     // Perform the normal hashing procedure.
     extracted[0] = _pext_u64(extracted[0], ~extracted[1]);
@@ -700,17 +711,34 @@ static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
  */
 static inline __m128i X86SimdTwoPieceHashMirrorHorizontal(__m128i board,
                                                           int cols) {
-    const __m128i k1 = _mm_set1_epi64x(0x5555555555555555LL);
-    const __m128i k2 = _mm_set1_epi64x(0x3333333333333333LL);
-    const __m128i k4 = _mm_set1_epi64x(0x0f0f0f0f0f0f0f0fLL);
-    board = _mm_or_si128(_mm_and_si128(_mm_srli_epi64(board, 1), k1),
-                         _mm_slli_epi64(_mm_and_si128(board, k1), 1));
-    board = _mm_or_si128(_mm_and_si128(_mm_srli_epi64(board, 2), k2),
-                         _mm_slli_epi64(_mm_and_si128(board, k2), 2));
-    board = _mm_or_si128(_mm_and_si128(_mm_srli_epi64(board, 4), k4),
-                         _mm_slli_epi64(_mm_and_si128(board, k4), 4));
+    // lut_low: bit-reverses the nibble and keeps it in the low 4 bits.
+    // E.g., index 1 (0001) maps to 8 (1000).
+    const __m128i lut_low =
+        _mm_setr_epi8(0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01,
+                      0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f);
 
-    // Move the board to the correct location
+    // lut_high: bit-reverses the nibble and shifts it to the high 4 bits.
+    // E.g., index 1 (0001) maps to 128 (1000 0000).
+    const __m128i lut_high = _mm_setr_epi8(
+        0x00, (char)0x80, 0x40, (char)0xc0, 0x20, (char)0xa0, 0x60, (char)0xe0,
+        0x10, (char)0x90, 0x50, (char)0xd0, 0x30, (char)0xb0, 0x70, (char)0xf0);
+
+    const __m128i mask = _mm_set1_epi8(0x0f);
+
+    // Isolate the low and high nibbles for every byte simultaneously
+    __m128i low_nibbles = _mm_and_si128(board, mask);
+    __m128i high_nibbles = _mm_and_si128(_mm_srli_epi16(board, 4), mask);
+
+    // Look up the bit-reversed nibbles.
+    // The previously 'low' nibble reversed becomes the 'high' nibble and vice
+    // versa.
+    __m128i rev_low = _mm_shuffle_epi8(lut_high, low_nibbles);
+    __m128i rev_high = _mm_shuffle_epi8(lut_low, high_nibbles);
+
+    // Recombine the reversed halves
+    board = _mm_or_si128(rev_low, rev_high);
+
+    // Move the board to the correct location for valid bit alignment
     board = _mm_srli_epi64(board, 8 - cols);
 
     return board;
