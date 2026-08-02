@@ -565,6 +565,7 @@ XzraStatus XzraDecompressFile(uint8_t *dest, const char *filename, size_t size,
 
     FILE *infile = fopen(filename, "rb");
     if (infile == NULL) {
+        lzma_end(&strm);
         char buf[BUFSIZ];
         strerror_r(errno, buf, sizeof(buf));
         fprintf(stderr, "XzraDecompressFile: error opening %s: %s\n", filename,
@@ -880,6 +881,7 @@ static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
     bool success =
         DecodeBlock(out, &b, (int64_t)iter->block.total_size, block_buf);
     free(block_buf);
+    lzma_filters_free(filters, NULL);
 
     return success ? 0 : 5;
 }

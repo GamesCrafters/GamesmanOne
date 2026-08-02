@@ -10,6 +10,21 @@ extern "C" {
 #include "core/gamesman_memory.h"
 }
 
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define HAS_ASAN 1
+#endif
+#elif defined(__SANITIZE_ADDRESS__)
+#define HAS_ASAN 1
+#endif
+
+#ifdef HAS_ASAN
+extern "C" const char *__asan_default_options() {
+    // Allows malloc to return NULL on huge allocations instead of crashing
+    return "allocator_may_return_null=1";
+}
+#endif
+
 // =================================== Macro ===================================
 
 // Verifies that a size of exactly zero correctly evaluates to needing zero

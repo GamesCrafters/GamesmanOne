@@ -18,6 +18,21 @@ extern "C" {
 #include "core/data_structures/bitset.h"
 }
 
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define HAS_ASAN 1
+#endif
+#elif defined(__SANITIZE_ADDRESS__)
+#define HAS_ASAN 1
+#endif
+
+#ifdef HAS_ASAN
+extern "C" const char *__asan_default_options() {
+    // Allows malloc to return NULL on huge allocations instead of crashing
+    return "allocator_may_return_null=1";
+}
+#endif
+
 namespace {
 
 // --- Creation and Destruction Tests ---
