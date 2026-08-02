@@ -64,11 +64,10 @@ target_compile_options(common_flags INTERFACE -Wall -Wextra -Wpedantic -march=na
 if(GAMESMAN_ENABLE_STATIC_ANALYZER)
   include(gamesman_static_analyzer) # Modifies common_flags internally
 endif()
-
-if(GAMESMAN_ENABLE_ASAN)
+if(GAMESMAN_ENABLE_ASAN_UBSAN)
   message(STATUS "Sanitizers enabled: ASan, LSan")
   target_compile_options(common_flags INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
-  target_link_options(common_flags INTERFACE -fsanitize=address)
+  target_link_options(common_flags INTERFACE -fsanitize=address,undefined)
 endif()
 
 if(GAMESMAN_ENABLE_TSAN)
