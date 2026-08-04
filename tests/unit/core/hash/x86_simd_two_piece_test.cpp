@@ -10,13 +10,13 @@
  */
 
 #include <gtest/gtest.h>
-#include <immintrin.h>
 
 #include <climits>
 
 extern "C" {
 #include "core/hash/x86_simd_two_piece.h"
 #include "core/types/gamesman_status.h"
+#include "core/types/simd.h"
 }
 
 // ================= X86SimdTwoPieceHashContextMemoryRequired =================
@@ -500,7 +500,7 @@ TEST(X86SimdTwoPieceHashTest, MaximumCapacityBoundary) {
 }
 #endif  // GAMESMAN_ENABLE_STRESS_TESTS
 
-// ==================== X86SimdTwoPieceHashHashFixedTurnMem ====================
+// ===================== X86SimdTwoPieceHashHashFixedTurn =====================
 
 // Tests that a board with zero pieces of either type correctly hashes to 0.
 TEST(X86SimdTwoPieceHashTest, HashesEmptyBoardToZero) {
@@ -508,8 +508,8 @@ TEST(X86SimdTwoPieceHashTest, HashesEmptyBoardToZero) {
     ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    uint64_t patterns[2] = {0, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {0, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, 0)
         << "An empty board (0 X's and 0 O's) should always hash to exactly 0.";
@@ -525,8 +525,8 @@ TEST(X86SimdTwoPieceHashTest, HashesFirstLexicographicalPositionToZero) {
 
     // For a single piece (1 X, 0 O), the lowest lexicographical position is
     // occupying the 0th bit.
-    uint64_t patterns[2] = {1ULL, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {1ULL, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, 0) << "The first lexicographical configuration (pieces in "
                           "the lowest available bits) should hash to 0.";
@@ -549,8 +549,8 @@ TEST(X86SimdTwoPieceHashTest, HashesLastLexicographicalPositionToMaxMinusOne) {
 
     // For a single piece (1 X, 0 O), the highest lexicographical position is
     // occupying the 18th bit.
-    uint64_t patterns[2] = {1ULL << 18, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {1ULL << 18, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, max_positions - 1)
         << "The last lexicographical configuration (pieces in the highest "
@@ -567,11 +567,11 @@ TEST(X86SimdTwoPieceHashTest, HashIsDeterministic) {
         << "Setup: Context must initialize successfully.";
 
     // Arbitrary pattern: X occupies slots 0 and 2; O occupies slot 1.
-    uint64_t patterns[2] = {0b101ULL, 0b010ULL};
+    U64x2 patterns = {0b101ULL, 0b010ULL};
 
-    Position hash1 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
-    Position hash2 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
-    Position hash3 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    Position hash1 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
+    Position hash2 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
+    Position hash3 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash1, hash2)
         << "Hash function must be deterministic; hashing the same pattern "
@@ -592,8 +592,8 @@ TEST(X86SimdTwoPieceHashTest, HashesEmptyIrregularBoardToZero) {
               kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    uint64_t patterns[2] = {0, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {0, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, 0) << "An empty irregular board (0 X's and 0 O's) should "
                           "always hash to exactly 0.";
@@ -614,8 +614,8 @@ TEST(X86SimdTwoPieceHashTest,
 
     // For a single piece (1 X, 0 O), the lowest lexicographical position is
     // occupying the lowest available set bit (bit 1).
-    uint64_t patterns[2] = {1ULL << 1, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {1ULL << 1, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, 0)
         << "The first lexicographical configuration on an irregular board "
@@ -643,8 +643,8 @@ TEST(X86SimdTwoPieceHashTest,
 
     // For a single piece (1 X, 0 O), the highest lexicographical position is
     // occupying the highest available set bit (bit 7).
-    uint64_t patterns[2] = {1ULL << 7, 0};
-    Position hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    U64x2 patterns = {1ULL << 7, 0};
+    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash, max_positions - 1)
         << "The last lexicographical configuration on an irregular board "
@@ -664,11 +664,11 @@ TEST(X86SimdTwoPieceHashTest, HashIsDeterministicOnIrregularBoard) {
         << "Setup: Context must initialize successfully.";
 
     // Arbitrary pattern: X occupies bit 1; O occupies bit 5.
-    uint64_t patterns[2] = {1ULL << 1, 1ULL << 5};
+    U64x2 patterns = {1ULL << 1, 1ULL << 5};
 
-    Position hash1 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
-    Position hash2 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
-    Position hash3 = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+    Position hash1 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
+    Position hash2 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
+    Position hash3 = X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
     EXPECT_EQ(hash1, hash2)
         << "Hash function must be deterministic on irregular boards; hashing "
@@ -679,7 +679,7 @@ TEST(X86SimdTwoPieceHashTest, HashIsDeterministicOnIrregularBoard) {
     X86SimdTwoPieceHashContextDestroy(&context);
 }
 
-// =================== X86SimdTwoPieceHashUnhashFixedTurnMem ===================
+// =================== X86SimdTwoPieceHashUnhashFixedTurn ===================
 
 // Tests that unhashing a hash value of 0 yields the first lexicographical
 // configuration.
@@ -688,12 +688,8 @@ TEST(X86SimdTwoPieceHashTest, UnhashesZeroToFirstLexicographicalPosition) {
     ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    // Initialize with garbage to ensure the function properly overwrites the
-    // data.
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 1 X and 0 O from hash 0
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, 0, 1, 0, patterns);
+    U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(&context, 0, 1, 0);
 
     EXPECT_EQ(patterns[0], 1ULL) << "Unhashing 0 for 1 piece should place it "
                                     "in the lowest available bit (bit 0).";
@@ -717,11 +713,9 @@ TEST(X86SimdTwoPieceHashTest,
     ASSERT_EQ(max_positions, 9)
         << "Setup: A 3x3 board should have exactly 9 positions for 1 piece.";
 
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 1 X and 0 O from the maximum valid hash
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, max_positions - 1, 1, 0,
-                                          patterns);
+    U64x2 patterns =
+        X86SimdTwoPieceHashUnhashFixedTurn(&context, max_positions - 1, 1, 0);
     EXPECT_EQ(patterns[0], 1ULL << 18)
         << "Unhashing max_positions - 1 for 1 piece on a 3x3 board should "
            "place it in the highest available bit (bit 18 due to 8x8 padding).";
@@ -738,10 +732,8 @@ TEST(X86SimdTwoPieceHashTest, UnhashesEmptyBoardCorrectly) {
     ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 0 X and 0 O from hash 0
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, 0, 0, 0, patterns);
+    U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(&context, 0, 0, 0);
 
     EXPECT_EQ(patterns[0], 0ULL)
         << "Unhashing an empty board should yield 0 for the first pattern.";
@@ -761,10 +753,8 @@ TEST(X86SimdTwoPieceHashTest, UnhashesEmptyIrregularBoardCorrectly) {
               kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 0 X and 0 O from hash 0
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, 0, 0, 0, patterns);
+    U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(&context, 0, 0, 0);
 
     EXPECT_EQ(patterns[0], 0ULL) << "Unhashing an empty irregular board should "
                                     "yield 0 for the first pattern.";
@@ -785,10 +775,8 @@ TEST(X86SimdTwoPieceHashTest,
               kSuccess)
         << "Setup: Context must initialize successfully.";
 
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 1 X and 0 O from hash 0
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, 0, 1, 0, patterns);
+    U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(&context, 0, 1, 0);
 
     EXPECT_EQ(patterns[0], 1ULL << 1)
         << "Unhashing 0 for 1 piece on an irregular board should place it in "
@@ -816,11 +804,9 @@ TEST(X86SimdTwoPieceHashTest,
     ASSERT_EQ(max_positions, 4) << "Setup: A 4-slot irregular board should "
                                    "have exactly 4 positions for 1 piece.";
 
-    uint64_t patterns[2] = {0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL};
-
     // Unhash position with 1 X and 0 O from the maximum valid hash
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, max_positions - 1, 1, 0,
-                                          patterns);
+    U64x2 patterns =
+        X86SimdTwoPieceHashUnhashFixedTurn(&context, max_positions - 1, 1, 0);
 
     EXPECT_EQ(patterns[0], 1ULL << 7)
         << "Unhashing max_positions - 1 for 1 piece on an irregular board "
@@ -831,7 +817,7 @@ TEST(X86SimdTwoPieceHashTest,
     X86SimdTwoPieceHashContextDestroy(&context);
 }
 
-// =================== Unhash + HashFixedTurnMem Round-Trips ===================
+// =================== Unhash + HashFixedTurn Round-Trips ===================
 
 // Tests that a single piece placed at various valid bit positions hashes and
 // unhashes back to the exact same pattern.
@@ -848,17 +834,15 @@ TEST(X86SimdTwoPieceHashTest, RoundTripsSinglePieceBoard) {
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
             int bit_index = (r * 8) + c;
-            uint64_t original_patterns[2] = {1ULL << bit_index, 0};
+            U64x2 original_patterns = {1ULL << bit_index, 0};
 
             // 1. Hash the original pattern
-            Position hash = X86SimdTwoPieceHashHashFixedTurnMem(
-                &context, original_patterns);
+            Position hash =
+                X86SimdTwoPieceHashHashFixedTurn(&context, original_patterns);
 
             // 2. Unhash back to patterns
-            uint64_t unhashed_patterns[2] = {0xFFFFFFFFFFFFFFFFULL,
-                                             0xFFFFFFFFFFFFFFFFULL};
-            X86SimdTwoPieceHashUnhashFixedTurnMem(&context, hash, num_x, num_o,
-                                                  unhashed_patterns);
+            U64x2 unhashed_patterns = X86SimdTwoPieceHashUnhashFixedTurn(
+                &context, hash, num_x, num_o);
 
             // 3. Verify pattern integrity
             EXPECT_EQ(unhashed_patterns[0], original_patterns[0])
@@ -892,16 +876,15 @@ TEST(X86SimdTwoPieceHashTest, RoundTripsFullBoard) {
         (1ULL << 0) | (1ULL << 2) | (1ULL << 9) | (1ULL << 16) | (1ULL << 18);
     uint64_t o_pattern =
         (1ULL << 1) | (1ULL << 8) | (1ULL << 10) | (1ULL << 17);
-    uint64_t original_patterns[2] = {x_pattern, o_pattern};
+    U64x2 original_patterns = {x_pattern, o_pattern};
 
     // 1. Hash the full board
     Position hash =
-        X86SimdTwoPieceHashHashFixedTurnMem(&context, original_patterns);
+        X86SimdTwoPieceHashHashFixedTurn(&context, original_patterns);
 
     // 2. Unhash back to patterns
-    uint64_t unhashed_patterns[2] = {0, 0};
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, hash, num_x, num_o,
-                                          unhashed_patterns);
+    U64x2 unhashed_patterns =
+        X86SimdTwoPieceHashUnhashFixedTurn(&context, hash, num_x, num_o);
 
     // 3. Verify perfect reconstruction
     EXPECT_EQ(unhashed_patterns[0], original_patterns[0])
@@ -930,17 +913,16 @@ TEST(X86SimdTwoPieceHashTest, RoundTripsMaxSupportedBoard) {
     // Place pieces at boundaries and middle points.
     // X at bits: 0 (r0c0), 15 (r1c7), 31 (r3c7 - max bit)
     // O at bits: 1 (r0c1), 16 (r2c0), 30 (r3c6)
-    uint64_t original_patterns[2] = {(1ULL << 0) | (1ULL << 15) | (1ULL << 31),
-                                     (1ULL << 1) | (1ULL << 16) | (1ULL << 30)};
+    U64x2 original_patterns = {(1ULL << 0) | (1ULL << 15) | (1ULL << 31),
+                               (1ULL << 1) | (1ULL << 16) | (1ULL << 30)};
 
     // 1. Hash the max board pattern
     Position hash =
-        X86SimdTwoPieceHashHashFixedTurnMem(&context, original_patterns);
+        X86SimdTwoPieceHashHashFixedTurn(&context, original_patterns);
 
     // 2. Unhash back to patterns
-    uint64_t unhashed_patterns[2] = {0, 0};
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, hash, num_x, num_o,
-                                          unhashed_patterns);
+    U64x2 unhashed_patterns =
+        X86SimdTwoPieceHashUnhashFixedTurn(&context, hash, num_x, num_o);
 
     // 3. Verify pattern integrity at the 32-slot limit
     EXPECT_EQ(unhashed_patterns[0], original_patterns[0])
@@ -970,15 +952,13 @@ TEST(X86SimdTwoPieceHashTest, RoundTripBijectionRegularBoard) {
 
     for (Position original_hash = 0; original_hash < max_positions;
          ++original_hash) {
-        uint64_t patterns[2] = {0, 0};
-
         // 1. Unhash to get the bitboards
-        X86SimdTwoPieceHashUnhashFixedTurnMem(&context, original_hash, num_x,
-                                              num_o, patterns);
+        U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(
+            &context, original_hash, num_x, num_o);
 
         // 2. Hash the resulting bitboards back to a position index
         Position rehashed =
-            X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+            X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
         // 3. Verify the round trip matches
         ASSERT_EQ(rehashed, original_hash)
@@ -1013,15 +993,13 @@ TEST(X86SimdTwoPieceHashTest, RoundTripBijectionIrregularBoard) {
 
     for (Position original_hash = 0; original_hash < max_positions;
          ++original_hash) {
-        uint64_t patterns[2] = {0, 0};
-
         // 1. Unhash to get the bitboards
-        X86SimdTwoPieceHashUnhashFixedTurnMem(&context, original_hash, num_x,
-                                              num_o, patterns);
+        U64x2 patterns = X86SimdTwoPieceHashUnhashFixedTurn(
+            &context, original_hash, num_x, num_o);
 
         // 2. Hash the resulting bitboards back to a position index
         Position rehashed =
-            X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
+            X86SimdTwoPieceHashHashFixedTurn(&context, patterns);
 
         // 3. Verify the round trip matches
         ASSERT_EQ(rehashed, original_hash)
@@ -1035,180 +1013,7 @@ TEST(X86SimdTwoPieceHashTest, RoundTripBijectionIrregularBoard) {
     X86SimdTwoPieceHashContextDestroy(&context);
 }
 
-// = X86SimdTwoPieceHashHashFixedTurnMem + X86SimdTwoPieceHashUnhashFixedTurn =
-
-// Verifies that passing data via a SIMD register yields the exact same hash as
-// passing the same data via a memory array.
-TEST(X86SimdTwoPieceHashTest, HashEquivalenceToMem) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    // Arbitrary pattern for 3x3 padded layout
-    uint64_t x_pattern = (1ULL << 0) | (1ULL << 8) | (1ULL << 16);
-    uint64_t o_pattern = (1ULL << 1) | (1ULL << 9);
-    uint64_t patterns[2] = {x_pattern, o_pattern};
-
-    // _mm_set_epi64x takes (high, low).
-    // We want lane 0 (low) to be X and lane 1 (high) to be O.
-    __m128i simd_patterns = _mm_set_epi64x(o_pattern, x_pattern);
-
-    Position mem_hash = X86SimdTwoPieceHashHashFixedTurnMem(&context, patterns);
-    Position simd_hash =
-        X86SimdTwoPieceHashHashFixedTurn(&context, simd_patterns);
-
-    EXPECT_EQ(simd_hash, mem_hash)
-        << "SIMD hash should exactly match the memory array hash.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// Verifies that unhashing to a SIMD register populates the 64-bit lanes exactly
-// as the memory function populates the array.
-TEST(X86SimdTwoPieceHashTest, UnhashEquivalenceToMem) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    int num_x = 2;
-    int num_o = 2;
-    Position test_hash = 42;  // Arbitrary valid hash index
-
-    uint64_t patterns[2] = {0, 0};
-    X86SimdTwoPieceHashUnhashFixedTurnMem(&context, test_hash, num_x, num_o,
-                                          patterns);
-
-    __m128i simd_patterns =
-        X86SimdTwoPieceHashUnhashFixedTurn(&context, test_hash, num_x, num_o);
-
-    // Extract lanes to compare with memory output
-    uint64_t simd_x = _mm_extract_epi64(simd_patterns, 0);
-    uint64_t simd_o = _mm_extract_epi64(simd_patterns, 1);
-
-    EXPECT_EQ(simd_x, patterns[0])
-        << "Lane 0 (X pattern) mismatch between SIMD and Mem unhash.";
-    EXPECT_EQ(simd_o, patterns[1])
-        << "Lane 1 (O pattern) mismatch between SIMD and Mem unhash.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// End-to-end verification of the SIMD pipeline on a standard board.
-TEST(X86SimdTwoPieceHashTest, RoundTripSimdRegistersRegularBoard) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    int num_x = 2;
-    int num_o = 1;
-    int64_t max_positions =
-        X86SimdTwoPieceHashGetNumPositionsFixedTurn(&context, num_x, num_o);
-
-    for (Position original_hash = 0; original_hash < max_positions;
-         ++original_hash) {
-        // 1. Unhash directly to a SIMD register
-        __m128i simd_patterns = X86SimdTwoPieceHashUnhashFixedTurn(
-            &context, original_hash, num_x, num_o);
-
-        // 2. Hash the register back immediately
-        Position rehashed =
-            X86SimdTwoPieceHashHashFixedTurn(&context, simd_patterns);
-
-        // 3. Verify
-        ASSERT_EQ(rehashed, original_hash)
-            << "SIMD Round trip failed! Original Hash: " << original_hash
-            << ", Rehashed: " << rehashed;
-    }
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// Ensures the SIMD register pipeline correctly handles masked bits on an
-// irregular board.
-TEST(X86SimdTwoPieceHashTest, RoundTripSimdRegistersIrregularBoard) {
-    X86SimdTwoPieceHashContext context;
-    uint64_t board_mask = 0xAAULL;  // Irregular mask
-    ASSERT_EQ(X86SimdTwoPieceHashContextInitIrregular(&context, board_mask),
-              kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    int num_x = 2;
-    int num_o = 1;
-    int64_t max_positions =
-        X86SimdTwoPieceHashGetNumPositionsFixedTurn(&context, num_x, num_o);
-
-    for (Position original_hash = 0; original_hash < max_positions;
-         ++original_hash) {
-        __m128i simd_patterns = X86SimdTwoPieceHashUnhashFixedTurn(
-            &context, original_hash, num_x, num_o);
-        Position rehashed =
-            X86SimdTwoPieceHashHashFixedTurn(&context, simd_patterns);
-
-        ASSERT_EQ(rehashed, original_hash)
-            << "SIMD Irregular Round trip failed! Original Hash: "
-            << original_hash << ", Rehashed: " << rehashed;
-    }
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// Verifies the zero-state behavior using SIMD intrinsics.
-TEST(X86SimdTwoPieceHashTest, EmptyBoardSimdRegisters) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    // 1. Hash zero test
-    __m128i empty_simd = _mm_setzero_si128();
-    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, empty_simd);
-    EXPECT_EQ(hash, 0)
-        << "Hashing a zeroed SIMD register should return hash 0.";
-
-    // 2. Unhash zero test
-    __m128i unhashed_simd =
-        X86SimdTwoPieceHashUnhashFixedTurn(&context, 0, 0, 0);
-    EXPECT_EQ(_mm_extract_epi64(unhashed_simd, 0), 0ULL)
-        << "Unhashing an empty board should yield 0 in lane 0.";
-    EXPECT_EQ(_mm_extract_epi64(unhashed_simd, 1), 0ULL)
-        << "Unhashing an empty board should yield 0 in lane 1.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-#ifdef GAMESMAN_ENABLE_STRESS_TESTS
-// Tests the upper limit (32 slots) ensuring the highest bit in both 64-bit
-// lanes of the __m128i register are processed correctly without bleeding into
-// one another.
-TEST(X86SimdTwoPieceHashTest, MaxSupportedBoardSimdRegisters) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 4, 8), kSuccess)
-        << "Setup: Context must initialize successfully at maximum size.";
-
-    // Use the absolute boundaries of the 32-slot limit (bit 31)
-    uint64_t x_pattern = (1ULL << 31) | (1ULL << 0);
-    uint64_t o_pattern = (1ULL << 30) | (1ULL << 15);
-
-    // _mm_set_epi64x takes (lane 1, lane 0) -> (O, X)
-    __m128i original_simd = _mm_set_epi64x(o_pattern, x_pattern);
-
-    // Hash and Unhash using the SIMD functions
-    Position hash = X86SimdTwoPieceHashHashFixedTurn(&context, original_simd);
-    __m128i unhashed_simd =
-        X86SimdTwoPieceHashUnhashFixedTurn(&context, hash, 2, 2);
-
-    // Verify boundary bits were preserved perfectly
-    EXPECT_EQ(_mm_extract_epi64(unhashed_simd, 0), x_pattern)
-        << "Lower lane (X pattern) boundary bits failed to survive SIMD round "
-           "trip.";
-    EXPECT_EQ(_mm_extract_epi64(unhashed_simd, 1), o_pattern)
-        << "Upper lane (O pattern) boundary bits failed to survive SIMD round "
-           "trip.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-#endif  // GAMESMAN_ENABLE_STRESS_TESTS
-
-// ========= X86SimdTwoPieceHashHashMem + X86SimdTwoPieceHashUnhashMem =========
+// ============ X86SimdTwoPieceHashHash + X86SimdTwoPieceHashUnhash ============
 
 // Verifies that the turn bit is correctly integrated into the hash
 // and can be perfectly extracted without corrupting the board patterns.
@@ -1220,37 +1025,35 @@ TEST(X86SimdTwoPieceHashTest, TurnBitEncodingAndRecovery) {
     // Arbitrary valid pattern for a 3x3 layout (e.g., 2 X's, 1 O)
     uint64_t x_pattern = (1ULL << 0) | (1ULL << 8);
     uint64_t o_pattern = (1ULL << 1);
-    uint64_t original_patterns[2] = {x_pattern, o_pattern};
+    U64x2 original_patterns = {x_pattern, o_pattern};
 
     // Hash the same patterns with both turn 0 and turn 1
     Position hash_turn_0 =
-        X86SimdTwoPieceHashHashMem(&context, original_patterns, 0);
+        X86SimdTwoPieceHashHash(&context, original_patterns, 0);
     Position hash_turn_1 =
-        X86SimdTwoPieceHashHashMem(&context, original_patterns, 1);
+        X86SimdTwoPieceHashHash(&context, original_patterns, 1);
 
     EXPECT_NE(hash_turn_0, hash_turn_1)
         << "Hashes for the exact same board state but different turns must be "
            "distinct.";
 
     // Unhash turn 0
-    uint64_t unhashed_patterns_0[2] = {0, 0};
     int recovered_turn_0 = X86SimdTwoPieceHashGetTurn(hash_turn_0);
     EXPECT_EQ(recovered_turn_0, 0) << "Failed to recover turn 0.";
 
-    X86SimdTwoPieceHashUnhashMem(&context, hash_turn_0, 2, 1,
-                                 unhashed_patterns_0);
+    U64x2 unhashed_patterns_0 =
+        X86SimdTwoPieceHashUnhash(&context, hash_turn_0, 2, 1);
     EXPECT_EQ(unhashed_patterns_0[0], x_pattern)
         << "X pattern corrupted on turn 0 unhash.";
     EXPECT_EQ(unhashed_patterns_0[1], o_pattern)
         << "O pattern corrupted on turn 0 unhash.";
 
     // Unhash turn 1
-    uint64_t unhashed_patterns_1[2] = {0, 0};
     int recovered_turn_1 = X86SimdTwoPieceHashGetTurn(hash_turn_1);
     EXPECT_EQ(recovered_turn_1, 1) << "Failed to recover turn 1.";
 
-    X86SimdTwoPieceHashUnhashMem(&context, hash_turn_1, 2, 1,
-                                 unhashed_patterns_1);
+    U64x2 unhashed_patterns_1 =
+        X86SimdTwoPieceHashUnhash(&context, hash_turn_1, 2, 1);
     EXPECT_EQ(unhashed_patterns_1[0], x_pattern)
         << "X pattern corrupted on turn 1 unhash.";
     EXPECT_EQ(unhashed_patterns_1[1], o_pattern)
@@ -1277,13 +1080,11 @@ TEST(X86SimdTwoPieceHashTest, ExhaustiveTurnRoundTripBijection) {
 
     for (Position original_hash = 0; original_hash < max_turned_positions;
          ++original_hash) {
-        uint64_t patterns[2] = {0, 0};
-
         // 1. Unhash the current index, recovering both the board patterns and
         // the turn
         int turn = X86SimdTwoPieceHashGetTurn(original_hash);
-        X86SimdTwoPieceHashUnhashMem(&context, original_hash, num_x, num_o,
-                                     patterns);
+        U64x2 patterns =
+            X86SimdTwoPieceHashUnhash(&context, original_hash, num_x, num_o);
 
         // 2. Validate turn bit is structurally sound
         ASSERT_TRUE(turn == 0 || turn == 1)
@@ -1291,142 +1092,11 @@ TEST(X86SimdTwoPieceHashTest, ExhaustiveTurnRoundTripBijection) {
             << " at hash " << original_hash;
 
         // 3. Re-hash the recovered state
-        Position rehashed =
-            X86SimdTwoPieceHashHashMem(&context, patterns, turn);
+        Position rehashed = X86SimdTwoPieceHashHash(&context, patterns, turn);
 
         // 4. Verify absolute bijection
         ASSERT_EQ(rehashed, original_hash)
             << "Variable-turn round trip failed! Original Hash: "
-            << original_hash << ", Rehashed: " << rehashed
-            << ", Recovered Turn: " << turn;
-    }
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// ============ X86SimdTwoPieceHashHash + X86SimdTwoPieceHashUnhash ============
-
-// Verifies that the SIMD variable-turn hash correctly integrates the turn bit
-// and that `X86SimdTwoPieceHashGetTurn` perfectly recovers it.
-TEST(X86SimdTwoPieceHashTest, SimdTurnEncodingAndRecovery) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    // Arbitrary valid pattern: 2 X's, 1 O
-    uint64_t x_pattern = (1ULL << 0) | (1ULL << 8);
-    uint64_t o_pattern = (1ULL << 1);
-
-    // Note: _mm_set_epi64x takes (high, low), so lane 1 is O, lane 0 is X
-    __m128i board = _mm_set_epi64x(o_pattern, x_pattern);
-
-    // Hash the exact same board state with both turns
-    Position hash_turn_0 = X86SimdTwoPieceHashHash(&context, board, 0);
-    Position hash_turn_1 = X86SimdTwoPieceHashHash(&context, board, 1);
-
-    EXPECT_NE(hash_turn_0, hash_turn_1)
-        << "Hashes for the exact same board state but different turns must be "
-           "distinct.";
-
-    // Recover and verify turns
-    int recovered_turn_0 = X86SimdTwoPieceHashGetTurn(hash_turn_0);
-    int recovered_turn_1 = X86SimdTwoPieceHashGetTurn(hash_turn_1);
-
-    EXPECT_EQ(recovered_turn_0, 0)
-        << "Failed to correctly extract turn 0 from hash.";
-    EXPECT_EQ(recovered_turn_1, 1)
-        << "Failed to correctly extract turn 1 from hash.";
-
-    // Unhash and verify lane integrity
-    __m128i unhashed_0 = X86SimdTwoPieceHashUnhash(&context, hash_turn_0, 2, 1);
-    EXPECT_EQ(_mm_extract_epi64(unhashed_0, 0), x_pattern)
-        << "X pattern corrupted on turn 0 unhash.";
-    EXPECT_EQ(_mm_extract_epi64(unhashed_0, 1), o_pattern)
-        << "O pattern corrupted on turn 0 unhash.";
-
-    __m128i unhashed_1 = X86SimdTwoPieceHashUnhash(&context, hash_turn_1, 2, 1);
-    EXPECT_EQ(_mm_extract_epi64(unhashed_1, 0), x_pattern)
-        << "X pattern corrupted on turn 1 unhash.";
-    EXPECT_EQ(_mm_extract_epi64(unhashed_1, 1), o_pattern)
-        << "O pattern corrupted on turn 1 unhash.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// Ensures the SIMD variable-turn functions are strictly equivalent to
-// their memory-based counterparts.
-TEST(X86SimdTwoPieceHashTest, SimdVsMemoryApiEquivalence) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    uint64_t x_pattern = (1ULL << 3) | (1ULL << 5);
-    uint64_t o_pattern = (1ULL << 2);
-
-    // Memory representation
-    uint64_t patterns[2] = {x_pattern, o_pattern};
-    // SIMD representation
-    __m128i board = _mm_set_epi64x(o_pattern, x_pattern);
-
-    int turn = 1;
-
-    // Compare Hash outputs
-    Position mem_hash = X86SimdTwoPieceHashHashMem(&context, patterns, turn);
-    Position simd_hash = X86SimdTwoPieceHashHash(&context, board, turn);
-
-    EXPECT_EQ(mem_hash, simd_hash) << "SIMD and Mem Hash functions produced "
-                                      "different hashes for identical states.";
-
-    // Compare Unhash outputs
-    uint64_t unhashed_patterns[2] = {0, 0};
-    X86SimdTwoPieceHashUnhashMem(&context, simd_hash, 2, 1, unhashed_patterns);
-
-    __m128i unhashed_simd =
-        X86SimdTwoPieceHashUnhash(&context, simd_hash, 2, 1);
-
-    EXPECT_EQ(unhashed_patterns[0], _mm_extract_epi64(unhashed_simd, 0))
-        << "Mismatch in X lane between SIMD and Mem unhash.";
-    EXPECT_EQ(unhashed_patterns[1], _mm_extract_epi64(unhashed_simd, 1))
-        << "Mismatch in O lane between SIMD and Mem unhash.";
-
-    X86SimdTwoPieceHashContextDestroy(&context);
-}
-
-// Ensures the round-trip bijection holds flawlessly across the entire
-// doubled state space using the SIMD pipeline.
-TEST(X86SimdTwoPieceHashTest, ExhaustiveSimdTurnRoundTripBijection) {
-    X86SimdTwoPieceHashContext context;
-    ASSERT_EQ(X86SimdTwoPieceHashContextInit(&context, 3, 3), kSuccess)
-        << "Setup: Context must initialize successfully.";
-
-    int num_x = 2;
-    int num_o = 1;
-
-    // The variable-turn state space is exactly double the fixed-turn state
-    // space
-    int64_t max_fixed_positions =
-        X86SimdTwoPieceHashGetNumPositionsFixedTurn(&context, num_x, num_o);
-    int64_t max_turned_positions = max_fixed_positions * 2;
-
-    for (Position original_hash = 0; original_hash < max_turned_positions;
-         ++original_hash) {
-        // 1. Extract the turn
-        int turn = X86SimdTwoPieceHashGetTurn(original_hash);
-        ASSERT_TRUE(turn == 0 || turn == 1)
-            << "Recovered turn must be strictly 0 or 1. Got: " << turn
-            << " at hash " << original_hash;
-
-        // 2. Unhash the board state to a SIMD register
-        __m128i unhashed_board =
-            X86SimdTwoPieceHashUnhash(&context, original_hash, num_x, num_o);
-
-        // 3. Immediately re-hash the register alongside the extracted turn
-        Position rehashed =
-            X86SimdTwoPieceHashHash(&context, unhashed_board, turn);
-
-        // 4. Verify absolute bijection
-        ASSERT_EQ(rehashed, original_hash)
-            << "SIMD variable-turn round trip failed! Original Hash: "
             << original_hash << ", Rehashed: " << rehashed
             << ", Recovered Turn: " << turn;
     }
@@ -1442,12 +1112,12 @@ TEST(X86SimdTwoPieceHashFlipDiagTest, EmptyAndFullBoards) {
     uint64_t empty_pattern = 0ULL;
     uint64_t full_pattern = ~0ULL;  // All 1s
 
-    __m128i board = _mm_set_epi64x(full_pattern, empty_pattern);
-    __m128i flipped = X86SimdTwoPieceHashFlipDiag(board);
+    U64x2 board = {empty_pattern, full_pattern};
+    U64x2 flipped = X86SimdTwoPieceHashFlipDiag(board);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), empty_pattern)
+    EXPECT_EQ(flipped[0], empty_pattern)
         << "Empty board (lane 0) was altered during diagonal flip.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), full_pattern)
+    EXPECT_EQ(flipped[1], full_pattern)
         << "Full board (lane 1) was altered during diagonal flip.";
 }
 
@@ -1459,12 +1129,12 @@ TEST(X86SimdTwoPieceHashFlipDiagTest, MainDiagonalInvariance) {
     constexpr uint64_t main_diag = 0x8040201008040201ULL;
 
     // Put it in both lanes for good measure
-    __m128i board = _mm_set_epi64x(main_diag, main_diag);
-    __m128i flipped = X86SimdTwoPieceHashFlipDiag(board);
+    U64x2 board = {main_diag, main_diag};
+    U64x2 flipped = X86SimdTwoPieceHashFlipDiag(board);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), main_diag)
+    EXPECT_EQ(flipped[0], main_diag)
         << "Main diagonal bits shifted improperly on lane 0.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), main_diag)
+    EXPECT_EQ(flipped[1], main_diag)
         << "Main diagonal bits shifted improperly on lane 1.";
 }
 
@@ -1481,13 +1151,13 @@ TEST(X86SimdTwoPieceHashFlipDiagTest, OffDiagonalTransposition) {
     // Flipped to: (0, 1) [bit 1] and (2, 0) [bit 16]
     constexpr uint64_t lane1_expected = (1ULL << 1) | (1ULL << 16);
 
-    __m128i board = _mm_set_epi64x(lane1_orig, lane0_orig);
-    __m128i flipped = X86SimdTwoPieceHashFlipDiag(board);
+    U64x2 board = {lane0_orig, lane1_orig};
+    U64x2 flipped = X86SimdTwoPieceHashFlipDiag(board);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), lane0_expected)
+    EXPECT_EQ(flipped[0], lane0_expected)
         << "Lane 0 asymmetric bits did not mirror correctly across the main "
            "diagonal.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), lane1_expected)
+    EXPECT_EQ(flipped[1], lane1_expected)
         << "Lane 1 asymmetric bits did not mirror correctly across the main "
            "diagonal.";
 }
@@ -1499,14 +1169,14 @@ TEST(X86SimdTwoPieceHashFlipDiagTest, DoubleFlipInvolution) {
     constexpr uint64_t lane0_pattern = 0xAA55AA55AA55AA55ULL;  // Checkerboard
     constexpr uint64_t lane1_pattern = 0xF0F0F0F00F0F0F0FULL;  // 4x4 squares
 
-    __m128i original_board = _mm_set_epi64x(lane1_pattern, lane0_pattern);
+    U64x2 original_board = {lane0_pattern, lane1_pattern};
 
-    __m128i flipped_once = X86SimdTwoPieceHashFlipDiag(original_board);
-    __m128i flipped_twice = X86SimdTwoPieceHashFlipDiag(flipped_once);
+    U64x2 flipped_once = X86SimdTwoPieceHashFlipDiag(original_board);
+    U64x2 flipped_twice = X86SimdTwoPieceHashFlipDiag(flipped_once);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice, 0), lane0_pattern)
+    EXPECT_EQ(flipped_twice[0], lane0_pattern)
         << "Double flip (lane 0) failed to restore original pattern.";
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice, 1), lane1_pattern)
+    EXPECT_EQ(flipped_twice[1], lane1_pattern)
         << "Double flip (lane 1) failed to restore original pattern.";
 }
 
@@ -1518,14 +1188,14 @@ TEST(X86SimdTwoPieceHashFlipVerticalTest, EmptyAndFullBoards) {
     uint64_t empty_pattern = 0ULL;
     uint64_t full_pattern = ~0ULL;  // All 1s
 
-    __m128i board = _mm_set_epi64x(full_pattern, empty_pattern);
+    U64x2 board = {empty_pattern, full_pattern};
 
     // Test on a standard 8-row board
-    __m128i flipped = X86SimdTwoPieceHashFlipVertical(board, 8);
+    U64x2 flipped = X86SimdTwoPieceHashFlipVertical(board, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), empty_pattern)
+    EXPECT_EQ(flipped[0], empty_pattern)
         << "Empty board (lane 0) was altered during vertical flip.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), full_pattern)
+    EXPECT_EQ(flipped[1], full_pattern)
         << "Full board (lane 1) was altered during vertical flip.";
 }
 
@@ -1542,12 +1212,12 @@ TEST(X86SimdTwoPieceHashFlipVerticalTest, Standard8RowFlip) {
     // Expected: Row 0, Col 0 (bit 0) and Row 4, Col 7 (bit 39)
     uint64_t lane1_expected = (1ULL << 0) | (1ULL << 39);
 
-    __m128i board = _mm_set_epi64x(lane1_orig, lane0_orig);
-    __m128i flipped = X86SimdTwoPieceHashFlipVertical(board, 8);
+    U64x2 board = {lane0_orig, lane1_orig};
+    U64x2 flipped = X86SimdTwoPieceHashFlipVertical(board, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), lane0_expected)
+    EXPECT_EQ(flipped[0], lane0_expected)
         << "Lane 0 did not flip correctly across 8 rows.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), lane1_expected)
+    EXPECT_EQ(flipped[1], lane1_expected)
         << "Lane 1 did not flip correctly across 8 rows.";
 }
 
@@ -1568,13 +1238,13 @@ TEST(X86SimdTwoPieceHashFlipVerticalTest, PartialBoardFlip) {
     uint64_t expected = (1ULL << 2) | (1ULL << 9) | (1ULL << 16);
 
     // Apply same pattern to both lanes
-    __m128i board = _mm_set_epi64x(pattern, pattern);
-    __m128i flipped = X86SimdTwoPieceHashFlipVertical(board, rows);
+    U64x2 board = {pattern, pattern};
+    U64x2 flipped = X86SimdTwoPieceHashFlipVertical(board, rows);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped, 0), expected)
+    EXPECT_EQ(flipped[0], expected)
         << "Lane 0 did not correctly vertically flip within a " << rows
         << "-row bounding box.";
-    EXPECT_EQ(_mm_extract_epi64(flipped, 1), expected)
+    EXPECT_EQ(flipped[1], expected)
         << "Lane 1 did not correctly vertically flip within a " << rows
         << "-row bounding box.";
 }
@@ -1586,36 +1256,32 @@ TEST(X86SimdTwoPieceHashFlipVerticalTest, DoubleFlipInvolution) {
     uint64_t lane0_pattern = 0xAA55AA55AA55AA55ULL;
     uint64_t lane1_pattern = 0x0F0F0F0F00FF00FFULL;
 
-    __m128i original_board = _mm_set_epi64x(lane1_pattern, lane0_pattern);
+    U64x2 original_board = {lane0_pattern, lane1_pattern};
 
     // Test involution on full 8 rows
-    __m128i flipped_once_8 = X86SimdTwoPieceHashFlipVertical(original_board, 8);
-    __m128i flipped_twice_8 =
-        X86SimdTwoPieceHashFlipVertical(flipped_once_8, 8);
+    U64x2 flipped_once_8 = X86SimdTwoPieceHashFlipVertical(original_board, 8);
+    U64x2 flipped_twice_8 = X86SimdTwoPieceHashFlipVertical(flipped_once_8, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice_8, 0), lane0_pattern)
+    EXPECT_EQ(flipped_twice_8[0], lane0_pattern)
         << "Double flip (lane 0, 8 rows) failed to restore original pattern.";
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice_8, 1), lane1_pattern)
+    EXPECT_EQ(flipped_twice_8[1], lane1_pattern)
         << "Double flip (lane 1, 8 rows) failed to restore original pattern.";
 
     // Test involution on partial 5 rows
     // Note: This relies on the bits outside the first 5 rows being gracefully
     // ignored or consistently shifted by the implementation.
-    __m128i flipped_once_5 = X86SimdTwoPieceHashFlipVertical(original_board, 5);
-    __m128i flipped_twice_5 =
-        X86SimdTwoPieceHashFlipVertical(flipped_once_5, 5);
+    U64x2 flipped_once_5 = X86SimdTwoPieceHashFlipVertical(original_board, 5);
+    U64x2 flipped_twice_5 = X86SimdTwoPieceHashFlipVertical(flipped_once_5, 5);
 
     // Depending on whether the function clears garbage bits above 'rows', we
     // only verify the bits within the 5-row bounding box (mask =
     // 0x000000FFFFFFFFFF)
     uint64_t row5_mask = 0x000000FFFFFFFFFFULL;
 
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice_5, 0) & row5_mask,
-              lane0_pattern & row5_mask)
+    EXPECT_EQ(flipped_twice_5[0] & row5_mask, lane0_pattern & row5_mask)
         << "Double flip (lane 0, 5 rows) failed to restore bounded original "
            "pattern.";
-    EXPECT_EQ(_mm_extract_epi64(flipped_twice_5, 1) & row5_mask,
-              lane1_pattern & row5_mask)
+    EXPECT_EQ(flipped_twice_5[1] & row5_mask, lane1_pattern & row5_mask)
         << "Double flip (lane 1, 5 rows) failed to restore bounded original "
            "pattern.";
 }
@@ -1628,14 +1294,14 @@ TEST(X86SimdTwoPieceHashMirrorHorizontalTest, EmptyAndFullBoards) {
     uint64_t empty_pattern = 0ULL;
     uint64_t full_pattern = ~0ULL;  // All 1s
 
-    __m128i board = _mm_set_epi64x(full_pattern, empty_pattern);
+    U64x2 board = {empty_pattern, full_pattern};
 
     // Test on a standard 8-column board
-    __m128i mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, 8);
+    U64x2 mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 0), empty_pattern)
+    EXPECT_EQ(mirrored[0], empty_pattern)
         << "Empty board (lane 0) was altered during horizontal mirror.";
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 1), full_pattern)
+    EXPECT_EQ(mirrored[1], full_pattern)
         << "Full board (lane 1) was altered during horizontal mirror.";
 }
 
@@ -1652,12 +1318,12 @@ TEST(X86SimdTwoPieceHashMirrorHorizontalTest, Standard8ColMirror) {
     // Expected: Row 7, Col 0 (bit 56) and Row 4, Col 4 (bit 36)
     uint64_t lane1_expected = (1ULL << 56) | (1ULL << 36);
 
-    __m128i board = _mm_set_epi64x(lane1_orig, lane0_orig);
-    __m128i mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, 8);
+    U64x2 board = {lane0_orig, lane1_orig};
+    U64x2 mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 0), lane0_expected)
+    EXPECT_EQ(mirrored[0], lane0_expected)
         << "Lane 0 did not mirror correctly across 8 columns.";
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 1), lane1_expected)
+    EXPECT_EQ(mirrored[1], lane1_expected)
         << "Lane 1 did not mirror correctly across 8 columns.";
 }
 
@@ -1676,13 +1342,13 @@ TEST(X86SimdTwoPieceHashMirrorHorizontalTest, PartialBoardMirror) {
     uint64_t expected = (1ULL << 12) | (1ULL << 26);
 
     // Apply same pattern to both lanes
-    __m128i board = _mm_set_epi64x(pattern, pattern);
-    __m128i mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, cols);
+    U64x2 board = {pattern, pattern};
+    U64x2 mirrored = X86SimdTwoPieceHashMirrorHorizontal(board, cols);
 
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 0), expected)
+    EXPECT_EQ(mirrored[0], expected)
         << "Lane 0 did not correctly horizontally mirror within a " << cols
         << "-col bounding box.";
-    EXPECT_EQ(_mm_extract_epi64(mirrored, 1), expected)
+    EXPECT_EQ(mirrored[1], expected)
         << "Lane 1 did not correctly horizontally mirror within a " << cols
         << "-col bounding box.";
 }
@@ -1694,34 +1360,32 @@ TEST(X86SimdTwoPieceHashMirrorHorizontalTest, DoubleMirrorInvolution) {
     uint64_t lane0_pattern = 0x123456789ABCDEF0ULL;
     uint64_t lane1_pattern = 0x0F0F0F0F00FF00FFULL;
 
-    __m128i original_board = _mm_set_epi64x(lane1_pattern, lane0_pattern);
+    U64x2 original_board = {lane0_pattern, lane1_pattern};
 
     // Test involution on full 8 columns
-    __m128i mirrored_once_8 =
+    U64x2 mirrored_once_8 =
         X86SimdTwoPieceHashMirrorHorizontal(original_board, 8);
-    __m128i mirrored_twice_8 =
+    U64x2 mirrored_twice_8 =
         X86SimdTwoPieceHashMirrorHorizontal(mirrored_once_8, 8);
 
-    EXPECT_EQ(_mm_extract_epi64(mirrored_twice_8, 0), lane0_pattern)
+    EXPECT_EQ(mirrored_twice_8[0], lane0_pattern)
         << "Double mirror (lane 0, 8 cols) failed to restore original pattern.";
-    EXPECT_EQ(_mm_extract_epi64(mirrored_twice_8, 1), lane1_pattern)
+    EXPECT_EQ(mirrored_twice_8[1], lane1_pattern)
         << "Double mirror (lane 1, 8 cols) failed to restore original pattern.";
 
     // Test involution on partial 5 columns
-    __m128i mirrored_once_5 =
+    U64x2 mirrored_once_5 =
         X86SimdTwoPieceHashMirrorHorizontal(original_board, 5);
-    __m128i mirrored_twice_5 =
+    U64x2 mirrored_twice_5 =
         X86SimdTwoPieceHashMirrorHorizontal(mirrored_once_5, 5);
 
     // Mask for 5 columns per row: 0x1F (0b00011111) repeated across 8 rows
     uint64_t col5_mask = 0x1F1F1F1F1F1F1F1FULL;
 
-    EXPECT_EQ(_mm_extract_epi64(mirrored_twice_5, 0) & col5_mask,
-              lane0_pattern & col5_mask)
+    EXPECT_EQ(mirrored_twice_5[0] & col5_mask, lane0_pattern & col5_mask)
         << "Double mirror (lane 0, 5 cols) failed to restore bounded original "
            "pattern.";
-    EXPECT_EQ(_mm_extract_epi64(mirrored_twice_5, 1) & col5_mask,
-              lane1_pattern & col5_mask)
+    EXPECT_EQ(mirrored_twice_5[1] & col5_mask, lane1_pattern & col5_mask)
         << "Double mirror (lane 1, 5 cols) failed to restore bounded original "
            "pattern.";
 }
@@ -1733,16 +1397,14 @@ TEST(X86SimdTwoPieceHashTest, BasicSwapPieces) {
     // Arbitrary distinct patterns representing piece locations
     uint64_t x_pieces_orig = 0xAAAAAAAAAAAAAAAAULL;  // Lane 0
     uint64_t o_pieces_orig = 0x5555555555555555ULL;  // Lane 1
-
-    // _mm_set_epi64x takes (lane1, lane0)
-    __m128i board = _mm_set_epi64x(o_pieces_orig, x_pieces_orig);
-    __m128i swapped = X86SimdTwoPieceHashSwapPieces(board);
+    U64x2 board = {x_pieces_orig, o_pieces_orig};
+    U64x2 swapped = X86SimdTwoPieceHashSwapPieces(board);
 
     // After swapping, Lane 0 should have O's original pieces,
     // and Lane 1 should have X's original pieces.
-    EXPECT_EQ(_mm_extract_epi64(swapped, 0), o_pieces_orig)
+    EXPECT_EQ(swapped[0], o_pieces_orig)
         << "Lane 0 did not receive Lane 1's pieces.";
-    EXPECT_EQ(_mm_extract_epi64(swapped, 1), x_pieces_orig)
+    EXPECT_EQ(swapped[1], x_pieces_orig)
         << "Lane 1 did not receive Lane 0's pieces.";
 }
 
@@ -1752,13 +1414,13 @@ TEST(X86SimdTwoPieceHashTest, SwapEmptyAndFull) {
     uint64_t full = ~0ULL;  // All 1s
 
     // X has no pieces (empty), O fills the board (full)
-    __m128i board = _mm_set_epi64x(full, empty);
-    __m128i swapped = X86SimdTwoPieceHashSwapPieces(board);
+    U64x2 board = {empty, full};
+    U64x2 swapped = X86SimdTwoPieceHashSwapPieces(board);
 
     // After swapping, X should be full, O should be empty
-    EXPECT_EQ(_mm_extract_epi64(swapped, 0), full)
+    EXPECT_EQ(swapped[0], full)
         << "Empty lane failed to receive the full bitboard.";
-    EXPECT_EQ(_mm_extract_epi64(swapped, 1), empty)
+    EXPECT_EQ(swapped[1], empty)
         << "Full lane failed to receive the empty bitboard.";
 }
 
@@ -1767,14 +1429,14 @@ TEST(X86SimdTwoPieceHashTest, DoubleSwapPiecesInvolution) {
     uint64_t x_pieces_orig = 0x123456789ABCDEF0ULL;
     uint64_t o_pieces_orig = 0x0FEDCBA987654321ULL;
 
-    __m128i original_board = _mm_set_epi64x(o_pieces_orig, x_pieces_orig);
+    U64x2 original_board = {x_pieces_orig, o_pieces_orig};
 
-    __m128i swapped_once = X86SimdTwoPieceHashSwapPieces(original_board);
-    __m128i swapped_twice = X86SimdTwoPieceHashSwapPieces(swapped_once);
+    U64x2 swapped_once = X86SimdTwoPieceHashSwapPieces(original_board);
+    U64x2 swapped_twice = X86SimdTwoPieceHashSwapPieces(swapped_once);
 
-    EXPECT_EQ(_mm_extract_epi64(swapped_twice, 0), x_pieces_orig)
+    EXPECT_EQ(swapped_twice[0], x_pieces_orig)
         << "Double swap failed to restore X's original bitboard in Lane 0.";
-    EXPECT_EQ(_mm_extract_epi64(swapped_twice, 1), o_pieces_orig)
+    EXPECT_EQ(swapped_twice[1], o_pieces_orig)
         << "Double swap failed to restore O's original bitboard in Lane 1.";
 }
 
@@ -1786,7 +1448,7 @@ TEST(X86SimdTwoPieceHashBoardLessThanTest, EqualBoards) {
     uint64_t lane1 = 0x00AABBCCDDEEFF11ULL;
     uint64_t lane0 = 0x0011223344556677ULL;
 
-    __m128i board = _mm_set_epi64x(lane1, lane0);
+    U64x2 board = {lane0, lane1};
 
     EXPECT_FALSE(X86SimdTwoPieceHashBoardLessThan(board, board))
         << "Identical boards must not evaluate to strictly less than.";
@@ -1799,11 +1461,11 @@ TEST(X86SimdTwoPieceHashBoardLessThanTest, Lane1Dominates) {
     uint64_t a_lane1 = 0x0000000000000005ULL;
     // Maximize Lane 0 to ensure Lane 1 dominates the comparison logic
     uint64_t a_lane0 = 0x00FFFFFFFFFFFFFFULL;
-    __m128i board_a = _mm_set_epi64x(a_lane1, a_lane0);
+    U64x2 board_a = {a_lane0, a_lane1};
 
     uint64_t b_lane1 = 0x0000000000000006ULL;
     uint64_t b_lane0 = 0x0000000000000000ULL;
-    __m128i board_b = _mm_set_epi64x(b_lane1, b_lane0);
+    U64x2 board_b = {b_lane0, b_lane1};
 
     // a < b should be true because Lane 1 is smaller
     EXPECT_TRUE(X86SimdTwoPieceHashBoardLessThan(board_a, board_b))
@@ -1820,10 +1482,10 @@ TEST(X86SimdTwoPieceHashBoardLessThanTest, Lane0Tiebreaker) {
     uint64_t shared_lane1 = 0x00123456789ABCDEULL;
 
     uint64_t a_lane0 = 0x000000000000004FULL;  // Smaller
-    __m128i board_a = _mm_set_epi64x(shared_lane1, a_lane0);
+    U64x2 board_a = {a_lane0, shared_lane1};
 
     uint64_t b_lane0 = 0x0000000000000050ULL;  // Larger
-    __m128i board_b = _mm_set_epi64x(shared_lane1, b_lane0);
+    U64x2 board_b = {b_lane0, shared_lane1};
 
     // a < b should be true
     EXPECT_TRUE(X86SimdTwoPieceHashBoardLessThan(board_a, board_b))
@@ -1845,8 +1507,8 @@ TEST(X86SimdTwoPieceHashBoardLessThanTest, Max7RowCapacitySafe) {
     uint64_t max_7row_val = 0x00FFFFFFFFFFFFFFULL;
     uint64_t slightly_less = 0x00FFFFFFFFFFFFFEULL;
 
-    __m128i max_board = _mm_set_epi64x(max_7row_val, max_7row_val);
-    __m128i lesser_board = _mm_set_epi64x(max_7row_val, slightly_less);
+    U64x2 max_board = {max_7row_val, max_7row_val};
+    U64x2 lesser_board = {slightly_less, max_7row_val};
 
     EXPECT_TRUE(X86SimdTwoPieceHashBoardLessThan(lesser_board, max_board))
         << "Comparison failed near the 7-row maximum boundary.";
@@ -1862,12 +1524,12 @@ TEST(X86SimdTwoPieceHashMinBoardTest, EqualBoards) {
     uint64_t lane1 = 0x00AABBCCDDEEFF11ULL;
     uint64_t lane0 = 0x0011223344556677ULL;
 
-    __m128i board = _mm_set_epi64x(lane1, lane0);
-    __m128i result = X86SimdTwoPieceHashMinBoard(board, board);
+    U64x2 board = {lane0, lane1};
+    U64x2 result = X86SimdTwoPieceHashMinBoard(board, board);
 
-    EXPECT_EQ(_mm_extract_epi64(result, 0), lane0)
+    EXPECT_EQ(result[0], lane0)
         << "Min of identical boards returned incorrect Lane 0.";
-    EXPECT_EQ(_mm_extract_epi64(result, 1), lane1)
+    EXPECT_EQ(result[1], lane1)
         << "Min of identical boards returned incorrect Lane 1.";
 }
 
@@ -1877,19 +1539,19 @@ TEST(X86SimdTwoPieceHashMinBoardTest, Lane1Dominates) {
     // Board A has a smaller Lane 1, but a maximized Lane 0
     uint64_t a_lane1 = 0x0000000000000005ULL;
     uint64_t a_lane0 = 0x00FFFFFFFFFFFFFFULL;
-    __m128i board_a = _mm_set_epi64x(a_lane1, a_lane0);
+    U64x2 board_a = {a_lane0, a_lane1};
 
     // Board B has a larger Lane 1, but a minimized Lane 0
     uint64_t b_lane1 = 0x0000000000000006ULL;
     uint64_t b_lane0 = 0x0000000000000000ULL;
-    __m128i board_b = _mm_set_epi64x(b_lane1, b_lane0);
+    U64x2 board_b = {b_lane0, b_lane1};
 
-    __m128i result = X86SimdTwoPieceHashMinBoard(board_a, board_b);
+    U64x2 result = X86SimdTwoPieceHashMinBoard(board_a, board_b);
 
     // Board A should be selected because 5 < 6
-    EXPECT_EQ(_mm_extract_epi64(result, 0), a_lane0)
+    EXPECT_EQ(result[0], a_lane0)
         << "Lane 1 domination failed: Incorrect Lane 0 selected.";
-    EXPECT_EQ(_mm_extract_epi64(result, 1), a_lane1)
+    EXPECT_EQ(result[1], a_lane1)
         << "Lane 1 domination failed: Incorrect Lane 1 selected.";
 }
 
@@ -1898,37 +1560,35 @@ TEST(X86SimdTwoPieceHashMinBoardTest, Lane0Tiebreaker) {
     uint64_t shared_lane1 = 0x00123456789ABCDEULL;
 
     uint64_t a_lane0 = 0x0000000000000050ULL;  // Larger
-    __m128i board_a = _mm_set_epi64x(shared_lane1, a_lane0);
+    U64x2 board_a = {a_lane0, shared_lane1};
 
     uint64_t b_lane0 = 0x000000000000004FULL;  // Smaller
-    __m128i board_b = _mm_set_epi64x(shared_lane1, b_lane0);
+    U64x2 board_b = {b_lane0, shared_lane1};
 
-    __m128i result = X86SimdTwoPieceHashMinBoard(board_a, board_b);
+    U64x2 result = X86SimdTwoPieceHashMinBoard(board_a, board_b);
 
     // Board B should be selected because 0x4F < 0x50
-    EXPECT_EQ(_mm_extract_epi64(result, 0), b_lane0)
+    EXPECT_EQ(result[0], b_lane0)
         << "Lane 0 tiebreaker failed: Selected the larger board.";
-    EXPECT_EQ(_mm_extract_epi64(result, 1), shared_lane1)
+    EXPECT_EQ(result[1], shared_lane1)
         << "Lane 0 tiebreaker failed: Corrupted shared Lane 1.";
 }
 
 // Verifies that min(a, b) == min(b, a).
 TEST(X86SimdTwoPieceHashMinBoardTest, ArgumentSymmetry) {
-    __m128i board_a =
-        _mm_set_epi64x(0x0000000000000010ULL, 0x0000000000000000ULL);
-    __m128i board_b =
-        _mm_set_epi64x(0x0000000000000020ULL, 0x00FFFFFFFFFFFFFFULL);
+    U64x2 board_a = {0x0000000000000000ULL, 0x0000000000000010ULL};
+    U64x2 board_b = {0x00FFFFFFFFFFFFFFULL, 0x0000000000000020ULL};
 
-    __m128i result_ab = X86SimdTwoPieceHashMinBoard(board_a, board_b);
-    __m128i result_ba = X86SimdTwoPieceHashMinBoard(board_b, board_a);
+    U64x2 result_ab = X86SimdTwoPieceHashMinBoard(board_a, board_b);
+    U64x2 result_ba = X86SimdTwoPieceHashMinBoard(board_b, board_a);
 
     // Both should yield board_a (Lane 1: 0x10 < 0x20)
-    EXPECT_EQ(_mm_extract_epi64(result_ab, 0), _mm_extract_epi64(result_ba, 0))
+    EXPECT_EQ(result_ab[0], result_ba[0])
         << "min(a, b) and min(b, a) returned different Lane 0s.";
-    EXPECT_EQ(_mm_extract_epi64(result_ab, 1), _mm_extract_epi64(result_ba, 1))
+    EXPECT_EQ(result_ab[1], result_ba[1])
         << "min(a, b) and min(b, a) returned different Lane 1s.";
 
-    EXPECT_EQ(_mm_extract_epi64(result_ab, 1), 0x0000000000000010ULL)
+    EXPECT_EQ(result_ab[1], 0x0000000000000010ULL)
         << "Symmetry test selected the maximum instead of the minimum.";
 }
 
@@ -1940,7 +1600,7 @@ TEST(CmpltU128Test, EqualIntegers) {
     uint64_t lane1 = 0xDEADBEEFCAFEBABEULL;
     uint64_t lane0 = 0x8BADF00D0D15EA5EULL;
 
-    __m128i val = _mm_set_epi64x(lane1, lane0);
+    U64x2 val = {lane0, lane1};
 
     EXPECT_FALSE(cmplt_u128(val, val)) << "Identical 128-bit integers must not "
                                           "evaluate to strictly less than.";
@@ -1953,11 +1613,11 @@ TEST(CmpltU128Test, Upper64BitsDominate) {
     uint64_t a_lane1 = 0x0000000000000005ULL;
     // Maximize Lane 0 for 'a' to ensure Lane 1 dominates the logic
     uint64_t a_lane0 = 0xFFFFFFFFFFFFFFFFULL;
-    __m128i val_a = _mm_set_epi64x(a_lane1, a_lane0);
+    U64x2 val_a = {a_lane0, a_lane1};
 
     uint64_t b_lane1 = 0x0000000000000006ULL;
     uint64_t b_lane0 = 0x0000000000000000ULL;
-    __m128i val_b = _mm_set_epi64x(b_lane1, b_lane0);
+    U64x2 val_b = {b_lane0, b_lane1};
 
     EXPECT_TRUE(cmplt_u128(val_a, val_b))
         << "Value A should be strictly less than Value B based on Lane 1.";
@@ -1972,10 +1632,10 @@ TEST(CmpltU128Test, Lower64BitsTiebreaker) {
     uint64_t shared_lane1 = 0x123456789ABCDEF0ULL;
 
     uint64_t a_lane0 = 0x000000000000004FULL;
-    __m128i val_a = _mm_set_epi64x(shared_lane1, a_lane0);
+    U64x2 val_a = {a_lane0, shared_lane1};
 
     uint64_t b_lane0 = 0x0000000000000050ULL;
-    __m128i val_b = _mm_set_epi64x(shared_lane1, b_lane0);
+    U64x2 val_b = {b_lane0, shared_lane1};
 
     EXPECT_TRUE(cmplt_u128(val_a, val_b))
         << "Value A should be strictly less than Value B based on Lane 0 "
@@ -1996,8 +1656,8 @@ TEST(CmpltU128Test, UnsignedEvaluationLane1) {
     // 0x8000000000000000 has the MSB set to 1
     uint64_t b_lane1 = 0x8000000000000000ULL;
 
-    __m128i val_a = _mm_set_epi64x(a_lane1, 0ULL);
-    __m128i val_b = _mm_set_epi64x(b_lane1, 0ULL);
+    U64x2 val_a = {0ULL, a_lane1};
+    U64x2 val_b = {0ULL, b_lane1};
 
     // If evaluated as signed, 0x80... is negative and thus "less than" 0x7F...
     // Unsigned logic must evaluate 0x7F... < 0x80... as true.
@@ -2019,8 +1679,8 @@ TEST(CmpltU128Test, UnsignedEvaluationLane0) {
     uint64_t a_lane0 = 0x7FFFFFFFFFFFFFFFULL;
     uint64_t b_lane0 = 0x8000000000000000ULL;
 
-    __m128i val_a = _mm_set_epi64x(shared_lane1, a_lane0);
-    __m128i val_b = _mm_set_epi64x(shared_lane1, b_lane0);
+    U64x2 val_a = {a_lane0, shared_lane1};
+    U64x2 val_b = {b_lane0, shared_lane1};
 
     // If evaluated as signed, 0x80... is negative and thus "less than" 0x7F...
     // Unsigned logic must evaluate 0x7F... < 0x80... as true.

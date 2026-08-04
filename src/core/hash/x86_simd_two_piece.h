@@ -34,7 +34,7 @@
  * representations to position hash values within each tier (hashing) and to
  * convert hash values back to boards (unhashing). The tiers are defined using
  * the numbers of the two types of pieces on the board. The boards are
- * represented as __m128i variables containing two bit boards each of length 64
+ * represented as U64x2 variables containing two bit boards each of length 64
  * describing the locations of the pieces. The lower 64 bits represent the
  * locations of the first type of piece (X) and the upper 64 bits represent the
  * locations of the second type of piece (O).
@@ -88,11 +88,10 @@
  * and then represented as
  *
  *     // Using C++ notation for binary numbers, not valid syntax in C.
- *     uint64_t raw[2] = {
+ *     U64x2 board = {
  *         0b0000000000000000000000000000000000000000'00000100'00000011'00000000,
  *         0b0000000000000000000000000000000000000000'00000010'00000000'00000101,
  *     };
- *     __m128i board = _mm_loadu_si128(raw);
  *
  * The boards are mapped to 64-bit grids to allow efficient flipping, mirroring,
  * and rotating, for which the algorithms can be found on Chess Programming Wiki
@@ -185,11 +184,10 @@
  * and then represented as
  *
  *     // Using C++ notation for binary numbers, not valid syntax in C.
- *     uint64_t raw[2] = {
+ *     U64x2 board = {
  *         0b00000000'00000000'00001000'00010000'00000000'00000100'00000000'00000000,
  *         0b00000000'00000000'00000000'00000000'00100000'00000000'00001000'00000000,
  *     };
- *     __m128i board = _mm_loadu_si128(raw);
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -211,19 +209,19 @@
 #ifndef GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 #define GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
 
-#include <emmintrin.h>
-#include <immintrin.h>
-#include <smmintrin.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <tmmintrin.h>
-#include <xmmintrin.h>
 
 #include "config.h"
 #include "core/types/base.h"
 #include "core/types/gamesman_status.h"
+#include "core/types/simd.h"
+
+#ifdef GAMESMAN_HAS_SSE2
+#include <immintrin.h>
+#endif  //
 
 enum {
     kX86SimdTwoPieceHashBoardSizeMax = 32 /**< Maximum supported board size. */
@@ -379,42 +377,6 @@ static inline int64_t X86SimdTwoPieceHashGetNumPositions(
 /**
  * @brief Returns the hash for the given position.
  *
- * @details The position is represented as two 64-bit piece patterns packed in a
- * `uint64_t` array `patterns`. It assumes the given position is from a tier
- * in which all positions are one of the players' turn. The `patterns` must
- * be packed in the following way:
- *     `patterns[0]` := bit pattern of X
- *     `patterns[1]` := bit pattern of O
- *
- * @param[in] context Hash context.
- * @param[in] patterns Board represented as bit patterns to hash.
- *
- * @returns Hash value of the given position.
- */
-static inline Position X86SimdTwoPieceHashHashFixedTurnMem(
-    const X86SimdTwoPieceHashContext *context, const uint64_t patterns[2]) {
-    // Convert the 8x8 padded pattern to tightly packed pattern
-    const uint64_t hash_mask = context->hash_mask;
-    // LCOV_EXCL_START
-    uint64_t extracted[2] = {
-        _pext_u64(patterns[0], hash_mask),
-        _pext_u64(patterns[1], hash_mask),
-    };
-    // LCOV_EXCL_STOP
-
-    // Perform the normal hashing procedure.
-    extracted[0] = _pext_u64(extracted[0], ~extracted[1]);
-    int pop_x = __builtin_popcountll(extracted[0]);
-    int pop_o = __builtin_popcountll(extracted[1]);
-    int64_t offset = context->nCr[context->board_size - pop_o][pop_x];
-
-    return offset * context->pattern_to_order[extracted[1]] +
-           context->pattern_to_order[extracted[0]];
-}
-
-/**
- * @brief Returns the hash for the given position.
- *
  * @details The position is represented as 64-bit piece patterns packed in a
  * 128-bit XMM register `board`. It assumes the given position is from a tier
  * in which all positions are one of the players' turn. The `board` must be
@@ -428,35 +390,24 @@ static inline Position X86SimdTwoPieceHashHashFixedTurnMem(
  * @returns Hash value of the given position.
  */
 static inline Position X86SimdTwoPieceHashHashFixedTurn(
-    const X86SimdTwoPieceHashContext *context, __m128i board) {
-    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
-    // required by _mm_store_si128
-    alignas(16) uint64_t s[2];
-    _mm_store_si128((__m128i *)s, board);
+    const X86SimdTwoPieceHashContext *context, U64x2 board) {
+    // Convert the 8x8 padded pattern to tightly packed pattern
+    const uint64_t hash_mask = context->hash_mask;
+    // LCOV_EXCL_START
+    alignas(16) uint64_t patterns[2] = {
+        PextU64(board[0], hash_mask),
+        PextU64(board[1], hash_mask),
+    };
+    // LCOV_EXCL_STOP
 
-    return X86SimdTwoPieceHashHashFixedTurnMem(context, s);
-}
+    // Perform the normal hashing procedure.
+    patterns[0] = PextU64(patterns[0], ~patterns[1]);
+    int pop_x = __builtin_popcountll(patterns[0]);
+    int pop_o = __builtin_popcountll(patterns[1]);
+    int64_t offset = context->nCr[context->board_size - pop_o][pop_x];
 
-/**
- * @brief Returns the hash for the given position, accounting for the turn.
- *
- * @details The position is represented as two 64-bit piece patterns packed in a
- * `uint64_t` array `patterns` with the given `turn`. The `patterns` must be
- * packed in the following way:
- *     `patterns[0]` := bit pattern of X
- *     `patterns[1]` := bit pattern of O
- *
- * @param[in] context Hash context.
- * @param[in] patterns Board represented as bit patterns to hash.
- * @param[in] turn 0 if it is the first player's turn, 1 if it is the second
- * player's turn.
- *
- * @returns Hash value of the given position.
- */
-static inline Position X86SimdTwoPieceHashHashMem(
-    const X86SimdTwoPieceHashContext *context, const uint64_t patterns[2],
-    int turn) {
-    return (X86SimdTwoPieceHashHashFixedTurnMem(context, patterns) << 1) | turn;
+    return offset * context->pattern_to_order[patterns[1]] +
+           context->pattern_to_order[patterns[0]];
 }
 
 /**
@@ -476,42 +427,12 @@ static inline Position X86SimdTwoPieceHashHashMem(
  * @returns Hash value of the given position.
  */
 static inline Position X86SimdTwoPieceHashHash(
-    const X86SimdTwoPieceHashContext *context, __m128i board, int turn) {
+    const X86SimdTwoPieceHashContext *context, U64x2 board, int turn) {
     return (X86SimdTwoPieceHashHashFixedTurn(context, board) << 1) | turn;
 }
 
 /**
- * @brief Unhashes the given position to a 128-bit space in memory.
- *
- * @details Reconstructs a position with `num_x` X's and `num_o` O's from the
- * given `hash`. It assumes `hash` was previously obtained using
- * `X86SimdTwoPieceHashHashFixedTurn` that does not account for turns. This
- * function is equivalent to first calling `X86SimdTwoPieceHashUnhashFixedTurn`
- * and then storing the contents of the return value to `patterns`, but is more
- * efficient.
- *
- * @note X is the first player, and O is the second player.
- *
- * @param[in] context Hash context.
- * @param[in] hash Hash value of the position to unhash.
- * @param[in] num_x Number of X's on the board.
- * @param[in] num_o Number of O's on the board.
- * @param[out] patterns Output array where the unhashed piece patterns are
- * stored.
- */
-static inline void X86SimdTwoPieceHashUnhashFixedTurnMem(
-    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
-    int num_o, uint64_t patterns[2]) {
-    int64_t offset = context->nCr[context->board_size - num_o][num_x];
-    patterns[0] = context->pop_order_to_pattern[num_x][hash % offset];
-    patterns[1] = context->pop_order_to_pattern[num_o][hash / offset];
-    patterns[0] = _pdep_u64(patterns[0], ~patterns[1]);
-    patterns[0] = _pdep_u64(patterns[0], context->hash_mask);
-    patterns[1] = _pdep_u64(patterns[1], context->hash_mask);
-}
-
-/**
- * @brief Unhashes the given position to a `__m128i` register.
+ * @brief Unhashes the given position to a `U64x2` register.
  *
  * @details Reconstructs a position with `num_x` X's and `num_o` O's from the
  * given `hash`. It assumes `hash` was previously obtained using
@@ -529,44 +450,22 @@ static inline void X86SimdTwoPieceHashUnhashFixedTurnMem(
  * @returns Unhashed board represented as two 64-bit piece patterns packed into
  * a 128-bit XMM register.
  */
-static inline __m128i X86SimdTwoPieceHashUnhashFixedTurn(
+static inline U64x2 X86SimdTwoPieceHashUnhashFixedTurn(
     const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
     int num_o) {
-    alignas(16) uint64_t s[2];
-    X86SimdTwoPieceHashUnhashFixedTurnMem(context, hash, num_x, num_o, s);
+    U64x2 board;
+    int64_t offset = context->nCr[context->board_size - num_o][num_x];
+    board[0] = context->pop_order_to_pattern[num_x][hash % offset];
+    board[1] = context->pop_order_to_pattern[num_o][hash / offset];
+    board[0] = PdepU64(board[0], ~board[1]);
+    board[0] = PdepU64(board[0], context->hash_mask);
+    board[1] = PdepU64(board[1], context->hash_mask);
 
-    return _mm_load_si128((const __m128i *)s);
+    return board;
 }
 
 /**
- * @brief Unhashes the given position, accounting for turns, to a 128-bit space
- * in memory.
- *
- * @details Reconstructs a position with `num_x` X's and `num_o` O's from the
- * given `hash`. It assumes `hash` was previously obtained using
- * `X86SimdTwoPieceHashHash` that accounts for turns. This function is
- * equivalent to first calling `X86SimdTwoPieceHashUnhash` and then storing the
- * contents of the return value to `patterns`, but is more efficient.
- *
- * @note X is the first player, and O is the second player.
- *
- * @param[in] context Hash context.
- * @param[in] hash Hash value of the position to unhash.
- * @param[in] num_x Number of X's on the board.
- * @param[in] num_o Number of O's on the board.
- * @param[out] patterns Output array where the unhashed piece patterns are
- * stored.
- */
-static inline void X86SimdTwoPieceHashUnhashMem(
-    const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
-    int num_o, uint64_t patterns[2]) {
-    // Get rid of the turn bit and then use the same algorithm.
-    X86SimdTwoPieceHashUnhashFixedTurnMem(context, hash >> 1, num_x, num_o,
-                                          patterns);
-}
-
-/**
- * @brief Unhashes the given position, accounting for turns, to a `__m128i`
+ * @brief Unhashes the given position, accounting for turns, to a `U64x2`
  * register.
  *
  * @details Reconstructs a position with `num_x` X's and `num_o` O's from the
@@ -584,7 +483,7 @@ static inline void X86SimdTwoPieceHashUnhashMem(
  * @returns Unhashed board represented as two 64-bit piece patterns packed into
  * a 128-bit XMM register.
  */
-static inline __m128i X86SimdTwoPieceHashUnhash(
+static inline U64x2 X86SimdTwoPieceHashUnhash(
     const X86SimdTwoPieceHashContext *context, Position hash, int num_x,
     int num_o) {
     // Get rid of the turn bit and then use the same algorithm.
@@ -630,17 +529,18 @@ static inline int X86SimdTwoPieceHashGetTurn(Position hash) { return hash & 1; }
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Diagonal
  */
-static inline __m128i X86SimdTwoPieceHashFlipDiag(__m128i board) {
-    __m128i t;
-    const __m128i k1 = _mm_set1_epi64x(0x5500550055005500LL);
-    const __m128i k2 = _mm_set1_epi64x(0x3333000033330000LL);
-    const __m128i k4 = _mm_set1_epi64x(0x0f0f0f0f00000000LL);
-    t = _mm_and_si128(k4, _mm_xor_si128(board, _mm_slli_epi64(board, 28)));
-    board = _mm_xor_si128(board, _mm_xor_si128(t, _mm_srli_epi64(t, 28)));
-    t = _mm_and_si128(k2, _mm_xor_si128(board, _mm_slli_epi64(board, 14)));
-    board = _mm_xor_si128(board, _mm_xor_si128(t, _mm_srli_epi64(t, 14)));
-    t = _mm_and_si128(k1, _mm_xor_si128(board, _mm_slli_epi64(board, 7)));
-    board = _mm_xor_si128(board, _mm_xor_si128(t, _mm_srli_epi64(t, 7)));
+static inline U64x2 X86SimdTwoPieceHashFlipDiag(U64x2 board) {
+    U64x2 t;
+    const U64x2 k1 = {0x5500550055005500ULL, 0x5500550055005500ULL};
+    const U64x2 k2 = {0x3333000033330000ULL, 0x3333000033330000ULL};
+    const U64x2 k4 = {0x0f0f0f0f00000000ULL, 0x0f0f0f0f00000000ULL};
+
+    t = k4 & (board ^ (board << 28));
+    board = board ^ t ^ (t >> 28);
+    t = k2 & (board ^ (board << 14));
+    board = board ^ t ^ (t >> 14);
+    t = k1 & (board ^ (board << 7));
+    board = board ^ t ^ (t >> 7);
 
     return board;
 }
@@ -667,24 +567,25 @@ static inline __m128i X86SimdTwoPieceHashFlipDiag(__m128i board) {
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Vertical
  */
-static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
-    // Extract the two 64-bit patterns to 16-byte-aligned stack memory as
-    // required by _mm_store_si128
-    alignas(16) uint64_t s[2];
-    _mm_store_si128((__m128i *)s, board);
+static inline U64x2 X86SimdTwoPieceHashFlipVertical(U64x2 board, int rows) {
+    // 1. Cast to byte-vector to perform the byte swap
+    U8x16 bytes = (U8x16)board;
 
-    // Byte swap flips the board vertically
-    s[0] = __builtin_bswap64(s[0]);
-    s[1] = __builtin_bswap64(s[1]);
+    // 2. Reverse the first 8 bytes and the last 8 bytes directly in the
+    // register This perfectly mimics bswap64 on two 64-bit integers.
+    bytes = __builtin_shufflevector(
+        bytes, bytes, 7, 6, 5, 4, 3, 2, 1, 0,  // bswap64 for s[0]
+        15, 14, 13, 12, 11, 10, 9, 8           // bswap64 for s[1]
+    );
 
-    // Pack the values back into the __m128i register
-    board = _mm_load_si128((const __m128i *)s);
+    // 3. Cast back to 64-bit vector for the shift
+    U64x2 b64 = (U64x2)bytes;
 
-    // Move the board to the correct location
+    // 4. Shift right. Clang/GCC natively support scalar shifts on vector types.
     int shift = (8 - rows) << 3;
-    board = _mm_srli_epi64(board, shift);
+    b64 = b64 >> shift;
 
-    return board;
+    return b64;
 }
 
 /**
@@ -709,39 +610,48 @@ static inline __m128i X86SimdTwoPieceHashFlipVertical(__m128i board, int rows) {
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Horizontal
  */
-static inline __m128i X86SimdTwoPieceHashMirrorHorizontal(__m128i board,
-                                                          int cols) {
+static inline U64x2 X86SimdTwoPieceHashMirrorHorizontal(U64x2 board, int cols) {
+#ifdef GAMESMAN_HAS_SSSE3
     // lut_low: bit-reverses the nibble and keeps it in the low 4 bits.
     // E.g., index 1 (0001) maps to 8 (1000).
-    const __m128i lut_low =
-        _mm_setr_epi8(0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01,
-                      0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f);
+    const U8x16 lut_low = {0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,
+                           0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f};
 
     // lut_high: bit-reverses the nibble and shifts it to the high 4 bits.
     // E.g., index 1 (0001) maps to 128 (1000 0000).
-    const __m128i lut_high = _mm_setr_epi8(
-        0x00, (char)0x80, 0x40, (char)0xc0, 0x20, (char)0xa0, 0x60, (char)0xe0,
-        0x10, (char)0x90, 0x50, (char)0xd0, 0x30, (char)0xb0, 0x70, (char)0xf0);
+    const U8x16 lut_high = {0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
+                            0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0};
 
-    const __m128i mask = _mm_set1_epi8(0x0f);
+    const U8x16 mask = {0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f,
+                        0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f};
 
     // Isolate the low and high nibbles for every byte simultaneously
-    __m128i low_nibbles = _mm_and_si128(board, mask);
-    __m128i high_nibbles = _mm_and_si128(_mm_srli_epi16(board, 4), mask);
+    U8x16 b8 = (U8x16)board;
+    U8x16 low_nibbles = b8 & mask;
+    U8x16 high_nibbles = (b8 >> 4) & mask;
 
     // Look up the bit-reversed nibbles.
     // The previously 'low' nibble reversed becomes the 'high' nibble and vice
     // versa.
-    __m128i rev_low = _mm_shuffle_epi8(lut_high, low_nibbles);
-    __m128i rev_high = _mm_shuffle_epi8(lut_low, high_nibbles);
+    U8x16 rev_low =
+        (U8x16)_mm_shuffle_epi8((__m128i)lut_high, (__m128i)low_nibbles);
+    U8x16 rev_high =
+        (U8x16)_mm_shuffle_epi8((__m128i)lut_low, (__m128i)high_nibbles);
 
     // Recombine the reversed halves
-    board = _mm_or_si128(rev_low, rev_high);
+    board = (U64x2)(rev_low | rev_high);
+#else   // Without SSSE3
+    const U64x2 k1 = {0x5555555555555555LL, 0x5555555555555555LL};
+    const U64x2 k2 = {0x3333333333333333LL, 0x3333333333333333LL};
+    const U64x2 k4 = {0x0f0f0f0f0f0f0f0fLL, 0x0f0f0f0f0f0f0f0fLL};
+
+    board = ((board >> 1) & k1) | ((board & k1) << 1);
+    board = ((board >> 2) & k2) | ((board & k2) << 2);
+    board = ((board >> 4) & k4) | ((board & k4) << 4);
+#endif  // GAMESMAN_HAS_SSSE3
 
     // Move the board to the correct location for valid bit alignment
-    board = _mm_srli_epi64(board, 8 - cols);
-
-    return board;
+    return board >> (8 - cols);
 }
 
 /**
@@ -751,8 +661,9 @@ static inline __m128i X86SimdTwoPieceHashMirrorHorizontal(__m128i board,
  *
  * @returns Board after swapping X and O pieces.
  */
-static inline __m128i X86SimdTwoPieceHashSwapPieces(__m128i board) {
-    return _mm_shuffle_epi32(board, _MM_SHUFFLE(1, 0, 3, 2));
+static inline U64x2 X86SimdTwoPieceHashSwapPieces(U64x2 board) {
+    U64x2 swapped = {board[1], board[0]};
+    return swapped;
 }
 
 /**
@@ -761,7 +672,7 @@ static inline __m128i X86SimdTwoPieceHashSwapPieces(__m128i board) {
  *
  * @note This function is more efficient than `cmplt_u128` but only gives the
  * correct comparison result if the board has 7 or fewer effective rows. This is
- * because the `_mm_cmplt_epi8` intrinsic treats each byte inside the `__m128i`
+ * because the `_mm_cmplt_epi8` intrinsic treats each byte inside the `U64x2`
  * variables as signed integers. Using this function for symmetry removal when
  * there are 8 effective rows does not lead to an error in the solver result but
  * may result in suboptimal database compression. In this case, consider using
@@ -775,11 +686,20 @@ static inline __m128i X86SimdTwoPieceHashSwapPieces(__m128i board) {
  *
  * @see https://stackoverflow.com/a/56346628
  */
-static inline bool X86SimdTwoPieceHashBoardLessThan(__m128i a, __m128i b) {
-    const int less = _mm_movemask_epi8(_mm_cmplt_epi8(a, b));
-    const int greater = _mm_movemask_epi8(_mm_cmpgt_epi8(a, b));
+static inline bool X86SimdTwoPieceHashBoardLessThan(U64x2 a, U64x2 b) {
+#ifdef GAMESMAN_HAS_SSE2
+    const int less = _mm_movemask_epi8(_mm_cmplt_epi8((__m128i)a, (__m128i)b));
+    const int greater =
+        _mm_movemask_epi8(_mm_cmpgt_epi8((__m128i)a, (__m128i)b));
 
     return less > greater;
+#else   // No SSE2
+    if (a[0] != b[0]) {
+        return a[0] < b[0];
+    }
+
+    return a[1] < b[1];
+#endif  // GAMESMAN_HAS_SSE2
 }
 
 /**
@@ -798,13 +718,17 @@ static inline bool X86SimdTwoPieceHashBoardLessThan(__m128i a, __m128i b) {
  *
  * @returns Either `a` or `b`, whichever is smaller.
  */
-static inline __m128i X86SimdTwoPieceHashMinBoard(__m128i a, __m128i b) {
-    // 0xFF in each i8 if a < b, 0x0 otherwise.
-    __m128i mask = _mm_set1_epi8(-(int)X86SimdTwoPieceHashBoardLessThan(a, b));
+static inline U64x2 X86SimdTwoPieceHashMinBoard(U64x2 a, U64x2 b) {
+    // Cast the boolean result to an unsigned 64-bit integer.
+    // Negating 1 gives 0xFFFFFFFFFFFFFFFF; negating 0 gives 0x0.
+    uint64_t mask_val = -(uint64_t)X86SimdTwoPieceHashBoardLessThan(a, b);
 
-    // Selects the second parameter if mask is set to all 0xFF, in which case
-    // a is smaller than b.
-    return _mm_blendv_epi8(b, a, mask);
+    // Broadcast the 64-bit scalar mask into a 128-bit vector mask
+    U64x2 mask = {mask_val, mask_val};
+
+    // Bitwise blend: selects 'a' if mask is all 1s (a < b), otherwise selects
+    // 'b'
+    return (a & mask) | (b & ~mask);
 }
 
 /**
@@ -819,19 +743,17 @@ static inline __m128i X86SimdTwoPieceHashMinBoard(__m128i a, __m128i b) {
  *
  * @see https://stackoverflow.com/a/56346628
  */
-static inline bool cmplt_u128(__m128i a, __m128i b) {
+static inline bool cmplt_u128(U64x2 a, U64x2 b) {
     // Flip the sign bits in both arguments.
     // Transforms 0 into -128 = minimum for signed bytes,
     // 0xFF into +127 = maximum for signed bytes
-    const __m128i signBits = _mm_set1_epi8((char)0x80);
-    a = _mm_xor_si128(a, signBits);
-    b = _mm_xor_si128(b, signBits);
+    const uint64_t lane = 0x8080808080808080ULL;
+    const U64x2 signBits = {lane, lane};
+    a = a ^ signBits;
+    b = b ^ signBits;
 
     // Now the signed byte comparisons will give the correct order
-    const int less = _mm_movemask_epi8(_mm_cmplt_epi8(a, b));
-    const int greater = _mm_movemask_epi8(_mm_cmpgt_epi8(a, b));
-
-    return less > greater;
+    return X86SimdTwoPieceHashBoardLessThan(a, b);
 }
 
 #endif  // GAMESMANONE_CORE_HASH_X86_SIMD_TWO_PIECE_H_
