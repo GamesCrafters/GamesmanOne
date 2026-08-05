@@ -3,10 +3,17 @@
 ##################
 
 cmake_minimum_required(VERSION 3.25)
-project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # Add the 'cmake' directory to the module search path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# macOS Homebrew LLVM & OpenMP Setup
+# Must execute BEFORE project() to correctly set compilers
+if(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
+  include(gamesman_macos_llvm_openmp)
+endif()
+
+project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # GoogleTest requires at least C++17
 set(CMAKE_CXX_STANDARD 17)

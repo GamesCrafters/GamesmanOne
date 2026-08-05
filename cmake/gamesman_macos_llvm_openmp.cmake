@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 3.24)
-set(CMAKE_SYSTEM_NAME Darwin)
-
 # ------------------------------------------------------------
 # 1.  Detect the Homebrew prefix in the most portable way
 # ------------------------------------------------------------
@@ -40,10 +37,10 @@ set(CMAKE_INSTALL_RPATH "${HBREW}/opt/libomp/lib")
 # 4.  Default to the host architecture (arm64 or x86_64)
 #     Users can still override with  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 # ------------------------------------------------------------
-if(NOT CMAKE_OSX_ARCHITECTURES)
-    if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64")
-        set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
-    else()
-        set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "")
-    endif()
-endif()
+# if(NOT CMAKE_OSX_ARCHITECTURES)
+#     if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64")
+#         set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
+#     else()
+#         set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "")
+#     endif()
+# endif()
