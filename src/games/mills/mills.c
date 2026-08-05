@@ -566,23 +566,24 @@ static U64x2 SwapInnerOuterRings(U64x2 board) {
 
 static U64x2 GetCanonicalBoardRotation(U64x2 board) {
     U64x2 canonical = board;
-    int8_t padded_side_length = PaddedSideLength();
+    int8_t padded = PaddedSideLength();
 
-    // 8 symmetries
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    U64x2 v = X86SimdTwoPieceHashFlipVertical(board, padded);
+    U64x2 h = X86SimdTwoPieceHashMirrorHorizontal(board, padded);
+    U64x2 vh = X86SimdTwoPieceHashFlipVertical(h, padded);
+
+    U64x2 d = X86SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = X86SimdTwoPieceHashFlipVertical(d, padded);
+    U64x2 dh = X86SimdTwoPieceHashMirrorHorizontal(d, padded);
+    U64x2 dvh = X86SimdTwoPieceHashFlipVertical(dh, padded);
+
+    if (X86SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
+    if (X86SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
+    if (X86SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
+    if (X86SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
+    if (X86SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
+    if (X86SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
+    if (X86SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
 
     return canonical;
 }

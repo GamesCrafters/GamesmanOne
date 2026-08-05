@@ -585,23 +585,26 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
 
 static U64x2 GetCanonicalBoard(U64x2 board) {
     // 8 symmetries
-    U64x2 min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, min_board)) min_board = board;
+    U64x2 canonical = board;
 
-    return min_board;
+    U64x2 v = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    U64x2 h = X86SimdTwoPieceHashMirrorHorizontal(board, side_length);
+    U64x2 vh = X86SimdTwoPieceHashFlipVertical(h, side_length);
+
+    U64x2 d = X86SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = X86SimdTwoPieceHashFlipVertical(d, side_length);
+    U64x2 dh = X86SimdTwoPieceHashMirrorHorizontal(d, side_length);
+    U64x2 dvh = X86SimdTwoPieceHashFlipVertical(dh, side_length);
+
+    if (X86SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
+    if (X86SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
+    if (X86SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
+    if (X86SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
+    if (X86SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
+    if (X86SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
+    if (X86SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
+
+    return canonical;
 }
 
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
