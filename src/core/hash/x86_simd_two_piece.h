@@ -694,11 +694,11 @@ static inline bool X86SimdTwoPieceHashBoardLessThan(U64x2 a, U64x2 b) {
 
     return less > greater;
 #else   // No SSE2
-    if (a[0] != b[0]) {
-        return a[0] < b[0];
+    if (a[1] != b[1]) {
+        return a[1] < b[1];
     }
 
-    return a[1] < b[1];
+    return a[0] < b[0];
 #endif  // GAMESMAN_HAS_SSE2
 }
 
@@ -744,6 +744,7 @@ static inline U64x2 X86SimdTwoPieceHashMinBoard(U64x2 a, U64x2 b) {
  * @see https://stackoverflow.com/a/56346628
  */
 static inline bool cmplt_u128(U64x2 a, U64x2 b) {
+#ifdef GAMESMAN_HAS_SSE2
     // Flip the sign bits in both arguments.
     // Transforms 0 into -128 = minimum for signed bytes,
     // 0xFF into +127 = maximum for signed bytes
@@ -751,8 +752,9 @@ static inline bool cmplt_u128(U64x2 a, U64x2 b) {
     const U64x2 signBits = {lane, lane};
     a = a ^ signBits;
     b = b ^ signBits;
-
     // Now the signed byte comparisons will give the correct order
+#endif  // GAMESMAN_HAS_SSE2
+
     return X86SimdTwoPieceHashBoardLessThan(a, b);
 }
 
