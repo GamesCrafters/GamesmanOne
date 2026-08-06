@@ -5,6 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief SIMD helper library.
  *
+ * @note This library requires GCC/Clang compiler extensions.
+ *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *

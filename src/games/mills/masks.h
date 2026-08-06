@@ -4,7 +4,7 @@
  * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
  * @author Cameron Cheung (cameroncheung@berkeley.edu): programmed the prototype
  * version that was later converted to the bit-board format
- * @author Robert Shi (robertyishi@berkeley.edu): x86 SIMD hash version
+ * @author Robert Shi (robertyishi@berkeley.edu): SIMD hash version
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Hardcoded masks for all Mills variants.

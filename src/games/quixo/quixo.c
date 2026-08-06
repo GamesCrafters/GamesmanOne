@@ -44,7 +44,7 @@
 #define U64X2_HASH_SET_SIZE 16ULL
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_hash_set.h"
-#include "core/hash/x86_simd_two_piece.h"
+#include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -381,21 +381,21 @@ static GameVariant current_variant = {
 
 // =============================== Hash Context ===============================
 
-static X86SimdTwoPieceHashContext hash_context;
+static SimdTwoPieceHashContext hash_context;
 
 // ============================== kQuixoSolverApi ==============================
 
 static Tier QuixoGetInitialTier(void) { return initial_tier.hash; }
 
 static Position QuixoGetInitialPosition(void) {
-    return X86SimdTwoPieceHashHash(&hash_context, (U64x2){0, 0}, 0);
+    return SimdTwoPieceHashHash(&hash_context, (U64x2){0, 0}, 0);
 }
 
 static int64_t QuixoGetTierSize(Tier tier) {
     QuixoTier t = {.hash = tier};
 
-    return X86SimdTwoPieceHashGetNumPositions(&hash_context, t.unpacked[0],
-                                              t.unpacked[1]);
+    return SimdTwoPieceHashGetNumPositions(&hash_context, t.unpacked[0],
+                                           t.unpacked[1]);
 }
 
 static int GenerateMovesInternal(U64x2 board, int turn,
@@ -434,9 +434,9 @@ static int QuixoGenerateMoves(TierPosition tier_position,
                               Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
 
     return GenerateMovesInternal(board, turn, moves);
 }
@@ -444,9 +444,9 @@ static int QuixoGenerateMoves(TierPosition tier_position,
 static Value QuixoPrimitive(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
     int opp_turn = !turn;
 
     for (int i = 0; i < kNumLines[curr_variant_idx]; ++i) {
@@ -548,15 +548,15 @@ static TierPosition DoMoveInternal(QuixoTier t, U64x2 board, int turn,
 
     return (TierPosition){
         .tier = t.hash,
-        .position = X86SimdTwoPieceHashHash(&hash_context, board, !turn),
+        .position = SimdTwoPieceHashHash(&hash_context, board, !turn),
     };
 }
 
 static TierPosition QuixoDoMove(TierPosition tier_position, Move move) {
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
     QuixoMove m = {.hash = move};
 
     return DoMoveInternal(t, board, turn, m);
@@ -575,9 +575,9 @@ static bool QuixoIsLegalPosition(TierPosition tier_position) {
 
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
 
     // Non-zero if there is at least one opponent's piece on the edges.
     return board[!turn] & kEdges[curr_variant_idx];
@@ -587,22 +587,22 @@ static U64x2 GetCanonicalBoard(U64x2 board) {
     // 8 symmetries
     U64x2 canonical = board;
 
-    U64x2 v = X86SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2 h = X86SimdTwoPieceHashMirrorHorizontal(board, side_length);
-    U64x2 vh = X86SimdTwoPieceHashFlipVertical(h, side_length);
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, side_length);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, side_length);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, side_length);
 
-    U64x2 d = X86SimdTwoPieceHashFlipDiag(board);
-    U64x2 dv = X86SimdTwoPieceHashFlipVertical(d, side_length);
-    U64x2 dh = X86SimdTwoPieceHashMirrorHorizontal(d, side_length);
-    U64x2 dvh = X86SimdTwoPieceHashFlipVertical(dh, side_length);
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, side_length);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, side_length);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, side_length);
 
-    if (X86SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
-    if (X86SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
-    if (X86SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
-    if (X86SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
-    if (X86SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
-    if (X86SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
-    if (X86SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
+    if (SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
+    if (SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
+    if (SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
+    if (SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
+    if (SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
+    if (SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
+    if (SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
 
     return canonical;
 }
@@ -610,20 +610,19 @@ static U64x2 GetCanonicalBoard(U64x2 board) {
 static Position QuixoGetCanonicalPosition(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
 
-    return X86SimdTwoPieceHashHash(&hash_context, GetCanonicalBoard(board),
-                                   turn);
+    return SimdTwoPieceHashHash(&hash_context, GetCanonicalBoard(board), turn);
 }
 
 static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
 
     // Generate all moves
     Move moves[kTierSolverNumMovesMax];
@@ -650,9 +649,9 @@ static int QuixoGetCanonicalChildPositions(
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
 
     // Generate all moves
     Move moves[kTierSolverNumMovesMax];
@@ -692,12 +691,12 @@ static int QuixoGetCanonicalParentPositions(
     // Unhash
     QuixoTier child_t = {.hash = tier_position.tier};
     QuixoTier parent_t = {.hash = parent_tier};
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position);
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position);
     if (!IsCorrectFlipping(child_t, parent_t, turn)) return 0;
 
     U64x2 board =
-        X86SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
-                                  child_t.unpacked[0], child_t.unpacked[1]);
+        SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                               child_t.unpacked[0], child_t.unpacked[1]);
     int opp_turn = !turn;
     uint64_t shift, src;
     bool same_tier = (child_t.hash == parent_t.hash);
@@ -714,7 +713,7 @@ static int QuixoGetCanonicalParentPositions(
             U64x2 new_board = DoMoveShiftRight(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
-                X86SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
+                SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
             if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
@@ -728,7 +727,7 @@ static int QuixoGetCanonicalParentPositions(
             U64x2 new_board = DoMoveShiftLeft(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
-                X86SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
+                SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
             if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
@@ -742,7 +741,7 @@ static int QuixoGetCanonicalParentPositions(
             U64x2 new_board = DoMoveShiftDown(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
-                X86SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
+                SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
             if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
@@ -756,7 +755,7 @@ static int QuixoGetCanonicalParentPositions(
             U64x2 new_board = DoMoveShiftUp(board, shift, src, opp_turn);
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
-                X86SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
+                SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
             if (PositionHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
@@ -770,26 +769,26 @@ static int QuixoGetCanonicalParentPositions(
 static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     // Unhash
     QuixoTier t = {.hash = tp.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(&hash_context, tp.position,
-                                            t.unpacked[0], t.unpacked[1]);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tp.position,
+                                         t.unpacked[0], t.unpacked[1]);
 
     // Find unique boards from all 8 symmetries
     U64x2HashSet dedup;
     U64x2HashSetInit(&dedup);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    board = SimdTwoPieceHashFlipVertical(board, side_length);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    board = SimdTwoPieceHashFlipVertical(board, side_length);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    board = SimdTwoPieceHashFlipVertical(board, side_length);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(&dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, side_length);
+    board = SimdTwoPieceHashFlipVertical(board, side_length);
     U64x2HashSetAdd(&dedup, board);
 
     return dedup.size;
@@ -877,8 +876,8 @@ static void BoardToStr(U64x2 board, char *buffer) {
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
     char board_str[kBoardSizeMax + 1];
     BoardToStr(board, board_str);
     int offset = 0;
@@ -1014,10 +1013,9 @@ static const GameVariant *QuixoGetCurrentVariant(void) {
 static int QuixoInitVariant(int selection) {
     side_length = 5 - selection;
     board_size = side_length * side_length;
-    X86SimdTwoPieceHashContextDestroy(&hash_context);
+    SimdTwoPieceHashContextDestroy(&hash_context);
 
-    return X86SimdTwoPieceHashContextInit(&hash_context, side_length,
-                                          side_length);
+    return SimdTwoPieceHashContextInit(&hash_context, side_length, side_length);
 }
 
 static int QuixoSetVariantOption(int option, int selection) {
@@ -1044,7 +1042,7 @@ static int QuixoInit(void *aux) {
 // =============================== QuixoFinalize ===============================
 
 static int QuixoFinalize(void) {
-    X86SimdTwoPieceHashContextDestroy(&hash_context);
+    SimdTwoPieceHashContextDestroy(&hash_context);
 
     return kSuccess;
 }
@@ -1101,7 +1099,7 @@ static bool QuixoIsLegalFormalPosition(ReadOnlyString formal_position) {
     TierPosition tier_position = {
         .tier = t.hash,
         .position =
-            X86SimdTwoPieceHashHash(&hash_context, StrToBoard(board), turn),
+            SimdTwoPieceHashHash(&hash_context, StrToBoard(board), turn),
     };
     if (!QuixoIsLegalPosition(tier_position)) return false;
 
@@ -1122,7 +1120,7 @@ static TierPosition QuixoFormalPositionToTierPosition(
     TierPosition ret = {
         .tier = t.hash,
         .position =
-            X86SimdTwoPieceHashHash(&hash_context, StrToBoard(board), turn),
+            SimdTwoPieceHashHash(&hash_context, StrToBoard(board), turn),
     };
 
     return ret;
@@ -1131,11 +1129,11 @@ static TierPosition QuixoFormalPositionToTierPosition(
 static CString QuixoTierPositionToFormalPosition(TierPosition tier_position) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
-    U64x2 board = X86SimdTwoPieceHashUnhash(
-        &hash_context, tier_position.position, t.unpacked[0], t.unpacked[1]);
+    U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tier_position.position,
+                                         t.unpacked[0], t.unpacked[1]);
     char board_str[kBoardSizeMax + 1];
     BoardToStr(board, board_str);
-    int turn = X86SimdTwoPieceHashGetTurn(tier_position.position) + 1;
+    int turn = SimdTwoPieceHashGetTurn(tier_position.position) + 1;
 
     return AutoGuiMakePosition(turn, board_str);
 }

@@ -3,7 +3,7 @@
  * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee,
  * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
  * @author Cameron Cheung (cameroncheung@berkeley.edu): prototype version
- * @author Robert Shi (robertyishi@berkeley.edu): x86 SIMD hash version
+ * @author Robert Shi (robertyishi@berkeley.edu): SIMD hash version
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Mills Games (Morris Family of Games).
@@ -43,7 +43,7 @@
 #define U64X2_HASH_SET_SIZE 16ULL
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_hash_set.h"
-#include "core/hash/x86_simd_two_piece.h"
+#include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -207,7 +207,7 @@ static int8_t GetBoardIndex(int8_t grid_index) {
 
 // =============================== Hash Context ===============================
 
-static X86SimdTwoPieceHashContext hash_context;
+static SimdTwoPieceHashContext hash_context;
 
 // ============================== kMillsSolverApi ==============================
 
@@ -227,7 +227,7 @@ static Tier MillsGetInitialTier(void) {
 static Position MillsGetInitialPosition(void) {
     // The initial board is always empty, which by definition is the bit board
     // filled with all zeros.
-    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, (U64x2){0, 0});
+    return SimdTwoPieceHashHashFixedTurn(&hash_context, (U64x2){0, 0});
 }
 
 static int GetTurnFromPlacementTier(MillsTier t) {
@@ -271,23 +271,23 @@ static int64_t MillsGetTierSize(Tier tier) {
     int num_x = t.unpacked.on_board[0];
     int num_o = t.unpacked.on_board[1];
     if (GetTurnFromTier(t) >= 0) {
-        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(&hash_context, num_x,
-                                                           num_o);
+        return SimdTwoPieceHashGetNumPositionsFixedTurn(&hash_context, num_x,
+                                                        num_o);
     }
 
-    return X86SimdTwoPieceHashGetNumPositions(&hash_context, num_x, num_o);
+    return SimdTwoPieceHashGetNumPositions(&hash_context, num_x, num_o);
 }
 
 static MillsTier Unhash(TierPosition tp, U64x2 *board, int *turn) {
     MillsTier t = {.hash = tp.tier};
     int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(t)) >= 0) {
-        *board = X86SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
-                                                    num_x, num_o);
+        *board = SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
+                                                 num_x, num_o);
     } else {
-        *turn = X86SimdTwoPieceHashGetTurn(tp.position);
+        *turn = SimdTwoPieceHashGetTurn(tp.position);
         *board =
-            X86SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
+            SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
     }
 
     return t;
@@ -299,13 +299,13 @@ static U64x2 UnhashSimd(TierPosition tp, MillsTier *t, int *turn,
     int num_x = t->unpacked.on_board[0], num_o = t->unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(*t)) >= 0) {
         *not_fixed_turn = false;
-        return X86SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
-                                                  num_x, num_o);
+        return SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
+                                               num_x, num_o);
     }
 
-    *turn = X86SimdTwoPieceHashGetTurn(tp.position);
+    *turn = SimdTwoPieceHashGetTurn(tp.position);
     *not_fixed_turn = true;
-    return X86SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
+    return SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
 }
 
 /**
@@ -524,9 +524,9 @@ static TierPosition DoMoveInternal(MillsTier t, U64x2 board_r, MillsMove m,
 
     TierPosition ret = {.tier = t.hash};
     if (GetTurnFromTier(t) >= 0) {
-        ret.position = X86SimdTwoPieceHashHashFixedTurn(&hash_context, board);
+        ret.position = SimdTwoPieceHashHashFixedTurn(&hash_context, board);
     } else {
-        ret.position = X86SimdTwoPieceHashHash(&hash_context, board, !turn);
+        ret.position = SimdTwoPieceHashHash(&hash_context, board, !turn);
     }
 
     return ret;
@@ -568,22 +568,22 @@ static U64x2 GetCanonicalBoardRotation(U64x2 board) {
     U64x2 canonical = board;
     int8_t padded = PaddedSideLength();
 
-    U64x2 v = X86SimdTwoPieceHashFlipVertical(board, padded);
-    U64x2 h = X86SimdTwoPieceHashMirrorHorizontal(board, padded);
-    U64x2 vh = X86SimdTwoPieceHashFlipVertical(h, padded);
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, padded);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, padded);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, padded);
 
-    U64x2 d = X86SimdTwoPieceHashFlipDiag(board);
-    U64x2 dv = X86SimdTwoPieceHashFlipVertical(d, padded);
-    U64x2 dh = X86SimdTwoPieceHashMirrorHorizontal(d, padded);
-    U64x2 dvh = X86SimdTwoPieceHashFlipVertical(dh, padded);
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, padded);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded);
 
-    if (X86SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
-    if (X86SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
-    if (X86SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
-    if (X86SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
-    if (X86SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
-    if (X86SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
-    if (X86SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
+    if (SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
+    if (SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
+    if (SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
+    if (SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
+    if (SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
+    if (SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
+    if (SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
 
     return canonical;
 }
@@ -596,8 +596,7 @@ static U64x2 GetCanonicalBoardRotationRingSwap(U64x2 board) {
     if (kInnerRingMasks[BoardId()]) {
         U64x2 swapped = SwapInnerOuterRings(board);
         U64x2 ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
-        if (X86SimdTwoPieceHashBoardLessThan(ring_swapped_canonical,
-                                             canonical)) {
+        if (SimdTwoPieceHashBoardLessThan(ring_swapped_canonical, canonical)) {
             canonical = ring_swapped_canonical;
         }
     }
@@ -615,8 +614,8 @@ static Position MillsGetCanonicalPosition(TierPosition tier_position) {
 
     // Hash
     if (not_fixed_turn)
-        return X86SimdTwoPieceHashHash(&hash_context, canonical, turn);
-    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, canonical);
+        return SimdTwoPieceHashHash(&hash_context, canonical, turn);
+    return SimdTwoPieceHashHashFixedTurn(&hash_context, canonical);
 }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
@@ -730,7 +729,7 @@ static void AddCanonicalParent(
     //
     TierPosition parent = {
         .tier = pt.hash,
-        .position = X86SimdTwoPieceHashHash(&hash_context, board, opp_turn),
+        .position = SimdTwoPieceHashHash(&hash_context, board, opp_turn),
     };
     parent.position = MillsGetCanonicalPosition(parent);
     if (PositionHashSetAdd(dedup, parent.position)) {
@@ -927,19 +926,19 @@ static void CollectRotationSymmetries(U64x2HashSet *dedup, U64x2 board) {
     // Rotations 8x
     U64x2HashSetAdd(dedup, board);
     int8_t padded_side_length = PaddedSideLength();
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
+    board = SimdTwoPieceHashFlipDiag(board);
     U64x2HashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
     U64x2HashSetAdd(dedup, board);
 }
 
@@ -1226,8 +1225,8 @@ static int MillsSetVariantOption(int option, int selection) {
             if (selection >= (int)NUM_BOARD_AND_PIECES_CHOICES) {
                 return kIllegalArgumentError;
             }
-            X86SimdTwoPieceHashContextDestroy(&hash_context);
-            int error = X86SimdTwoPieceHashContextInitIrregular(
+            SimdTwoPieceHashContextDestroy(&hash_context);
+            int error = SimdTwoPieceHashContextInitIrregular(
                 &hash_context, kBoardMasks[selection]);
             assert(error == kSuccess);
             (void)error;
@@ -1284,7 +1283,7 @@ static int MillsInit(void *aux) {
 // =============================== MillsFinalize ===============================
 
 static int MillsFinalize(void) {
-    X86SimdTwoPieceHashContextDestroy(&hash_context);
+    SimdTwoPieceHashContextDestroy(&hash_context);
 
     return kSuccess;
 }
@@ -1378,9 +1377,9 @@ static TierPosition MillsFormalPositionToTierPosition(
     TierPosition ret = {.tier = t.hash};
     int turn = formal_position[0] - '1';
     if (GetTurnFromTier(t) >= 0) {
-        ret.position = X86SimdTwoPieceHashHashFixedTurn(&hash_context, board);
+        ret.position = SimdTwoPieceHashHashFixedTurn(&hash_context, board);
     } else {
-        ret.position = X86SimdTwoPieceHashHash(&hash_context, board, turn);
+        ret.position = SimdTwoPieceHashHash(&hash_context, board, turn);
     }
 
     return ret;

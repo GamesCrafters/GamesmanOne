@@ -1,5 +1,5 @@
 /**
- * @file x86_simd_two_piece.c
+ * @file simd_two_piece.c
  * @author François Bonnet: original published version, arXiv:2007.15895v1
  * https://github.com/st34-satoshi/quixo-cpp/tree/master/others/multi-fb/codeFrancois_v7
  * @author Robert Shi (robertyishi@berkeley.edu): reimplemented with 64-bit
@@ -7,9 +7,7 @@
  * for efficient board mirroring and rotation.
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the x86 SIMD hash system for tier games with
- * rectangular boards of size 32 or less and using no more than two types of
- * pieces.
+ * @brief Implementation of the SIMD two-piece hash system.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,7 +25,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "core/hash/x86_simd_two_piece.h"
+#include "core/hash/simd_two_piece.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -36,8 +34,8 @@
 #include "core/gamesman_memory.h"
 #include "core/types/gamesman_status.h"
 
-size_t X86SimdTwoPieceHashContextMemoryRequired(int num_slots) {
-    if (num_slots <= 0 || num_slots > kX86SimdTwoPieceHashBoardSizeMax) {
+size_t SimdTwoPieceHashContextMemoryRequired(int num_slots) {
+    if (num_slots <= 0 || num_slots > kSimdTwoPieceHashBoardSizeMax) {
         return SIZE_MAX;
     }
 
@@ -60,19 +58,19 @@ static Status ValidateRowsCols(int rows, int cols) {
 }
 
 static Status ValidateBoardSize(int board_size) {
-    if (board_size <= 0 || board_size > kX86SimdTwoPieceHashBoardSizeMax) {
+    if (board_size <= 0 || board_size > kSimdTwoPieceHashBoardSizeMax) {
         fprintf(stderr,
                 "ValidateBoardSize: invalid board size (%d) provided. "
                 "Valid range: [1, %d]\n",
-                board_size, kX86SimdTwoPieceHashBoardSizeMax);
+                board_size, kSimdTwoPieceHashBoardSizeMax);
         return kIllegalArgumentError;
     }
 
     return kSuccess;
 }
 
-static void InitTriangle(X86SimdTwoPieceHashContext *context) {
-    for (int i = 0; i <= kX86SimdTwoPieceHashBoardSizeMax; ++i) {
+static void InitTriangle(SimdTwoPieceHashContext *context) {
+    for (int i = 0; i <= kSimdTwoPieceHashBoardSizeMax; ++i) {
         context->nCr[i][0] = 1;
         for (int j = 1; j <= i; ++j) {
             context->nCr[i][j] =
@@ -81,7 +79,7 @@ static void InitTriangle(X86SimdTwoPieceHashContext *context) {
     }
 }
 
-static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
+static Status InitTables(SimdTwoPieceHashContext *context, int board_size) {
     InitTriangle(context);
     const size_t num_patterns = 1ULL << board_size;
 
@@ -103,7 +101,7 @@ static Status InitTables(X86SimdTwoPieceHashContext *context, int board_size) {
     }
 
     // 3. Initialize tables
-    int32_t order_count[kX86SimdTwoPieceHashBoardSizeMax + 1] = {0};
+    int32_t order_count[kSimdTwoPieceHashBoardSizeMax + 1] = {0};
     for (size_t i = 0; i < num_patterns; ++i) {
         int pop = __builtin_popcountll(i);
         int32_t order = order_count[pop]++;
@@ -123,8 +121,8 @@ static uint64_t BuildRectangularHashMask(int rows, int cols) {
     return mask;
 }
 
-Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
-                                      int rows, int cols) {
+Status SimdTwoPieceHashContextInit(SimdTwoPieceHashContext *context, int rows,
+                                   int cols) {
     memset(context, 0, sizeof(*context));
 
     Status status = ValidateRowsCols(rows, cols);
@@ -147,14 +145,14 @@ Status X86SimdTwoPieceHashContextInit(X86SimdTwoPieceHashContext *context,
 
 _bailout:
     if (status != kSuccess) {
-        X86SimdTwoPieceHashContextDestroy(context);
+        SimdTwoPieceHashContextDestroy(context);
     }
 
     return status;
 }
 
-Status X86SimdTwoPieceHashContextInitIrregular(
-    X86SimdTwoPieceHashContext *context, uint64_t board_mask) {
+Status SimdTwoPieceHashContextInitIrregular(SimdTwoPieceHashContext *context,
+                                            uint64_t board_mask) {
     memset(context, 0, sizeof(*context));
 
     // Board size is the number of set bits in board_mask
@@ -173,13 +171,13 @@ Status X86SimdTwoPieceHashContextInitIrregular(
 
 _bailout:
     if (status != kSuccess) {
-        X86SimdTwoPieceHashContextDestroy(context);
+        SimdTwoPieceHashContextDestroy(context);
     }
 
     return status;
 }
 
-void X86SimdTwoPieceHashContextDestroy(X86SimdTwoPieceHashContext *context) {
+void SimdTwoPieceHashContextDestroy(SimdTwoPieceHashContext *context) {
     if (!context) {
         return;
     }

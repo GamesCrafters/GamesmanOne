@@ -1,10 +1,10 @@
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.h
     ${CMAKE_CURRENT_SOURCE_DIR}/generic.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/x86_simd_two_piece.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/simd_two_piece.h)
 
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/generic_context.c
     ${CMAKE_CURRENT_SOURCE_DIR}/generic.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/x86_simd_two_piece.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/simd_two_piece.c)
 
 add_library(gamesman_hash STATIC ${HEADERS} ${SOURCES})
 target_link_libraries(gamesman_hash PRIVATE common_flags)
