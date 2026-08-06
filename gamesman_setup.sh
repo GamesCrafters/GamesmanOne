@@ -84,10 +84,13 @@ install_rhel() {
 # Function to install dependencies on MacOS
 install_macos() {
     xcode-select --install 2>/dev/null # Suppress error if already installed
-    brew install cmake zlib llvm libomp jq ninja open-mpi doxygen dot || return 1
+    brew install cmake zlib llvm libomp jq ninja open-mpi || return 1
     brew install ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
+    brew install clang-format 2>/dev/null || echo "Note: clang-format could not be installed. Continuing without it..."
+    brew install doxygen dot 2>/dev/null || echo "Note: Doxygen could not be installed. Continuing without it..."
     brew install include-what-you-use 2>/dev/null || echo "Note: include-what-you-use could not be installed. Continuing without it..."
     brew install lcov 2>/dev/null || echo "Note: lcov could not be installed. Continuing without it..."
+    
     return 0
 }
 
