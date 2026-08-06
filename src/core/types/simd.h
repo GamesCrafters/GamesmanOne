@@ -27,8 +27,19 @@
 
 #include <stdint.h>
 
+/**
+ * @brief 128-bit SIMD vector of 16 signed 8-bit integers.
+ */
 typedef int8_t I8x16 __attribute__((vector_size(16)));
+
+/**
+ * @brief 128-bit SIMD vector of 16 unsigned 8-bit integers.
+ */
 typedef uint8_t U8x16 __attribute__((vector_size(16)));
+
+/**
+ * @brief 128-bit SIMD vector of 2 unsigned 64-bit integers.
+ */
 typedef uint64_t U64x2 __attribute__((vector_size(16)));
 
 #include <stdint.h>
@@ -37,6 +48,16 @@ typedef uint64_t U64x2 __attribute__((vector_size(16)));
 #include <immintrin.h>
 #endif  // GAMESMAN_HAS_BMI1
 
+/**
+ * @brief Extract bits from unsigned 64-bit integer `val` at the corresponding
+ * bit locations specified by mask to contiguous low bits; the remaining
+ * upper bits are set to zero.
+ *
+ * @param[in] val The 64-bit value to extract bits from.
+ * @param[in] mask The 64-bit mask specifying which bits to extract.
+ *
+ * @returns The extracted bits packed into the lower bits of the result.
+ */
 static inline uint64_t PextU64(uint64_t val, uint64_t mask) {
 #ifdef GAMESMAN_HAS_BMI2
     return _pext_u64(val, mask);
@@ -52,6 +73,16 @@ static inline uint64_t PextU64(uint64_t val, uint64_t mask) {
 #endif
 }
 
+/**
+ * @brief Deposit contiguous low bits from unsigned 64-bit integer `val` to the
+ * return value at the corresponding bit locations specified by `mask`; all
+ * other bits in the return value are set to zero.
+ *
+ * @param[in] val The 64-bit value providing the contiguous bits to deposit.
+ * @param[in] mask The 64-bit mask specifying where to scatter the bits.
+ *
+ * @returns The deposited bits dispersed according to `mask`.
+ */
 static inline uint64_t PdepU64(uint64_t val, uint64_t mask) {
 #ifdef GAMESMAN_HAS_BMI2
     return _pdep_u64(val, mask);
@@ -67,6 +98,13 @@ static inline uint64_t PdepU64(uint64_t val, uint64_t mask) {
 #endif
 }
 
+/**
+ * @brief Clears the lowest set bit in a given 64-bit integer.
+ *
+ * @param[in] x The 64-bit integer to operate on.
+ *
+ * @returns The value of `x` with its lowest set bit cleared to 0.
+ */
 static inline uint64_t BlsrU64(uint64_t x) {
 #ifdef GAMESMAN_HAS_BMI1
     return _blsr_u64(x);
@@ -75,6 +113,13 @@ static inline uint64_t BlsrU64(uint64_t x) {
 #endif  // GAMESMAN_HAS_BMI1
 }
 
+/**
+ * @brief Extracts the lowest set bit from a given 64-bit integer.
+ *
+ * @param[in] x The 64-bit integer to operate on.
+ *
+ * @returns A 64-bit integer where only the lowest set bit of `x` is set.
+ */
 static inline uint64_t BlsiU64(uint64_t x) {
 #ifdef GAMESMAN_HAS_BMI1
     return _blsi_u64(x);
