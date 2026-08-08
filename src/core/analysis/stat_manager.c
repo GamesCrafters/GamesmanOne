@@ -26,7 +26,7 @@
 
 #include "core/analysis/stat_manager.h"
 
-#include <fcntl.h>  // IWYU pragma: no_include <sys/types.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

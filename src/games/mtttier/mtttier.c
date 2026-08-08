@@ -35,7 +35,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>  // IWYU pragma: keep
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 

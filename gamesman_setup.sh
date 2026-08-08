@@ -67,7 +67,6 @@ print_usage() {
 install_debian() {
     sudo apt update && sudo apt install -y cmake zlib1g zlib1g-dev jq ninja-build clang clang-tidy libomp-dev openmpi-bin libopenmpi-dev || return 1
     sudo apt install -y ccache 2>/dev/null || echo "Note: ccache could not be installed. Continuing without it..."
-    sudo apt install -y iwyu 2>/dev/null || echo "Note: iwyu could not be installed. Continuing without it..."
     sudo apt install -y lcov 2>/dev/null || echo "Note: lcov could not be installed. Continuing without it..."
     return 0
 }

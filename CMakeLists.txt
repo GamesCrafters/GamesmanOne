@@ -51,35 +51,6 @@ else()
   message(STATUS "ccache not found. Repeated compilation on unmodified targets may take longer.")
 endif()
 
-# include-what-you-use (optional, disabled for brew installation)
-find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-if(IWYU_PATH)
-  set(IS_BREW_IWYU FALSE)
-  find_program(BREW_BIN brew)
-  if(BREW_BIN)
-    # Get the active Homebrew prefix
-    execute_process(
-      COMMAND ${BREW_BIN} --prefix
-      OUTPUT_VARIABLE BREW_PREFIX
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    # Check if IWYU_PATH starts with the Homebrew prefix
-    if(IWYU_PATH MATCHES "^${BREW_PREFIX}")
-      set(IS_BREW_IWYU TRUE)
-    endif()
-  endif()
-
-  if(IS_BREW_IWYU)
-    message(STATUS "Disabling Homebrew IWYU at ${IWYU_PATH} due to compatibility issues with compiler extension")
-  else() # IS_BREW_IWYU
-    message(STATUS "Found IWYU: ${IWYU_PATH}")
-    set(CMAKE_C_INCLUDE_WHAT_YOU_USE "${IWYU_PATH}")
-  endif() # IS_BREW_IWYU
-else() # IWYU_PATH
-  message(WARNING "include-what-you-use iwyu not found. Compile-time IWYU checking will be disabled.")
-endif() # IWYU_PATH
-
 #######################################
 # Common Flags Interface for Gamesman #
 #######################################

@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  // IWYU pragma: keep
+#include <unistd.h>
 
 #include "config.h"
 #include "core/types/base.h"
