@@ -3,7 +3,7 @@
  * @author Patricia Fong, Kevin Liu, Erwin A. Vedar, Wei Tu, Elmer Lee,
  * Cameron Cheung: developed the first version in GamesmanClassic (m369mm.c).
  * @author Cameron Cheung (cameroncheung@berkeley.edu): prototype version
- * @author Robert Shi (robertyishi@berkeley.edu): x86 SIMD hash version
+ * @author Robert Shi (robertyishi@berkeley.edu): SIMD hash version
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the Mills Games (Morris Family of Games).
@@ -31,9 +31,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <emmintrin.h>
-#include <immintrin.h>
-#include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -43,10 +40,10 @@
 
 #include "core/types/game/game.h"
 
-#define X86_M128I_HASH_SET_SIZE 16ULL
+#define U64X2_HASH_SET_SIZE 16ULL
 #include "core/data_structures/cstring.h"
-#include "core/data_structures/x86_m128i_hash_set.h"
-#include "core/hash/x86_simd_two_piece.h"
+#include "core/data_structures/u64x2_hash_set.h"
+#include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -57,6 +54,7 @@
 #include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
+#include "core/types/simd.h"
 #include "core/types/tier_position_hash_set.h"
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/partmove_array.h"
@@ -209,7 +207,7 @@ static int8_t GetBoardIndex(int8_t grid_index) {
 
 // =============================== Hash Context ===============================
 
-static X86SimdTwoPieceHashContext hash_context;
+static SimdTwoPieceHashContext hash_context;
 
 // ============================== kMillsSolverApi ==============================
 
@@ -229,7 +227,7 @@ static Tier MillsGetInitialTier(void) {
 static Position MillsGetInitialPosition(void) {
     // The initial board is always empty, which by definition is the bit board
     // filled with all zeros.
-    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, _mm_setzero_si128());
+    return SimdTwoPieceHashHashFixedTurn(&hash_context, (U64x2){0, 0});
 }
 
 static int GetTurnFromPlacementTier(MillsTier t) {
@@ -273,41 +271,41 @@ static int64_t MillsGetTierSize(Tier tier) {
     int num_x = t.unpacked.on_board[0];
     int num_o = t.unpacked.on_board[1];
     if (GetTurnFromTier(t) >= 0) {
-        return X86SimdTwoPieceHashGetNumPositionsFixedTurn(&hash_context, num_x,
-                                                           num_o);
+        return SimdTwoPieceHashGetNumPositionsFixedTurn(&hash_context, num_x,
+                                                        num_o);
     }
 
-    return X86SimdTwoPieceHashGetNumPositions(&hash_context, num_x, num_o);
+    return SimdTwoPieceHashGetNumPositions(&hash_context, num_x, num_o);
 }
 
-static MillsTier Unhash(TierPosition tp, uint64_t patterns[2], int *turn) {
+static MillsTier Unhash(TierPosition tp, U64x2 *board, int *turn) {
     MillsTier t = {.hash = tp.tier};
     int num_x = t.unpacked.on_board[0], num_o = t.unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(t)) >= 0) {
-        X86SimdTwoPieceHashUnhashFixedTurnMem(&hash_context, tp.position, num_x,
-                                              num_o, patterns);
+        *board = SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
+                                                 num_x, num_o);
     } else {
-        *turn = X86SimdTwoPieceHashGetTurn(tp.position);
-        X86SimdTwoPieceHashUnhashMem(&hash_context, tp.position, num_x, num_o,
-                                     patterns);
+        *turn = SimdTwoPieceHashGetTurn(tp.position);
+        *board =
+            SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
     }
 
     return t;
 }
 
-static __m128i UnhashSimd(TierPosition tp, MillsTier *t, int *turn,
-                          bool *not_fixed_turn) {
+static U64x2 UnhashSimd(TierPosition tp, MillsTier *t, int *turn,
+                        bool *not_fixed_turn) {
     t->hash = tp.tier;
     int num_x = t->unpacked.on_board[0], num_o = t->unpacked.on_board[1];
     if ((*turn = GetTurnFromTier(*t)) >= 0) {
         *not_fixed_turn = false;
-        return X86SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
-                                                  num_x, num_o);
+        return SimdTwoPieceHashUnhashFixedTurn(&hash_context, tp.position,
+                                               num_x, num_o);
     }
 
-    *turn = X86SimdTwoPieceHashGetTurn(tp.position);
+    *turn = SimdTwoPieceHashGetTurn(tp.position);
     *not_fixed_turn = true;
-    return X86SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
+    return SimdTwoPieceHashUnhash(&hash_context, tp.position, num_x, num_o);
 }
 
 /**
@@ -327,18 +325,18 @@ static bool ClosesMill(uint64_t pattern, MillsMove m) {
     return false;
 }
 
-static void GeneratePlacingMoves(uint64_t patterns[2], int turn,
-                                 uint64_t legal_removes, uint64_t blanks,
+static void GeneratePlacingMoves(U64x2 board, int turn, uint64_t legal_removes,
+                                 uint64_t blanks,
                                  Move moves[static kTierSolverNumMovesMax],
                                  int *ret) {
     MillsMove m = kMillsMoveInit;
     m.unpacked.src = kFromRemaining;
-    for (; blanks; blanks = _blsr_u64(blanks)) {
-        m.unpacked.dest = (int8_t)_tzcnt_u64(blanks);
-        if (legal_removes && ClosesMill(patterns[turn], m)) {
+    for (; blanks; blanks = BlsrU64(blanks)) {
+        m.unpacked.dest = (int8_t)__builtin_ctzll(blanks);
+        if (legal_removes && ClosesMill(board[turn], m)) {
             for (uint64_t removes = legal_removes; removes;
-                 removes = _blsr_u64(removes)) {
-                m.unpacked.remove = (int8_t)_tzcnt_u64(removes);
+                 removes = BlsrU64(removes)) {
+                m.unpacked.remove = (int8_t)__builtin_ctzll(removes);
                 moves[(*ret)++] = m.hash;
             }
         } else {
@@ -362,22 +360,21 @@ static uint64_t BuildDestMask(MillsTier t, int turn, int8_t src,
     return kDestMasks[BoardId()][src] & blanks;
 }
 
-static void GenerateSlidingMoves(MillsTier t, uint64_t patterns[2], int turn,
+static void GenerateSlidingMoves(MillsTier t, U64x2 board, int turn,
                                  uint64_t legal_removes, uint64_t blanks,
                                  Move moves[static kTierSolverNumMovesMax],
                                  int *ret) {
     MillsMove m = kMillsMoveInit;
-    for (uint64_t pattern = patterns[turn]; pattern;
-         pattern = _blsr_u64(pattern)) {
-        m.unpacked.src = (int8_t)_tzcnt_u64(pattern);
+    for (uint64_t pattern = board[turn]; pattern; pattern = BlsrU64(pattern)) {
+        m.unpacked.src = (int8_t)__builtin_ctzll(pattern);
         for (uint64_t dest_mask =
                  BuildDestMask(t, turn, m.unpacked.src, blanks);
-             dest_mask; dest_mask = _blsr_u64(dest_mask)) {
-            m.unpacked.dest = (int8_t)_tzcnt_u64(dest_mask);
-            if (legal_removes && ClosesMill(patterns[turn], m)) {
+             dest_mask; dest_mask = BlsrU64(dest_mask)) {
+            m.unpacked.dest = (int8_t)__builtin_ctzll(dest_mask);
+            if (legal_removes && ClosesMill(board[turn], m)) {
                 for (uint64_t removes = legal_removes; removes;
-                     removes = _blsr_u64(removes)) {
-                    m.unpacked.remove = (int8_t)_tzcnt_u64(removes);
+                     removes = BlsrU64(removes)) {
+                    m.unpacked.remove = (int8_t)__builtin_ctzll(removes);
                     moves[(*ret)++] = m.hash;
                 }
             } else {
@@ -436,27 +433,26 @@ static uint64_t BuildLegalRemovalsMask(uint64_t pattern) {
     return ret | (BooleanMask(ret == 0ULL) & pattern);
 }
 
-static uint64_t BuildBlanksMask(const uint64_t patterns[2]) {
-    return (~(patterns[0] | patterns[1])) & kBoardMasks[BoardId()];
+static uint64_t BuildBlanksMask(U64x2 board) {
+    return (~(board[0] | board[1])) & kBoardMasks[BoardId()];
 }
 
-static int GenerateMovesInternal(MillsTier t, uint64_t patterns[2], int turn,
+static int GenerateMovesInternal(MillsTier t, U64x2 board, int turn,
                                  Move moves[static kTierSolverNumMovesMax]) {
     // Legal removal indices of opponent pieces as set bits
-    uint64_t legal_removes = BuildLegalRemovalsMask(patterns[!turn]);
-    uint64_t blanks = BuildBlanksMask(patterns);  // All blank slots as set bits
+    uint64_t legal_removes = BuildLegalRemovalsMask(board[!turn]);
+    uint64_t blanks = BuildBlanksMask(board);  // All blank slots as set bits
     int ret = 0;
 
     // Placing moves are available whenever there are pieces to place.
     if (t.unpacked.remaining[turn]) {
-        GeneratePlacingMoves(patterns, turn, legal_removes, blanks, moves,
-                             &ret);
+        GeneratePlacingMoves(board, turn, legal_removes, blanks, moves, &ret);
     }
 
     // Sliding/flying moves are available when all pieces have been placed
     // or if using Lasker rule.
     if (Lasker() || t.unpacked.remaining[turn] == 0) {
-        GenerateSlidingMoves(t, patterns, turn, legal_removes, blanks, moves,
+        GenerateSlidingMoves(t, board, turn, legal_removes, blanks, moves,
                              &ret);
     }
 
@@ -466,11 +462,11 @@ static int GenerateMovesInternal(MillsTier t, uint64_t patterns[2], int turn,
 static int MillsGenerateMoves(TierPosition tier_position,
                               Move moves[static kTierSolverNumMovesMax]) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
 
-    return GenerateMovesInternal(t, patterns, turn, moves);
+    return GenerateMovesInternal(t, board, turn, moves);
 }
 
 static Value MillsPrimitive(TierPosition tier_position) {
@@ -506,33 +502,31 @@ static Value MillsPrimitive(TierPosition tier_position) {
     return kUndecided;
 }
 
-static TierPosition DoMoveInternal(MillsTier t, const uint64_t _patterns[2],
-                                   MillsMove m, int turn) {
+static TierPosition DoMoveInternal(MillsTier t, U64x2 board_r, MillsMove m,
+                                   int turn) {
     // Create a copy of the patterns
-    uint64_t patterns[2] = {_patterns[0], _patterns[1]};
+    U64x2 board = {board_r[0], board_r[1]};
 
     // Create and apply toggle masks for each player's bit board.
     // First handle the current player's bit board by applying the move.
     bool placing = (m.unpacked.src == kFromRemaining);
     uint64_t toggle = (1ULL << m.unpacked.dest) |
                       (BooleanMask(!placing) & (1ULL << m.unpacked.src));
-    patterns[turn] ^= toggle;
+    board[turn] ^= toggle;
     t.unpacked.remaining[turn] -= placing;
     t.unpacked.on_board[turn] += placing;
 
     // Then handle the opponent's bit board by conditionally applying removal.
     bool removing = (m.unpacked.remove != kNoRemoval);
     toggle = (BooleanMask(removing) & (1ULL << m.unpacked.remove));
-    patterns[!turn] ^= toggle;
+    board[!turn] ^= toggle;
     t.unpacked.on_board[!turn] -= removing;
 
     TierPosition ret = {.tier = t.hash};
     if (GetTurnFromTier(t) >= 0) {
-        ret.position =
-            X86SimdTwoPieceHashHashFixedTurnMem(&hash_context, patterns);
+        ret.position = SimdTwoPieceHashHashFixedTurn(&hash_context, board);
     } else {
-        ret.position =
-            X86SimdTwoPieceHashHashMem(&hash_context, patterns, !turn);
+        ret.position = SimdTwoPieceHashHash(&hash_context, board, !turn);
     }
 
     return ret;
@@ -540,12 +534,12 @@ static TierPosition DoMoveInternal(MillsTier t, const uint64_t _patterns[2],
 
 static TierPosition MillsDoMove(TierPosition tier_position, Move move) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
     MillsMove m = {.hash = move};
 
-    return DoMoveInternal(t, patterns, m, turn);
+    return DoMoveInternal(t, board, m, turn);
 }
 
 static bool MillsIsLegalPosition(TierPosition tier_position) {
@@ -555,56 +549,54 @@ static bool MillsIsLegalPosition(TierPosition tier_position) {
 }
 
 static uint64_t SwapBits(uint64_t x, uint64_t mask1, uint64_t mask2) {
-    uint64_t toggles = _pext_u64(x, mask1) ^ _pext_u64(x, mask2);
+    uint64_t toggles = PextU64(x, mask1) ^ PextU64(x, mask2);
 
-    return x ^ _pdep_u64(toggles, mask1) ^ _pdep_u64(toggles, mask2);
+    return x ^ PdepU64(toggles, mask1) ^ PdepU64(toggles, mask2);
 }
 
-static __m128i SwapInnerOuterRings(__m128i board) {
-    alignas(16) uint64_t patterns[2];
-    _mm_store_si128((__m128i *)patterns, board);
+static U64x2 SwapInnerOuterRings(U64x2 board) {
     int board_id = BoardId();
-    patterns[0] = SwapBits(patterns[0], kInnerRingMasks[board_id],
-                           kOuterRingMasks[board_id]);
-    patterns[1] = SwapBits(patterns[1], kInnerRingMasks[board_id],
-                           kOuterRingMasks[board_id]);
+    board[0] = SwapBits(board[0], kInnerRingMasks[board_id],
+                        kOuterRingMasks[board_id]);
+    board[1] = SwapBits(board[1], kInnerRingMasks[board_id],
+                        kOuterRingMasks[board_id]);
 
-    return _mm_load_si128((const __m128i *)patterns);
+    return board;
 }
 
-static __m128i GetCanonicalBoardRotation(__m128i board) {
-    __m128i canonical = board;
-    int8_t padded_side_length = PaddedSideLength();
+static U64x2 GetCanonicalBoardRotation(U64x2 board) {
+    U64x2 canonical = board;
+    int8_t padded = PaddedSideLength();
 
-    // 8 symmetries
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    if (X86SimdTwoPieceHashBoardLessThan(board, canonical)) canonical = board;
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, padded);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, padded);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, padded);
+
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, padded);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded);
+
+    if (SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
+    if (SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
+    if (SimdTwoPieceHashBoardLessThan(vh, canonical)) canonical = vh;
+    if (SimdTwoPieceHashBoardLessThan(d, canonical)) canonical = d;
+    if (SimdTwoPieceHashBoardLessThan(dv, canonical)) canonical = dv;
+    if (SimdTwoPieceHashBoardLessThan(dh, canonical)) canonical = dh;
+    if (SimdTwoPieceHashBoardLessThan(dvh, canonical)) canonical = dvh;
 
     return canonical;
 }
 
-static __m128i GetCanonicalBoardRotationRingSwap(__m128i board) {
+static U64x2 GetCanonicalBoardRotationRingSwap(U64x2 board) {
     // Rotational symmetries are always present
-    __m128i canonical = GetCanonicalBoardRotation(board);
+    U64x2 canonical = GetCanonicalBoardRotation(board);
 
     // Ring swap symmetries are present in certain board variants
     if (kInnerRingMasks[BoardId()]) {
-        __m128i swapped = SwapInnerOuterRings(board);
-        __m128i ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
-        if (X86SimdTwoPieceHashBoardLessThan(ring_swapped_canonical,
-                                             canonical)) {
+        U64x2 swapped = SwapInnerOuterRings(board);
+        U64x2 ring_swapped_canonical = GetCanonicalBoardRotation(swapped);
+        if (SimdTwoPieceHashBoardLessThan(ring_swapped_canonical, canonical)) {
             canonical = ring_swapped_canonical;
         }
     }
@@ -617,24 +609,24 @@ static Position MillsGetCanonicalPosition(TierPosition tier_position) {
     MillsTier t;
     int turn;
     bool not_fixed_turn;
-    __m128i board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
-    __m128i canonical = GetCanonicalBoardRotationRingSwap(board);
+    U64x2 board = UnhashSimd(tier_position, &t, &turn, &not_fixed_turn);
+    U64x2 canonical = GetCanonicalBoardRotationRingSwap(board);
 
     // Hash
     if (not_fixed_turn)
-        return X86SimdTwoPieceHashHash(&hash_context, canonical, turn);
-    return X86SimdTwoPieceHashHashFixedTurn(&hash_context, canonical);
+        return SimdTwoPieceHashHash(&hash_context, canonical, turn);
+    return SimdTwoPieceHashHashFixedTurn(&hash_context, canonical);
 }
 
 static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
 
     // Generate moves
     Move moves[kTierSolverNumMovesMax];
-    int num_moves = GenerateMovesInternal(t, patterns, turn, moves);
+    int num_moves = GenerateMovesInternal(t, board, turn, moves);
 
     // Collect children
     TierPositionHashSet dedup;
@@ -642,7 +634,7 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     TierPositionHashSetReserve(&dedup, num_moves / 4);
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
-        TierPosition child = DoMoveInternal(t, patterns, m, turn);
+        TierPosition child = DoMoveInternal(t, board, m, turn);
         child.position = MillsGetCanonicalPosition(child);
         TierPositionHashSetAdd(&dedup, child);
     }
@@ -656,13 +648,13 @@ static int MillsGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
 
     // Generate moves
     Move moves[kTierSolverNumMovesMax];
-    int num_moves = GenerateMovesInternal(t, patterns, turn, moves);
+    int num_moves = GenerateMovesInternal(t, board, turn, moves);
 
     // Collect children
     TierPositionHashSet dedup;
@@ -671,7 +663,7 @@ static int MillsGetCanonicalChildPositions(
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         MillsMove m = {.hash = moves[i]};
-        TierPosition child = DoMoveInternal(t, patterns, m, turn);
+        TierPosition child = DoMoveInternal(t, board, m, turn);
         child.position = MillsGetCanonicalPosition(child);
         if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
@@ -700,13 +692,13 @@ static void FillChars(const char *fmt, int count, const char *chars,
     *out = '\0';
 }
 
-static void PatternsToStr(uint64_t patterns[2], char *buffer, char x, char o) {
+static void PatternsToStr(U64x2 board, char *buffer, char x, char o) {
     int board_id = BoardId();
     int num_slots = kNumSlots[board_id];
     for (int i = 0; i < num_slots; ++i) {
-        if ((patterns[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+        if ((board[0] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
             buffer[i] = x;
-        } else if ((patterns[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
+        } else if ((board[1] >> kBoardIdxToGridIdx[board_id][i]) & 1ULL) {
             buffer[i] = o;
         } else {
             buffer[i] = '-';
@@ -716,14 +708,14 @@ static void PatternsToStr(uint64_t patterns[2], char *buffer, char x, char o) {
 
 static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
-    char board[25];
-    PatternsToStr(patterns, board, 'X', 'O');
+    MillsTier t = Unhash(tier_position, &board, &turn);
+    char board_str[25];
+    PatternsToStr(board, board_str, 'X', 'O');
 
     char tmp[2048];
-    FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board, tmp);
+    FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board_str, tmp);
     sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
             t.unpacked.remaining[1], t.unpacked.on_board[1]);
     printf("it is %d's turn\n", turn);
@@ -732,14 +724,12 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
 }
 
 static void AddCanonicalParent(
-    MillsTier pt, const uint64_t patterns[2], int opp_turn,
-    PositionHashSet *dedup,
+    MillsTier pt, U64x2 board, int opp_turn, PositionHashSet *dedup,
     Position parents[static kTierSolverNumParentPositionsMax], int *ret) {
     //
     TierPosition parent = {
         .tier = pt.hash,
-        .position =
-            X86SimdTwoPieceHashHashMem(&hash_context, patterns, opp_turn),
+        .position = SimdTwoPieceHashHash(&hash_context, board, opp_turn),
     };
     parent.position = MillsGetCanonicalPosition(parent);
     if (PositionHashSetAdd(dedup, parent.position)) {
@@ -747,48 +737,46 @@ static void AddCanonicalParent(
     }
 }
 
-static uint64_t BuildOpponentNoCapturePossibleDestMask(
-    const uint64_t patterns[2], int turn) {
+static uint64_t BuildOpponentNoCapturePossibleDestMask(U64x2 board, int turn) {
     //
     uint64_t mask;
     int opp_turn = !turn;
-    if (BuildLegalRemovalsMask(patterns[turn])) {  // We have vulnerable pieces.
+    if (BuildLegalRemovalsMask(board[turn])) {  // We have vulnerable pieces.
         // The opponent could only have moved/placed those pieces that are
         // currently not in a mill. Otherwise, they would have removed one of
         // our pieces.
-        mask = BuildNotInMillMask(patterns[opp_turn]);
+        mask = BuildNotInMillMask(board[opp_turn]);
     } else {
         // The opponent had no legal removals to make in the previous turn.
         // This means that the opponent could have moved/placed any piece on the
         // board, even those that are currently in a mill.
-        mask = patterns[opp_turn];
+        mask = board[opp_turn];
     }
 
     return mask;
 }
 
 static int GetParentsSlidingNoCapture(
-    MillsTier t, uint64_t patterns[2], int turn,
+    MillsTier t, U64x2 board, int turn,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     //
     int opp_turn = !turn;
-    const uint64_t blanks = BuildBlanksMask(patterns);
+    const uint64_t blanks = BuildBlanksMask(board);
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
     PositionHashSetReserve(&dedup, 256);
     int ret = 0;
     for (uint64_t opp_possible_dests =
-             BuildOpponentNoCapturePossibleDestMask(patterns, turn);
-         opp_possible_dests;
-         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
-        int8_t dest = (int8_t)_tzcnt_u64(opp_possible_dests);
+             BuildOpponentNoCapturePossibleDestMask(board, turn);
+         opp_possible_dests; opp_possible_dests = BlsrU64(opp_possible_dests)) {
+        int8_t dest = (int8_t)__builtin_ctzll(opp_possible_dests);
         uint64_t dest_mask = 1ULL << dest;
         for (uint64_t sources = BuildDestMask(t, opp_turn, dest, blanks);
-             sources; sources = _blsr_u64(sources)) {
-            uint64_t move_mask = dest_mask | _blsi_u64(sources);
-            patterns[opp_turn] ^= move_mask;  // Undo opponent's move
-            AddCanonicalParent(t, patterns, opp_turn, &dedup, parents, &ret);
-            patterns[opp_turn] ^= move_mask;  // Redo opponent's move
+             sources; sources = BlsrU64(sources)) {
+            uint64_t move_mask = dest_mask | BlsiU64(sources);
+            board[opp_turn] ^= move_mask;  // Undo opponent's move
+            AddCanonicalParent(t, board, opp_turn, &dedup, parents, &ret);
+            board[opp_turn] ^= move_mask;  // Redo opponent's move
         }
     }
     PositionHashSetDestroy(&dedup);
@@ -797,7 +785,7 @@ static int GetParentsSlidingNoCapture(
 }
 
 static int GetParentsPlacingNoCapture(
-    MillsTier pt, uint64_t patterns[2], int turn,
+    MillsTier pt, U64x2 board, int turn,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     //
     int opp_turn = !turn;
@@ -806,13 +794,12 @@ static int GetParentsPlacingNoCapture(
     PositionHashSetReserve(&dedup, 256);
     int ret = 0;
     for (uint64_t opp_possible_dests =
-             BuildOpponentNoCapturePossibleDestMask(patterns, turn);
-         opp_possible_dests;
-         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
-        uint64_t move_mask = _blsi_u64(opp_possible_dests);
-        patterns[opp_turn] ^= move_mask;  // Undo opponent's placement
-        AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents, &ret);
-        patterns[opp_turn] ^= move_mask;  // Redo opponent's placement
+             BuildOpponentNoCapturePossibleDestMask(board, turn);
+         opp_possible_dests; opp_possible_dests = BlsrU64(opp_possible_dests)) {
+        uint64_t move_mask = BlsiU64(opp_possible_dests);
+        board[opp_turn] ^= move_mask;  // Undo opponent's placement
+        AddCanonicalParent(pt, board, opp_turn, &dedup, parents, &ret);
+        board[opp_turn] ^= move_mask;  // Redo opponent's placement
     }
     PositionHashSetDestroy(&dedup);
 
@@ -824,14 +811,14 @@ static int GetParentsPlacingNoCapture(
  * reach the current board, returns a mask with all set bits corresponding to
  * possible removal locations.
  */
-static uint64_t BuildPriorLegalRemovalsMask(uint64_t patterns[2], int turn) {
+static uint64_t BuildPriorLegalRemovalsMask(U64x2 board, int turn) {
     uint64_t ret = 0ULL;
-    for (uint64_t blanks = BuildBlanksMask(patterns); blanks;
-         blanks = _blsr_u64(blanks)) {
-        uint64_t candidate = _blsi_u64(blanks);
-        patterns[turn] ^= candidate;  // Place a piece at the candidate location
-        uint64_t legal_removals = BuildLegalRemovalsMask(patterns[turn]);
-        patterns[turn] ^= candidate;  // Revert placement
+    for (uint64_t blanks = BuildBlanksMask(board); blanks;
+         blanks = BlsrU64(blanks)) {
+        uint64_t candidate = BlsiU64(blanks);
+        board[turn] ^= candidate;  // Place a piece at the candidate location
+        uint64_t legal_removals = BuildLegalRemovalsMask(board[turn]);
+        board[turn] ^= candidate;  // Revert placement
         if (legal_removals & candidate) {
             ret |= candidate;
         }
@@ -841,29 +828,28 @@ static uint64_t BuildPriorLegalRemovalsMask(uint64_t patterns[2], int turn) {
 }
 
 static int GetParentsPlacingCapture(
-    MillsTier pt, uint64_t patterns[2], int turn,
+    MillsTier pt, U64x2 board, int turn,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     //
-    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(patterns, turn);
+    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(board, turn);
     int opp_turn = !turn;
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
     PositionHashSetReserve(&dedup, 256);
     int ret = 0;
-    for (uint64_t opp_possible_dests = BuildInMillMask(patterns[opp_turn]);
-         opp_possible_dests;
-         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
-        uint64_t dest_mask = _blsi_u64(opp_possible_dests);
-        patterns[opp_turn] ^= dest_mask;  // Undo opponent's placement
+    for (uint64_t opp_possible_dests = BuildInMillMask(board[opp_turn]);
+         opp_possible_dests; opp_possible_dests = BlsrU64(opp_possible_dests)) {
+        uint64_t dest_mask = BlsiU64(opp_possible_dests);
+        board[opp_turn] ^= dest_mask;  // Undo opponent's placement
 
-        for (uint64_t plr = prior_legal_removals; plr; plr = _blsr_u64(plr)) {
-            uint64_t capture_mask = _blsi_u64(plr);
-            patterns[turn] ^= capture_mask;  // Undo opponent's capture
-            AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents, &ret);
-            patterns[turn] ^= capture_mask;  // Redo opponent's capture
+        for (uint64_t plr = prior_legal_removals; plr; plr = BlsrU64(plr)) {
+            uint64_t capture_mask = BlsiU64(plr);
+            board[turn] ^= capture_mask;  // Undo opponent's capture
+            AddCanonicalParent(pt, board, opp_turn, &dedup, parents, &ret);
+            board[turn] ^= capture_mask;  // Redo opponent's capture
         }
 
-        patterns[opp_turn] ^= dest_mask;  // Redo opponent's placement
+        board[opp_turn] ^= dest_mask;  // Redo opponent's placement
     }
     PositionHashSetDestroy(&dedup);
 
@@ -871,37 +857,35 @@ static int GetParentsPlacingCapture(
 }
 
 static int GetParentsSlidingCapture(
-    MillsTier pt, uint64_t patterns[2], int turn,
+    MillsTier pt, U64x2 board, int turn,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     //
-    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(patterns, turn);
+    uint64_t prior_legal_removals = BuildPriorLegalRemovalsMask(board, turn);
     int opp_turn = !turn;
-    const uint64_t blanks = BuildBlanksMask(patterns);
+    const uint64_t blanks = BuildBlanksMask(board);
     PositionHashSet dedup;
     PositionHashSetInit(&dedup, 0.5);
     PositionHashSetReserve(&dedup, 256);
     int ret = 0;
-    for (uint64_t opp_possible_dests = BuildInMillMask(patterns[opp_turn]);
-         opp_possible_dests;
-         opp_possible_dests = _blsr_u64(opp_possible_dests)) {
-        int8_t dest = (int8_t)_tzcnt_u64(opp_possible_dests);
+    for (uint64_t opp_possible_dests = BuildInMillMask(board[opp_turn]);
+         opp_possible_dests; opp_possible_dests = BlsrU64(opp_possible_dests)) {
+        int8_t dest = (int8_t)__builtin_ctzll(opp_possible_dests);
         uint64_t dest_mask = 1ULL << dest;
         for (uint64_t sources = BuildDestMask(pt, opp_turn, dest, blanks);
-             sources; sources = _blsr_u64(sources)) {
-            uint64_t src_mask = _blsi_u64(sources);
+             sources; sources = BlsrU64(sources)) {
+            uint64_t src_mask = BlsiU64(sources);
             uint64_t move_mask = dest_mask | src_mask;
-            patterns[opp_turn] ^= move_mask;  // Undo opponent's move
+            board[opp_turn] ^= move_mask;  // Undo opponent's move
 
             for (uint64_t plr = prior_legal_removals & (~src_mask); plr;
-                 plr = _blsr_u64(plr)) {
-                uint64_t capture_mask = _blsi_u64(plr);
-                patterns[turn] ^= capture_mask;  // Undo opponent's capture
-                AddCanonicalParent(pt, patterns, opp_turn, &dedup, parents,
-                                   &ret);
-                patterns[turn] ^= capture_mask;  // Redo opponent's capture
+                 plr = BlsrU64(plr)) {
+                uint64_t capture_mask = BlsiU64(plr);
+                board[turn] ^= capture_mask;  // Undo opponent's capture
+                AddCanonicalParent(pt, board, opp_turn, &dedup, parents, &ret);
+                board[turn] ^= capture_mask;  // Redo opponent's capture
             }
 
-            patterns[opp_turn] ^= move_mask;  // Redo opponent's move
+            board[opp_turn] ^= move_mask;  // Redo opponent's move
         }
     }
     PositionHashSetDestroy(&dedup);
@@ -913,23 +897,23 @@ static int MillsGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier,
     Position parents[static kTierSolverNumParentPositionsMax]) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
     MillsTier pt = {.hash = parent_tier};
     int opp_turn = !turn;
     if (pt.hash == t.hash) {  // No tier transition
-        return GetParentsSlidingNoCapture(t, patterns, turn, parents);
+        return GetParentsSlidingNoCapture(t, board, turn, parents);
     } else if (pt.unpacked.on_board[opp_turn] ==
                t.unpacked.on_board[opp_turn] - 1) {  // Opponent placed
         if (pt.unpacked.on_board[turn] == t.unpacked.on_board[turn]) {
-            return GetParentsPlacingNoCapture(pt, patterns, turn, parents);
+            return GetParentsPlacingNoCapture(pt, board, turn, parents);
         } else {
-            return GetParentsPlacingCapture(pt, patterns, turn, parents);
+            return GetParentsPlacingCapture(pt, board, turn, parents);
         }
     } else if (pt.unpacked.on_board[turn] - 1 == t.unpacked.on_board[turn]) {
         // Opponent captured one of our pieces but didn't place a new piece
-        return GetParentsSlidingCapture(pt, patterns, turn, parents);
+        return GetParentsSlidingCapture(pt, board, turn, parents);
     }
 
     // It is also possible that the current turn does not match the tier
@@ -938,24 +922,24 @@ static int MillsGetCanonicalParentPositions(
     return 0;
 }
 
-static void CollectRotationSymmetries(X86M128iHashSet *dedup, __m128i board) {
+static void CollectRotationSymmetries(U64x2HashSet *dedup, U64x2 board) {
     // Rotations 8x
-    X86M128iHashSetAdd(dedup, board);
+    U64x2HashSetAdd(dedup, board);
     int8_t padded_side_length = PaddedSideLength();
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipDiag(board);
-    X86M128iHashSetAdd(dedup, board);
-    board = X86SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    X86M128iHashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipDiag(board);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipDiag(board);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipDiag(board);
+    U64x2HashSetAdd(dedup, board);
+    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2HashSetAdd(dedup, board);
 }
 
 static int MillsGetNumberOfSymmetries(TierPosition tp) {
@@ -963,15 +947,15 @@ static int MillsGetNumberOfSymmetries(TierPosition tp) {
     MillsTier t;
     int turn;
     bool not_fixed_turn;
-    __m128i board = UnhashSimd(tp, &t, &turn, &not_fixed_turn);
+    U64x2 board = UnhashSimd(tp, &t, &turn, &not_fixed_turn);
 
-    X86M128iHashSet dedup;
-    X86M128iHashSetInit(&dedup);
+    U64x2HashSet dedup;
+    U64x2HashSetInit(&dedup);
     CollectRotationSymmetries(&dedup, board);
 
     // Ring swap symmetries 2x are present in certain board variants
     if (kInnerRingMasks[BoardId()]) {
-        __m128i swapped = SwapInnerOuterRings(board);
+        U64x2 swapped = SwapInnerOuterRings(board);
         CollectRotationSymmetries(&dedup, swapped);
     }
 
@@ -1241,8 +1225,8 @@ static int MillsSetVariantOption(int option, int selection) {
             if (selection >= (int)NUM_BOARD_AND_PIECES_CHOICES) {
                 return kIllegalArgumentError;
             }
-            X86SimdTwoPieceHashContextDestroy(&hash_context);
-            int error = X86SimdTwoPieceHashContextInitIrregular(
+            SimdTwoPieceHashContextDestroy(&hash_context);
+            int error = SimdTwoPieceHashContextInitIrregular(
                 &hash_context, kBoardMasks[selection]);
             assert(error == kSuccess);
             (void)error;
@@ -1299,7 +1283,7 @@ static int MillsInit(void *aux) {
 // =============================== MillsFinalize ===============================
 
 static int MillsFinalize(void) {
-    X86SimdTwoPieceHashContextDestroy(&hash_context);
+    SimdTwoPieceHashContextDestroy(&hash_context);
 
     return kSuccess;
 }
@@ -1364,17 +1348,17 @@ static bool MillsIsLegalFormalPosition(ReadOnlyString formal_position) {
     return true;
 }
 
-static void ParseBoardString(ReadOnlyString board, uint64_t patterns[2],
+static void ParseBoardString(ReadOnlyString board_str, U64x2 *board,
                              int8_t *num_x, int8_t *num_o) {
-    patterns[0] = patterns[1] = 0ULL;
+    *board = (U64x2){0, 0};
     int board_id = BoardId();
     for (int8_t i = 0; i < kNumSlots[board_id]; ++i) {
-        char c = toupper(board[i]);
+        char c = toupper(board_str[i]);
         if (c == 'W') {
-            patterns[0] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
+            (*board)[0] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
             ++(*num_x);
         } else if (c == 'B') {
-            patterns[1] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
+            (*board)[1] |= 1ULL << kBoardIdxToGridIdx[board_id][i];
             ++(*num_o);
         }
     }
@@ -1383,9 +1367,9 @@ static void ParseBoardString(ReadOnlyString board, uint64_t patterns[2],
 static TierPosition MillsFormalPositionToTierPosition(
     ReadOnlyString formal_position) {
     //
-    uint64_t patterns[2];
+    U64x2 board;
     MillsTier t = kMillsTierInit;
-    ParseBoardString(formal_position + 2, patterns, &t.unpacked.on_board[0],
+    ParseBoardString(formal_position + 2, &board, &t.unpacked.on_board[0],
                      &t.unpacked.on_board[1]);
     ParseRemainingPieces(formal_position, &t.unpacked.remaining[0],
                          &t.unpacked.remaining[1]);
@@ -1393,11 +1377,9 @@ static TierPosition MillsFormalPositionToTierPosition(
     TierPosition ret = {.tier = t.hash};
     int turn = formal_position[0] - '1';
     if (GetTurnFromTier(t) >= 0) {
-        ret.position =
-            X86SimdTwoPieceHashHashFixedTurnMem(&hash_context, patterns);
+        ret.position = SimdTwoPieceHashHashFixedTurn(&hash_context, board);
     } else {
-        ret.position =
-            X86SimdTwoPieceHashHashMem(&hash_context, patterns, turn);
+        ret.position = SimdTwoPieceHashHash(&hash_context, board, turn);
     }
 
     return ret;
@@ -1405,11 +1387,11 @@ static TierPosition MillsFormalPositionToTierPosition(
 
 static CString MillsTierPositionToFormalPosition(TierPosition tier_position) {
     // Unhash
-    uint64_t patterns[2];
+    U64x2 board;
     int turn;
-    MillsTier t = Unhash(tier_position, patterns, &turn);
+    MillsTier t = Unhash(tier_position, &board, &turn);
     char entities[25 + 4];  // max board size is 25, plus 4 counter digits
-    PatternsToStr(patterns, entities, 'W', 'B');
+    PatternsToStr(board, entities, 'W', 'B');
     int cur = kNumSlots[BoardId()];
     int num_digits = NumPieceCounterDigits();
     if (t.unpacked.remaining[0] || t.unpacked.remaining[1]) {

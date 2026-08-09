@@ -21,11 +21,12 @@ jobs:
   # JOB 1: Unit Tests
   # ==========================================
   unit-test:
-    name: Unit Test (${{ matrix.preset }})
-    runs-on: ubuntu-latest
+    name: Unit Test (${{ matrix.os }}, ${{ matrix.preset }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         preset: [ci-asan, ci-asan-st, ci-coverage, ci-coverage-st]
     
     steps:
@@ -45,13 +46,13 @@ jobs:
   # JOB 2: End-to-End Tests
   # ==========================================
   e2e-test:
-    name: E2E Test (${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
-    runs-on: ubuntu-latest
+    name: E2E Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         preset: [ci-asan, release]
-        # Added the game and variant combinations
         test_case:
           - { game: "fsvp", variant: "10" }
           - { game: "mttt", variant: "0" }

@@ -67,7 +67,9 @@ bool Int64ArrayInternalExpand(Int64Array *array) {
     }
 
     // Copy contents over.
-    memcpy(new_array, array->array, array->capacity * sizeof(int64_t));
+    if (array->capacity) {
+        memcpy(new_array, array->array, array->capacity * sizeof(int64_t));
+    }
     GamesmanAllocatorDeallocate(array->allocator, array->array);
     array->array = new_array;
     array->capacity = new_capacity;
@@ -103,7 +105,9 @@ bool Int64ArrayResize(Int64Array *array, int64_t size) {
             return false;
         }
 
-        memcpy(new_array, array->array, array->size * sizeof(int64_t));
+        if (array->array) {
+            memcpy(new_array, array->array, array->size * sizeof(int64_t));
+        }
         GamesmanAllocatorDeallocate(array->allocator, array->array);
         array->array = new_array;
         array->capacity = size;

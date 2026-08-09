@@ -3,10 +3,17 @@
 ##################
 
 cmake_minimum_required(VERSION 3.25)
-project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # Add the 'cmake' directory to the module search path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# macOS Homebrew LLVM & OpenMP Setup
+# Must execute BEFORE project() to correctly set compilers
+if(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
+  include(gamesman_macos_llvm_openmp)
+endif()
+
+project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 
 # GoogleTest requires at least C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -44,15 +51,6 @@ else()
   message(STATUS "ccache not found. Repeated compilation on unmodified targets may take longer.")
 endif()
 
-# include-what-you-use (optional)
-find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-if(IWYU_PATH)
-  message(STATUS "Found IWYU: ${IWYU_PATH}")
-  set(CMAKE_C_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
-else()
-  message(WARNING "include-what-you-use iwyu not found. Compile-time IWYU checking will be disabled.")
-endif()
-
 #######################################
 # Common Flags Interface for Gamesman #
 #######################################
@@ -86,6 +84,23 @@ if(GAMESMAN_ENABLE_LINE_COVERAGE)
   else()
     message(STATUS "lcov not found. Code coverage targets will not be available.")
   endif()
+endif()
+
+check_c_compiler_flag("-msse2" GAMESMAN_HAS_SSE2)
+if(GAMESMAN_HAS_SSE2)
+  target_compile_definitions(common_flags INTERFACE GAMESMAN_HAS_SSE2)
+endif()
+check_c_compiler_flag("-mssse3" GAMESMAN_HAS_SSSE3)
+if(GAMESMAN_HAS_SSSE3)
+  target_compile_definitions(common_flags INTERFACE GAMESMAN_HAS_SSSE3)
+endif()
+check_c_compiler_flag("-mbmi" GAMESMAN_HAS_BMI1)
+if(GAMESMAN_HAS_BMI1)
+  target_compile_definitions(common_flags INTERFACE GAMESMAN_HAS_BMI1)
+endif()
+check_c_compiler_flag("-mbmi2" GAMESMAN_HAS_BMI2)
+if(GAMESMAN_HAS_BMI2)
+  target_compile_definitions(common_flags INTERFACE GAMESMAN_HAS_BMI2)
 endif()
 
 ########################

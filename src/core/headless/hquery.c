@@ -67,8 +67,8 @@ static json_object *JsonCreateBasicPositionObject(const Game *game,
 static json_object *JsonCreateChildPositionObject(const Game *game,
                                                   Position parent, Move move);
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj);
+    const Game *game, Position position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj);
 
 static int JsonPrintTierPositionResponse(const Game *game,
                                          TierPosition tier_position);
@@ -82,8 +82,8 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
                                                       TierPosition parent,
                                                       Move move);
 static json_object *JsonCreateParentTierPositionObject(
-    const Game *game, TierPosition tier_position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj);
+    const Game *game, TierPosition tier_position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj);
 static json_object *JsonCreatePartmoveEdgeObject(const Partmove *pm);
 
 static void JsonPrintStartResponse(ReadOnlyString start,
@@ -407,8 +407,8 @@ static int JsonPrintPositionResponse(const Game *game, Position position) {
         partmove_edge_obj = NULL;
     }
 
-    parent_obj = JsonCreateParentPositionObject(game, position, moves_array_obj,
-                                                partmoves_array_obj);
+    parent_obj = JsonCreateParentPositionObject(
+        game, position, &moves_array_obj, &partmoves_array_obj);
     if (parent_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -490,18 +490,27 @@ static json_object *JsonCreateChildPositionObject(const Game *game,
 }
 
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj) {
+    const Game *game, Position position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj) {
     //
     json_object *ret = JsonCreateBasicPositionObject(game, position);
-    if (ret == NULL) return NULL;
+    if (!ret) {
+        return NULL;
+    }
 
-    int error = HeadlessJsonAddMovesArray(ret, moves_array_obj);
-    error |= HeadlessJsonAddPartmovesArray(ret, partmoves_array_obj);
+    int error = HeadlessJsonAddMovesArray(ret, *moves_array_obj);
     if (error) {
         json_object_put(ret);
         return NULL;
     }
+    *moves_array_obj = NULL;
+
+    error = HeadlessJsonAddPartmovesArray(ret, *partmoves_array_obj);
+    if (error) {
+        json_object_put(ret);
+        return NULL;
+    }
+    *partmoves_array_obj = NULL;
 
     return ret;
 }
@@ -554,7 +563,7 @@ static int JsonPrintTierPositionResponse(const Game *game,
     }
 
     parent_obj = JsonCreateParentTierPositionObject(
-        game, tier_position, moves_array_obj, partmoves_array_obj);
+        game, tier_position, &moves_array_obj, &partmoves_array_obj);
     if (parent_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -669,18 +678,27 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
 }
 
 static json_object *JsonCreateParentTierPositionObject(
-    const Game *game, TierPosition tier_position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj) {
+    const Game *game, TierPosition tier_position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj) {
     //
     json_object *ret = JsonCreateBasicTierPositionObject(game, tier_position);
-    if (ret == NULL) return NULL;
+    if (!ret) {
+        return NULL;
+    }
 
-    int error = HeadlessJsonAddMovesArray(ret, moves_array_obj);
-    error |= HeadlessJsonAddPartmovesArray(ret, partmoves_array_obj);
+    int error = HeadlessJsonAddMovesArray(ret, *moves_array_obj);
     if (error) {
         json_object_put(ret);
         return NULL;
     }
+    *moves_array_obj = NULL;
+
+    error = HeadlessJsonAddPartmovesArray(ret, *partmoves_array_obj);
+    if (error) {
+        json_object_put(ret);
+        return NULL;
+    }
+    *partmoves_array_obj = NULL;
 
     return ret;
 }
