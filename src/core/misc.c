@@ -24,6 +24,8 @@
 
 #include "core/misc.h"
 
+#include <regex.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -105,4 +107,40 @@ char *SecondsToFormattedTimeString(double seconds_d, char *buf,
     }
 
     return buf;
+}
+
+bool RegexMatch(const char *pattern, const char *target) {
+    if (!pattern || !target) {
+        return false;
+    }
+
+    regex_t regex;
+    int reti;
+    bool is_match = false;
+
+    // 1. Compile the regular expression
+    // REG_EXTENDED allows modern regex syntax (like {1,3}, +, etc.)
+    // REG_NOSUB tells the compiler we don't need to capture subgroups,
+    // which speeds up execution.
+    reti = regcomp(&regex, pattern, REG_EXTENDED | REG_NOSUB);
+    if (reti) {
+        fprintf(stderr, "Error: Could not compile regex pattern\n");
+        return false;
+    }
+
+    // 2. Execute the regular expression
+    reti = regexec(&regex, target, 0, NULL, 0);
+    if (!reti) {
+        is_match = true;
+    } else if (reti != REG_NOMATCH) {
+        // Handle edge-case execution errors (e.g., out of memory)
+        char msgbuf[128];
+        regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+        fprintf(stderr, "Regex match failed: %s\n", msgbuf);
+    }
+
+    // 3. Free the memory allocated by regcomp
+    regfree(&regex);
+
+    return is_match;
 }
