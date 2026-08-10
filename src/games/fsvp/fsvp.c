@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
@@ -72,7 +73,7 @@ static Move FsvpStringToMove(ReadOnlyString move_string);
 #define VARIANT_SIZE_MAX 100
 static ConstantReadOnlyString kFsvpGameSizeChoices[] = {
     "4",  "5",  "6",  "7",  "8",  "9",  "10", "11",
-    "12", "20", "50", "60", "70", "80", "90", "100"};
+    "12", "20", "50", "60", "70", "80", "90"};
 
 static const GameVariantOption kFsvpGameSize = {
     .name = "size",
@@ -341,46 +342,16 @@ static int FsvpMoveToString(Move move, char *buffer) {
 }
 
 static bool FsvpIsValidMoveString(ReadOnlyString move_string) {
-    if (move_string[0] != 's' && move_string[0] != 'c') return false;
-    int i = 2;
-
-    // Check first number (1 or 2 digits)
-    if (!isdigit(move_string[i++])) return false;
-    if (isdigit(move_string[i])) ++i;
-
-    // Check for space after first number
-    if (move_string[i++] != ' ') return false;
-
-    // Check second number (1 or 2 digits)
-    if (!isdigit(move_string[i++])) return false;
-    if (isdigit(move_string[i])) ++i;
-
-    // Check if the string ends after the second number
-    if (move_string[i] != '\0') return false;
-
-    return true;
+    return RegexMatch("^[sc] [0-9]{1,3} [0-9]{1,3}$", move_string);
 }
 
 // Assumes valid move string.
 static Move FsvpStringToMove(ReadOnlyString move_string) {
-    bool splitting = move_string[0] == 's';
-    int i = 2;
+    char operation;
     int values[2];
-    for (int number = 0; number < 2; ++number) {
-        char tmp[3];
-        tmp[0] = move_string[i];
-        if (isdigit(move_string[i + 1])) {
-            tmp[1] = move_string[i + 1];
-            tmp[2] = '\0';
-            i += 3;
-        } else {
-            tmp[1] = '\0';
-            i += 2;
-        }
-        values[number] = atoi(tmp);
-    }
+    sscanf(move_string, "%c %d %d", &operation, &values[0], &values[1]);
 
-    return ConstructMove(splitting, values[0], values[1]);
+    return ConstructMove(operation == 's', values[0], values[1]);
 }
 
 // Helper functions
