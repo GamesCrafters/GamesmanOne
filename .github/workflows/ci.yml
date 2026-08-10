@@ -90,7 +90,7 @@ jobs:
       - name: Run End-to-End Tests
         env:
           GAMESMAN_PRESET: ${{ matrix.preset }}
-        run: pytest tests/e2e/e2e_test.py -k "${{ matrix.test_case.game }}-${{ matrix.test_case.variant }}" -v
+        run: pytest tests/e2e/test_headless.py -k "${{ matrix.test_case.game }}-${{ matrix.test_case.variant }}" -v
 
   # Job 2: Static Analysis (Disabled for now)
   # static-analysis:
