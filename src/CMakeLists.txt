@@ -9,7 +9,10 @@ add_subdirectory(core)
 add_subdirectory(games)
 add_subdirectory(libs)
 
-# Link libraries.
+# Add compile-time definitions and link libraries.
+if(GAMESMAN_ENABLE_ANIMATION)
+  target_compile_definitions(gamesman_core PRIVATE GAMESMAN_ENABLE_ANIMATION)
+endif()
 target_link_libraries(gamesman_core PRIVATE json-c) # json-c
 if(OpenMP_FOUND) # OpenMP (optional)
   target_link_libraries(gamesman_core PRIVATE OpenMP::OpenMP_C)

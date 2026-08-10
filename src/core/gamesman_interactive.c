@@ -36,9 +36,9 @@
 #include "core/types/base.h"
 #include "core/types/gamesman_status.h"
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 #include <unistd.h>
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 // clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =
@@ -81,7 +81,7 @@ static void AnimationUpdate(char *opening_credits, int frame) {
 #endif  // USE_MPI
 }
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 static void EraseLastBlockExact(const char *s) {
     if (!s) return;
 
@@ -122,7 +122,7 @@ static void EraseLastBlockExact(const char *s) {
     putchar('\r');
     fflush(stdout);
 }
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 static void PrintOpeningCredits(void) {
     size_t length = strlen(kHeaderAnimation[0]) +
@@ -131,7 +131,7 @@ static void PrintOpeningCredits(void) {
     char *buf = (char *)SafeCalloc(length, sizeof(char));
 
     const int nframes = sizeof(kHeaderAnimation) / sizeof(kHeaderAnimation[0]);
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
     char *prev = NULL;
     for (int i = 0; i < nframes; ++i) {
         EraseLastBlockExact(prev);
@@ -141,15 +141,15 @@ static void PrintOpeningCredits(void) {
         fflush(stdout);
         usleep(8000);
     }
-#else   // Debug: no animation
+#else   // No animation
     AnimationUpdate(buf, nframes - 1);
     printf("%s", buf);
     fflush(stdout);
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
     GamesmanFree(buf);
 }
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 static void AnimateText(const char *str, unsigned int us) {
     while (*str) {
         putchar(*(str++));
@@ -157,14 +157,14 @@ static void AnimateText(const char *str, unsigned int us) {
         usleep(us);
     }
 }
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 static void PromptForContinue(void) {
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
     AnimateText(kContinuePrompt, 5000);
-#else   // Debug: no animation
+#else   // No animation
     printf("%s", kContinuePrompt);
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
     getchar();
 }
 

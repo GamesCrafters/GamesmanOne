@@ -31,6 +31,7 @@ option(GAMESMAN_ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to 
 option(GAMESMAN_ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
 option(GAMESMAN_ENABLE_BENCHMARKS "Build targets for benchmarking." OFF) # Set this to ON to enable benchmarks
 option(GAMESMAN_ENABLE_TESTING "Build test targets." ON) # Set this to OFF to disable testing
+option(GAMESMAN_ENABLE_ANIMATION "Enable animations in interactive mode." OFF) # Set this to ON to enable animations
 
 if(GAMESMAN_ENABLE_ASAN_UBSAN)
   message(STATUS "Sanitizers enabled: ASan, LSan")
