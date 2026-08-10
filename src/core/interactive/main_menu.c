@@ -16,7 +16,7 @@ int InteractiveMainMenu(ReadOnlyString key) {
         "GAMESMAN Help",
         "Open Source Software Usage",
     };
-    static ConstantReadOnlyString keys[] = {"g", "h", "c"};
+    static ConstantReadOnlyString keys[] = {"g", "h", "o"};
     static const HookFunctionPointer hooks[] = {
         &InteractiveGames,
         &InteractiveHelp,
