@@ -27,7 +27,6 @@ from syrupy.assertion import SnapshotAssertion
 # 1. Test matrix [(<game0>, <variant_id0>, <autogui0>), ...]
 # Note: You can replace this list with the larger games you want to test manually.
 GAMES_TO_TEST: list[tuple[str, int, bool]] = [
-    ("mallqueenschess", 0, False),  # Regular
     ("dshogi", 0, True),  # Regular
     ("gates", 0, False),  # Tier
     ("gobbletg", 0, True),  # Tier
