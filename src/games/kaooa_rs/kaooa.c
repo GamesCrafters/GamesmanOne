@@ -35,6 +35,7 @@
 #include "core/constants.h"
 #include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
+#include "core/types/gamesman_status.h"
 
 // ============================= Type Definitions =============================
 
@@ -327,9 +328,9 @@ static int KaooaGetTierName(Tier tier,
                             char name[static kDbFileNameLengthMax + 1]) {
     assert(tier >= 0 && tier <= 7);
     if (tier < 7) {
-        sprintf(name, "%" PRITier "_dropped", tier);
+        snprintf(name, kDbFileNameLengthMax + 1, "%" PRITier "_dropped", tier);
     } else {
-        sprintf(name, "moving_phase");
+        snprintf(name, kDbFileNameLengthMax + 1, "moving_phase");
     }
 
     return kSuccess;
@@ -363,7 +364,7 @@ static MoveArray KaooaGenerateMovesGameplay(TierPosition tier_position) {
     return ret;
 }
 
-static ConstantReadOnlyString kKaooaPositionStringFormat =
+static const char kKaooaPositionStringFormat[] =
     "                 [1]                  |                  [%c]\n"
     "                 / \\                  |                  / \\\n"
     "                |   |                 |                 |   |\n"
@@ -393,6 +394,11 @@ static ConstantReadOnlyString kKaooaPositionStringFormat =
     "     [4]                     [3]      |      [%c]                     "
     "[%c]\n";
 
+enum {
+    kPositionStringLengthMax = sizeof(kKaooaPositionStringFormat),
+    kMoveStringLengthMax = 2 + 2 * kInt32Base10StringLengthMax,
+};
+
 static int KaooaTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     char board[kBoardSize];
@@ -401,9 +407,9 @@ static int KaooaTierPositionToString(TierPosition tier_position, char *buffer) {
     bool success = GenericHashUnhashLabel(tier, pos, board);
     if (!success) return kGenericHashError;
 
-    sprintf(buffer, kKaooaPositionStringFormat, board[0], board[4], board[9],
-            board[5], board[1], board[8], board[6], board[7], board[3],
-            board[2]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kKaooaPositionStringFormat,
+             board[0], board[4], board[9], board[5], board[1], board[8],
+             board[6], board[7], board[3], board[2]);
 
     return kSuccess;
 }
@@ -411,9 +417,10 @@ static int KaooaTierPositionToString(TierPosition tier_position, char *buffer) {
 static int KaooaMoveToString(Move move, char *buffer) {
     KaooaMove m = {.hashed = move};
     if (m.unpacked.src < 0) {  // Placement
-        sprintf(buffer, "%d", m.unpacked.dest + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d", m.unpacked.dest + 1);
     } else {
-        sprintf(buffer, "%d %d", m.unpacked.src + 1, m.unpacked.dest + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %d", m.unpacked.src + 1,
+                 m.unpacked.dest + 1);
     }
 
     return kSuccess;

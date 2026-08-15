@@ -50,6 +50,7 @@
 #include "core/types/position_hash_set.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_regular.h"
+#include "libs/string/xstring.h"
 
 // clang-tidy gives many warnings about narrowing conversion from 'int' to
 // 'char' that are known to be correct. The following line turns them all
@@ -630,6 +631,11 @@ static const char kPositionStringFormat[] =
     "P1 Captured:                      %c %c %c %c %c %c\n"
     "\n";
 
+enum {
+    kPositionStringLengthMax = sizeof(kPositionStringFormat),
+    kMoveStringLengthMax = 1 + 2 * kInt32Base10StringLengthMax,
+};
+
 static int DobutsuShogiPositionToString(Position position, char *buffer) {
     // Unhash
     char board[kBoardStrSize];
@@ -665,12 +671,12 @@ static int DobutsuShogiPositionToString(Position position, char *buffer) {
                 break;
         }
     }
-    sprintf(buffer, kPositionStringFormat, p2_captured[0], p2_captured[1],
-            p2_captured[2], p2_captured[3], p2_captured[4], p2_captured[5],
-            board[0], board[1], board[2], board[3], board[4], board[5],
-            board[6], board[7], board[8], board[9], board[10], board[11],
-            p1_captured[0], p1_captured[1], p1_captured[2], p1_captured[3],
-            p1_captured[4], p1_captured[5]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kPositionStringFormat,
+             p2_captured[0], p2_captured[1], p2_captured[2], p2_captured[3],
+             p2_captured[4], p2_captured[5], board[0], board[1], board[2],
+             board[3], board[4], board[5], board[6], board[7], board[8],
+             board[9], board[10], board[11], p1_captured[0], p1_captured[1],
+             p1_captured[2], p1_captured[3], p1_captured[4], p1_captured[5]);
 
     return kSuccess;
 }
@@ -680,12 +686,14 @@ static int DobutsuShogiMoveToString(Move move, char *buffer) {
     ExpandMove(move, &src, &dest);
     char src_str[kInt32Base10StringLengthMax + 1];
     if (src < kBoardSize) {
-        sprintf(src_str, "%d", src + 1);  // Print in 1-index format.
+        // Print in 1-index format.
+        snprintf(src_str, sizeof(src_str), "%d", src + 1);
     } else {
-        sprintf(src_str, "%c", tolower(kIndexToPieceType[src - kBoardSize]));
+        snprintf(src_str, sizeof(src_str), "%c",
+                 tolower(kIndexToPieceType[src - kBoardSize]));
     }
 
-    sprintf(buffer, "%s %d", src_str, dest + 1);
+    snprintf(buffer, kMoveStringLengthMax + 1, "%s %d", src_str, dest + 1);
 
     return kSuccess;
 }
@@ -744,9 +752,9 @@ static Move DobutsuShogiStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon kDobutsuShogiGameplayApiCommon = {
     .GetInitialPosition = DobutsuShogiGetInitialPosition,
-    .position_string_length_max = sizeof(kPositionStringFormat),
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 6,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = DobutsuShogiMoveToString,
 
     .IsValidMoveString = DobutsuShogiIsValidMoveString,
@@ -892,16 +900,16 @@ static CString DobutsuShogiMoveToFormalMove(Position position, Move move) {
     ExpandMove(move, &src, &dest);
     char src_str[kInt32Base10StringLengthMax + 2];
     if (src < kBoardSize) {
-        sprintf(src_str, "%s",
-                kFormalMoveMap[src]);  // Print in 1-index format.
+        // Print in 1-index format.
+        snprintf(src_str, sizeof(src_str), "%s", kFormalMoveMap[src]);
     } else {
         char piece_type = kIndexToPieceType[src - kBoardSize];
         if (GenericHashGetTurn(position) == 2) piece_type = tolower(piece_type);
-        sprintf(src_str, "%c", piece_type);
+        snprintf(src_str, sizeof(src_str), "%c", piece_type);
     }
 
     char buffer[kInt32Base10StringLengthMax + 5];
-    sprintf(buffer, "%s %s", src_str, kFormalMoveMap[dest]);
+    snprintf(buffer, sizeof(buffer), "%s %s", src_str, kFormalMoveMap[dest]);
     CString ret;
     CStringInitCopyCharArray(&ret, buffer);
 
@@ -915,11 +923,12 @@ static CString DobutsuShogiMoveToAutoGuiMove(Position position, Move move) {
     CString ret;
     char autogui_move[6 + 2 * kInt32Base10StringLengthMax];
     if (src < kBoardSize) {  // M-Type move from src to dest.
-        sprintf(autogui_move, "M_%d_%d_x", src, dest);
+        snprintf(autogui_move, sizeof(autogui_move), "M_%d_%d_x", src, dest);
     } else {  // A-Type move adding piece to dest.
         // This is the center index in the AutoGUI coordinate system.
         int center = (src - kBoardSize) * kBoardSize + dest + kBoardSize + 6;
-        sprintf(autogui_move, "A_%d_%d_y", src - kBoardSize, center);
+        snprintf(autogui_move, sizeof(autogui_move), "A_%d_%d_y",
+                 src - kBoardSize, center);
     }
     CStringInitCopyCharArray(&ret, autogui_move);
 

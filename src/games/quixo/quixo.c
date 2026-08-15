@@ -62,6 +62,7 @@
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
+#include "libs/string/xstring.h"
 
 // =================================== Types ===================================
 
@@ -886,41 +887,34 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
                                          t.unpacked[0], t.unpacked[1]);
     char board_str[kBoardSizeMax + 1];
     BoardToStr(board, board_str);
-    int offset = 0;
+    size_t offset = 0;
     for (int r = 0; r < side_length; ++r) {
         if (r == (side_length - 1) / 2) {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "LEGEND: ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "LEGEND: ");
         } else {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "        ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "        ");
         }
 
         for (int c = 0; c < side_length; ++c) {
             int index = r * side_length + c + 1;
             if (c == 0) {
-                offset += snprintf(buffer + offset,
-                                   kPositionStringLengthMax + 1 - offset,
-                                   "(%2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               "(%2d", index);
             } else {
-                offset += snprintf(buffer + offset,
-                                   kPositionStringLengthMax + 1 - offset,
-                                   " %2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               " %2d", index);
             }
         }
-        offset += snprintf(buffer + offset,
-                           kPositionStringLengthMax + 1 - offset, ")");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, ")");
 
         if (r == (side_length - 1) / 2) {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "    BOARD: : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "    BOARD: : ");
         } else {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "           : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "           : ");
         }
 
         for (int c = 0; c < side_length; ++c) {
@@ -929,8 +923,7 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
                 snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
                          "%c ", board_str[index]);
         }
-        offset += snprintf(buffer + offset,
-                           kPositionStringLengthMax + 1 - offset, "\n");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }
 
     return kSuccess;
@@ -939,7 +932,7 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
 static int QuixoMoveToString(Move move, char *buffer) {
     QuixoMove m = {.hash = move};
     snprintf(
-        buffer, kMoveStringLengthMax, "%d %c",
+        buffer, kMoveStringLengthMax + 1, "%d %c",
         kDirIndexToSrc[curr_variant_idx][m.unpacked.dir][m.unpacked.idx] + 1,
         kDirToChar[m.unpacked.dir]);
 

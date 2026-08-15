@@ -574,8 +574,8 @@ static int MallqueenschessPositionToString(Position position, char *buffer) {
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1) {
         fprintf(stderr,
                 "MallqueenschessTierPositionToString: (BUG) not enough space "
-                "was allocated "
-                "to buffer. Please increase position_string_length_max.\n");
+                "was allocated to buffer. Please increase "
+                "position_string_length_max.\n");
         return 1;
     }
     return 0;

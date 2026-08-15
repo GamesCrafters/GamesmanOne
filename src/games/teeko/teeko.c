@@ -50,6 +50,7 @@
 #include "core/types/move_array.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
+#include "libs/string/xstring.h"
 
 // ================================= Constants =================================
 
@@ -383,41 +384,34 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
                                           tier_position.position, board);
     if (!success) return kGenericHashError;
 
-    int offset = 0;
+    size_t offset = 0;
     for (int r = 0; r < kBoardRows; ++r) {
         if (r == (kBoardRows - 1) / 2) {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "LEGEND: ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "LEGEND: ");
         } else {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "        ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "        ");
         }
 
         for (int c = 0; c < kBoardCols; ++c) {
             int index = r * kBoardCols + c + 1;
             if (c == 0) {
-                offset += snprintf(buffer + offset,
-                                   kPositionStringLengthMax + 1 - offset,
-                                   "(%2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               "(%2d", index);
             } else {
-                offset += snprintf(buffer + offset,
-                                   kPositionStringLengthMax + 1 - offset,
-                                   " %2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               " %2d", index);
             }
         }
-        offset += snprintf(buffer + offset,
-                           kPositionStringLengthMax + 1 - offset, ")");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, ")");
 
         if (r == (kBoardRows - 1) / 2) {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "    BOARD: : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "    BOARD: : ");
         } else {
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "           : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "           : ");
         }
 
         for (int c = 0; c < kBoardCols; ++c) {
@@ -426,8 +420,7 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
                 snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
                          "%c ", board[index]);
         }
-        offset += snprintf(buffer + offset,
-                           kPositionStringLengthMax + 1 - offset, "\n");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }
 
     return kSuccess;

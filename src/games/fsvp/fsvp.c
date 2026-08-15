@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "core/constants.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
@@ -102,11 +103,16 @@ static const RegularSolverApi kFsvpSolverApi = {
 
 // Gameplay API Setup
 
+enum {
+    kPositionStringLengthMax = 100,
+    kMoveStringLengthMax = 3 + 2 * kInt64Base10StringLengthMax,
+};
+
 static const GameplayApiCommon kFsvpGameplayApiCommon = {
     .GetInitialPosition = FsvpGetInitialPosition,
-    .position_string_length_max = 100,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 7,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = FsvpMoveToString,
 
     .IsValidMoveString = FsvpIsValidMoveString,
@@ -314,29 +320,32 @@ static MoveArray FsvpGenerateMovesGameplay(Position position) {
 static int FsvpPositionToString(Position position, char *buffer) {
     // Format: "{ a, b, c, ..., z, }"
     Board board = Unhash(position);
-    int size = 0;
-    size += sprintf(buffer, "{ ");
+    size_t offset = 0;
+    AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "{ ");
     for (int i = variant_size; i > 0; --i) {
         for (int count = 0; count < board.counts[i]; ++count) {
-            size += sprintf(buffer + size, "%d, ", i);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "%d, ", i);
         }
     }
-    sprintf(buffer + size, "}");
+    AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "}");
 
     return kSuccess;
 }
 
 static int FsvpMoveToString(Move move, char *buffer) {
     bool splitting = move & 1;
-    int size = 0;
+    size_t offset = 0;
     if (splitting) {
-        size += sprintf(buffer + size, "s ");
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "s ");
     } else {  // combining
-        size += sprintf(buffer + size, "c ");
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "c ");
     }
     move >>= 1;
-    size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
-    sprintf(buffer + size, "%" PRId64, move % variant_size);              // y
+    AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "%" PRId64 " ",
+                   move / variant_size);  // x
+    AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "%" PRId64,
+                   move % variant_size);  // y
 
     return kSuccess;
 }

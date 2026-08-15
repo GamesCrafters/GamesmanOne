@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/misc.h"
@@ -603,17 +604,23 @@ static const char kPositionStringFormat[] =
     "         ( 16 17 18 19 20 )           : %c %c %c %c %c\n"
     "         ( 21 22 23 24 25 )           : %c %c %c %c %c\n";
 
+enum {
+    kPositionStringLengthMax = sizeof(kPositionStringFormat),
+    kMoveStringLengthMax = 7 + 2 * kInt32Base10StringLengthMax,
+};
+
 static int NeutronPositionToString(Position position, char *buffer) {
     // Unhash
     char board[kBoardSize];
     bool success = Unhash(position, board);
     if (!success) return kGenericHashError;
 
-    sprintf(buffer, kPositionStringFormat, board[0], board[1], board[2],
-            board[3], board[4], board[5], board[6], board[7], board[8],
-            board[9], board[10], board[11], board[12], board[13], board[14],
-            board[15], board[16], board[17], board[18], board[19], board[20],
-            board[21], board[22], board[23], board[24]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kPositionStringFormat,
+             board[0], board[1], board[2], board[3], board[4], board[5],
+             board[6], board[7], board[8], board[9], board[10], board[11],
+             board[12], board[13], board[14], board[15], board[16], board[17],
+             board[18], board[19], board[20], board[21], board[22], board[23],
+             board[24]);
 
     return kSuccess;
 }
@@ -621,15 +628,15 @@ static int NeutronPositionToString(Position position, char *buffer) {
 static int NeutronMoveToString(Move move, char *buffer) {
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
-        sprintf(buffer, "%d %s", m.unpacked.p_src + 1,
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s",
+                 m.unpacked.p_src + 1, kDirectionStr[m.unpacked.p_dir]);
     } else if (m.unpacked.p_src < 0) {  // No piece move
-        sprintf(buffer, "%d %s END", m.unpacked.n_src + 1,
-                kDirectionStr[m.unpacked.n_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s END",
+                 m.unpacked.n_src + 1, kDirectionStr[m.unpacked.n_dir]);
     } else {
-        sprintf(buffer, "%d %s %d %s", m.unpacked.n_src + 1,
-                kDirectionStr[m.unpacked.n_dir], m.unpacked.p_src + 1,
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s %d %s",
+                 m.unpacked.n_src + 1, kDirectionStr[m.unpacked.n_dir],
+                 m.unpacked.p_src + 1, kDirectionStr[m.unpacked.p_dir]);
     }
 
     return kSuccess;
@@ -724,9 +731,9 @@ static Move NeutronStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon kNeutronGameplayApiCommon = {
     .GetInitialPosition = NeutronGetInitialPosition,
-    .position_string_length_max = sizeof(kPositionStringFormat),
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 11,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = NeutronMoveToString,
 
     .IsValidMoveString = NeutronIsValidMoveString,
@@ -839,18 +846,22 @@ static CString NeutronMoveToFormalMove(Position position, Move move) {
     (void)position;  // Unused.
 
     // The following logic works for both part-moves and full-moves.
-    char buffer[12];
+    static const size_t max_length = 10;
+    char buffer[max_length + 1];
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
         assert(m.unpacked.p_src >= 0);
-        sprintf(buffer, "%s %s", kBoardIndexToLegend[m.unpacked.p_src],
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, sizeof(buffer), "%s %s",
+                 kBoardIndexToLegend[m.unpacked.p_src],
+                 kDirectionStr[m.unpacked.p_dir]);
     } else if (m.unpacked.p_src < 0) {  // No piece move
-        sprintf(buffer, "N %s", kDirectionStr[m.unpacked.n_dir]);
+        snprintf(buffer, sizeof(buffer), "N %s",
+                 kDirectionStr[m.unpacked.n_dir]);
     } else {
-        sprintf(buffer, "N %s %s %s", kDirectionStr[m.unpacked.n_dir],
-                kBoardIndexToLegend[m.unpacked.p_src],
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, sizeof(buffer), "N %s %s %s",
+                 kDirectionStr[m.unpacked.n_dir],
+                 kBoardIndexToLegend[m.unpacked.p_src],
+                 kDirectionStr[m.unpacked.p_dir]);
     }
     CString ret;
     CStringInitCopyCharArray(&ret, buffer);
