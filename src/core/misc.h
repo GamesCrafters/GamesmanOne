@@ -25,7 +25,6 @@
 #ifndef GAMESMANONE_CORE_MISC_H_
 #define GAMESMANONE_CORE_MISC_H_
 
-#include <stdbool.h>
 #include <stddef.h>
 
 /**
@@ -60,16 +59,5 @@ void NotReached(const char *message);
  * @return A pointer to `buf`, or `NULL` if `buf` is `NULL` or `buf_size` is 0.
  */
 char *SecondsToFormattedTimeString(double seconds, char *buf, size_t buf_size);
-
-/**
- * @brief Checks if a string matches a given regular expression.
- *
- * @param[in] pattern The regular expression pattern.
- * @param[in] target  The string to test against the pattern.
- *
- * @retval true if it matches,
- * @retval false otherwise.
- */
-bool RegexMatch(const char *pattern, const char *target);
 
 #endif  // GAMESMANONE_CORE_MISC_H_

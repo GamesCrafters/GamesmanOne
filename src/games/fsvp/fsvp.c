@@ -35,7 +35,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
@@ -46,6 +45,7 @@
 #include "core/types/gameplay_api/gameplay_api_regular.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
+#include "libs/string/xstring.h"
 
 static int FsvpInit(void *aux);
 static int FsvpFinalize(void);
