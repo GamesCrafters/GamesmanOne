@@ -785,7 +785,7 @@ static void SolveTierGraphPrintTime(Tier tier, double time_elapsed_seconds,
             SecondsToFormattedTimeString(time_remaining, time_string,
                                          sizeof(time_string));
         } else {
-            sprintf(time_string, "unknown");
+            snprintf(time_string, sizeof(time_string), "unknown");
         }
         printf("Estimated time remaining: %s.\n", time_string);
     }

@@ -38,7 +38,8 @@ static int PrintSolveCommand(FILE *file, int num_processes,
 int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     static const char extension[] = ".sh";
     char file_name[kSavioJobNameLengthMax + sizeof(extension) + 1];
-    sprintf(file_name, "%s%s", settings->job_name, extension);
+    snprintf(file_name, sizeof(file_name), "%s%s", settings->job_name,
+             extension);
     FILE *file = GuardedFopen(file_name, "w");
     if (file == NULL) return kFileSystemError;
 

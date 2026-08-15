@@ -189,5 +189,6 @@ static int TestCurrentGameVariant(ReadOnlyString key) {
 static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
     int variant_index = InteractiveMatchGetVariantIndex();
-    sprintf(title, title_format, current_game->formal_name, variant_index);
+    snprintf(title, sizeof(title), title_format, current_game->formal_name,
+             variant_index);
 }

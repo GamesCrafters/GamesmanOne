@@ -42,6 +42,7 @@
 #include "core/types/gamesman_status.h"
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/io/xfile.h"
+#include "libs/string/xstring.h"
 
 // Database API.
 
@@ -137,18 +138,19 @@ static TierToPtrChainedHashMap loaded_tiers;
  */
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name>", +2 for '/' and '\0'.
-    char *full_path = (char *)GamesmanCallocWhole(
-        (strlen(sandbox_path) + kDbFileNameLengthMax + 2), sizeof(char));
+    const size_t max_length = strlen(sandbox_path) + kDbFileNameLengthMax + 1;
+    char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
     }
 
-    int count = sprintf(full_path, "%s/", sandbox_path);
+    size_t offset = 0;
+    AppendSnprintf(full_path, max_length + 1, &offset, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(tier, full_path + count);
+        GetTierName(tier, full_path + offset);
     } else {
-        sprintf(full_path + count, "%" PRITier, tier);
+        AppendSnprintf(full_path, max_length + 1, &offset, "%" PRITier, tier);
     }
 
     return full_path;
@@ -157,15 +159,17 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
 static char *GetFullPathToFinishFlag(void) {
     // Full path: "<path>/.finish", +2 for '/' and '\0'.
     ConstantReadOnlyString kFinishFlagFilename = ".finish";
-    char *full_path = (char *)GamesmanCallocWhole(
-        (strlen(sandbox_path) + strlen(kFinishFlagFilename) + 2), sizeof(char));
+    const size_t max_length =
+        strlen(sandbox_path) + strlen(kFinishFlagFilename) + 1;
+    char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr,
                 "GetFullPathToFinishFlag: failed to calloc full_path.\n");
         return NULL;
     }
 
-    sprintf(full_path, "%s/%s", sandbox_path, kFinishFlagFilename);
+    snprintf(full_path, max_length + 1, "%s/%s", sandbox_path,
+             kFinishFlagFilename);
     return full_path;
 }
 

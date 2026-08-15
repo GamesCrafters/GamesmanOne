@@ -46,7 +46,7 @@ static void InitKeys(void) {
     if (initialized) return;
 
     for (int i = 0; i < kNumSavioPartitions; ++i) {
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], sizeof(keys[i]), "%d", i);
         keys_p[i] = (ReadOnlyString)&keys[i];
     }
     initialized = true;

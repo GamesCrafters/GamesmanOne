@@ -697,7 +697,8 @@ static int DefaultGetTierName(Tier tier,
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    sprintf(name, "%s_%d", current_game_name, current_variant_id);
+    snprintf(name, kDbFileNameLengthMax + 1, "%s_%d", current_game_name,
+             current_variant_id);
 
     return kSuccess;
 }

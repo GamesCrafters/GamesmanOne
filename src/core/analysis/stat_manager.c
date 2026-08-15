@@ -353,7 +353,7 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
     }
 
     char file_name[file_name_length + 1];  // +1 for '\0'.
-    sprintf(file_name, "%" PRITier "%s", tier, extension);
+    snprintf(file_name, sizeof(file_name), "%" PRITier "%s", tier, extension);
 
     strcat(path, sandbox_path);
     strcat(path, file_name);

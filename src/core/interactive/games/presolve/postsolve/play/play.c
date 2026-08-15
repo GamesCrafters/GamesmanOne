@@ -38,11 +38,11 @@ static void PrintPrediction(void) {
             return;
 
         case kWin:
-            sprintf(value_string, "win");
+            snprintf(value_string, sizeof(value_string), "win");
             break;
 
         case kTie:
-            sprintf(value_string, "tie");
+            snprintf(value_string, sizeof(value_string), "tie");
             break;
 
         case kDraw:
@@ -50,7 +50,7 @@ static void PrintPrediction(void) {
             return;
 
         case kLose:
-            sprintf(value_string, "lose");
+            snprintf(value_string, sizeof(value_string), "lose");
             break;
 
         default:

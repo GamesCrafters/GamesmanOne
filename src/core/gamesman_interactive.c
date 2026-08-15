@@ -71,13 +71,13 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage =
     "      MPI Enabled       ";
 #endif  // USE_MPI
 
-static void AnimationUpdate(char *opening_credits, int frame) {
+static void AnimationUpdate(char *opening_credits, size_t capacity, int frame) {
 #ifndef USE_MPI
-    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
-            kOpeningCreditsNoMessage, GM_DATE);
+    snprintf(opening_credits, capacity, kOpeningCreditsFormat,
+             kHeaderAnimation[frame], kOpeningCreditsNoMessage, GM_DATE);
 #else   // USE_MPI defined.
-    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
-            kOpeningCreditsMpiMessage, GM_DATE);
+    snprintf(opening_credits, capacity, kOpeningCreditsFormat,
+             kHeaderAnimation[frame], kOpeningCreditsMpiMessage, GM_DATE);
 #endif  // USE_MPI
 }
 
@@ -125,24 +125,24 @@ static void EraseLastBlockExact(const char *s) {
 #endif  // GAMESMAN_ENABLE_ANIMATION
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kHeaderAnimation[0]) +
-                    strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
-                    kOpeningCreditsMessageSize;
-    char *buf = (char *)SafeCalloc(length, sizeof(char));
+    const size_t length = strlen(kHeaderAnimation[0]) +
+                          strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
+                          kOpeningCreditsMessageSize;
+    char *buf = (char *)SafeCalloc(length + 1, sizeof(char));
 
     const int nframes = sizeof(kHeaderAnimation) / sizeof(kHeaderAnimation[0]);
 #ifdef GAMESMAN_ENABLE_ANIMATION
     char *prev = NULL;
     for (int i = 0; i < nframes; ++i) {
         EraseLastBlockExact(prev);
-        AnimationUpdate(buf, i);
+        AnimationUpdate(buf, length, i);
         prev = buf;
         printf("%s", buf);
         fflush(stdout);
         usleep(8000);
     }
 #else   // No animation
-    AnimationUpdate(buf, nframes - 1);
+    AnimationUpdate(buf, length, nframes - 1);
     printf("%s", buf);
     fflush(stdout);
 #endif  // GAMESMAN_ENABLE_ANIMATION

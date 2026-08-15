@@ -54,6 +54,7 @@
 #include "core/types/tier_to_ptr_chained_hash_map.h"
 #include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
+#include "libs/string/xstring.h"
 #include "libs/xzra/xzra.h"
 
 // DB API
@@ -354,19 +355,20 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
 static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name><ext>", +2 for '/' and '\0'.
     static const char extension[] = ".adb.xz";
-    char *full_path = (char *)GamesmanCallocWhole(
-        (strlen(sandbox_path) + kDbFileNameLengthMax + sizeof(extension) + 2),
-        sizeof(char));
+    const size_t max_length =
+        strlen(sandbox_path) + kDbFileNameLengthMax + sizeof(extension) + 1;
+    char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
     }
 
-    int count = sprintf(full_path, "%s/", sandbox_path);
+    size_t offset = 0;
+    AppendSnprintf(full_path, max_length + 1, &offset, "%s/", sandbox_path);
     if (GetTierName != NULL) {
-        GetTierName(tier, full_path + count);
+        GetTierName(tier, full_path + offset);
     } else {
-        sprintf(full_path + count, "%" PRITier, tier);
+        AppendSnprintf(full_path, max_length + 1, &offset, "%" PRITier, tier);
     }
     strcat(full_path, extension);
 
@@ -408,7 +410,7 @@ static char *GetFullPathToTempCheckpoint(Tier tier,
 static char *GetFullPathToTempSegment(Tier tier, GetTierNameFunc GetTierName,
                                       int seg_idx) {
     char postfix[14 + kInt32Base10StringLengthMax];
-    sprintf(postfix, "_seg_%d.lz4.tmp", seg_idx);
+    snprintf(postfix, sizeof(postfix), "_seg_%d.lz4.tmp", seg_idx);
 
     return GetFullPathPlusExtension(tier, GetTierName, postfix);
 }
@@ -416,7 +418,7 @@ static char *GetFullPathToTempSegment(Tier tier, GetTierNameFunc GetTierName,
 static char *GetFullPathToSegment(Tier tier, GetTierNameFunc GetTierName,
                                   int seg_idx) {
     char postfix[10 + kInt32Base10StringLengthMax];
-    sprintf(postfix, "_seg_%d.lz4", seg_idx);
+    snprintf(postfix, sizeof(postfix), "_seg_%d.lz4", seg_idx);
 
     return GetFullPathPlusExtension(tier, GetTierName, postfix);
 }
@@ -424,15 +426,17 @@ static char *GetFullPathToSegment(Tier tier, GetTierNameFunc GetTierName,
 static char *GetFullPathToFinishFlag(void) {
     // Full path: "<path>/.finish", +2 for '/' and '\0'.
     static const char finish_flag_name[] = ".finish";
-    char *full_path = (char *)GamesmanCallocWhole(
-        (strlen(sandbox_path) + sizeof(finish_flag_name) + 2), sizeof(char));
+    const size_t max_length =
+        strlen(sandbox_path) + sizeof(finish_flag_name) + 1;
+    char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
     if (full_path == NULL) {
         fprintf(stderr,
                 "GetFullPathToFinishFlag: failed to calloc full_path.\n");
         return NULL;
     }
 
-    sprintf(full_path, "%s/%s", sandbox_path, finish_flag_name);
+    snprintf(full_path, max_length + 1, "%s/%s", sandbox_path,
+             finish_flag_name);
     return full_path;
 }
 

@@ -22,12 +22,6 @@ if(GAMESMAN_ENABLE_MPI) # MPI (optional)
   target_link_libraries(gamesman_core PRIVATE MPI::MPI_C)
 endif()
 
-# TODO: remove this when all sprintf has been replaced and tested
-if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "AppleClang")
-  message(WARNING "Temporarily disabling compiler warnings on deprecated declarations")
-  target_compile_options(gamesman_core PRIVATE -Wno-deprecated-declarations)
-endif()
-
 # Define the GAMESMAN executable
 add_executable(gamesman main.c)
 
