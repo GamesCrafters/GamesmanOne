@@ -37,7 +37,7 @@ int InteractiveGameOptionChoices(ReadOnlyString key) {
 
     for (int i = 0; i < num_items; ++i) {
         items[i] = variant->options[option_index].choices[i];
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], kKeyLengthMax + 1, "%d", i);
         hooks[i] = &MakeSelection;
     }
     int ret = AutoMenu(title, num_items, (ConstantReadOnlyString *)items,
@@ -54,7 +54,7 @@ static ReadOnlyString *AllocateItems(int num_items) {
 static char **AllocateKeys(int num_items) {
     char **keys = (char **)SafeCalloc(num_items, sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
-        keys[i] = (char *)SafeCalloc(kKeyLengthMax, sizeof(char));
+        keys[i] = (char *)SafeCalloc(kKeyLengthMax + 1, sizeof(char));
     }
     return keys;
 }
@@ -81,9 +81,9 @@ static void UpdateTitle(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
     const GameVariant *variant = InteractiveMatchGetVariant();
     int selection = variant->selections[option_index];
-    sprintf(title, "Changing option [%s] for %s (currently %s)",
-            variant->options[option_index].name, current_game->formal_name,
-            variant->options[option_index].choices[selection]);
+    snprintf(title, sizeof(title), "Changing option [%s] for %s (currently %s)",
+             variant->options[option_index].name, current_game->formal_name,
+             variant->options[option_index].choices[selection]);
 }
 
 static void FreeAll(int num_items, ReadOnlyString *items, char **keys,

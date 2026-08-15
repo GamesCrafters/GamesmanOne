@@ -21,7 +21,7 @@ static char **AllocateItems(int num_items) {
 static char **AllocateKeys(int num_items) {
     char **keys = (char **)SafeMalloc(num_items * sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
-        keys[i] = (char *)SafeMalloc(kKeyLengthMax);
+        keys[i] = (char *)SafeMalloc(kKeyLengthMax + 1);
     }
     return keys;
 }
@@ -53,7 +53,7 @@ int InteractiveGames(ReadOnlyString key) {
     HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
         strcpy(items[i], all_games[i]->formal_name);
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], kKeyLengthMax + 1, "%d", i);
         hooks[i] = &InteractivePresolve;
     }
     int ret = AutoMenu(kTitle, num_items, (ConstantReadOnlyString *)items,
