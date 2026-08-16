@@ -356,9 +356,13 @@ static bool FsvpIsValidMoveString(ReadOnlyString move_string) {
 
 // Assumes valid move string.
 static Move FsvpStringToMove(ReadOnlyString move_string) {
-    char operation;
-    int values[2];
-    sscanf(move_string, "%c %d %d", &operation, &values[0], &values[1]);
+    char operation = '\0';
+    int values[2] = {0};
+    int parsed =
+        sscanf(move_string, "%c %d %d", &operation, &values[0], &values[1]);
+    if (parsed != 3) {
+        return ConstructMove(false, 0, 0);
+    }
 
     return ConstructMove(operation == 's', values[0], values[1]);
 }

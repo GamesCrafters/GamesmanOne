@@ -416,9 +416,8 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
 
         for (int c = 0; c < kBoardCols; ++c) {
             int index = r * kBoardCols + c;
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "%c ", board[index]);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "%c ",
+                           board[index]);
         }
         AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }

@@ -919,9 +919,8 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
 
         for (int c = 0; c < side_length; ++c) {
             int index = r * side_length + c;
-            offset +=
-                snprintf(buffer + offset, kPositionStringLengthMax + 1 - offset,
-                         "%c ", board_str[index]);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "%c ",
+                           board_str[index]);
         }
         AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }
