@@ -3,13 +3,13 @@ name: CI Build and Test
 on:
   # Allows manual triggering from the GitHub Actions UI
   workflow_dispatch:
-  
+
   # Runs when code is actually pushed/merged into these branches
   push:
     branches:
       - main
       - dev
-      
+
   # Runs when a PR is opened or updated targeting these branches
   pull_request:
     branches:
@@ -28,25 +28,24 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         preset: [ci-asan, ci-asan-st, ci-coverage, ci-coverage-st]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Configure Gamesman
         run: |
-          chmod +x gamesman_setup.sh 
+          chmod +x gamesman_setup.sh
           ./gamesman_setup.sh --install-deps
 
-      - name: Run CMake Workflow
+      - name: Run Unit Testing Workflow
         run: cmake --workflow --preset ${{ matrix.preset }}
 
-
   # ==========================================
-  # JOB 2: End-to-End Tests
+  # JOB 2: E2E Headless Tests
   # ==========================================
-  e2e-test:
-    name: E2E Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+  e2e-headless-test:
+    name: E2E Headless Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -61,14 +60,14 @@ jobs:
           - { game: "mtttier", variant: "0" }
           - { game: "quixo", variant: "1" }
           - { game: "quixo", variant: "2" }
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Configure Gamesman
         run: |
-          chmod +x gamesman_setup.sh 
+          chmod +x gamesman_setup.sh
           ./gamesman_setup.sh --install-deps
 
       - name: Configure CMake
@@ -80,19 +79,61 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install E2E Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pytest syrupy
 
-      - name: Run End-to-End Tests
+      - name: Run Tests
         env:
           GAMESMAN_PRESET: ${{ matrix.preset }}
         run: pytest tests/e2e/test_headless.py -k "${{ matrix.test_case.game }}-${{ matrix.test_case.variant }}" -v
 
-  # Job 2: Static Analysis (Disabled for now)
+  # ==========================================
+  # JOB 3: E2E Interactive Tests
+  # ==========================================
+  e2e-interactive-test:
+    name: E2E Interactive Test (${{ matrix.os }}, ${{ matrix.preset }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        preset: [ci-asan] # Must not include release here due to animated terminal output
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Configure Gamesman
+        run: |
+          chmod +x gamesman_setup.sh
+          ./gamesman_setup.sh --install-deps
+
+      - name: Configure CMake
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}-build
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install E2E Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest syrupy pexpect
+
+      - name: Run Tests
+        env:
+          GAMESMAN_PRESET: ${{ matrix.preset }}
+        run: pytest tests/e2e/test_interactive.py -v
+
+  # Static Analysis (Disabled for now)
   # static-analysis:
   #   name: Analyze (${{ matrix.preset }})
   #   runs-on: ubuntu-latest
@@ -100,7 +141,7 @@ jobs:
   #     fail-fast: false
   #     matrix:
   #       preset: [ci-analyze-gcc, ci-analyze-clang]
-    
+
   #   steps:
   #     - name: Checkout code
   #       uses: actions/checkout@v7
@@ -114,6 +155,6 @@ jobs:
   #       run: cmake --preset ${{ matrix.preset }}
 
   #     - name: Build / Analyze
-        # These presets don't have matching test presets in your JSON, 
-        # as the analysis happens during the compilation step.
-        # run: cmake --build --preset ${{ matrix.preset }}-build
+  # These presets don't have matching test presets in your JSON,
+  # as the analysis happens during the compilation step.
+  # run: cmake --build --preset ${{ matrix.preset }}-build
