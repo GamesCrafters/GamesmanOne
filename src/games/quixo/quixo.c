@@ -1166,7 +1166,7 @@ static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
 
 static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused;
-    char buf[5];
+    char buf[kMoveStringLengthMax + 1];
     QuixoMoveToString(move, buf);
     CString ret;
     CStringInitCopyCharArray(&ret, buf);
