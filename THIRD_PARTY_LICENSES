@@ -5,8 +5,13 @@ This project includes third-party open source software.
 Below is a list of these libraries along with their licenses.
 
 -------------------------------------------------------------------------------
+Library: Benchmark
+Website: <https://github.com/google/benchmark>
+License: Apache-2.0 license
+
+-------------------------------------------------------------------------------
 Library: GoogleTest
-Website: <https://github.com/json-c/json-c>
+Website: <https://github.com/google/googletest>
 License: BSD-3-Clause license
 Copyright (c) 2008 Google Inc.
 
