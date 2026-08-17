@@ -22,7 +22,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin",
-        "GAMESMAN_ENABLE_TESTING": "OFF"
+        "GAMESMAN_ENABLE_TESTING": "OFF",
+        "GAMESMAN_ENABLE_ANIMATION": "ON"
       }
     },
     {

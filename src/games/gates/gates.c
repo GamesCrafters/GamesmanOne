@@ -24,6 +24,7 @@
 #include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
 #include "games/gates/gates_tier.h"
+#include "libs/string/xstring.h"
 
 #ifndef NDEBUG
 #include "core/types/database/database.h"
@@ -1130,6 +1131,11 @@ static const char kGatesPositionStringFormat[] =
     "|                            |  :\n"
     "|       16    17    18       |  :          %c     %c     %c";
 
+enum {
+    kPositionStringLengthMax = sizeof(kGatesPositionStringFormat),
+    kMoveStringLengthMax = 256,
+};
+
 #ifndef NDEBUG
 static void DebugPrintTierPosition(TierPosition tier_position) {
     GatesTier t;
@@ -1169,10 +1175,10 @@ static int GatesTierPositionToString(TierPosition tier_position, char *buffer) {
 #ifndef NDEBUG
     DebugPrintTierPosition(tier_position);
 #endif
-    sprintf(buffer, kGatesPositionStringFormat, board[0], board[1], board[2],
-            board[3], board[4], board[5], board[6], board[7], board[8],
-            board[9], board[10], board[11], board[12], board[13], board[14],
-            board[15], board[16], board[17]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kGatesPositionStringFormat,
+             board[0], board[1], board[2], board[3], board[4], board[5],
+             board[6], board[7], board[8], board[9], board[10], board[11],
+             board[12], board[13], board[14], board[15], board[16], board[17]);
 
     return kSuccess;
 }
@@ -1184,25 +1190,27 @@ static int GatesMoveToString(Move move, char *buffer) {
     bool gate_movement = m.unpacked.gate_src >= 0;
     bool teleport = m.unpacked.teleport_dest >= 0;
     bool first_chunk = true;
-    int count = 0;
+    size_t offset = 0;
     if (placement) {
-        count += sprintf(buffer + count, "p %c %" PRId8,
-                         kPieces[m.unpacked.placement_type],
-                         m.unpacked.placement_dest + 1);
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset,
+                       "p %c %" PRId8, kPieces[m.unpacked.placement_type],
+                       m.unpacked.placement_dest + 1);
         first_chunk = false;
     }
     if (gate_movement) {
-        count += sprintf(buffer + count, "g %" PRId8 " %" PRId8,
-                         m.unpacked.gate_src + 1, m.unpacked.gate_dest + 1);
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset,
+                       "g %" PRId8 " %" PRId8, m.unpacked.gate_src + 1,
+                       m.unpacked.gate_dest + 1);
         first_chunk = false;
     }
     if (movement) {
-        count += sprintf(buffer + count, "%sm %" PRId8 " %" PRId8,
-                         first_chunk ? "" : " ", m.unpacked.move_src + 1,
-                         m.unpacked.move_dest + 1);
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset,
+                       "%sm %" PRId8 " %" PRId8, first_chunk ? "" : " ",
+                       m.unpacked.move_src + 1, m.unpacked.move_dest + 1);
     }
     if (teleport) {
-        sprintf(buffer + count, " t %" PRId8, m.unpacked.teleport_dest + 1);
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, " t %" PRId8,
+                       m.unpacked.teleport_dest + 1);
     }
 
     return kSuccess;
@@ -1251,9 +1259,9 @@ static Move GatesStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon GatesGameplayApiCommon = {
     .GetInitialPosition = GatesGetInitialPosition,
-    .position_string_length_max = sizeof(kGatesPositionStringFormat),
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 19,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = GatesMoveToString,
 
     .IsValidMoveString = GatesIsValidMoveString,

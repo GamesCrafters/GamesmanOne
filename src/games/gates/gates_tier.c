@@ -12,6 +12,7 @@
 #include "core/types/database/database.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/tier_hash_set.h"
+#include "libs/string/xstring.h"
 
 // ====================== GatesTierGetSymmetryMatrixEntry ======================
 
@@ -505,35 +506,40 @@ int GatesGetChildTiers(Tier tier,
 int GatesGetTierName(Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     GatesTier t;
     GatesTierUnhash(tier, &t);
-    int count = 0;
+    size_t offset = 0;
     switch (t.phase) {
         case kPlacement:
-            count += sprintf(name + count, "p_");
-            count += sprintf(name + count, "%" PRIField "%" PRIField, t.n[G],
-                             t.n[g]);
+            AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset,
+                           "p_%" PRIField "%" PRIField, t.n[G], t.n[g]);
             break;
 
         case kMovement:
-            count += sprintf(name + count, "m_");
+            AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset, "m_");
             break;
 
         case kGate1Moving:
-            count += sprintf(name + count, "g1_");
+            AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset, "g1_");
             break;
 
         case kGate2Moving:
-            count += sprintf(name + count, "g2_");
+            AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset, "g2_");
             break;
 
         default:
             return kIllegalGameTierError;
     }
 
-    count += sprintf(name + count,
-                     "%" PRIField "%" PRIField "%" PRIField "%" PRIField,
-                     t.n[A], t.n[a], t.n[Z], t.n[z]);
-    if (t.n[G] > 0) count += sprintf(name + count, "_%" PRIField, t.G1);
-    if (t.n[G] > 1) sprintf(name + count, "_%" PRIField, t.G2);
+    AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset,
+                   "%" PRIField "%" PRIField "%" PRIField "%" PRIField, t.n[A],
+                   t.n[a], t.n[Z], t.n[z]);
+    if (t.n[G] > 0) {
+        AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset, "_%" PRIField,
+                       t.G1);
+    }
+    if (t.n[G] > 1) {
+        AppendSnprintf(name, kDbFileNameLengthMax + 1, &offset, "_%" PRIField,
+                       t.G2);
+    }
 
     return kSuccess;
 }

@@ -451,11 +451,13 @@ static int GobbletGobblersGetChildTiers(
     return ret;
 }
 
-static int GobbletGobblersGetTierName(Tier tier, char *name) {
+static int GobbletGobblersGetTierName(
+    Tier tier, char name[static kDbFileNameLengthMax + 1]) {
     GobbletGobblersTier t = {.hash = tier};
-    sprintf(name, "%d%d%d%d%d%d", t.configs[0].count[0], t.configs[0].count[1],
-            t.configs[1].count[0], t.configs[1].count[1], t.configs[2].count[0],
-            t.configs[2].count[1]);
+    snprintf(name, kDbFileNameLengthMax + 1, "%d%d%d%d%d%d",
+             t.configs[0].count[0], t.configs[0].count[1],
+             t.configs[1].count[0], t.configs[1].count[1],
+             t.configs[2].count[0], t.configs[2].count[1]);
 
     return kSuccess;
 }
@@ -505,6 +507,11 @@ static const char kPositionFormat[] =
     "( 7       8       9 )  |  %c [%c]   %c [%c]   %c [%c]\n"
     "                       |    [%c]     [%c]     [%c]\n";
 
+enum {
+    kPositionStringLengthMax = sizeof(kPositionFormat),
+    kMoveStringLengthMax = 6 + 2 * kInt32Base10StringLengthMax,
+};
+
 static int GobbletGobblersTierPositionToString(TierPosition tier_position,
                                                char *buffer) {
     GobbletGobblersTier t;
@@ -514,19 +521,19 @@ static int GobbletGobblersTierPositionToString(TierPosition tier_position,
 
     char faces[9];
     GetFaces(faces, &p);
-    sprintf(buffer, kPositionFormat,
+    snprintf(buffer, kPositionStringLengthMax + 1, kPositionFormat,
 
-            p.board[2][0], p.board[2][1], p.board[2][2], faces[0],
-            p.board[1][0], faces[1], p.board[1][1], faces[2], p.board[1][2],
-            p.board[0][0], p.board[0][1], p.board[0][2],
+             p.board[2][0], p.board[2][1], p.board[2][2], faces[0],
+             p.board[1][0], faces[1], p.board[1][1], faces[2], p.board[1][2],
+             p.board[0][0], p.board[0][1], p.board[0][2],
 
-            p.board[2][3], p.board[2][4], p.board[2][5], faces[3],
-            p.board[1][3], faces[4], p.board[1][4], faces[5], p.board[1][5],
-            p.board[0][3], p.board[0][4], p.board[0][5],
+             p.board[2][3], p.board[2][4], p.board[2][5], faces[3],
+             p.board[1][3], faces[4], p.board[1][4], faces[5], p.board[1][5],
+             p.board[0][3], p.board[0][4], p.board[0][5],
 
-            p.board[2][6], p.board[2][7], p.board[2][8], faces[6],
-            p.board[1][6], faces[7], p.board[1][7], faces[8], p.board[1][8],
-            p.board[0][6], p.board[0][7], p.board[0][8]);
+             p.board[2][6], p.board[2][7], p.board[2][8], faces[6],
+             p.board[1][6], faces[7], p.board[1][7], faces[8], p.board[1][8],
+             p.board[0][6], p.board[0][7], p.board[0][8]);
 
     return kSuccess;
 }
@@ -534,10 +541,11 @@ static int GobbletGobblersTierPositionToString(TierPosition tier_position,
 static int GobbletGobblersMoveToString(Move move, char *buffer) {
     GobbletGobblersMove m = {.hash = move};
     if (m.unpacked.add_size < 0) {  // Moving a piece
-        sprintf(buffer, "move %d %d", m.unpacked.src + 1, m.unpacked.dest + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "move %d %d",
+                 m.unpacked.src + 1, m.unpacked.dest + 1);
     } else {  // Adding a piece
-        sprintf(buffer, "add %d %d", m.unpacked.add_size + 1,
-                m.unpacked.dest + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "add %d %d",
+                 m.unpacked.add_size + 1, m.unpacked.dest + 1);
     }
 
     return kSuccess;
@@ -578,9 +586,9 @@ static Move GobbletGobblersStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon GobbletGobblersGameplayApiCommon = {
     .GetInitialPosition = GobbletGobblersGetInitialPosition,
-    .position_string_length_max = sizeof(kPositionFormat),
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 8,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = GobbletGobblersMoveToString,
 
     .IsValidMoveString = GobbletGobblersIsValidMoveString,
@@ -765,10 +773,11 @@ static CString GobbletGobblersMoveToFormalMove(TierPosition tier_position,
     GobbletGobblersMove m = {.hash = move};
     static const char sizes[] = "SML";
     if (m.unpacked.add_size < 0) {  // Moving a piece
-        sprintf(placeholder, "M_%d_%d", m.unpacked.src, m.unpacked.dest);
+        snprintf(placeholder, sizeof(placeholder), "M_%d_%d", m.unpacked.src,
+                 m.unpacked.dest);
     } else {
-        sprintf(placeholder, "A_%c_%d", sizes[m.unpacked.add_size],
-                m.unpacked.dest);
+        snprintf(placeholder, sizeof(placeholder), "A_%c_%d",
+                 sizes[m.unpacked.add_size], m.unpacked.dest);
     }
 
     CString ret;

@@ -50,6 +50,7 @@
 #include "core/types/move_array.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
+#include "libs/string/xstring.h"
 
 // ================================= Constants =================================
 
@@ -332,9 +333,9 @@ static int TeekoGetTierName(Tier tier,
                             char name[static kDbFileNameLengthMax + 1]) {
     assert(tier >= 0 && tier <= 8);
     if (tier < 8) {
-        sprintf(name, "%" PRITier "_dropped", tier);
+        snprintf(name, kDbFileNameLengthMax + 1, "%" PRITier "_dropped", tier);
     } else {
-        sprintf(name, "moving_phase");
+        snprintf(name, kDbFileNameLengthMax + 1, "moving_phase");
     }
 
     return kSuccess;
@@ -358,6 +359,11 @@ static const TierSolverApi kTeekoSolverApi = {
 
 // ============================= kTeekoGameplayApi =============================
 
+enum {
+    kPositionStringLengthMax = 1024,
+    kMoveStringLengthMax = 2 * kInt32Base10StringLengthMax + 1,
+};
+
 static MoveArray TeekoGenerateMovesGameplay(TierPosition tier_position) {
     Move moves[kTierSolverNumMovesMax];
     int num_moves = TeekoGenerateMoves(tier_position, moves);
@@ -370,7 +376,7 @@ static MoveArray TeekoGenerateMovesGameplay(TierPosition tier_position) {
     return ret;
 }
 
-// Simple automatic board string formatting from Teeko.
+// Automatic board string
 static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     char board[kBoardSize];
@@ -378,35 +384,42 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
                                           tier_position.position, board);
     if (!success) return kGenericHashError;
 
-    int offset = 0;
+    size_t offset = 0;
     for (int r = 0; r < kBoardRows; ++r) {
         if (r == (kBoardRows - 1) / 2) {
-            offset += sprintf(buffer + offset, "LEGEND: ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "LEGEND: ");
         } else {
-            offset += sprintf(buffer + offset, "        ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "        ");
         }
 
         for (int c = 0; c < kBoardCols; ++c) {
             int index = r * kBoardCols + c + 1;
             if (c == 0) {
-                offset += sprintf(buffer + offset, "(%2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               "(%2d", index);
             } else {
-                offset += sprintf(buffer + offset, " %2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               " %2d", index);
             }
         }
-        offset += sprintf(buffer + offset, ")");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, ")");
 
         if (r == (kBoardRows - 1) / 2) {
-            offset += sprintf(buffer + offset, "    BOARD: : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "    BOARD: : ");
         } else {
-            offset += sprintf(buffer + offset, "           : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "           : ");
         }
 
         for (int c = 0; c < kBoardCols; ++c) {
             int index = r * kBoardCols + c;
-            offset += sprintf(buffer + offset, "%c ", board[index]);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "%c ",
+                           board[index]);
         }
-        offset += sprintf(buffer + offset, "\n");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }
 
     return kSuccess;
@@ -414,11 +427,11 @@ static int TeekoTierPositionToString(TierPosition tier_position, char *buffer) {
 
 static int TeekoMoveToString(Move move, char *buffer) {
     if (move < kBoardSize) {
-        sprintf(buffer, "%" PRIMove, move + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%" PRIMove, move + 1);
     } else {
         int src, dest;
         ExpandMove(move, &src, &dest);
-        sprintf(buffer, "%d %d", src + 1, dest + 1);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %d", src + 1, dest + 1);
     }
 
     return kSuccess;
@@ -453,9 +466,9 @@ static Move TeekoStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon TeekoGameplayApiCommon = {
     .GetInitialPosition = TeekoGetInitialPosition,
-    .position_string_length_max = 400,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 6,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = TeekoMoveToString,
 
     .IsValidMoveString = TeekoIsValidMoveString,
@@ -631,13 +644,14 @@ static CString TeekoTierPositionToAutoGuiPosition(TierPosition tier_position) {
 
 static CString TeekoMoveToFormalMove(TierPosition tier_position, Move move) {
     CString ret;
-    char formal_move[kInt32Base10StringLengthMax * 2 + 2];
+    static const size_t max_length = kInt32Base10StringLengthMax * 2 + 2;
+    char formal_move[max_length];
     if (tier_position.tier < 8) {  // Dropping
-        sprintf(formal_move, "%d", (int)move);
+        snprintf(formal_move, max_length, "%d", (int)move);
     } else {  // Moving
         int src, dest;
         ExpandMove(move, &src, &dest);
-        sprintf(formal_move, "%d %d", src, dest);
+        snprintf(formal_move, max_length, "%d %d", src, dest);
     }
     CStringInitCopyCharArray(&ret, formal_move);
 
@@ -646,13 +660,14 @@ static CString TeekoMoveToFormalMove(TierPosition tier_position, Move move) {
 
 static CString TeekoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     CString ret;
-    char autogui_move[kInt32Base10StringLengthMax * 2 + 6];
+    static const size_t max_length = kInt32Base10StringLengthMax * 2 + 6;
+    char autogui_move[max_length];
     if (tier_position.tier < 8) {  // Dropping, A-type move
-        sprintf(autogui_move, "A_-_%d_y", (int)move);
+        snprintf(autogui_move, max_length, "A_-_%d_y", (int)move);
     } else {  // Moving, M-type move
         int src, dest;
         ExpandMove(move, &src, &dest);
-        sprintf(autogui_move, "M_%d_%d_x", src, dest);
+        snprintf(autogui_move, max_length, "M_%d_%d_x", src, dest);
     }
     CStringInitCopyCharArray(&ret, autogui_move);
 

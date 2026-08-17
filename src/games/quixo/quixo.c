@@ -42,6 +42,7 @@
 #include "core/types/game/game.h"
 
 #define U64X2_HASH_SET_SIZE 16ULL
+#include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_hash_set.h"
 #include "core/hash/simd_two_piece.h"
@@ -61,6 +62,7 @@
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
+#include "libs/string/xstring.h"
 
 // =================================== Types ===================================
 
@@ -817,8 +819,8 @@ static int QuixoGetChildTiers(
 static int QuixoGetTierName(Tier tier,
                             char name[static kDbFileNameLengthMax + 1]) {
     QuixoTier t = {.hash = tier};
-    sprintf(name, "%dBlank_%dX_%dO", GetNumBlanks(t), t.unpacked[0],
-            t.unpacked[1]);
+    snprintf(name, kDbFileNameLengthMax + 1, "%dBlank_%dX_%dO", GetNumBlanks(t),
+             t.unpacked[0], t.unpacked[1]);
 
     return kSuccess;
 }
@@ -873,6 +875,11 @@ static void BoardToStr(U64x2 board, char *buffer) {
     buffer[board_size] = '\0';
 }
 
+enum {
+    kPositionStringLengthMax = 512,
+    kMoveStringLengthMax = 2 + kInt32Base10StringLengthMax,
+};
+
 static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
     // Unhash
     QuixoTier t = {.hash = tier_position.tier};
@@ -880,35 +887,42 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
                                          t.unpacked[0], t.unpacked[1]);
     char board_str[kBoardSizeMax + 1];
     BoardToStr(board, board_str);
-    int offset = 0;
+    size_t offset = 0;
     for (int r = 0; r < side_length; ++r) {
         if (r == (side_length - 1) / 2) {
-            offset += sprintf(buffer + offset, "LEGEND: ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "LEGEND: ");
         } else {
-            offset += sprintf(buffer + offset, "        ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "        ");
         }
 
         for (int c = 0; c < side_length; ++c) {
             int index = r * side_length + c + 1;
             if (c == 0) {
-                offset += sprintf(buffer + offset, "(%2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               "(%2d", index);
             } else {
-                offset += sprintf(buffer + offset, " %2d", index);
+                AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                               " %2d", index);
             }
         }
-        offset += sprintf(buffer + offset, ")");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, ")");
 
         if (r == (side_length - 1) / 2) {
-            offset += sprintf(buffer + offset, "    BOARD: : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "    BOARD: : ");
         } else {
-            offset += sprintf(buffer + offset, "           : ");
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "           : ");
         }
 
         for (int c = 0; c < side_length; ++c) {
             int index = r * side_length + c;
-            offset += sprintf(buffer + offset, "%c ", board_str[index]);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "%c ",
+                           board_str[index]);
         }
-        offset += sprintf(buffer + offset, "\n");
+        AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "\n");
     }
 
     return kSuccess;
@@ -916,8 +930,8 @@ static int QuixoTierPositionToString(TierPosition tier_position, char *buffer) {
 
 static int QuixoMoveToString(Move move, char *buffer) {
     QuixoMove m = {.hash = move};
-    sprintf(
-        buffer, "%d %c",
+    snprintf(
+        buffer, kMoveStringLengthMax + 1, "%d %c",
         kDirIndexToSrc[curr_variant_idx][m.unpacked.dir][m.unpacked.idx] + 1,
         kDirToChar[m.unpacked.dir]);
 
@@ -978,9 +992,9 @@ static Move QuixoStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon QuixoGameplayApiCommon = {
     .GetInitialPosition = QuixoGetInitialPosition,
-    .position_string_length_max = 512,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 4,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = QuixoMoveToString,
 
     .IsValidMoveString = QuixoIsValidMoveString,
@@ -1151,7 +1165,7 @@ static CString QuixoTierPositionToAutoGuiPosition(TierPosition tier_position) {
 
 static CString QuixoMoveToFormalMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused;
-    char buf[5];
+    char buf[kMoveStringLengthMax + 1];
     QuixoMoveToString(move, buf);
     CString ret;
     CStringInitCopyCharArray(&ret, buf);
@@ -1172,9 +1186,10 @@ static CString QuixoMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     int src = kDirIndexToSrc[curr_variant_idx][m.unpacked.dir][m.unpacked.idx];
     int dest_center = src + (1 + m.unpacked.dir) * board_size;
 
-    char buf[16];
-    sprintf(buf, "M_%d_%d", src, dest_center);
-    sprintf(buf, "M_%d_%d_x", src, dest_center);
+    static const size_t max_length = 6 + 2 * kInt32Base10StringLengthMax;
+    char buf[max_length];
+    snprintf(buf, max_length, "M_%d_%d", src, dest_center);
+    snprintf(buf, max_length, "M_%d_%d_x", src, dest_center);
     CString ret;
     CStringInitCopyCharArray(&ret, buf);
 

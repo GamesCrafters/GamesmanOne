@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/constants.h"
 #include "core/gamesman_memory.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
@@ -41,14 +42,15 @@ int InteractiveGameOptions(ReadOnlyString key) {
 
     // Hard-coded size based on the title definition below.
     char title[29 + kGameFormalNameLengthMax];
-    sprintf(title, "Game-specific options for %s", current_game->formal_name);
+    snprintf(title, sizeof(title), "Game-specific options for %s",
+             current_game->formal_name);
 
     int num_items = GetNumOptions(variant);
     UpdateItems();
     char **keys = AllocateKeys(num_items);
     HookFunctionPointer *hooks = AllocateHooks(num_items);
     for (int i = 0; i < num_items; ++i) {
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], kInt32Base10StringLengthMax + 1, "%d", i);
         hooks[i] = &InteractiveGameOptionChoices;
     }
 
@@ -108,7 +110,8 @@ static char **AllocateItems(int num_items, int item_length) {
 static char **AllocateKeys(int num_items) {
     char **keys = (char **)SafeCalloc(num_items, sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
-        keys[i] = (char *)SafeCalloc(kKeyLengthMax, sizeof(char));
+        keys[i] =
+            (char *)SafeCalloc(kInt32Base10StringLengthMax + 1, sizeof(char));
     }
     return keys;
 }

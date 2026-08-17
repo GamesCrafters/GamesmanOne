@@ -585,8 +585,8 @@ static int MkaooaPositionToString(Position position, char *buffer) {
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1) {
         fprintf(stderr,
                 "MkaooaTierPositionToString: (BUG) not enough space "
-                "was allocated "
-                "to buffer. Please increase position_string_length_max.\n");
+                "was allocated to buffer. Please increase "
+                "position_string_length_max.\n");
         return 1;
     }
     return 0;
@@ -787,7 +787,6 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     if (from == to) {
         autogui_move[4] = (char)('0' + from);
     } else {
-        // sprintf(autogui_move, "M_%d_%d", from, to);
         autogui_move[0] = 'M';
         autogui_move[2] = (char)('0' + from);
         autogui_move[4] = (char)('0' + to);

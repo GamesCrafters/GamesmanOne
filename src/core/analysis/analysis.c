@@ -883,11 +883,11 @@ static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
     bool first_line = (remoteness == kFirstLineReservedRemotness);
     bool last_line = (remoteness == kLastLineReservedRemotness);
     char format[128];
-    sprintf(format,
-            "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
-            "%%%d" PRId64 "\n",
-            (last_line ? "-" : ""), column_width, column_width, column_width,
-            column_width, column_width, column_width);
+    snprintf(format, sizeof(format),
+             "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
+             "%%%d" PRId64 "\n",
+             (last_line ? "-" : ""), column_width, column_width, column_width,
+             column_width, column_width, column_width);
 
     if (first_line) {
         PrintFirstSummaryLine(stream, format, analysis, canonical);
@@ -939,7 +939,7 @@ static void PrintSummaryLineHelper(FILE *stream, ReadOnlyString format,
 
     int64_t total = win_count + lose_count + tie_count;
     char remoteness_string[kInt32Base10StringLengthMax + 1];
-    sprintf(remoteness_string, "%d", remoteness);
+    snprintf(remoteness_string, sizeof(remoteness_string), "%d", remoteness);
     fprintf(stream, format, remoteness_string, win_count, lose_count, tie_count,
             0, total);
 }

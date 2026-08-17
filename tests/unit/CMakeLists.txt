@@ -126,5 +126,7 @@ add_subdirectory(libs)
 # Discover all tests for gamesman_test
 include(GoogleTest)
 gtest_discover_tests(gamesman_test
-    PROPERTIES LABELS "unit" "gamesman_core"
+    PROPERTIES
+    LABELS "unit"
+    LABELS "gamesman_core"
 )

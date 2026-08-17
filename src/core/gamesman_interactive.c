@@ -36,9 +36,9 @@
 #include "core/types/base.h"
 #include "core/types/gamesman_status.h"
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 #include <unistd.h>
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 // clang-format off
 static ConstantReadOnlyString kOpeningCreditsFormat =
@@ -71,17 +71,17 @@ static ConstantReadOnlyString kOpeningCreditsMpiMessage =
     "      MPI Enabled       ";
 #endif  // USE_MPI
 
-static void AnimationUpdate(char *opening_credits, int frame) {
+static void AnimationUpdate(char *opening_credits, size_t capacity, int frame) {
 #ifndef USE_MPI
-    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
-            kOpeningCreditsNoMessage, GM_DATE);
+    snprintf(opening_credits, capacity, kOpeningCreditsFormat,
+             kHeaderAnimation[frame], kOpeningCreditsNoMessage, GM_DATE);
 #else   // USE_MPI defined.
-    sprintf(opening_credits, kOpeningCreditsFormat, kHeaderAnimation[frame],
-            kOpeningCreditsMpiMessage, GM_DATE);
+    snprintf(opening_credits, capacity, kOpeningCreditsFormat,
+             kHeaderAnimation[frame], kOpeningCreditsMpiMessage, GM_DATE);
 #endif  // USE_MPI
 }
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 static void EraseLastBlockExact(const char *s) {
     if (!s) return;
 
@@ -122,34 +122,34 @@ static void EraseLastBlockExact(const char *s) {
     putchar('\r');
     fflush(stdout);
 }
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 static void PrintOpeningCredits(void) {
-    size_t length = strlen(kHeaderAnimation[0]) +
-                    strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
-                    kOpeningCreditsMessageSize;
-    char *buf = (char *)SafeCalloc(length, sizeof(char));
+    const size_t length = strlen(kHeaderAnimation[0]) +
+                          strlen(kOpeningCreditsFormat) + strlen(GM_DATE) +
+                          kOpeningCreditsMessageSize;
+    char *buf = (char *)SafeCalloc(length + 1, sizeof(char));
 
     const int nframes = sizeof(kHeaderAnimation) / sizeof(kHeaderAnimation[0]);
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
     char *prev = NULL;
     for (int i = 0; i < nframes; ++i) {
         EraseLastBlockExact(prev);
-        AnimationUpdate(buf, i);
+        AnimationUpdate(buf, length, i);
         prev = buf;
         printf("%s", buf);
         fflush(stdout);
         usleep(8000);
     }
-#else   // Debug: no animation
-    AnimationUpdate(buf, nframes - 1);
+#else   // No animation
+    AnimationUpdate(buf, length, nframes - 1);
     printf("%s", buf);
     fflush(stdout);
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
     GamesmanFree(buf);
 }
 
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
 static void AnimateText(const char *str, unsigned int us) {
     while (*str) {
         putchar(*(str++));
@@ -157,14 +157,14 @@ static void AnimateText(const char *str, unsigned int us) {
         usleep(us);
     }
 }
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 static void PromptForContinue(void) {
-#ifdef NDEBUG  // Release
+#ifdef GAMESMAN_ENABLE_ANIMATION
     AnimateText(kContinuePrompt, 5000);
-#else   // Debug: no animation
+#else   // No animation
     printf("%s", kContinuePrompt);
-#endif  // NDEBUG
+#endif  // GAMESMAN_ENABLE_ANIMATION
     getchar();
 }
 

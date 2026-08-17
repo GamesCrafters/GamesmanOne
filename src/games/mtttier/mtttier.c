@@ -370,7 +370,7 @@ static TierType MtttierGetTierType(Tier tier) {
 
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
-    sprintf(name, "%" PRITier "p", tier);
+    snprintf(name, kDbFileNameLengthMax + 1, "%" PRITier "p", tier);
     return kSuccess;
 }
 

@@ -462,9 +462,10 @@ static void CopyRandToSeqChunkInMem(Bitset *seq, int chunk) {
 }
 
 static void StoreSeqChunk(Bitset *seq, int chunk) {
-    static char tmp_path[kMaxPathLength], path[kMaxPathLength];
-    sprintf(tmp_path, "%s/seq_%d.lz4.tmp", config.path_prefix, chunk);
-    sprintf(path, "%s/seq_%d.lz4", config.path_prefix, chunk);
+    char tmp_path[kMaxPathLength], path[kMaxPathLength];
+    snprintf(tmp_path, sizeof(tmp_path), "%s/seq_%d.lz4.tmp",
+             config.path_prefix, chunk);
+    snprintf(path, sizeof(path), "%s/seq_%d.lz4", config.path_prefix, chunk);
     size_t size = BitSetGetSerializedSize(seq);
     Lz4UtilsCompressBufferToFile(BitsetGetRawData(seq), size, config.lz4_level,
                                  tmp_path, NULL);
@@ -561,9 +562,10 @@ static void Step2_0_2LoadWinPosFromDb(int remoteness) {
 }
 
 static void ReadDbAndSeqChunk(int slot, int chunk) {
-    static char seq_filename[kMaxPathLength];
+    char seq_filename[kMaxPathLength];
     DbManagerSegmentationLoad(slot, chunk);
-    sprintf(seq_filename, "%s/seq_%d.lz4", config.path_prefix, chunk);
+    snprintf(seq_filename, sizeof(seq_filename), "%s/seq_%d.lz4",
+             config.path_prefix, chunk);
     Bitset *seq = chunking.seq_buf[slot];
     size_t size = BitSetGetSerializedSize(seq);
     Lz4UtilsDecompressFileToBuffer(seq_filename, BitsetGetRawData(seq), size,

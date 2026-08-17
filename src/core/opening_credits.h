@@ -27,12 +27,13 @@
 #ifndef GAMESMANONE_CORE_OPENING_CREDITS_H_
 #define GAMESMANONE_CORE_OPENING_CREDITS_H_
 
-#ifdef NDEBUG
+#ifdef GAMESMAN_ENABLE_ANIMATION
 #define THEME "\x1b[38;5;166m"
-#else
-#define THEME
-#endif
 #define RESET "\x1b[0m"
+#else  // No animation
+#define THEME
+#define RESET
+#endif  // GAMESMAN_ENABLE_ANIMATION
 
 // clang-format off
 static const char *const kHeaderAnimation[] = {

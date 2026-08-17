@@ -9,7 +9,10 @@ add_subdirectory(core)
 add_subdirectory(games)
 add_subdirectory(libs)
 
-# Link libraries.
+# Add compile-time definitions and link libraries.
+if(GAMESMAN_ENABLE_ANIMATION)
+  target_compile_definitions(gamesman_core PRIVATE GAMESMAN_ENABLE_ANIMATION)
+endif()
 target_link_libraries(gamesman_core PRIVATE json-c) # json-c
 if(OpenMP_FOUND) # OpenMP (optional)
   target_link_libraries(gamesman_core PRIVATE OpenMP::OpenMP_C)
@@ -17,12 +20,6 @@ endif()
 if(GAMESMAN_ENABLE_MPI) # MPI (optional)
   target_compile_definitions(gamesman_core PRIVATE USE_MPI)
   target_link_libraries(gamesman_core PRIVATE MPI::MPI_C)
-endif()
-
-# TODO: remove this when all sprintf has been replaced and tested
-if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "AppleClang")
-  message(WARNING "Temporarily disabling compiler warnings on deprecated declarations")
-  target_compile_options(gamesman_core PRIVATE -Wno-deprecated-declarations)
 endif()
 
 # Define the GAMESMAN executable

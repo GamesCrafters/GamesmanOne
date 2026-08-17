@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "core/constants.h"
 #include "core/solvers/regular_solver/regular_solver.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
@@ -45,6 +46,7 @@
 #include "core/types/gameplay_api/gameplay_api_regular.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
+#include "libs/string/xstring.h"
 
 static int FsvpInit(void *aux);
 static int FsvpFinalize(void);
@@ -72,7 +74,7 @@ static Move FsvpStringToMove(ReadOnlyString move_string);
 #define VARIANT_SIZE_MAX 100
 static ConstantReadOnlyString kFsvpGameSizeChoices[] = {
     "4",  "5",  "6",  "7",  "8",  "9",  "10", "11",
-    "12", "20", "50", "60", "70", "80", "90", "100"};
+    "12", "20", "50", "60", "70", "80", "90"};
 
 static const GameVariantOption kFsvpGameSize = {
     .name = "size",
@@ -101,11 +103,16 @@ static const RegularSolverApi kFsvpSolverApi = {
 
 // Gameplay API Setup
 
+enum {
+    kPositionStringLengthMax = 100,
+    kMoveStringLengthMax = 3 + 2 * kInt64Base10StringLengthMax,
+};
+
 static const GameplayApiCommon kFsvpGameplayApiCommon = {
     .GetInitialPosition = FsvpGetInitialPosition,
-    .position_string_length_max = 100,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 7,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = FsvpMoveToString,
 
     .IsValidMoveString = FsvpIsValidMoveString,
@@ -313,74 +320,51 @@ static MoveArray FsvpGenerateMovesGameplay(Position position) {
 static int FsvpPositionToString(Position position, char *buffer) {
     // Format: "{ a, b, c, ..., z, }"
     Board board = Unhash(position);
-    int size = 0;
-    size += sprintf(buffer, "{ ");
+    size_t offset = 0;
+    AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "{ ");
     for (int i = variant_size; i > 0; --i) {
         for (int count = 0; count < board.counts[i]; ++count) {
-            size += sprintf(buffer + size, "%d, ", i);
+            AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset,
+                           "%d, ", i);
         }
     }
-    sprintf(buffer + size, "}");
+    AppendSnprintf(buffer, kPositionStringLengthMax + 1, &offset, "}");
 
     return kSuccess;
 }
 
 static int FsvpMoveToString(Move move, char *buffer) {
     bool splitting = move & 1;
-    int size = 0;
+    size_t offset = 0;
     if (splitting) {
-        size += sprintf(buffer + size, "s ");
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "s ");
     } else {  // combining
-        size += sprintf(buffer + size, "c ");
+        AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "c ");
     }
     move >>= 1;
-    size += sprintf(buffer + size, "%" PRId64 " ", move / variant_size);  // x
-    sprintf(buffer + size, "%" PRId64, move % variant_size);              // y
+    AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "%" PRId64 " ",
+                   move / variant_size);  // x
+    AppendSnprintf(buffer, kMoveStringLengthMax + 1, &offset, "%" PRId64,
+                   move % variant_size);  // y
 
     return kSuccess;
 }
 
 static bool FsvpIsValidMoveString(ReadOnlyString move_string) {
-    if (move_string[0] != 's' && move_string[0] != 'c') return false;
-    int i = 2;
-
-    // Check first number (1 or 2 digits)
-    if (!isdigit(move_string[i++])) return false;
-    if (isdigit(move_string[i])) ++i;
-
-    // Check for space after first number
-    if (move_string[i++] != ' ') return false;
-
-    // Check second number (1 or 2 digits)
-    if (!isdigit(move_string[i++])) return false;
-    if (isdigit(move_string[i])) ++i;
-
-    // Check if the string ends after the second number
-    if (move_string[i] != '\0') return false;
-
-    return true;
+    return RegexMatch("^[sc] [0-9]{1,3} [0-9]{1,3}$", move_string);
 }
 
 // Assumes valid move string.
 static Move FsvpStringToMove(ReadOnlyString move_string) {
-    bool splitting = move_string[0] == 's';
-    int i = 2;
-    int values[2];
-    for (int number = 0; number < 2; ++number) {
-        char tmp[3];
-        tmp[0] = move_string[i];
-        if (isdigit(move_string[i + 1])) {
-            tmp[1] = move_string[i + 1];
-            tmp[2] = '\0';
-            i += 3;
-        } else {
-            tmp[1] = '\0';
-            i += 2;
-        }
-        values[number] = atoi(tmp);
+    char operation = '\0';
+    int values[2] = {0};
+    int parsed =
+        sscanf(move_string, "%c %d %d", &operation, &values[0], &values[1]);
+    if (parsed != 3) {
+        return ConstructMove(false, 0, 0);
     }
 
-    return ConstructMove(splitting, values[0], values[1]);
+    return ConstructMove(operation == 's', values[0], values[1]);
 }
 
 // Helper functions

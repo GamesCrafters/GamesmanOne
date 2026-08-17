@@ -49,9 +49,9 @@ CString AutoGuiMakeMoveA(char token, int center, char sound) {
     CString ret;
     char buffer[kInt64Base10StringLengthMax + 7];
     if (sound) {
-        sprintf(buffer, "A_%c_%d_%c", token, center, sound);
+        snprintf(buffer, sizeof(buffer), "A_%c_%d_%c", token, center, sound);
     } else {
-        sprintf(buffer, "A_%c_%d", token, center);
+        snprintf(buffer, sizeof(buffer), "A_%c_%d", token, center);
     }
     CStringInitCopyCharArray(&ret, buffer);
 
@@ -62,9 +62,9 @@ CString AutoGuiMakeMoveM(int src, int dest, char sound) {
     CString ret;
     char buffer[kInt64Base10StringLengthMax * 2 + 6];
     if (sound) {
-        sprintf(buffer, "M_%d_%d_%c", src, dest, sound);
+        snprintf(buffer, sizeof(buffer), "M_%d_%d_%c", src, dest, sound);
     } else {
-        sprintf(buffer, "M_%d_%d", src, dest);
+        snprintf(buffer, sizeof(buffer), "M_%d_%d", src, dest);
     }
     CStringInitCopyCharArray(&ret, buffer);
 
@@ -75,9 +75,9 @@ CString AutoGuiMakeMoveL(int src, int dest, char sound) {
     CString ret;
     char buffer[kInt64Base10StringLengthMax * 2 + 6];
     if (sound) {
-        sprintf(buffer, "L_%d_%d_%c", src, dest, sound);
+        snprintf(buffer, sizeof(buffer), "L_%d_%d_%c", src, dest, sound);
     } else {
-        sprintf(buffer, "L_%d_%d", src, dest);
+        snprintf(buffer, sizeof(buffer), "L_%d_%d", src, dest);
     }
     CStringInitCopyCharArray(&ret, buffer);
 
@@ -86,13 +86,12 @@ CString AutoGuiMakeMoveL(int src, int dest, char sound) {
 
 CString AutoGuiMakeMoveT(ReadOnlyString text, int center, char sound) {
     CString ret;
-    size_t len = strlen(text);
-    char *buffer =
-        (char *)SafeCalloc(len + kInt32Base10StringLengthMax + 6, sizeof(char));
+    size_t max_length = strlen(text) + kInt32Base10StringLengthMax + 5;
+    char *buffer = (char *)SafeCalloc(max_length + 1, sizeof(char));
     if (sound) {
-        sprintf(buffer, "T_%s_%d_%c", text, center, sound);
+        snprintf(buffer, max_length + 1, "T_%s_%d_%c", text, center, sound);
     } else {
-        sprintf(buffer, "T_%s_%d", text, center);
+        snprintf(buffer, max_length + 1, "T_%s_%d", text, center);
     }
     CStringInitCopyCharArray(&ret, buffer);
     GamesmanFree(buffer);

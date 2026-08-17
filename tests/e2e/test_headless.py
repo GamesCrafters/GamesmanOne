@@ -24,10 +24,10 @@ Note:
 
 Usage in root project directory:
     # Run tests
-    GAMESMAN_PRESET=<cmake_preset> pytest tests/e2e/e2e_test.py -v
+    GAMESMAN_PRESET=<cmake_preset> pytest tests/e2e/test_headless.py -v
 
     # Run tests and update baseline snapshot
-    GAMESMAN_PRESET=<cmake_preset> pytest tests/e2e/e2e_test.py --snapshot-update
+    GAMESMAN_PRESET=<cmake_preset> pytest tests/e2e/test_headless.py --snapshot-update
 """
 
 import os

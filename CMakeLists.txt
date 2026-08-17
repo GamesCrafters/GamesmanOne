@@ -19,9 +19,6 @@ project(GamesmanOne VERSION 1.4.0 DESCRIPTION 2026.06.18)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Necessary for conditional compilation and flag inclusion
-include(CheckCCompilerFlag)
-
 ########################
 # Options and Settings #
 ########################
@@ -34,12 +31,23 @@ option(GAMESMAN_ENABLE_TSAN "Enable thread sanitizer." OFF) # Set this to ON to 
 option(GAMESMAN_ENABLE_LINE_COVERAGE "Enable line coverage." OFF) # Set this to ON to enable line coverage
 option(GAMESMAN_ENABLE_BENCHMARKS "Build targets for benchmarking." OFF) # Set this to ON to enable benchmarks
 option(GAMESMAN_ENABLE_TESTING "Build test targets." ON) # Set this to OFF to disable testing
+option(GAMESMAN_ENABLE_ANIMATION "Enable animations in interactive mode." OFF) # Set this to ON to enable animations
+
+if(GAMESMAN_ENABLE_ASAN_UBSAN)
+  message(STATUS "Sanitizers enabled: ASan, LSan UBSan")
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
+if(GAMESMAN_ENABLE_TSAN)
+  message(STATUS "Sanitizers enabled: TSan")
+  add_compile_options(-fsanitize=thread)
+  add_link_options(-fsanitize=thread)
+endif()
 
 ########################
 # Library Dependencies #
 ########################
-
-include(gamesman_dependencies)
 
 # ccache (optional)
 find_program(CCACHE_PROGRAM ccache)
@@ -48,8 +56,13 @@ if(CCACHE_PROGRAM)
   set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
   set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 else()
-  message(STATUS "ccache not found. Repeated compilation on unmodified targets may take longer.")
+  message(STATUS "ccache not found. Recompilation of unmodified targets may take longer.")
 endif()
+
+include(gamesman_dependencies)
+
+# Necessary for conditional compilation and flag inclusion
+include(CheckCCompilerFlag)
 
 #######################################
 # Common Flags Interface for Gamesman #
@@ -61,17 +74,6 @@ target_compile_options(common_flags INTERFACE -Wall -Wextra -Wpedantic -march=na
 
 if(GAMESMAN_ENABLE_STATIC_ANALYZER)
   include(gamesman_static_analyzer) # Modifies common_flags internally
-endif()
-if(GAMESMAN_ENABLE_ASAN_UBSAN)
-  message(STATUS "Sanitizers enabled: ASan, LSan")
-  target_compile_options(common_flags INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)
-  target_link_options(common_flags INTERFACE -fsanitize=address,undefined)
-endif()
-
-if(GAMESMAN_ENABLE_TSAN)
-  message(STATUS "Sanitizers enabled: TSan")
-  target_compile_options(common_flags INTERFACE -fsanitize=thread)
-  target_link_options(common_flags INTERFACE -fsanitize=thread)
 endif()
 
 if(GAMESMAN_ENABLE_LINE_COVERAGE)

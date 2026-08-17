@@ -41,6 +41,7 @@
 #include "core/types/game/game.h"
 
 #define U64X2_HASH_SET_SIZE 16ULL
+#include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_hash_set.h"
 #include "core/hash/simd_two_piece.h"
@@ -674,6 +675,11 @@ static int MillsGetCanonicalChildPositions(
     return ret;
 }
 
+enum {
+    kPositionStringLengthMax = 2047,
+    kMoveStringLengthMax = 3 + 3 * kInt32Base10StringLengthMax,
+};
+
 static void FillChars(const char *fmt, int count, const char *chars,
                       char *out_buf) {
     const char *p = fmt;
@@ -714,10 +720,11 @@ static int MillsTierPositionToString(TierPosition tier_position, char *buffer) {
     char board_str[25];
     PatternsToStr(board, board_str, 'X', 'O');
 
-    char tmp[2048];
+    char tmp[kPositionStringLengthMax + 1];
     FillChars(kFormats[BoardId()], kNumSlots[BoardId()], board_str, tmp);
-    sprintf(buffer, tmp, t.unpacked.remaining[0], t.unpacked.on_board[0],
-            t.unpacked.remaining[1], t.unpacked.on_board[1]);
+    snprintf(buffer, sizeof(tmp), tmp, t.unpacked.remaining[0],
+             t.unpacked.on_board[0], t.unpacked.remaining[1],
+             t.unpacked.on_board[1]);
     printf("it is %d's turn\n", turn);
 
     return kSuccess;
@@ -1076,9 +1083,9 @@ TierType MillsGetTierType(Tier tier) {
 static int MillsGetTierName(Tier tier,
                             char name[static kDbFileNameLengthMax + 1]) {
     MillsTier t = {.hash = tier};
-    sprintf(name, "R%dX%dO_B%dX%dO", t.unpacked.remaining[0],
-            t.unpacked.remaining[1], t.unpacked.on_board[0],
-            t.unpacked.on_board[1]);
+    snprintf(name, kDbFileNameLengthMax + 1, "R%dX%dO_B%dX%dO",
+             t.unpacked.remaining[0], t.unpacked.remaining[1],
+             t.unpacked.on_board[0], t.unpacked.on_board[1]);
 
     return kSuccess;
 }
@@ -1125,19 +1132,23 @@ static int MillsMoveToString(Move move, char *buffer) {
     MillsMove m = {.hash = move};
     if (m.unpacked.src == kFromRemaining) {  // placement
         if (m.unpacked.remove == kNoRemoval) {
-            sprintf(buffer, "%d", GetBoardIndex(m.unpacked.dest));
+            snprintf(buffer, kMoveStringLengthMax + 1, "%d",
+                     GetBoardIndex(m.unpacked.dest));
         } else {
-            sprintf(buffer, "%dr%d", GetBoardIndex(m.unpacked.dest),
-                    GetBoardIndex(m.unpacked.remove));
+            snprintf(buffer, kMoveStringLengthMax + 1, "%dr%d",
+                     GetBoardIndex(m.unpacked.dest),
+                     GetBoardIndex(m.unpacked.remove));
         }
     } else {  // sliding/flying
         if (m.unpacked.remove == kNoRemoval) {
-            sprintf(buffer, "%d-%d", GetBoardIndex(m.unpacked.src),
-                    GetBoardIndex(m.unpacked.dest));
+            snprintf(buffer, kMoveStringLengthMax + 1, "%d-%d",
+                     GetBoardIndex(m.unpacked.src),
+                     GetBoardIndex(m.unpacked.dest));
         } else {
-            sprintf(buffer, "%d-%dr%d", GetBoardIndex(m.unpacked.src),
-                    GetBoardIndex(m.unpacked.dest),
-                    GetBoardIndex(m.unpacked.remove));
+            snprintf(buffer, kMoveStringLengthMax + 1, "%d-%dr%d",
+                     GetBoardIndex(m.unpacked.src),
+                     GetBoardIndex(m.unpacked.dest),
+                     GetBoardIndex(m.unpacked.remove));
         }
     }
 
@@ -1178,9 +1189,9 @@ static Move MillsStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon MillsGameplayApiCommon = {
     .GetInitialPosition = MillsGetInitialPosition,
-    .position_string_length_max = 2047,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 8,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = MillsMoveToString,
 
     .IsValidMoveString = MillsIsValidMoveString,
@@ -1434,24 +1445,30 @@ static const char *GetFormalBoardSlotStr(int8_t slot) {
 static CString MillsMoveToFormalMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused.
     MillsMove m = {.hash = move};
-    char buffer[9];
+    static const size_t max_length = 8;
+    char buffer[max_length + 1];
     if (m.unpacked.dest == kNoDest) {  // Removal only part-move
-        sprintf(buffer, "R%s", GetFormalBoardSlotStr(m.unpacked.remove));
+        snprintf(buffer, sizeof(buffer), "R%s",
+                 GetFormalBoardSlotStr(m.unpacked.remove));
     } else if (m.unpacked.src == kFromRemaining) {
         if (m.unpacked.remove == kNoRemoval) {  // Place without removal
-            sprintf(buffer, "%s", GetFormalBoardSlotStr(m.unpacked.dest));
+            snprintf(buffer, sizeof(buffer), "%s",
+                     GetFormalBoardSlotStr(m.unpacked.dest));
         } else {  // Place and remove
-            sprintf(buffer, "%sR%s", GetFormalBoardSlotStr(m.unpacked.dest),
-                    GetFormalBoardSlotStr(m.unpacked.remove));
+            snprintf(buffer, sizeof(buffer), "%sR%s",
+                     GetFormalBoardSlotStr(m.unpacked.dest),
+                     GetFormalBoardSlotStr(m.unpacked.remove));
         }
     } else {
         if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
-            sprintf(buffer, "%s-%s", GetFormalBoardSlotStr(m.unpacked.src),
-                    GetFormalBoardSlotStr(m.unpacked.dest));
+            snprintf(buffer, sizeof(buffer), "%s-%s",
+                     GetFormalBoardSlotStr(m.unpacked.src),
+                     GetFormalBoardSlotStr(m.unpacked.dest));
         } else {  // Slide and remove
-            sprintf(buffer, "%s-%sR%s", GetFormalBoardSlotStr(m.unpacked.src),
-                    GetFormalBoardSlotStr(m.unpacked.dest),
-                    GetFormalBoardSlotStr(m.unpacked.remove));
+            snprintf(buffer, sizeof(buffer), "%s-%sR%s",
+                     GetFormalBoardSlotStr(m.unpacked.src),
+                     GetFormalBoardSlotStr(m.unpacked.dest),
+                     GetFormalBoardSlotStr(m.unpacked.remove));
         }
     }
     CString ret;

@@ -420,7 +420,7 @@ static void TestPrintError(Tier tier, Position position) {
     char name[kDbFileNameLengthMax + 1];
     if (api_internal->GetTierName(tier, name) != kSuccess) {
         fprintf(stderr, "TestPrintError: (WARNING) GetTierName failed\n");
-        sprintf(name, "GetTierName ERROR");
+        snprintf(name, sizeof(name), "GetTierName ERROR");
     }
 
     char *buf;

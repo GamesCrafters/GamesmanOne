@@ -671,7 +671,7 @@ static int DefaultGetCanonicalChildPositions(
 
 static int DefaultGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
-    sprintf(name, "%" PRITier, tier);
+    snprintf(name, kDbFileNameLengthMax + 1, "%" PRITier, tier);
 
     return kSuccess;
 }

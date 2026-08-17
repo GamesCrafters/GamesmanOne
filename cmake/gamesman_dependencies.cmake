@@ -30,7 +30,6 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 ############################################## json-c ##############################################
 
-# json-c
 FetchContent_Declare(
     json-c
     GIT_REPOSITORY https://github.com/json-c/json-c.git
@@ -39,7 +38,10 @@ FetchContent_Declare(
 
 ############################################# XZ Utils #############################################
 
-# XZ Utils
+# Suppress liblzma native language support warning
+# Disables NLS translations for xz
+set(XZ_NLS OFF CACHE BOOL "Disable Native Language Support for xz" FORCE)
+
 FetchContent_Declare(
     liblzma
     GIT_REPOSITORY https://github.com/tukaani-project/xz.git
@@ -48,7 +50,6 @@ FetchContent_Declare(
 
 ################################################ LZ4 ###############################################
 
-# LZ4
 FetchContent_Declare(
     lz4
     GIT_REPOSITORY https://github.com/lz4/lz4.git
@@ -80,7 +81,7 @@ target_include_directories(lzma_wrapper INTERFACE
 
 ############################################## OpenMP ##############################################
 
-if(GAMESMAN_ENABLE_OPENMP) # OpenMP
+if(GAMESMAN_ENABLE_OPENMP)
     find_package(OpenMP)
     if(OpenMP_FOUND)
         message(STATUS "OpenMP multithreading enabled")
@@ -93,7 +94,7 @@ endif()
 
 ################################################ MPI ###############################################
 
-if(GAMESMAN_ENABLE_MPI) # MPI
+if(GAMESMAN_ENABLE_MPI)
     find_package(MPI REQUIRED)
     message(STATUS "MPI enabled")
 endif()

@@ -38,11 +38,11 @@ static void PrintPrediction(void) {
             return;
 
         case kWin:
-            sprintf(value_string, "win");
+            snprintf(value_string, sizeof(value_string), "win");
             break;
 
         case kTie:
-            sprintf(value_string, "tie");
+            snprintf(value_string, sizeof(value_string), "tie");
             break;
 
         case kDraw:
@@ -50,7 +50,7 @@ static void PrintPrediction(void) {
             return;
 
         case kLose:
-            sprintf(value_string, "lose");
+            snprintf(value_string, sizeof(value_string), "lose");
             break;
 
         default:
@@ -346,36 +346,48 @@ static int PromptForAndProcessUserMove(const Game *game) {
     }
     move_string[strcspn(move_string, "\r\n")] = '\0';
 
+    int ret = 0;
     if (strcmp(move_string, "v") == 0) {  // Print values for all moves.
         if (solved) {
             PrintSortedMoveValues(game);
         } else {
             printf("Game is not solved, so move values cannot be shown.\n");
         }
-        return 0;
-    } else if (strcmp(move_string, "q") == 0) {  // Quit.
-        GamesmanExit();
-    } else if (strcmp(move_string, "a") == 0) {  // Abort game.
-        GamesmanFree(move_string);
-        return 2;
-    } else if (strcmp(move_string, "u") == 0) {  // Undo.
-        return InteractiveMatchUndo();
+        goto _bailout;
     }
+
+    if (strcmp(move_string, "q") == 0) {  // Quit.
+        GamesmanExit();
+    }
+
+    if (strcmp(move_string, "a") == 0) {  // Abort game.
+        ret = 2;
+        goto _bailout;
+    }
+
+    if (strcmp(move_string, "u") == 0) {  // Undo.
+        ret = InteractiveMatchUndo();
+        goto _bailout;
+    }
+
     if (!game->gameplay_api->common->IsValidMoveString(move_string)) {
         printf("Sorry, I don't know that option. Try another.\n");
-        GamesmanFree(move_string);
-        return 1;
+        ret = 1;
+        goto _bailout;
     }
+
     Move user_move = game->gameplay_api->common->StringToMove(move_string);
     if (!MoveArrayContains(&moves, user_move)) {
         printf("Sorry, I don't know that option. Try another.\n");
-        GamesmanFree(move_string);
-        return 1;
+        ret = 1;
+        goto _bailout;
     }
+    InteractiveMatchCommitMove(user_move);
+
+_bailout:
     MoveArrayDestroy(&moves);
     GamesmanFree(move_string);
-    InteractiveMatchCommitMove(user_move);
-    return 0;
+    return ret;
 }
 
 static void PrintGameResult(ReadOnlyString game_formal_name) {
