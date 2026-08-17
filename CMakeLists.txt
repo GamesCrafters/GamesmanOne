@@ -34,7 +34,7 @@ option(GAMESMAN_ENABLE_TESTING "Build test targets." ON) # Set this to OFF to di
 option(GAMESMAN_ENABLE_ANIMATION "Enable animations in interactive mode." OFF) # Set this to ON to enable animations
 
 if(GAMESMAN_ENABLE_ASAN_UBSAN)
-  message(STATUS "Sanitizers enabled: ASan, LSan")
+  message(STATUS "Sanitizers enabled: ASan, LSan UBSan")
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()
