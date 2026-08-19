@@ -889,7 +889,7 @@ static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
 
     // Unhash
     char board[kBoardSize];
-    if (!Unhash(position, board)) return kNullCString;
+    if (!Unhash(position, board)) return CStringGetNull();
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move.
         return AutoGuiMakeMoveM(
@@ -902,10 +902,10 @@ static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
             GetMoveDestination(board, m.unpacked.n_src, m.unpacked.n_dir),
             kSoundChar);
     } else {  // A full multipart move does not have an AutoGUI string.
-        return kNullCString;
+        return CStringGetNull();
     }
 
-    return kNullCString;
+    return CStringGetNull();
 }
 
 static CString AddNeutronPartmove(Position pos,

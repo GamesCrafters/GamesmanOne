@@ -142,8 +142,8 @@ typedef struct UwapiTier {
 
     /**
      * @brief Returns the formal position as a CString corresponding to the
-     * given hashed TIER_POSITION. Returns \c kErrorCString if an error
-     * occurred.
+     * given hashed TIER_POSITION. Returns a "null" CString, which can be tested
+     * by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -156,8 +156,8 @@ typedef struct UwapiTier {
 
     /**
      * @brief Returns the AutoGUI position as a CString corresponding to the
-     * given hashed TIER_POSITION. Returns \c kErrorCString if an error
-     * occurred.
+     * given hashed TIER_POSITION. Returns a "null" CString, which can be tested
+     * by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -173,8 +173,8 @@ typedef struct UwapiTier {
 
     /**
      * @brief Returns the formal move as a CString corresponding to the given
-     * MOVE at the given TIER_POSITION. Returns \c kErrorCString if an error
-     * occurred.
+     * MOVE at the given TIER_POSITION. Returns a "null" CString, which can be
+     * tested by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -197,9 +197,9 @@ typedef struct UwapiTier {
     /**
      * @brief Returns the AutoGUI move as a CString corresponding to the given
      * MOVE at the given TIER_POSITION if MOVE is a full-move. Returns
-     * \c kNullCString if MOVE is a part-move. Returns \c kErrorCString if an
-     * error occurred. Note that all moves are full moves if the game does not
-     * implement multipart moves.
+     * \c kNullCString if MOVE is a part-move. Returns a "null" CString, which
+     * can be tested by the `CStringIsNull()` function, on error. Note that all
+     * moves are full moves if the game does not implement multipart moves.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.

@@ -1492,7 +1492,7 @@ static CString MillsMoveToAutoGuiMove(TierPosition tier_position, Move move) {
                                     kPlaceSoundChar);
         } else {  // Place and remove
             // A full multipart move does not have an AutoGUI string.
-            return kNullCString;
+            return CStringGetNull();
         }
     } else {
         if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
@@ -1501,11 +1501,11 @@ static CString MillsMoveToAutoGuiMove(TierPosition tier_position, Move move) {
                                     kSlideSoundChar);
         } else {  // Slide and remove
             // A full multipart move does not have an AutoGUI string.
-            return kNullCString;
+            return CStringGetNull();
         }
     }
 
-    return kNullCString;  // Not reached.
+    return CStringGetNull();  // Not reached.
 }
 
 static void FlipAutoGuiPositionTurn(CString *pos) {
