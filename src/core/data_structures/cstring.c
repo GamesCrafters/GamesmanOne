@@ -156,10 +156,24 @@ bool CStringAppend(CString *dest, const char *src) {
     const int64_t append_length = (int64_t)strlen(src);
     const int64_t target_size = dest->length + append_length;
 
-    // Expand if necessary.
+    // Detect if src points inside dest->str (self-append)
+    bool is_self_overlap =
+        (src >= dest->str) && (src < dest->str + dest->capacity);
+    ptrdiff_t src_offset = 0;
+    if (is_self_overlap) {
+        src_offset = src - dest->str;  // Save the relative offset
+    }
+
+    // Expand if necessary
     if (target_size >= dest->capacity) {
         if (!CStringExpand(dest, target_size)) {
             return false;
+        }
+
+        // Expansion frees the original src address. Set src to the new address
+        // in the reallocated string to avoid use-after-free.
+        if (is_self_overlap) {
+            src = dest->str + src_offset;
         }
     }
 
