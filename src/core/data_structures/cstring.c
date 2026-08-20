@@ -177,8 +177,9 @@ bool CStringAppend(CString *dest, const char *src) {
         }
     }
 
-    memcpy(dest->str + dest->length, src, append_length + 1);
+    memcpy(dest->str + dest->length, src, append_length);
     dest->length += append_length;
+    dest->str[dest->length] = '\0';
 
     return true;
 }
