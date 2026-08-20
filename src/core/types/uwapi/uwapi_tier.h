@@ -197,7 +197,7 @@ typedef struct UwapiTier {
     /**
      * @brief Returns the AutoGUI move as a CString corresponding to the given
      * MOVE at the given TIER_POSITION if MOVE is a full-move. Returns
-     * \c kNullCString if MOVE is a part-move. Returns a "null" CString, which
+     * an empty string if MOVE is a part-move. Returns a "null" CString, which
      * can be tested by the `CStringIsNull()` function, on error. Note that all
      * moves are full moves if the game does not implement multipart moves.
      *

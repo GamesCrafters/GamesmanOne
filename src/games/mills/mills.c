@@ -1477,6 +1477,15 @@ static CString MillsMoveToFormalMove(TierPosition tier_position, Move move) {
     return ret;
 }
 
+static CString GetEmptyCString(void) {
+    CString empty;
+    if (!CStringInitEmpty(&empty)) {
+        return CStringGetNull();
+    }
+
+    return empty;
+}
+
 static CString MillsMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused.
     static const char kPlaceSoundChar = 'x';
@@ -1486,26 +1495,27 @@ static CString MillsMoveToAutoGuiMove(TierPosition tier_position, Move move) {
     if (m.unpacked.dest == kNoDest) {  // Removal only part-move
         return AutoGuiMakeMoveA(kRemovalToken, GetBoardIndex(m.unpacked.remove),
                                 kRemovalSoundChar);
-    } else if (m.unpacked.src == kFromRemaining) {
+    }
+
+    if (m.unpacked.src == kFromRemaining) {
         if (m.unpacked.remove == kNoRemoval) {  // Place without removal
             return AutoGuiMakeMoveA('-', GetBoardIndex(m.unpacked.dest),
                                     kPlaceSoundChar);
-        } else {  // Place and remove
-            // A full multipart move does not have an AutoGUI string.
-            return CStringGetNull();
         }
-    } else {
-        if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
-            return AutoGuiMakeMoveM(GetBoardIndex(m.unpacked.src),
-                                    GetBoardIndex(m.unpacked.dest),
-                                    kSlideSoundChar);
-        } else {  // Slide and remove
-            // A full multipart move does not have an AutoGUI string.
-            return CStringGetNull();
-        }
+
+        // Else, Place and remove
+        // A full multipart move does not have an AutoGUI string.
+        return GetEmptyCString();
+    }
+    if (m.unpacked.remove == kNoRemoval) {  // Sliding without removal
+        return AutoGuiMakeMoveM(GetBoardIndex(m.unpacked.src),
+                                GetBoardIndex(m.unpacked.dest),
+                                kSlideSoundChar);
     }
 
-    return CStringGetNull();  // Not reached.
+    // Else, slide and remove
+    // A full multipart move does not have an AutoGUI string.
+    return GetEmptyCString();
 }
 
 static void FlipAutoGuiPositionTurn(CString *pos) {

@@ -476,7 +476,7 @@ static json_object *JsonCreateChildPositionObject(const Game *game,
     }
 
     int error = HeadlessJsonAddMove(ret, formal_move.str);
-    if (!CStringIsNull(&autogui_move)) {  // Only add full-moves.
+    if (autogui_move.length) {  // Only add full-moves.
         error |= HeadlessJsonAddAutoGuiMove(ret, autogui_move.str);
     }
     CStringDestroy(&formal_move);
@@ -664,7 +664,7 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
     }
 
     int error = HeadlessJsonAddMove(ret, formal_move.str);
-    if (!CStringIsNull(&autogui_move)) {  // Only add full-moves.
+    if (autogui_move.length) {  // Only add full-moves.
         error |= HeadlessJsonAddAutoGuiMove(ret, autogui_move.str);
     }
     CStringDestroy(&formal_move);
