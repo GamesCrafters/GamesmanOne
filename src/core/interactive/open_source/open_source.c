@@ -12,6 +12,10 @@ typedef struct OpenSourceSoftware {
 // clang-format off
 static const OpenSourceSoftware kSoftwareList[] = {
     {
+        .name = "Benchmark",
+        .url= "https://github.com/google/benchmark",
+    },
+    {
         .name = "GoogleTest",
         .url= "https://github.com/google/googletest",
     },

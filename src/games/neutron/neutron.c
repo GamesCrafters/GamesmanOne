@@ -884,28 +884,41 @@ static int GetMoveDestination(const char board[kBoardSize], int8_t src,
     return ToIndex(row, col);
 }
 
+static CString GetEmptyCString(void) {
+    CString empty;
+    if (!CStringInitEmpty(&empty)) {
+        return CStringGetNull();
+    }
+
+    return empty;
+}
+
 static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
     static const char kSoundChar = 'x';
 
     // Unhash
     char board[kBoardSize];
-    if (!Unhash(position, board)) return kNullCString;
+    if (!Unhash(position, board)) {
+        return CStringGetNull();
+    }
+
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move.
         return AutoGuiMakeMoveM(
             m.unpacked.p_src,
             GetMoveDestination(board, m.unpacked.p_src, m.unpacked.p_dir),
             kSoundChar);
-    } else if (m.unpacked.p_src < 0) {  // No piece move.
+    }
+
+    if (m.unpacked.p_src < 0) {  // No piece move.
         return AutoGuiMakeMoveM(
             m.unpacked.n_src,
             GetMoveDestination(board, m.unpacked.n_src, m.unpacked.n_dir),
             kSoundChar);
-    } else {  // A full multipart move does not have an AutoGUI string.
-        return kNullCString;
     }
 
-    return kNullCString;
+    // Else, a full multipart move does not have an AutoGUI string.
+    return GetEmptyCString();
 }
 
 static CString AddNeutronPartmove(Position pos,

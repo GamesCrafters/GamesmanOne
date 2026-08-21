@@ -108,8 +108,8 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the formal position as a dynamically allocated CString
-     * corresponding to the given hashed POSITION. Returns \c kErrorCString if
-     * an error occurred.
+     * corresponding to the given hashed POSITION. Returns a "null" CString,
+     * which can be tested by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -122,8 +122,8 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the AutoGUI position as a dynamically allocated CString
-     * corresponding to the given hashed POSITION. Returns \c kErrorCString if
-     * an error occurred.
+     * corresponding to the given hashed POSITION. Returns a "null" CString,
+     * which can be tested by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -139,8 +139,8 @@ typedef struct UwapiRegular {
 
     /**
      * @brief Returns the formal move as a dynamically allocated CString
-     * corresponding to the given MOVE at the given POSITION. Returns \c
-     * kErrorCString if an error occurred.
+     * corresponding to the given MOVE at the given POSITION. Returns a "null"
+     * CString, which can be tested by the `CStringIsNull()` function, on error.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.
@@ -162,9 +162,11 @@ typedef struct UwapiRegular {
     /**
      * @brief Returns the AutoGUI move as a dynamically allocated CString
      * corresponding to the given MOVE at the given POSITION if MOVE is a
-     * single-part move. Returns \c kNullCString if MOVE is a multipart move.
-     * Returns \c kErrorCString if an error occurred. Note that all moves are
-     * single-part if the game does not implement multipart moves.
+     * single-part move. Returns the "null" CString, which can be tested with
+     * the `CStringIsNull()` function, if MOVE is a multipart move. Returns a
+     * "null" CString, which can be tested by the `CStringIsNull()` function, on
+     * error. Note that all moves are single-part if the game does not implement
+     * multipart moves.
      *
      * @note The caller of this function is responsible for destroying the
      * CString returned.

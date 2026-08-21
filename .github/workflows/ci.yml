@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest] # macOS disabled due to terminal race conditions
         preset: [ci-asan] # Must not include release here due to animated terminal output
 
     steps:

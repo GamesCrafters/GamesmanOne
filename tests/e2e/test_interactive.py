@@ -117,11 +117,8 @@ def test_gamesman_interactive(
     # Spawn the process
     child = pexpect.spawn(gamesman_bin, encoding="utf-8", timeout=5)
 
-    # 1. Enforce a large, static terminal size to prevent unpredictable line-wrapping
+    # Enforce a large, static terminal size to prevent unpredictable line-wrapping
     child.setwinsize(200, 200)
-
-    # 2. Disable OS-level terminal echo to eliminate the race condition
-    child.setecho(False)
 
     # Log all stdout from the application to our output_log variable
     child.logfile_read = output_log

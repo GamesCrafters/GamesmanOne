@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic C-string (char array) implementation.
- * @version 3.0.2
- * @date 2025-03-15
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,38 +30,50 @@
 #include <stdlib.h>
 #include <string.h>
 
-const CString kNullCString = {
-    .str = NULL,
-    .length = 0,
-    .capacity = 0,
-};
+#include "config.h"
+#include "core/gamesman_memory.h"
 
-const CString kErrorCString = {
-    .str = NULL,
-    .length = -1,
-    .capacity = -1,
-};
+CString CStringGetNull(void) {
+    return (CString){
+        .str = NULL,
+        .length = 0,
+        .capacity = 0,
+    };
+}
 
 bool CStringInitEmpty(CString *cstring) {
-    cstring->str = (char *)calloc(1, sizeof(char));
-    if (cstring->str == NULL) return false;
+    if (!cstring) {
+        return false;
+    }
+
+    static const size_t kInitialSize = GM_CACHE_LINE_SIZE;
+    cstring->str = (char *)GamesmanCallocWhole(kInitialSize, sizeof(char));
+    if (!cstring->str) {
+        return false;
+    }
 
     cstring->length = 0;
-    cstring->capacity = 1;
+    cstring->capacity = kInitialSize;
 
     return true;
 }
 
 bool CStringInitCopy(CString *init, const CString *other) {
-    if (other == NULL) {
-        *init = kNullCString;
+    if (!init) {
+        return false;
+    }
+
+    if (!other || CStringIsNull(other)) {
+        *init = CStringGetNull();
         return true;
     }
 
-    init->str = (char *)malloc(other->capacity);
-    if (init->str == NULL) return false;
+    init->str = (char *)GamesmanMalloc(other->capacity);
+    if (!init->str) {
+        return false;
+    }
 
-    strcpy(init->str, other->str);
+    memcpy(init->str, other->str, other->length + 1);
     init->length = other->length;
     init->capacity = other->capacity;
 
@@ -71,25 +81,36 @@ bool CStringInitCopy(CString *init, const CString *other) {
 }
 
 bool CStringInitCopyCharArray(CString *cstring, const char *src) {
-    if (src == NULL) {
-        *cstring = kNullCString;
+    if (!cstring) {
+        return false;
+    }
+
+    if (!src) {
+        *cstring = CStringGetNull();
         return true;
     }
 
-    int64_t length = (int64_t)strlen(src);
-    cstring->str = (char *)malloc(length + 1);
-    if (cstring->str == NULL) return false;
+    const size_t length = strlen(src);
+    const size_t capacity = length + 1;
+    cstring->str = (char *)GamesmanMalloc(capacity);
+    if (!cstring->str) {
+        return false;
+    }
 
-    strcpy(cstring->str, src);
-    cstring->length = length;
-    cstring->capacity = length + 1;
+    memcpy(cstring->str, src, capacity);
+    cstring->length = (int64_t)length;
+    cstring->capacity = (int64_t)capacity;
 
     return true;
 }
 
 void CStringInitMove(CString *init, CString *other) {
-    if (other == NULL) {
-        *init = kNullCString;
+    if (!init || init == other) {
+        return;
+    }
+
+    if (!other || CStringIsNull(other)) {
+        *init = CStringGetNull();
         return;
     }
 
@@ -98,7 +119,11 @@ void CStringInitMove(CString *init, CString *other) {
 }
 
 void CStringDestroy(CString *cstring) {
-    free(cstring->str);
+    if (!cstring) {
+        return;
+    }
+
+    GamesmanFree(cstring->str);
     memset(cstring, 0, sizeof(*cstring));
 }
 
@@ -107,8 +132,15 @@ static bool CStringExpand(CString *cstring, int64_t target_size) {
     while (new_capacity <= target_size) {
         new_capacity *= 2;
     }
-    char *new_str = (char *)realloc(cstring->str, new_capacity);
-    if (new_str == NULL) return false;
+
+    char *new_str = (char *)GamesmanMalloc(new_capacity);
+    if (new_str == NULL) {
+        return false;
+    }
+
+    // Copy over the content
+    memcpy(new_str, cstring->str, cstring->length + 1);
+    GamesmanFree(cstring->str);
 
     cstring->str = new_str;
     cstring->capacity = new_capacity;
@@ -117,45 +149,66 @@ static bool CStringExpand(CString *cstring, int64_t target_size) {
 }
 
 bool CStringAppend(CString *dest, const char *src) {
-    int64_t append_length = (int64_t)strlen(src);
-    int64_t target_size = dest->length + append_length;
-
-    // Expand if necessary.
-    if (target_size >= dest->capacity) {
-        CStringExpand(dest, target_size);
+    if (!dest || !src) {
+        return false;
     }
 
-    strcat(dest->str, src);
+    const int64_t append_length = (int64_t)strlen(src);
+    const int64_t target_size = dest->length + append_length;
+
+    // Detect if src points inside dest->str (self-append)
+    bool is_self_overlap =
+        (src >= dest->str) && (src < dest->str + dest->capacity);
+    ptrdiff_t src_offset = 0;
+    if (is_self_overlap) {
+        src_offset = src - dest->str;  // Save the relative offset
+    }
+
+    // Expand if necessary
+    if (target_size >= dest->capacity) {
+        if (!CStringExpand(dest, target_size)) {
+            return false;
+        }
+
+        // Expansion frees the original src address. Set src to the new address
+        // in the reallocated string to avoid use-after-free.
+        if (is_self_overlap) {
+            src = dest->str + src_offset;
+        }
+    }
+
+    memcpy(dest->str + dest->length, src, append_length);
     dest->length += append_length;
+    dest->str[dest->length] = '\0';
 
     return true;
 }
 
-bool CStringResize(CString *cstring, int64_t size, char fill) {
-    if (cstring->length >= size) {
-        cstring->length = size;
-        cstring->str[size] = '\0';
-        return true;
+bool CStringResize(CString *cstring, int64_t length, char fill) {
+    if (!cstring || length < 0) {
+        return false;
     }
 
-    // cstring->length < size, expanding.
-    if (size >= cstring->capacity) {
-        CStringExpand(cstring, size);
+    // Expand if current capacity is not enough for the given length.
+    if (length >= cstring->capacity) {
+        if (!CStringExpand(cstring, length)) {
+            return false;
+        }
     }
-    memset(cstring->str + cstring->length, fill, size - cstring->length);
-    cstring->length = size;
 
+    if (cstring->length < length) {
+        memset(cstring->str + cstring->length, fill, length - cstring->length);
+    }
+
+    cstring->length = length;
+    cstring->str[length] = '\0';
     return true;
 }
 
 bool CStringIsNull(const CString *cstring) {
-    if (cstring->str != kNullCString.str) return false;
-    if (cstring->length != kNullCString.length) return false;
-    if (cstring->capacity != kNullCString.capacity) return false;
+    if (!cstring) {
+        return true;
+    }
 
-    return true;
-}
-
-bool CStringError(const CString *cstring) {
-    return cstring->length < 0 || cstring->capacity < 0;
+    return !cstring->str && !cstring->length && !cstring->capacity;
 }
