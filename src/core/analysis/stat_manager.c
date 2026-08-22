@@ -136,7 +136,7 @@ int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
     int error = kSuccess;
     char buf[2][BUFSIZ];  // Double-buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
-    ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
+    ConcurrentBitset *s = ConcurrentBitsetCreateAllocatorMt(size, allocator);
     Lz4UtilsInStream *lz4_istream = NULL;
     if (filename == NULL || s == NULL) {
         error = kMallocFailureError;

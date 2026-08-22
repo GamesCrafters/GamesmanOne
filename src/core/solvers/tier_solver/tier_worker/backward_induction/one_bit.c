@@ -222,7 +222,7 @@ static bool Step0_1AllocateMemory(size_t memlimit) {
     if (chunking.count > 4096) return false;
 
     // Allocate the random access concurrent bitset.
-    rand_bitset = ConcurrentBitsetCreate(tier_group_size);
+    rand_bitset = ConcurrentBitsetCreateMt(tier_group_size);
     if (!rand_bitset) return false;
 
     // Allocate DB and sequential access bitset rolling buffers
@@ -412,7 +412,7 @@ static void GenerateParentsFromDbChildTiers(Value val, int remoteness) {
  * marks them in the random access bitset.
  */
 static void GenerateParentsFromDb(Value val, int remoteness) {
-    ConcurrentBitsetResetAll(rand_bitset);
+    ConcurrentBitsetResetAllMt(rand_bitset);
     GenerateParentsFromDbSolving(val, remoteness);
     GenerateParentsFromDbChildTiers(val, remoteness);
 }
@@ -556,7 +556,7 @@ static void LoadWinPosFromDbChildTiers(int remoteness) {
  * bitset.
  */
 static void Step2_0_2LoadWinPosFromDb(int remoteness) {
-    ConcurrentBitsetResetAll(rand_bitset);
+    ConcurrentBitsetResetAllMt(rand_bitset);
     LoadWinPosFromDbSolving(remoteness);
     LoadWinPosFromDbChildTiers(remoteness);
 }

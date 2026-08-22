@@ -194,7 +194,8 @@ static void Step0_1InitFringes(void) {
     // Initialize discovered bitset. The fringe bitset will be initialized
     // to a copy of the current tier's position bit map once it is loaded
     // from disk or created.
-    bs_discovered = ConcurrentBitsetCreateAllocator(this_tier_size, allocator);
+    bs_discovered =
+        ConcurrentBitsetCreateAllocatorMt(this_tier_size, allocator);
 }
 
 static void Step0_2InitChildTiersReverseLookupMap(void) {
@@ -234,7 +235,7 @@ static ConcurrentBitset *LoadDiscoveryMap(Tier tier) {
     if (error != kFileSystemError) return ret;
 
     // Create a discovery map for the tier.
-    ret = ConcurrentBitsetCreate(tier_size);
+    ret = ConcurrentBitsetCreateMt(tier_size);
     if (ret == NULL) {
         fprintf(
             stderr,
@@ -255,7 +256,7 @@ static ConcurrentBitset *LoadDiscoveryMap(Tier tier) {
 static bool Step1LoadDiscoveryMaps(void) {
     this_tier_map = LoadDiscoveryMap(this_tier);
     if (this_tier_map == NULL) return false;
-    bs_fringe = ConcurrentBitsetCreateCopy(this_tier_map);
+    bs_fringe = ConcurrentBitsetCreateCopyMt(this_tier_map);
 
     if (num_child_tiers > 0) {
         child_tier_maps = (ConcurrentBitset **)GamesmanAllocatorAllocate(
@@ -664,7 +665,7 @@ static void Step2Discover(Analysis *dest) {
         } else {
             assert(GetFringeSize() == 0);
             no_oom = DiscoverFromBitsetToArray(dest);
-            ConcurrentBitsetResetAll(bs_fringe);
+            ConcurrentBitsetResetAllMt(bs_fringe);
         }
 
         if (no_oom) {

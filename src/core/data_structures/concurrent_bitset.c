@@ -86,23 +86,28 @@ static int64_t NumBitsToNumBlocks(int64_t num_bits) {
 }
 
 size_t ConcurrentBitsetMemRequired(int64_t num_bits) {
-    if (num_bits < 0) num_bits = 0;
+    if (num_bits < 0) {
+        num_bits = 0;
+    }
+
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
     return sizeof(ConcurrentBitset) + num_blocks * sizeof(AtomicBlockType);
 }
 
-ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits) {
-    return ConcurrentBitsetCreateAllocator(num_bits, NULL);
+ConcurrentBitset *ConcurrentBitsetCreateMt(int64_t num_bits) {
+    return ConcurrentBitsetCreateAllocatorMt(num_bits, NULL);
 }
 
-ConcurrentBitset *ConcurrentBitsetCreateAllocator(
+ConcurrentBitset *ConcurrentBitsetCreateAllocatorMt(
     int64_t num_bits, GamesmanAllocator *allocator) {
     // Allocate space.
     if (num_bits < 0) num_bits = 0;
     size_t alloc_size = ConcurrentBitsetMemRequired(num_bits);
     ConcurrentBitset *ret =
         (ConcurrentBitset *)GamesmanAllocatorAllocate(allocator, alloc_size);
-    if (ret == NULL) return ret;
+    if (ret == NULL) {
+        return ret;
+    }
 
     // Initialize all blocks to 0.
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
@@ -119,12 +124,14 @@ ConcurrentBitset *ConcurrentBitsetCreateAllocator(
     return ret;
 }
 
-ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
+ConcurrentBitset *ConcurrentBitsetCreateCopyMt(const ConcurrentBitset *other) {
     // Allocate space.
     size_t alloc_size = ConcurrentBitsetMemRequired(other->num_bits);
     ConcurrentBitset *ret = (ConcurrentBitset *)GamesmanAllocatorAllocate(
         other->allocator, alloc_size);
-    if (ret == NULL) return ret;
+    if (ret == NULL) {
+        return ret;
+    }
 
     // Copy all blocks from other.
     int64_t num_blocks = NumBitsToNumBlocks(other->num_bits);
@@ -144,7 +151,10 @@ ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
 }
 
 void ConcurrentBitsetDestroy(ConcurrentBitset *s) {
-    if (s == NULL) return;
+    if (s == NULL) {
+        return;
+    }
+
     GamesmanAllocator *allocator = s->allocator;
     GamesmanAllocatorDeallocate(allocator, s);
     GamesmanAllocatorRelease(allocator);
@@ -186,8 +196,10 @@ bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
     return previous & mask;
 }
 
-void ConcurrentBitsetResetAll(ConcurrentBitset *s) {
-    if (s == NULL) return;
+void ConcurrentBitsetResetAllMt(ConcurrentBitset *s) {
+    if (s == NULL) {
+        return;
+    }
 
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
     PRAGMA_OMP(parallel for)
@@ -213,35 +225,27 @@ size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s) {
     return num_blocks * sizeof(BlockType);
 }
 
-void ConcurrentBitsetSerialize(const ConcurrentBitset *s, void *buf) {
-    BlockType *out = (BlockType *)buf;
-    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP(parallel for)
-    for (int64_t i = 0; i < num_blocks; ++i) {
-        out[i] = atomic_load_explicit(&s->data[i], memory_order_relaxed);
-    }
-}
-
-void ConcurrentBitsetDeserialize(ConcurrentBitset *s, const void *buf) {
-    const BlockType *in = (const BlockType *)buf;
-    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP(parallel for)
-    for (int64_t i = 0; i < num_blocks; ++i) {
-        atomic_store_explicit(&s->data[i], in[i], memory_order_relaxed);
-    }
-}
-
 static int64_t Int64Min(int64_t a, int64_t b) { return a < b ? a : b; }
 
 size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
                                           size_t offset, void *buf,
                                           size_t bufsize) {
-    if (!s) return 0;
-    if (offset % sizeof(BlockType) != 0) return 0;
-    if (!buf) return 0;
+    if (!s) {
+        return 0;
+    }
+
+    if (offset % sizeof(BlockType) != 0) {
+        return 0;
+    }
+
+    if (!buf) {
+        return 0;
+    }
+
     if (bufsize < sizeof(BlockType) || bufsize % sizeof(BlockType) != 0) {
         return 0;
     }
+
     int64_t block_begin = offset / sizeof(BlockType);
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
     int64_t block_end =
@@ -258,12 +262,22 @@ size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
 
 size_t ConcurrentBitsetDeserializeStreaming(ConcurrentBitset *s, size_t offset,
                                             const void *buf, size_t bufsize) {
-    if (!s) return 0;
-    if (offset % sizeof(BlockType) != 0) return 0;
-    if (!buf) return 0;
+    if (!s) {
+        return 0;
+    }
+
+    if (offset % sizeof(BlockType) != 0) {
+        return 0;
+    }
+
+    if (!buf) {
+        return 0;
+    }
+
     if (bufsize < sizeof(BlockType) || bufsize % sizeof(BlockType) != 0) {
         return 0;
     }
+
     int64_t block_begin = offset / sizeof(BlockType);
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
     int64_t block_end =
