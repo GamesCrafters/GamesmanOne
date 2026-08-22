@@ -87,7 +87,7 @@ static int64_t NumBitsToNumBlocks(int64_t num_bits) {
 
 size_t ConcurrentBitsetMemRequired(int64_t num_bits) {
     if (num_bits < 0) {
-        num_bits = 0;
+        return SIZE_MAX;
     }
 
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
@@ -101,11 +101,14 @@ ConcurrentBitset *ConcurrentBitsetCreateMt(int64_t num_bits) {
 ConcurrentBitset *ConcurrentBitsetCreateAllocatorMt(
     int64_t num_bits, GamesmanAllocator *allocator) {
     // Allocate space.
-    if (num_bits < 0) num_bits = 0;
+    if (num_bits < 0) {
+        return NULL;
+    }
+
     size_t alloc_size = ConcurrentBitsetMemRequired(num_bits);
     ConcurrentBitset *ret =
         (ConcurrentBitset *)GamesmanAllocatorAllocate(allocator, alloc_size);
-    if (ret == NULL) {
+    if (!ret) {
         return ret;
     }
 
@@ -125,11 +128,15 @@ ConcurrentBitset *ConcurrentBitsetCreateAllocatorMt(
 }
 
 ConcurrentBitset *ConcurrentBitsetCreateCopyMt(const ConcurrentBitset *other) {
+    if (!other) {
+        return NULL;
+    }
+
     // Allocate space.
     size_t alloc_size = ConcurrentBitsetMemRequired(other->num_bits);
     ConcurrentBitset *ret = (ConcurrentBitset *)GamesmanAllocatorAllocate(
         other->allocator, alloc_size);
-    if (ret == NULL) {
+    if (!ret) {
         return ret;
     }
 
@@ -151,7 +158,7 @@ ConcurrentBitset *ConcurrentBitsetCreateCopyMt(const ConcurrentBitset *other) {
 }
 
 void ConcurrentBitsetDestroy(ConcurrentBitset *s) {
-    if (s == NULL) {
+    if (!s) {
         return;
     }
 
@@ -197,10 +204,6 @@ bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
 }
 
 void ConcurrentBitsetResetAllMt(ConcurrentBitset *s) {
-    if (s == NULL) {
-        return;
-    }
-
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
     PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {

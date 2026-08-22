@@ -1,6 +1,6 @@
 /**
  * This file is a C language translation and modification of:
- *   folly/folly/ConcurrentBitSet.h from Meta Platforms, Inc. (Facebook)
+ *  folly/folly/ConcurrentBitSet.h from Meta Platforms, Inc. (Facebook)
  * https://github.com/facebook/folly/blob/main/folly/ConcurrentBitSet.h
  *
  * Original file Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -34,8 +34,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief A Concurrent Bitset suitable in a multi-writer multi-reader context.
- * @version 1.0.0
- * @date 2025-03-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -64,162 +62,204 @@
 
 #include "core/gamesman_memory.h"
 
+/**
+ * @brief Opaque type representing a concurrent bitset.
+ */
 typedef struct ConcurrentBitset ConcurrentBitset;
 
 /**
  * @brief Returns the amount of memory required in bytes to create a
- * ConcurrentBitset of size \p num_bits bits.
+ * `ConcurrentBitset` of size `num_bits` bits.
  *
- * @param num_bits Number of bits in the new ConcurrentBitset.
- * @return The amount of memory required.
+ * @param[in] num_bits Number of bits in the new `ConcurrentBitset`. If
+ * negative, `SIZE_MAX` will be returned to indicate an error.
+ *
+ * @return The amount of memory required in bytes.
  */
 size_t ConcurrentBitsetMemRequired(int64_t num_bits);
 
 /**
- * @brief Constructs a ConcurrentBitset of \p num_bits bits. All bits are
- * initially set to 0. This function is multithreaded using all OpenMP threads.
+ * @brief Constructs a `ConcurrentBitset` of `num_bits` bits with all bits set
+ * to 0.
  *
- * @param num_bits Number of bits in the new ConcurrentBitset.
- * @return Pointer to a newly created ConcurrentBitset object, or
- * @return \c NULL on failure due to invalid \p num_bits or memory allocation
- * failure.
+ * @details This function is multithreaded using all OpenMP threads.
+ *
+ * @param[in] num_bits Number of bits in the new `ConcurrentBitset`. If set to
+ * 0, a `ConcurrentBitset` of 0 bits will be created and returned, and it must
+ * still be deallocated using the `ConcurrentBitsetDestroy()` function to
+ * prevent memory leak. If negative, the function will return `NULL`.
+ *
+ * @return Pointer to a newly created `ConcurrentBitset` object. `NULL` on
+ * memory allocation failure or if `num_bits` is negative.
  */
 ConcurrentBitset *ConcurrentBitsetCreateMt(int64_t num_bits);
 
 /**
- * @brief Constructs a ConcurrentBitset of \p num_bits bits using \p allocator
- * as the underlying memory allocator. If \p allocator is \c NULL, the function
- * call is equivalent to ConcurrentBitsetCreateMt(num_bits). Note that this
- * function does not transfer the ownership of \p allocator to the new array
- * object. The caller is responsible for releasing its own copy of the
- * allocator. This function is multithreaded using all OpenMP threads.
+ * @brief Constructs a `ConcurrentBitset` of `num_bits` bits using `allocator`
+ * as the underlying memory allocator.
  *
- * @param num_bits Number of bits in the new ConcurrentBitset.
- * @param allocator Memory allocator to use.
- * @return Pointer to a newly created ConcurrentBitset object, or
- * @return \c NULL on failure due to invalid \p num_bits or memory allocation
- * failure.
+ * @details If `allocator` is `NULL`, the function call is equivalent to
+ * `ConcurrentBitsetCreateMt(num_bits)`. Note that this function does not
+ * transfer the ownership of `allocator` to the new array object. The caller is
+ * responsible for releasing its own copy of the allocator. This function is
+ * multithreaded using all OpenMP threads. If `num_bits` is negative, the
+ * function will return `NULL`.
+ *
+ * @param[in] num_bits Number of bits in the new `ConcurrentBitset`.
+ * @param[in,out] allocator Memory allocator to use.
+ *
+ * @return Pointer to a newly created `ConcurrentBitset` object. `NULL` on
+ * memory allocation failure.
  */
 ConcurrentBitset *ConcurrentBitsetCreateAllocatorMt(
     int64_t num_bits, GamesmanAllocator *allocator);
 
 /**
- * @brief Constructs a copy of the given ConcurrentBitset. If the \p other
- * ConcurrentBitset uses a custom memory allocator, the copy will also create
- * a reference of the same memory allocator and use it. This function is
- * multithreaded using all OpenMP threads.
+ * @brief Constructs a copy of the given `ConcurrentBitset`.
  *
- * @note This function does not provide thread-safety. The copy operation is
- * not atomic.
+ * @details If the `other` `ConcurrentBitset` uses a custom memory allocator,
+ * the copy will create a reference of the same memory allocator and use it.
+ * `NULL` will be returned if `other` is `NULL`. This function is multithreaded
+ * using all OpenMP threads.
  *
- * @param other ConcurrentBitset object to copy.
- * @return Pointer to the copy of the given ConcurrentBitset object, or
- * @return \c NULL on memory allocation failure.
+ * @note This function is not MT-safe unless `other` is `NULL`. The copy
+ * operation is not atomic.
+ *
+ * @param[in] other `ConcurrentBitset` object to copy.
+ *
+ * @return Pointer to the copy of the given `ConcurrentBitset` object. `NULL` if
+ * `other` is `NULL` or on memory allocation failure.
  */
 ConcurrentBitset *ConcurrentBitsetCreateCopyMt(const ConcurrentBitset *other);
 
 /**
- * @brief Destroys the given ConcurrentBitset object.
+ * @brief Destroys the given `ConcurrentBitset` object. Does nothing if `s` is
+ * `NULL`.
  *
- * @param s Pointer to the ConcurrentBitset object to be destroyed.
+ * @param[in,out] s Pointer to the `ConcurrentBitset` object to be destroyed.
  */
 void ConcurrentBitsetDestroy(ConcurrentBitset *s);
 
 /**
- * @brief Returns the number of bits in the given ConcurrentBitset.
+ * @brief Returns the number of bits in the given `ConcurrentBitset`.
  *
- * @param s Pointer to a ConcurrentBitset object.
- * @return Number of bits in the ConcurrentBitset.
+ * @param[in] s Non-`NULL` pointer to a `ConcurrentBitset` object.
+ *
+ * @return Number of bits in the `ConcurrentBitset`.
  */
 int64_t ConcurrentBitsetGetNumBits(const ConcurrentBitset *s);
 
 /**
- * @brief Sets the bit at index \p bit_index to 1 and returns the previous value
- * of the bit. Undefined if \p s is \c NULL or if \p bit_index is out of bounds.
+ * @brief Sets the bit at index `bit_index` to 1 and returns the previous value
+ * of the bit.
  *
- * @param s Pointer to the target ConcurrentBitset object to modify.
- * @param bit_index Index of the bit to be set.
- * @param memory_order Memory order to use.
- * @return Previous value of the bit.
+ * @details Undefined if `s` is `NULL` or if `bit_index` is out of bounds.
+ *
+ * @param[in,out] s Non-`NULL` pointer to the target `ConcurrentBitset` object
+ * to modify.
+ * @param[in] bit_index Index of the bit to be set.
+ * @param[in] order Memory order to use.
+ *
+ * @return Previous boolean value of the bit.
  */
 bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
                          memory_order order);
 
 /**
- * @brief Resets the bit at index \p bit_index to 0 and returns the previous
- * value of the bit. Undefined if \p s is \c NULL or if \p bit_index is out of
- * bounds.
+ * @brief Resets the bit at index `bit_index` to 0 and returns the previous
+ * value of the bit.
  *
- * @param s Pointer to the target ConcurrentBitset object to modify.
- * @param bit_index Index of the bit to be reset.
- * @param memory_order Memory order to use.
- * @return Previous value of the bit.
+ * @details Undefined if `s` is `NULL` or if `bit_index` is out of bounds.
+ *
+ * @param[in,out] s Non-`NULL` pointer to the target `ConcurrentBitset` object
+ * to modify.
+ * @param[in] bit_index Index of the bit to be reset.
+ * @param[in] order Memory order to use.
+ *
+ * @return Previous boolean value of the bit.
  */
 bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
                            memory_order order);
 
 /**
- * @brief Resets all bits in the given ConcurrentBitset \p s. Does nothing if
- * \p s is \c NULL. This function is multithreaded using all OpenMP threads.
+ * @brief Resets all bits in the given `ConcurrentBitset` `s`.
  *
- * @note This function does not provide thread-safety. If \p s is modified
- * by another thread while this function is in progress, the result is
- * undefined.
+ * @details Undefined if `s` is `NULL`. This function is multithreaded using all
+ * OpenMP threads.
  *
- * @param s Pointer to the target ConcurrentBitset object to modify.
+ * @note This function is not MT-safe. If `s` is modified by another thread
+ * while this function is in progress, the resulting state is undefined.
+ *
+ * @param[in,out] s Non-`NULL` pointer to the target `ConcurrentBitset` object
+ * to modify.
  */
 void ConcurrentBitsetResetAllMt(ConcurrentBitset *s);
 
 /**
- * @brief Returns the bit at index \p bit_index as a boolean value.
+ * @brief Returns the bit at index `bit_index` as a boolean value.
  *
- * @param s Pointer to the source ConcurrentBitset object.
- * @param bit_index Index of the bit to be tested.
- * @param memory_order Memory order to use.
- * @return \c true if the bit at index \p bit_index is 1,
- * @return \c false otherwise.
+ * @details Undefined if `s` is `NULL` or if `bit_index` is out of bounds.
+ *
+ * @param[in] s Non-`NULL` pointer to the source `ConcurrentBitset` object.
+ * @param[in] bit_index Index of the bit to be tested.
+ * @param[in] order Memory order to use.
+ *
+ * @return `true` if the bit at index `bit_index` is 1, `false` otherwise.
  */
 bool ConcurrentBitsetTest(ConcurrentBitset *s, int64_t bit_index,
                           memory_order order);
 
 /**
  * @brief Returns the amount of memory required in bytes to store the serialized
- * ConcurrentBitset object.
+ * `ConcurrentBitset` object.
  *
- * @param s ConcurrentBitset object to be serialized.
+ * @param[in] s Non-`NULL` pointer to the `ConcurrentBitset` object to be
+ * serialized.
+ *
  * @return Amount of memory required in bytes to store the serialized
- * ConcurrentBitset object.
+ * `ConcurrentBitset` object.
  */
 size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s);
 
 /**
- * @brief Serializes at most \p bufsize bytes starting from the \p offset -th
- * byte of the ConcurrentBitset \p s into \p buf and return the number of bytes
- * serialized.
+ * @brief Serializes at most `bufsize` bytes starting from the `offset`-th byte
+ * of `s` into `buf`.
  *
- * @param s ConcurrentBitset object to be serialized.
- * @param offset Byte offset of \p s from which serialization begins.
- * @param buf Output buffer.
- * @param bufsize Output buffer size in bytes, which must be positive and a
- * multiple of sizeof(unsigned long long). If this requirement is not met, the
- * function will silently return 0 without performing any serialization.
- * @return Number of source bytes serialized.
+ * @param[in] s `ConcurrentBitset` object to be serialized.
+ * @param[in] offset Byte offset of `s` from which serialization begins. Must
+ * be a multiple of the internal block size. Otherwise, the function silently
+ * returns 0.
+ * @param[out] buf Output buffer.
+ * @param[in] bufsize Output buffer size in bytes, which must be positive and a
+ * multiple of the internal block size (which is typically `sizeof(unsigned long
+ * long)`, but may be smaller depending on the platform's lock-free atomic
+ * capabilities). If this requirement is not met or any parameter is invalid,
+ * the function will silently return 0 without performing any serialization.
+ *
+ * @return Number of source bytes serialized, which is guaranteed to be a
+ * multiple of the internal block size.
  */
 size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
                                           size_t offset, void *buf,
                                           size_t bufsize);
 
 /**
- * @brief Deserialize \p bufsize bytes of data from \p buf into \p s starting
- * from its \p offset -th byte.
+ * @brief Deserialize `bufsize` bytes of data from `buf` into `s` starting
+ * from its `offset`-th byte.
  *
- * @param s Pointer to the destination ConcurrentBitset object.
- * @param offset Byte offset of \p s from which deserialization begins.
- * @param buf Input buffer that contains serialized data.
- * @param bufsize Size of \p buf in bytes, which must be positive and a multiple
- * of sizeof(unsigned long long). If this requirement is not met, the function
- * will silently return 0 without performing any deserialization.
- * @return Number of deserialized bytes.
+ * @param[in,out] s Pointer to the destination `ConcurrentBitset` object.
+ * @param[in] offset Byte offset of `s` from which deserialization begins. Must
+ * be a multiple of the internal block size. Otherwise, the function silently
+ * returns 0.
+ * @param[in] buf Input buffer that contains serialized data.
+ * @param[in] bufsize Size of `buf` in bytes, which must be positive and a
+ * multiple of the internal block size (which is typically `sizeof(unsigned long
+ * long)`, but may be smaller depending on the platform's lock-free atomic
+ * capabilities). If this requirement is not met or any parameter is invalid,
+ * the function will silently return 0 without performing any deserialization.
+ *
+ * @return Number of deserialized bytes, which is guaranteed to be a
+ * multiple of the internal block size.
  */
 size_t ConcurrentBitsetDeserializeStreaming(ConcurrentBitset *s, size_t offset,
                                             const void *buf, size_t bufsize);
