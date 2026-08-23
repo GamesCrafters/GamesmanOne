@@ -1,6 +1,7 @@
 add_library_test(data_structures_test data_structures
     SOURCES
     bitset_test.cpp
+    concurrent_bitset_test.cpp
     cstring_test.cpp
     hash_test.cpp
     int64_array_test.cpp
@@ -8,6 +9,8 @@ add_library_test(data_structures_test data_structures
     u64x2_hash_set_test.cpp
     COMPILE_DEFINITIONS
     $<$<BOOL:${GAMESMAN_ENABLE_TSAN}>:GAMESMAN_TSAN_ENABLED>
+    EXTRA_LIBS
+    gamesman_memory
     TIMEOUT
     10
 )
