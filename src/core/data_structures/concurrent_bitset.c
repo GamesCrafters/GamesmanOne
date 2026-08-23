@@ -180,8 +180,8 @@ static int64_t BitOffset(int64_t bit_index) {
 }
 
 bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
-                         memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                         memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -192,8 +192,8 @@ bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
 }
 
 bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
-                           memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                           memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -212,8 +212,8 @@ void ConcurrentBitsetResetAllMt(ConcurrentBitset *s) {
 }
 
 bool ConcurrentBitsetTest(ConcurrentBitset *s, int64_t bit_index,
-                          memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                          memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -230,22 +230,30 @@ size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s) {
 
 static int64_t Int64Min(int64_t a, int64_t b) { return a < b ? a : b; }
 
-size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
-                                          size_t offset, void *buf,
-                                          size_t bufsize) {
-    if (!s) {
-        return 0;
-    }
-
-    if (offset % sizeof(BlockType) != 0) {
-        return 0;
+static bool ValidateParametersSerializeDeserialize(const ConcurrentBitset *s,
+                                                   size_t offset,
+                                                   const void *buf,
+                                                   size_t bufsize) {
+    // Offset must be in bounds and a multiple of block size
+    if (offset * 8 >= (size_t)s->num_bits || offset % sizeof(BlockType) != 0) {
+        return false;
     }
 
     if (!buf) {
-        return 0;
+        return false;
     }
 
     if (bufsize < sizeof(BlockType) || bufsize % sizeof(BlockType) != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
+                                          size_t offset, void *buf,
+                                          size_t bufsize) {
+    if (!ValidateParametersSerializeDeserialize(s, offset, buf, bufsize)) {
         return 0;
     }
 
@@ -265,19 +273,7 @@ size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
 
 size_t ConcurrentBitsetDeserializeStreaming(ConcurrentBitset *s, size_t offset,
                                             const void *buf, size_t bufsize) {
-    if (!s) {
-        return 0;
-    }
-
-    if (offset % sizeof(BlockType) != 0) {
-        return 0;
-    }
-
-    if (!buf) {
-        return 0;
-    }
-
-    if (bufsize < sizeof(BlockType) || bufsize % sizeof(BlockType) != 0) {
+    if (!ValidateParametersSerializeDeserialize(s, offset, buf, bufsize)) {
         return 0;
     }
 

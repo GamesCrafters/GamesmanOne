@@ -55,12 +55,27 @@
 #ifndef GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_
 #define GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_
 
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "core/gamesman_memory.h"
+
+/* Handle memory_order compatibility between C11 and C++11 */
+#ifdef __cplusplus
+#include <atomic>
+using memory_order_compat = std::memory_order;
+#else
+#include <stdatomic.h>
+typedef memory_order memory_order_compat;
+#endif
+
+/* Forward declaration of the struct if it's opaque */
+typedef struct ConcurrentBitset ConcurrentBitset;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Opaque type representing a concurrent bitset.
@@ -163,7 +178,7 @@ int64_t ConcurrentBitsetGetNumBits(const ConcurrentBitset *s);
  * @return Previous boolean value of the bit.
  */
 bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
-                         memory_order order);
+                         memory_order_compat order);
 
 /**
  * @brief Resets the bit at index `bit_index` to 0 and returns the previous
@@ -179,7 +194,7 @@ bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
  * @return Previous boolean value of the bit.
  */
 bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
-                           memory_order order);
+                           memory_order_compat order);
 
 /**
  * @brief Resets all bits in the given `ConcurrentBitset` `s`.
@@ -207,7 +222,7 @@ void ConcurrentBitsetResetAllMt(ConcurrentBitset *s);
  * @return `true` if the bit at index `bit_index` is 1, `false` otherwise.
  */
 bool ConcurrentBitsetTest(ConcurrentBitset *s, int64_t bit_index,
-                          memory_order order);
+                          memory_order_compat order);
 
 /**
  * @brief Returns the amount of memory required in bytes to store the serialized
@@ -225,7 +240,8 @@ size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s);
  * @brief Serializes at most `bufsize` bytes starting from the `offset`-th byte
  * of `s` into `buf`.
  *
- * @param[in] s `ConcurrentBitset` object to be serialized.
+ * @param[in] s Non-null pointer to the `ConcurrentBitset` object to be
+ * serialized.
  * @param[in] offset Byte offset of `s` from which serialization begins. Must
  * be a multiple of the internal block size. Otherwise, the function silently
  * returns 0.
@@ -247,7 +263,8 @@ size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
  * @brief Deserialize `bufsize` bytes of data from `buf` into `s` starting
  * from its `offset`-th byte.
  *
- * @param[in,out] s Pointer to the destination `ConcurrentBitset` object.
+ * @param[in,out] s Non-null pointer to the destination `ConcurrentBitset`
+ * object.
  * @param[in] offset Byte offset of `s` from which deserialization begins. Must
  * be a multiple of the internal block size. Otherwise, the function silently
  * returns 0.
@@ -263,5 +280,9 @@ size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
  */
 size_t ConcurrentBitsetDeserializeStreaming(ConcurrentBitset *s, size_t offset,
                                             const void *buf, size_t bufsize);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_CONCURRENT_BITSET_H_
