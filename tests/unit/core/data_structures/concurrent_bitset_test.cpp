@@ -292,7 +292,7 @@ TEST(ConcurrentBitsetTest, CreateCopyMtNullInput) {
 // Verifies that a copied bitset uses the same allocator as the original.
 TEST(ConcurrentBitsetTest, CreateCopyMtSharesAllocator) {
     // Reserve more than enough space for the two bitsets
-    constexpr size_t kPoolSize = 256;
+    constexpr size_t kPoolSize = 1024;
     constexpr int64_t kNumBits = 16;
 
     GamesmanAllocatorOptions options;
@@ -338,8 +338,8 @@ TEST(ConcurrentBitsetTest, CreateCopyMtSharesAllocator) {
 // memory fails gracefully and returns a null pointer.
 TEST(ConcurrentBitsetTest, CreateCopyMtAllocatorOutOfMemory) {
     // Reserve enough space only for the first bitset.
-    constexpr int64_t kNumBits = 2048;  // 256 bytes
-    constexpr size_t kPoolSize = 384;   // 384 bytes < 256 bytes * 2
+    constexpr int64_t kNumBits = 8192;  // 1 KiB
+    constexpr size_t kPoolSize = 1536;  // 1.5 KiB < 1 KiB * 2
 
     GamesmanAllocatorOptions options;
     GamesmanAllocatorOptionsSetDefaults(&options);
