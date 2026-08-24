@@ -129,7 +129,7 @@ TEST(ConcurrentBitsetTest, CreateMtNegative) {
     }
 }
 
-// ======================== ConcurrentBitsetCreateMt ========================
+// ===================== ConcurrentBitsetCreateAllocatorMt =====================
 
 // Verifies that passing a null allocator correctly falls back to default memory
 // allocation and successfully creates a valid bitset.
@@ -167,6 +167,32 @@ TEST(ConcurrentBitsetTest, CreateAllocatorMtValidAllocator) {
            "requested.";
 
     ConcurrentBitsetDestroy(bitset);
+    GamesmanAllocatorRelease(allocator);
+}
+
+// Verifies that providing a memory allocator with not enough memory fails
+// gracefully and returns a null pointer.
+TEST(ConcurrentBitsetTest, CreateAllocatorMtOutOfMemory) {
+    GamesmanAllocatorOptions options;
+    GamesmanAllocatorOptionsSetDefaults(&options);
+    options.pool_size = 7;
+    GamesmanAllocator* allocator = GamesmanAllocatorCreate(&options);
+    ASSERT_NE(allocator, nullptr)
+        << "Allocator creation must succeed for the test setup.";
+
+    // At least 8 bytes are required to store 64 bits.
+    ConcurrentBitset* bitset = ConcurrentBitsetCreateAllocatorMt(64, allocator);
+    ASSERT_EQ(bitset, nullptr)
+        << "Bitset creation must return nullptr when the provided allocator "
+           "does not have enough memory.";
+    ASSERT_EQ(GamesmanAllocatorGetRemainingPoolSize(allocator), 7)
+        << "Failed Bitset creation should not consume memory from the "
+           "allocator.";
+
+    if (bitset != nullptr) {
+        ConcurrentBitsetDestroy(bitset);
+    }
+
     GamesmanAllocatorRelease(allocator);
 }
 
@@ -261,6 +287,97 @@ TEST(ConcurrentBitsetTest, CreateCopyMtNullInput) {
     if (copy != nullptr) {
         ConcurrentBitsetDestroy(copy);
     }
+}
+
+// Verifies that a copied bitset uses the same allocator as the original.
+TEST(ConcurrentBitsetTest, CreateCopyMtSharesAllocator) {
+    // Reserve more than enough space for the two bitsets
+    constexpr size_t kPoolSize = 256;
+    constexpr int64_t kNumBits = 16;
+
+    GamesmanAllocatorOptions options;
+    GamesmanAllocatorOptionsSetDefaults(&options);
+    options.pool_size = kPoolSize;
+    GamesmanAllocator* allocator = GamesmanAllocatorCreate(&options);
+    ASSERT_NE(allocator, nullptr)
+        << "Allocator creation must succeed for the test setup.";
+
+    ConcurrentBitset* original =
+        ConcurrentBitsetCreateAllocatorMt(kNumBits, allocator);
+    ASSERT_NE(original, nullptr)
+        << "Bitset creation should succeed for a valid original bitset.";
+
+    const size_t remaining_size_original =
+        GamesmanAllocatorGetRemainingPoolSize(allocator);
+    ASSERT_LE(remaining_size_original, kPoolSize)
+        << "The remaining memory pool size of the allocator should decrease "
+           "after a successful "
+           "bitset creation.";
+
+    // The copied bitset should use the same allocator as the original
+    ConcurrentBitset* copy = ConcurrentBitsetCreateCopyMt(original);
+    EXPECT_NE(copy, nullptr)
+        << "Bitset copy creation should succeed for the second bitset.";
+
+    const size_t remaining_size_second =
+        GamesmanAllocatorGetRemainingPoolSize(allocator);
+    EXPECT_LE(remaining_size_second, remaining_size_original)
+        << "The remaining memory pool size of the allocator should decrease "
+           "after bitset copy creation.";
+    EXPECT_EQ(kPoolSize - remaining_size_original,
+              remaining_size_original - remaining_size_second)
+        << "The amount of memory consumed by the copied bitset should be the "
+           "same as the original.";
+
+    ConcurrentBitsetDestroy(original);
+    ConcurrentBitsetDestroy(copy);
+    GamesmanAllocatorRelease(allocator);
+}
+
+// Verifies that attempting to copy a bitset whose allocator has not enough
+// memory fails gracefully and returns a null pointer.
+TEST(ConcurrentBitsetTest, CreateCopyMtAllocatorOutOfMemory) {
+    // Reserve enough space only for the first bitset.
+    constexpr int64_t kNumBits = 2048;  // 256 bytes
+    constexpr size_t kPoolSize = 384;   // 384 bytes < 256 bytes * 2
+
+    GamesmanAllocatorOptions options;
+    GamesmanAllocatorOptionsSetDefaults(&options);
+    options.pool_size = kPoolSize;
+    GamesmanAllocator* allocator = GamesmanAllocatorCreate(&options);
+    ASSERT_NE(allocator, nullptr)
+        << "Allocator creation must succeed for the test setup.";
+
+    ConcurrentBitset* original =
+        ConcurrentBitsetCreateAllocatorMt(kNumBits, allocator);
+    ASSERT_NE(original, nullptr)
+        << "Bitset creation should succeed for a valid original bitset.";
+
+    const size_t remaining_size_original =
+        GamesmanAllocatorGetRemainingPoolSize(allocator);
+    ASSERT_LE(remaining_size_original, kPoolSize)
+        << "The remaining memory pool size of the allocator should decrease "
+           "after a successful "
+           "bitset creation.";
+
+    // The copy operation should fail due to not enough memory left in the
+    // allocator's pool
+    ConcurrentBitset* copy = ConcurrentBitsetCreateCopyMt(original);
+    EXPECT_EQ(copy, nullptr)
+        << "Bitset copy creation should fail when there's not enough memory "
+           "left in the allocator's pool.";
+
+    const size_t remaining_size_second =
+        GamesmanAllocatorGetRemainingPoolSize(allocator);
+    EXPECT_EQ(remaining_size_second, remaining_size_original)
+        << "The remaining memory pool size of the allocator should remain the "
+           "same after a failed copy creation.";
+
+    ConcurrentBitsetDestroy(original);
+    if (copy) {
+        ConcurrentBitsetDestroy(copy);
+    }
+    GamesmanAllocatorRelease(allocator);
 }
 
 // ========================== ConcurrentBitsetDestroy ==========================
