@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Separate chaining Tier to generic pointer (void *) hash map.
- * @version 1.0.0
- * @date 2025-06-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -59,22 +57,16 @@ typedef struct Int64ToPtrChainedHashMapIterator TierToPtrChainedHashMapIterator;
  * value will be set to 0.25 and 0.75, respectively, regardless of the
  * user-specified value.
  */
-void TierToPtrChainedHashMapInit(TierToPtrChainedHashMap *map,
-                                 double max_load_factor);
+static inline void TierToPtrChainedHashMapInit(TierToPtrChainedHashMap *map,
+                                               double max_load_factor) {
+    Int64ToPtrChainedHashMapInit(map, max_load_factor);
+}
 
 /** @brief Deallocates the given \p map. */
-void TierToPtrChainedHashMapDestroy(TierToPtrChainedHashMap *map);
-
-/**
- * @brief Returns whether \p tier is in \p map.
- *
- * @param map Hash map in which the existence of \p tier is looked for.
- * @param tier Tier to look for.
- * @return \c true if \p tier exists in \p map, or
- * @return \c false otherwise.
- */
-bool TierToPtrChainedHashMapContains(const TierToPtrChainedHashMap *map,
-                                     Tier tier);
+static inline void TierToPtrChainedHashMapDestroy(
+    TierToPtrChainedHashMap *map) {
+    Int64ToPtrChainedHashMapDestroy(map);
+}
 
 /**
  * @brief Returns an iterator to the entry containing the given \p tier in \p
@@ -87,8 +79,10 @@ bool TierToPtrChainedHashMapContains(const TierToPtrChainedHashMap *map,
  * @return Int64ToPtrChainedHashMapIterator pointing to the entry with \p tier ,
  * or an invalid iterator if \p tier is not found in \p map .
  */
-TierToPtrChainedHashMapIterator TierToPtrChainedHashMapGet(
-    const TierToPtrChainedHashMap *map, Tier tier);
+static inline TierToPtrChainedHashMapIterator TierToPtrChainedHashMapGet(
+    const TierToPtrChainedHashMap *map, Tier tier) {
+    return Int64ToPtrChainedHashMapGet(map, tier);
+}
 
 /**
  * @brief Sets the entry with \p tier in \p map to the given \p value and
@@ -103,8 +97,10 @@ TierToPtrChainedHashMapIterator TierToPtrChainedHashMapGet(
  * @return \c true on success,
  * @return \c false otherwise.
  */
-bool TierToPtrChainedHashMapSet(TierToPtrChainedHashMap *map, Tier tier,
-                                void *value);
+static inline bool TierToPtrChainedHashMapSet(TierToPtrChainedHashMap *map,
+                                              Tier tier, void *value) {
+    return Int64ToPtrChainedHashMapSet(map, tier, value);
+}
 
 /**
  * @brief Removes the entry with \p tier in \p map. Does nothing if \p tier does
@@ -113,7 +109,10 @@ bool TierToPtrChainedHashMapSet(TierToPtrChainedHashMap *map, Tier tier,
  * @param map Target hash map.
  * @param tier Tier to the entry to remove.
  */
-void TierToPtrChainedHashMapRemove(TierToPtrChainedHashMap *map, Tier tier);
+static inline void TierToPtrChainedHashMapRemove(TierToPtrChainedHashMap *map,
+                                                 Tier tier) {
+    Int64ToPtrChainedHashMapRemove(map, tier);
+}
 
 /**
  * @brief Returns an iterator to the first entry in \p map . Returns an invalid
@@ -123,8 +122,10 @@ void TierToPtrChainedHashMapRemove(TierToPtrChainedHashMap *map, Tier tier);
  * @return Int64ToPtrChainedHashMapIterator to the first entry in \p map , or
  * an invalid iterator if \p map is empty.
  */
-TierToPtrChainedHashMapIterator TierToPtrChainedHashMapBegin(
-    const TierToPtrChainedHashMap *map);
+static inline TierToPtrChainedHashMapIterator TierToPtrChainedHashMapBegin(
+    const TierToPtrChainedHashMap *map) {
+    return Int64ToPtrChainedHashMapBegin(map);
+}
 
 /**
  * @brief Returns the key of the entry that \p it is pointing to. The user
@@ -134,8 +135,10 @@ TierToPtrChainedHashMapIterator TierToPtrChainedHashMapBegin(
  * @param it Iterator.
  * @return Key to the entry pointed to by \p it.
  */
-int64_t TierToPtrChainedHashMapIteratorKey(
-    const TierToPtrChainedHashMapIterator *it);
+static inline int64_t TierToPtrChainedHashMapIteratorKey(
+    const TierToPtrChainedHashMapIterator *it) {
+    return Int64ToPtrChainedHashMapIteratorKey(it);
+}
 
 /**
  * @brief Returns the value of the entry that \p it is pointing to. The user
@@ -145,14 +148,18 @@ int64_t TierToPtrChainedHashMapIteratorKey(
  * @param it Iterator.
  * @return Value of the entry pointed to by \p it.
  */
-void *TierToPtrChainedHashMapIteratorValue(
-    const TierToPtrChainedHashMapIterator *it);
+static inline void *TierToPtrChainedHashMapIteratorValue(
+    const TierToPtrChainedHashMapIterator *it) {
+    return Int64ToPtrChainedHashMapIteratorValue(it);
+}
 
 /**
  * @brief Returns \c true if \p it is a valid iterator, or \c false otherwise.
  */
-bool TierToPtrChainedHashMapIteratorIsValid(
-    const TierToPtrChainedHashMapIterator *it);
+static inline bool TierToPtrChainedHashMapIteratorIsValid(
+    const TierToPtrChainedHashMapIterator *it) {
+    return Int64ToPtrChainedHashMapIteratorIsValid(it);
+}
 
 /**
  * @brief Advances iterator \p it to the next valid entry in the hash map.
@@ -161,6 +168,9 @@ bool TierToPtrChainedHashMapIteratorIsValid(
  * @return \c true if the next entry exists,
  * @return \c false otherwise.
  */
-bool TierToPtrChainedHashMapIteratorNext(TierToPtrChainedHashMapIterator *it);
+static inline bool TierToPtrChainedHashMapIteratorNext(
+    TierToPtrChainedHashMapIterator *it) {
+    return Int64ToPtrChainedHashMapIteratorNext(it);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_TO_PTR_CHAINED_HASH_MAP_H_

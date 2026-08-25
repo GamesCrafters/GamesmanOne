@@ -85,17 +85,6 @@ void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
 void Int64ToPtrChainedHashMapDestroy(Int64ToPtrChainedHashMap *map);
 
 /**
- * @brief Returns whether \p key is in \p map.
- *
- * @param map Hash map in which the existence of \p key is looked for.
- * @param key Key to look for.
- * @return \c true if \p key exists in \p map, or
- * @return \c false otherwise.
- */
-bool Int64ToPtrChainedHashMapContains(const Int64ToPtrChainedHashMap *map,
-                                      int64_t key);
-
-/**
  * @brief Returns an iterator to the entry containing the given \p key in \p map
  * . Returns an invalid iterator if \p key is not found in \p map . The iterator
  * returned must be tested by Int64ToPtrChainedHashMapIteratorIsValid for

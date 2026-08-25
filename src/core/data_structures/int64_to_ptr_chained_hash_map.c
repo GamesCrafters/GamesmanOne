@@ -64,13 +64,6 @@ static int64_t Hash(int64_t key, int64_t capacity_mask) {
     return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
 }
 
-bool Int64ToPtrChainedHashMapContains(const Int64ToPtrChainedHashMap *map,
-                                      int64_t key) {
-    Int64ToPtrChainedHashMapIterator it = Int64ToPtrChainedHashMapGet(map, key);
-
-    return Int64ToPtrChainedHashMapIteratorIsValid(&it);
-}
-
 static Int64ToPtrChainedHashMapIterator NewIterator(
     const Int64ToPtrChainedHashMap *map, int64_t bucket_index,
     Int64ToPtrChainedHashMapEntry *cur) {
