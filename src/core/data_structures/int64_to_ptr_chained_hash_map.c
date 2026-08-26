@@ -5,8 +5,6 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Separate chaining int64_t to generic pointer (void *) hash map
  * implementation.
- * @version 1.0.0
- * @date 2025-06-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -143,7 +141,9 @@ bool Int64ToPtrChainedHashMapSet(Int64ToPtrChainedHashMap *map, int64_t key,
     // Key does not exist. Create a new entry.
     entry = (Int64ToPtrChainedHashMapEntry *)GamesmanMalloc(
         sizeof(Int64ToPtrChainedHashMapEntry));
-    if (!entry) return false;
+    if (!entry) {
+        return false;
+    }
 
     entry->key = key;
     entry->value = value;
