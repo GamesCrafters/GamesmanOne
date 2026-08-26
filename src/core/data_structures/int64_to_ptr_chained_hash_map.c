@@ -37,31 +37,39 @@
 void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
                                   double max_load_factor) {
     map->buckets = NULL;
-    map->capacity_mask = -1;
+    map->capacity_mask = 0ULL;
     map->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
+
+    if (max_load_factor > 2.0) {
+        max_load_factor = 2.0;
+    }
+    if (max_load_factor < 0.5) {
+        max_load_factor = 0.5;
+    }
     map->max_load_factor = max_load_factor;
 }
 
 void Int64ToPtrChainedHashMapDestroy(Int64ToPtrChainedHashMap *map) {
-    for (int64_t i = 0; i < map->capacity_mask + 1; ++i) {
-        Int64ToPtrChainedHashMapEntry *walker = map->buckets[i];
-        while (walker) {
-            Int64ToPtrChainedHashMapEntry *next = walker->next;
-            GamesmanFree(walker);
-            walker = next;
+    if (map->buckets) {
+        for (uint64_t i = 0; i < map->capacity_mask + 1; ++i) {
+            Int64ToPtrChainedHashMapEntry *walker = map->buckets[i];
+            while (walker) {
+                Int64ToPtrChainedHashMapEntry *next = walker->next;
+                GamesmanFree(walker);
+                walker = next;
+            }
         }
+        GamesmanFree(map->buckets);
+        map->buckets = NULL;
     }
-    GamesmanFree(map->buckets);
+
     map->size = 0;
-    map->buckets = NULL;
-    map->capacity_mask = -1;
+    map->capacity_mask = 0ULL;
     map->max_load_factor = 0.0;
 }
 
-static int64_t Hash(int64_t key, int64_t capacity_mask) {
-    return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
+static int64_t Hash(int64_t key, uint64_t capacity_mask) {
+    return (int64_t)(Splitmix64((uint64_t)key) & capacity_mask);
 }
 
 static Int64ToPtrChainedHashMapIterator NewIterator(
@@ -77,7 +85,9 @@ static Int64ToPtrChainedHashMapIterator NewIterator(
 
 Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapGet(
     const Int64ToPtrChainedHashMap *map, int64_t key) {
-    if (map->capacity_mask < 0) return NewIterator(map, -1, NULL);
+    if (!map->capacity_mask) {
+        return NewIterator(map, -1, NULL);
+    }
 
     int64_t index = Hash(key, map->capacity_mask);
     Int64ToPtrChainedHashMapEntry *walker = map->buckets[index];
@@ -91,20 +101,24 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapGet(
     return NewIterator(map, -1, NULL);
 }
 
-static bool Expand(Int64ToPtrChainedHashMap *map, int64_t new_mask) {
+static bool Expand(Int64ToPtrChainedHashMap *map, uint64_t new_mask) {
     Int64ToPtrChainedHashMapEntry **new_buckets =
         (Int64ToPtrChainedHashMapEntry **)GamesmanCallocWhole(
             new_mask + 1, sizeof(Int64ToPtrChainedHashMapEntry *));
-    if (new_buckets == NULL) return false;
+    if (!new_buckets) {
+        return false;
+    }
 
-    for (int64_t i = 0; i < map->capacity_mask + 1; ++i) {
-        Int64ToPtrChainedHashMapEntry *entry = map->buckets[i];
-        while (entry) {
-            int64_t new_index = Hash(entry->key, new_mask);
-            Int64ToPtrChainedHashMapEntry *next = entry->next;
-            entry->next = new_buckets[new_index];
-            new_buckets[new_index] = entry;
-            entry = next;
+    if (map->buckets) {
+        for (uint64_t i = 0; i < map->capacity_mask + 1; ++i) {
+            Int64ToPtrChainedHashMapEntry *entry = map->buckets[i];
+            while (entry) {
+                int64_t new_index = Hash(entry->key, new_mask);
+                Int64ToPtrChainedHashMapEntry *next = entry->next;
+                entry->next = new_buckets[new_index];
+                new_buckets[new_index] = entry;
+                entry = next;
+            }
         }
     }
 
@@ -118,12 +132,16 @@ static bool Expand(Int64ToPtrChainedHashMap *map, int64_t new_mask) {
 bool Int64ToPtrChainedHashMapSet(Int64ToPtrChainedHashMap *map, int64_t key,
                                  void *value) {
     // Check if resizing is needed.
-    if (map->capacity_mask < 0) {
-        if (!Expand(map, 1)) return false;
+    if (!map->capacity_mask) {
+        if (!Expand(map, 15ULL)) {
+            return false;
+        }
     } else if ((double)(map->size + 1) >
                (double)(map->capacity_mask + 1) * map->max_load_factor) {
-        int64_t new_capacity_mask = (map->capacity_mask << 1) | 1;
-        if (!Expand(map, new_capacity_mask)) return false;
+        uint64_t new_capacity_mask = (map->capacity_mask << 1) | 1ULL;
+        if (!Expand(map, new_capacity_mask)) {
+            return false;
+        }
     }
 
     // Look for existing key to replace its value.
@@ -153,7 +171,9 @@ bool Int64ToPtrChainedHashMapSet(Int64ToPtrChainedHashMap *map, int64_t key,
 
 void Int64ToPtrChainedHashMapRemove(Int64ToPtrChainedHashMap *map,
                                     int64_t key) {
-    if (map->capacity_mask < 0) return;
+    if (!map->capacity_mask) {
+        return;
+    }
 
     int64_t index = Hash(key, map->capacity_mask);
     Int64ToPtrChainedHashMapEntry *entry = map->buckets[index];
@@ -178,8 +198,9 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapBegin(
     it.bucket_index = 0;
     it.cur = NULL;
 
-    // Advance to first valid bucket
-    while (it.bucket_index < map->capacity_mask + 1) {
+    // Advance to the first valid bucket
+    int64_t capacity = (int64_t)map->capacity_mask + 1;
+    while (it.bucket_index < capacity) {
         if (map->buckets[it.bucket_index]) {
             it.cur = map->buckets[it.bucket_index];
             break;
@@ -207,14 +228,18 @@ void *Int64ToPtrChainedHashMapIteratorValue(
 
 bool Int64ToPtrChainedHashMapIteratorNext(
     Int64ToPtrChainedHashMapIterator *it) {
-    if (!Int64ToPtrChainedHashMapIteratorIsValid(it)) return false;
+    if (!Int64ToPtrChainedHashMapIteratorIsValid(it)) {
+        return false;
+    }
 
     it->cur = it->cur->next;
-    if (it->cur != NULL) return true;
+    if (it->cur != NULL) {
+        return true;
+    }
 
     // Otherwise, look for the next valid bucket or report failure
-    ++it->bucket_index;
-    while (it->bucket_index < it->map->capacity_mask + 1) {
+    int64_t capacity = (int64_t)it->map->capacity_mask + 1;
+    while (it->bucket_index < capacity) {
         if (it->map->buckets[it->bucket_index]) {
             it->cur = it->map->buckets[it->bucket_index];
             return true;

@@ -46,7 +46,7 @@ typedef struct Int64ToPtrChainedHashMapEntry {
  */
 typedef struct Int64ToPtrChainedHashMap {
     Int64ToPtrChainedHashMapEntry **buckets; /**< Dynamic array of buckets. */
-    int64_t capacity_mask;                   /**< Number of buckets - 1 */
+    uint64_t capacity_mask; /**< Number of buckets - 1; 0 if unallocated. */
     int64_t size;           /**< Number of entries in the map. */
     double max_load_factor; /**< Hash map will automatically expand if
                             (double)size/capacity is greater than this value. */
@@ -73,10 +73,9 @@ typedef struct Int64ToPtrChainedHashMapIterator {
  * map will automatically expand its capacity if (double)size/capacity is
  * greater than the max_load_factor. A small max_load_factor trades memory for
  * speed whereas a large max_load_factor trades speed for memory. This value is
- * restricted to be in the range [0.25, 0.75]. If the user passes a
- * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
- * value will be set to 0.25 and 0.75, respectively, regardless of the
- * user-specified value.
+ * clamped to the range [0.5, 2.0]. If the user passes a max_load_factor that is
+ * smaller than 0.5 or greater than 2.0, the internal value will be set to 0.5
+ * and 2.0, respectively, regardless of the user-specified value.
  */
 void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
                                   double max_load_factor);
