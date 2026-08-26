@@ -28,6 +28,7 @@
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_TO_PTR_CHAINED_HASH_MAP_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /**
@@ -77,8 +78,20 @@ typedef struct Int64ToPtrChainedHashMapIterator {
  * smaller than 0.5 or greater than 2.0, the internal value will be set to 0.5
  * and 2.0, respectively, regardless of the user-specified value.
  */
-void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
-                                  double max_load_factor);
+static inline void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
+                                                double max_load_factor) {
+    map->buckets = NULL;
+    map->capacity_mask = 0ULL;
+    map->size = 0;
+
+    if (max_load_factor > 2.0) {
+        max_load_factor = 2.0;
+    }
+    if (max_load_factor < 0.5) {
+        max_load_factor = 0.5;
+    }
+    map->max_load_factor = max_load_factor;
+}
 
 /** @brief Deallocates the given \p map. */
 void Int64ToPtrChainedHashMapDestroy(Int64ToPtrChainedHashMap *map);
@@ -140,8 +153,10 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapBegin(
  * @param it Iterator.
  * @return Key to the entry pointed to by \p it.
  */
-int64_t Int64ToPtrChainedHashMapIteratorKey(
-    const Int64ToPtrChainedHashMapIterator *it);
+static inline int64_t Int64ToPtrChainedHashMapIteratorKey(
+    const Int64ToPtrChainedHashMapIterator *it) {
+    return it->cur->key;
+}
 
 /**
  * @brief Returns the value of the entry that \p it is pointing to. The user
@@ -151,14 +166,18 @@ int64_t Int64ToPtrChainedHashMapIteratorKey(
  * @param it Iterator.
  * @return Value of the entry pointed to by \p it.
  */
-void *Int64ToPtrChainedHashMapIteratorValue(
-    const Int64ToPtrChainedHashMapIterator *it);
+static inline void *Int64ToPtrChainedHashMapIteratorValue(
+    const Int64ToPtrChainedHashMapIterator *it) {
+    return it->cur->value;
+}
 
 /**
  * @brief Returns \c true if \p it is a valid iterator, or \c false otherwise.
  */
-bool Int64ToPtrChainedHashMapIteratorIsValid(
-    const Int64ToPtrChainedHashMapIterator *it);
+static inline bool Int64ToPtrChainedHashMapIteratorIsValid(
+    const Int64ToPtrChainedHashMapIterator *it) {
+    return it->cur != NULL;
+}
 
 /**
  * @brief Advances iterator \p it to the next valid entry in the hash map.

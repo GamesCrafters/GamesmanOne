@@ -34,21 +34,6 @@
 #include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
 
-void Int64ToPtrChainedHashMapInit(Int64ToPtrChainedHashMap *map,
-                                  double max_load_factor) {
-    map->buckets = NULL;
-    map->capacity_mask = 0ULL;
-    map->size = 0;
-
-    if (max_load_factor > 2.0) {
-        max_load_factor = 2.0;
-    }
-    if (max_load_factor < 0.5) {
-        max_load_factor = 0.5;
-    }
-    map->max_load_factor = max_load_factor;
-}
-
 void Int64ToPtrChainedHashMapDestroy(Int64ToPtrChainedHashMap *map) {
     if (map->buckets) {
         for (uint64_t i = 0; i < map->capacity_mask + 1; ++i) {
@@ -198,6 +183,10 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapBegin(
     it.bucket_index = 0;
     it.cur = NULL;
 
+    if (!map->buckets) {
+        return it;
+    }
+
     // Advance to the first valid bucket
     int64_t capacity = (int64_t)map->capacity_mask + 1;
     while (it.bucket_index < capacity) {
@@ -209,21 +198,6 @@ Int64ToPtrChainedHashMapIterator Int64ToPtrChainedHashMapBegin(
     }
 
     return it;
-}
-
-bool Int64ToPtrChainedHashMapIteratorIsValid(
-    const Int64ToPtrChainedHashMapIterator *it) {
-    return it->cur != NULL;
-}
-
-int64_t Int64ToPtrChainedHashMapIteratorKey(
-    const Int64ToPtrChainedHashMapIterator *it) {
-    return it->cur->key;
-}
-
-void *Int64ToPtrChainedHashMapIteratorValue(
-    const Int64ToPtrChainedHashMapIterator *it) {
-    return it->cur->value;
 }
 
 bool Int64ToPtrChainedHashMapIteratorNext(
@@ -238,6 +212,7 @@ bool Int64ToPtrChainedHashMapIteratorNext(
     }
 
     // Otherwise, look for the next valid bucket or report failure
+    ++it->bucket_index;
     int64_t capacity = (int64_t)it->map->capacity_mask + 1;
     while (it->bucket_index < capacity) {
         if (it->map->buckets[it->bucket_index]) {
