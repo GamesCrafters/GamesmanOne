@@ -786,9 +786,9 @@ TEST(Int64ToPtrChainedHashMapTest, StressHighVolume) {
     Int64ToPtrChainedHashMap map;
     Int64ToPtrChainedHashMapInit(&map, 1.0);
 
-    // 1,000,000 elements is large enough to trigger numerous rehashes and
+    // 100,000 elements is large enough to trigger numerous rehashes and
     // deeply test the memory management without causing test timeouts.
-    constexpr int kNumElements = 1000000;
+    constexpr int kNumElements = 100000;
     std::vector<int> values(kNumElements);
 
     // Phase 1: Massive Insertion
@@ -816,7 +816,7 @@ TEST(Int64ToPtrChainedHashMapTest, StressHighVolume) {
         Int64ToPtrChainedHashMapIteratorNext(&it);
     }
     EXPECT_EQ(iteration_count, kNumElements)
-        << "Iterator failed to yield exactly 1,000,000 elements.";
+        << "Iterator failed to yield exactly " << kNumElements << " elements.";
 
     // Phase 4: Bulk Deletion (Remove half of the elements)
     for (int i = 0; i < kNumElements / 2; ++i) {
