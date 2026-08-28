@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief int64_t queue using dynamic array.
- * @version 1.0.1
- * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,20 +30,6 @@
 
 /**
  * @brief int64_t queue using dynamic array.
- *
- * @example
- * #include <inttypes.h>
- * #include <stdio.h>
- *
- * Int64Queue myqueue;
- * Int64QueueInit(&myqueue);
- * Int64QueuePush(&myqueue, -1);
- * Int64QueuePush(&myqueue, 2);
- * printf("%" PRId64, Int64QueuePop(&myqueue));  // -1
- * Int64QueuePush(&myqueue, -3);
- * printf("%" PRId64, Int64QueuePop(&myqueue));  // 2
- * printf("%" PRId64, Int64QueuePop(&myqueue));  // -3
- * Int64QueueDestroy(&myqueue);
  */
 typedef struct Int64Queue {
     int64_t *array;   /**< Internal dynamic array storing the items. */
