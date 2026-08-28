@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief int64_t queue using dynamic array.
+ * @brief Dynamic int64_t queue.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,7 +26,10 @@
 #define GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#include "core/gamesman_memory.h"
 
 /**
  * @brief int64_t queue using dynamic array.
@@ -39,16 +42,31 @@ typedef struct Int64Queue {
 } Int64Queue;
 
 /** @brief Initializes QUEUE. */
-void Int64QueueInit(Int64Queue *queue);
+static inline void Int64QueueInit(Int64Queue *queue) {
+    queue->array = NULL;
+    queue->capacity = 0;
+    queue->front = 0;
+    queue->size = 0;
+}
 
 /** @brief Destroys QUEUE. */
-void Int64QueueDestroy(Int64Queue *queue);
+static inline void Int64QueueDestroy(Int64Queue *queue) {
+    GamesmanFree(queue->array);
+    queue->array = NULL;
+    queue->capacity = 0;
+    queue->front = 0;
+    queue->size = 0;
+}
 
 /** @brief Returns true if QUEUE is empty, or false otherwise. */
-bool Int64QueueIsEmpty(const Int64Queue *queue);
+static inline bool Int64QueueIsEmpty(const Int64Queue *queue) {
+    return (queue->size == 0);
+}
 
 /** @brief Returns the number of items in QUEUE. */
-int64_t Int64QueueSize(const Int64Queue *queue);
+static inline int64_t Int64QueueSize(const Int64Queue *queue) {
+    return queue->size;
+}
 
 /**
  * @brief Pushes ELEMENT into the QUEUE.
@@ -59,9 +77,17 @@ int64_t Int64QueueSize(const Int64Queue *queue);
 bool Int64QueuePush(Int64Queue *queue, int64_t item);
 
 /** @brief Pops the item at the front of the QUEUE and returns it. */
-int64_t Int64QueuePop(Int64Queue *queue);
+static inline int64_t Int64QueuePop(Int64Queue *queue) {
+    int64_t element = queue->array[queue->front];
+    queue->front = (queue->front + 1) % queue->capacity;
+    --queue->size;
+
+    return element;
+}
 
 /** @brief Returns the item at the front of the QUEUE without popping it. */
-int64_t Int64QueueFront(const Int64Queue *queue);
+static inline int64_t Int64QueueFront(const Int64Queue *queue) {
+    return queue->array[queue->front];
+}
 
 #endif  // GAMESMANONE_CORE_DATA_STRUCTURES_INT64_QUEUE_H_

@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of int64_t queue using dynamic array.
+ * @brief Implementation of Int64Queue.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -24,17 +24,15 @@
 
 #include "core/data_structures/int64_queue.h"
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "core/gamesman_memory.h"
 
 static bool Expand(Int64Queue *queue) {
-    int64_t new_capacity = queue->capacity == 0 ? 1 : queue->capacity * 2;
+    int64_t new_capacity = queue->capacity == 0 ? 16 : queue->capacity * 2;
     int64_t *new_array =
         (int64_t *)GamesmanMalloc(new_capacity * sizeof(int64_t));
     if (!new_array) {
@@ -52,63 +50,21 @@ static bool Expand(Int64Queue *queue) {
            queue->front * sizeof(int64_t));
     queue->array = new_array;
     queue->capacity = new_capacity;
+
     return true;
 }
-
-// Function to initialize the queue
-void Int64QueueInit(Int64Queue *queue) {
-    queue->array = NULL;
-    queue->capacity = 0;
-    queue->front = 0;
-    queue->size = 0;
-}
-
-// Function to destroy the queue and free the allocated memory
-void Int64QueueDestroy(Int64Queue *queue) {
-    GamesmanFree(queue->array);
-    queue->array = NULL;
-    queue->capacity = 0;
-    queue->front = 0;
-    queue->size = 0;
-}
-
-// Function to check if the queue is empty
-bool Int64QueueIsEmpty(const Int64Queue *queue) { return (queue->size == 0); }
-
-// Function to check the size of the queue
-int64_t Int64QueueSize(const Int64Queue *queue) { return queue->size; }
 
 // Function to add an element to the queue
 bool Int64QueuePush(Int64Queue *queue, int64_t item) {
     if (queue->size == queue->capacity) {
-        if (!Expand(queue)) return false;
+        if (!Expand(queue)) {
+            return false;
+        }
     }
-    assert(queue->size < queue->capacity);
+
     int64_t back = (queue->front + queue->size) % queue->capacity;
     queue->array[back] = item;
     ++queue->size;
+
     return true;
-}
-
-// Function to remove an element from the queue
-int64_t Int64QueuePop(Int64Queue *queue) {
-    if (Int64QueueIsEmpty(queue)) {
-        fprintf(stderr, "Int64QueuePop: popping from an empty queue.\n");
-        return 0;
-    }
-
-    int64_t element = queue->array[queue->front];
-    queue->front = (queue->front + 1) % queue->capacity;
-    --queue->size;
-
-    return element;
-}
-
-int64_t Int64QueueFront(const Int64Queue *queue) {
-    if (Int64QueueIsEmpty(queue)) {
-        fprintf(stderr, "Int64QueueFront: peaking into an empty queue.\n");
-        return 0;
-    }
-
-    return queue->array[queue->front];
 }
