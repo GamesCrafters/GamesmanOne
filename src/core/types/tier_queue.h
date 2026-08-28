@@ -35,16 +35,22 @@
 typedef Int64Queue TierQueue;
 
 /** @brief Initializes QUEUE. */
-void TierQueueInit(TierQueue *queue);
+static inline void TierQueueInit(TierQueue *queue) { Int64QueueInit(queue); }
 
 /** @brief Destroys QUEUE. */
-void TierQueueDestroy(TierQueue *queue);
+static inline void TierQueueDestroy(TierQueue *queue) {
+    Int64QueueDestroy(queue);
+}
 
 /** @brief Returns true if QUEUE is empty, or false otherwise. */
-bool TierQueueEmpty(const TierQueue *queue);
+static inline bool TierQueueEmpty(const TierQueue *queue) {
+    return Int64QueueIsEmpty(queue);
+}
 
 /** @brief Returns the number of items in QUEUE. */
-int64_t TierQueueSize(const TierQueue *queue);
+static inline int64_t TierQueueSize(const TierQueue *queue) {
+    return Int64QueueSize(queue);
+}
 
 /**
  * @brief Pushes TIER into the QUEUE.
@@ -52,12 +58,18 @@ int64_t TierQueueSize(const TierQueue *queue);
  * @return true on success,
  * @return false otherwise.
  */
-bool TierQueuePush(TierQueue *queue, Tier tier);
+static inline bool TierQueuePush(TierQueue *queue, Tier tier) {
+    return Int64QueuePush(queue, tier);
+}
 
 /** @brief Pops the item at the front of the QUEUE and returns it. */
-Tier TierQueuePop(TierQueue *queue);
+static inline Tier TierQueuePop(TierQueue *queue) {
+    return Int64QueuePop(queue);
+}
 
 /** @brief Returns the tier at the front of the QUEUE without popping it. */
-Tier TierQueueFront(const TierQueue *queue);
+static inline Tier TierQueueFront(const TierQueue *queue) {
+    return Int64QueueFront(queue);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_QUEUE_H_
