@@ -32,7 +32,9 @@
 #include "core/gamesman_memory.h"
 
 static bool Expand(Int64Queue *queue) {
-    int64_t new_capacity = queue->capacity == 0 ? 16 : queue->capacity * 2;
+    const int64_t old_capacity =
+        queue->capacity_mask ? (int64_t)queue->capacity_mask + 1 : 0;
+    const int64_t new_capacity = old_capacity ? old_capacity * 2 : 16;
     int64_t *new_array =
         (int64_t *)GamesmanMalloc(new_capacity * sizeof(int64_t));
     if (!new_array) {
@@ -40,29 +42,28 @@ static bool Expand(Int64Queue *queue) {
     }
 
     if (queue->array) {
-        memcpy(new_array, queue->array, queue->capacity * sizeof(int64_t));
+        memcpy(new_array, queue->array, old_capacity * sizeof(int64_t));
         GamesmanFree(queue->array);
     }
 
     // Copy wrapped-around elements in the original array. This is safe if
     // the capacity is at least doubled.
-    memcpy(&new_array[queue->capacity], new_array,
-           queue->front * sizeof(int64_t));
+    memcpy(&new_array[old_capacity], new_array, queue->front * sizeof(int64_t));
     queue->array = new_array;
-    queue->capacity = new_capacity;
+    queue->capacity_mask = new_capacity - 1;
 
     return true;
 }
 
 // Function to add an element to the queue
 bool Int64QueuePush(Int64Queue *queue, int64_t item) {
-    if (queue->size == queue->capacity) {
+    if (!queue->array || (uint64_t)queue->size == queue->capacity_mask + 1) {
         if (!Expand(queue)) {
             return false;
         }
     }
 
-    int64_t back = (queue->front + queue->size) % queue->capacity;
+    int64_t back = (queue->front + queue->size) & queue->capacity_mask;
     queue->array[back] = item;
     ++queue->size;
 

@@ -2,9 +2,7 @@
  * @file int64_queue.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
- *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic int64_t queue.
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -32,60 +30,103 @@
 #include "core/gamesman_memory.h"
 
 /**
- * @brief int64_t queue using dynamic array.
+ * @brief `int64_t` queue using dynamic array.
+ *
+ * @details No internal states are intended to be inspect or manipulated
+ * directly. Use the provided API functions instead.
  */
 typedef struct Int64Queue {
-    int64_t *array;   /**< Internal dynamic array storing the items. */
-    int64_t front;    /**< Index to the element at the front of the queue. */
-    int64_t size;     /**< Number of elements in the queue. */
-    int64_t capacity; /**< Current capacity of the queue. */
+    int64_t *array; /**< Internal dynamic array storing the items. */
+    int64_t front;  /**< Index to the element at the front of the queue. */
+    int64_t size;   /**< Number of elements in the queue. */
+    uint64_t capacity_mask; /**< Current capacity of the queue - 1. */
 } Int64Queue;
 
-/** @brief Initializes QUEUE. */
+/**
+ * @brief Initializes `queue`.
+ *
+ * @param[out] queue Pointer to the queue to initialize.
+ */
 static inline void Int64QueueInit(Int64Queue *queue) {
     queue->array = NULL;
-    queue->capacity = 0;
     queue->front = 0;
     queue->size = 0;
+    queue->capacity_mask = 0ULL;
 }
 
-/** @brief Destroys QUEUE. */
+/**
+ * @brief Destroys `queue`.
+ *
+ * @param[in,out] queue Pointer to the queue to destroy.
+ */
 static inline void Int64QueueDestroy(Int64Queue *queue) {
     GamesmanFree(queue->array);
     queue->array = NULL;
-    queue->capacity = 0;
     queue->front = 0;
     queue->size = 0;
+    queue->capacity_mask = 0ULL;
 }
 
-/** @brief Returns true if QUEUE is empty, or false otherwise. */
+/**
+ * @brief Returns true if `queue` is empty, or false otherwise.
+ *
+ * @param[in] queue Pointer to the queue.
+ *
+ * @retval true If the `queue` is empty.
+ * @retval false Otherwise.
+ */
 static inline bool Int64QueueIsEmpty(const Int64Queue *queue) {
     return (queue->size == 0);
 }
 
-/** @brief Returns the number of items in QUEUE. */
+/**
+ * @brief Returns the number of items in `queue`.
+ *
+ * @param[in] queue Pointer to the queue.
+ *
+ * @return The number of elements currently stored in the `queue`.
+ */
 static inline int64_t Int64QueueSize(const Int64Queue *queue) {
     return queue->size;
 }
 
 /**
- * @brief Pushes ELEMENT into the QUEUE.
+ * @brief Pushes `item` into the `queue`.
  *
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] queue Pointer to the queue.
+ * @param[in] item The element to push.
+ *
+ * @retval true On success.
+ * @retval false On failure due to memory allocation errors.
  */
 bool Int64QueuePush(Int64Queue *queue, int64_t item);
 
-/** @brief Pops the item at the front of the QUEUE and returns it. */
+/**
+ * @brief Pops the item at the front of the `queue` and returns it.
+ *
+ * @warning Popping an empty queue results in undefined behavior.
+ *
+ * @param[in,out] queue Pointer to the queue.
+ *
+ * @return The item at the front of the `queue`.
+ */
 static inline int64_t Int64QueuePop(Int64Queue *queue) {
     int64_t element = queue->array[queue->front];
-    queue->front = (queue->front + 1) % queue->capacity;
+    queue->front = (queue->front + 1) & queue->capacity_mask;
     --queue->size;
 
     return element;
 }
 
-/** @brief Returns the item at the front of the QUEUE without popping it. */
+/**
+ * @brief Returns the item at the front of the `queue` without popping it.
+ *
+ * @warning Peeking into an empty queue results in undefined behavior.
+ *
+ * @param[in] queue Pointer to the queue.
+ *
+ * @return The item at the front of the `queue`.
+ */
 static inline int64_t Int64QueueFront(const Int64Queue *queue) {
     return queue->array[queue->front];
 }
