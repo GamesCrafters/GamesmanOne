@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tier stack.
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,10 +34,12 @@
 typedef Int64Array TierStack;
 
 /** @brief Initializes Tier stack STACK. */
-void TierStackInit(TierStack *stack);
+static inline void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
 
 /** @brief Destroys Tier stack STACK. */
-void TierStackDestroy(TierStack *stack);
+static inline void TierStackDestroy(TierStack *stack) {
+    Int64ArrayDestroy(stack);
+}
 
 /**
  * @brief Pushes a new TIER into the STACK.
@@ -49,7 +49,9 @@ void TierStackDestroy(TierStack *stack);
  * @return true on success,
  * @return false otherwise.
  */
-bool TierStackPush(TierStack *stack, Tier tier);
+static inline bool TierStackPush(TierStack *stack, Tier tier) {
+    return Int64ArrayPushBack(stack, tier);
+}
 
 /**
  * @brief Pops a tier from the STACK. Calling this function on an empty STACK
@@ -57,7 +59,7 @@ bool TierStackPush(TierStack *stack, Tier tier);
  *
  * @param stack Stack to pop the tier from.
  */
-void TierStackPop(TierStack *stack);
+static inline void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
 
 /**
  * @brief Returns the item at the top of the STACK. Calling this function on an
@@ -66,9 +68,13 @@ void TierStackPop(TierStack *stack);
  * @param stack Stack to peak into.
  * @return Tier at the top of STACK.
  */
-Tier TierStackTop(const TierStack *stack);
+static inline Tier TierStackTop(const TierStack *stack) {
+    return Int64ArrayBack(stack);
+}
 
 /** @brief Returns true if the given STACK is empty, or false otherwise. */
-bool TierStackEmpty(const TierStack *stack);
+static inline bool TierStackEmpty(const TierStack *stack) {
+    return Int64ArrayEmpty(stack);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H_

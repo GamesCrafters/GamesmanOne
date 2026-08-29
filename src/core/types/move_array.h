@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Move array.
- * @version 2.0.0
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,10 +34,12 @@
 typedef Int64Array MoveArray;
 
 /** @brief Initializes the move ARRAY to an empty array. */
-void MoveArrayInit(MoveArray *array);
+static inline void MoveArrayInit(MoveArray *array) { Int64ArrayInit(array); }
 
 /** @brief Destroyes the move ARRAY. */
-void MoveArrayDestroy(MoveArray *array);
+static inline void MoveArrayDestroy(MoveArray *array) {
+    Int64ArrayDestroy(array);
+}
 
 /**
  * @brief Appends MOVE to the end of ARRAY.
@@ -49,7 +49,9 @@ void MoveArrayDestroy(MoveArray *array);
  * @return true on success,
  * @return false otherwise.
  */
-bool MoveArrayAppend(MoveArray *array, Move move);
+static inline bool MoveArrayAppend(MoveArray *array, Move move) {
+    return Int64ArrayPushBack(array, move);
+}
 
 /**
  * @brief Removes the last Move in ARRAY.
@@ -58,7 +60,11 @@ bool MoveArrayAppend(MoveArray *array, Move move);
  * @return true on success,
  * @return false if ARRAY is empty.
  */
-bool MoveArrayPopBack(MoveArray *array);
+static inline bool MoveArrayPopBack(MoveArray *array) {
+    if (array->size <= 0) return false;
+    --array->size;
+    return true;
+}
 
 /**
  * @brief Sorts the move ARRAY in ascending order using the given COMP-arison
@@ -70,10 +76,15 @@ bool MoveArrayPopBack(MoveArray *array);
  * first argument is greater than the second and zero if the arguments are
  * equivalent.
  */
-void MoveArraySortExplicit(MoveArray *array,
-                           int (*comp)(const void *, const void *));
+static inline void MoveArraySortExplicit(MoveArray *array,
+                                         int (*comp)(const void *,
+                                                     const void *)) {
+    Int64ArraySortExplicit(array, comp);
+}
 
 /** @brief Returns true if ARRAY contains MOVE, or false otherwise. */
-bool MoveArrayContains(const MoveArray *array, Move move);
+static inline bool MoveArrayContains(const MoveArray *array, Move move) {
+    return Int64ArrayContains(array, move);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_

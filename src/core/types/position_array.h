@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Position array.
- * @version 1.1.0
- * @date 2025-04-26
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,13 +35,19 @@
 typedef Int64Array PositionArray;
 
 /** @brief Initializes the position ARRAY to an empty array. */
-void PositionArrayInit(PositionArray *array);
+static inline void PositionArrayInit(PositionArray *array) {
+    Int64ArrayInit(array);
+}
 
-void PositionArrayInitAllocator(PositionArray *array,
-                                GamesmanAllocator *allocator);
+static inline void PositionArrayInitAllocator(PositionArray *array,
+                                              GamesmanAllocator *allocator) {
+    Int64ArrayInitAllocator(array, allocator);
+}
 
 /** @brief Destroyes the position ARRAY. */
-void PositionArrayDestroy(PositionArray *array);
+static inline void PositionArrayDestroy(PositionArray *array) {
+    Int64ArrayDestroy(array);
+}
 
 /**
  * @brief Appends POSITION to the end of ARRAY.
@@ -53,9 +57,15 @@ void PositionArrayDestroy(PositionArray *array);
  * @return true on success,
  * @return false otherwise.
  */
-bool PositionArrayAppend(PositionArray *array, Position position);
+static inline bool PositionArrayAppend(PositionArray *array,
+                                       Position position) {
+    return Int64ArrayPushBack(array, position);
+}
 
 /** @brief Returns true if ARRAY contains POSITION, or false otherwise. */
-bool PositionArrayContains(PositionArray *array, Position position);
+static inline bool PositionArrayContains(PositionArray *array,
+                                         Position position) {
+    return Int64ArrayContains(array, position);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_POSITION_ARRAY_H_
