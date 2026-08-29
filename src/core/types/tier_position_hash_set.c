@@ -30,6 +30,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
@@ -40,42 +41,6 @@ void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
     if (max_load_factor < 0.25) max_load_factor = 0.25;
     set->max_load_factor = max_load_factor;
     set->capacity_mask = -1;
-}
-
-// This function is adapted from Google CityHash
-// Copyright (c) 2011 Google, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-// CityHash, by Geoff Pike and Jyrki Alakuijala
-//
-// http://code.google.com/p/cityhash/
-static uint64_t Hash128to64(uint64_t lo, uint64_t hi) {
-    // Murmur-inspired hashing.
-    const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-    uint64_t a = (lo ^ hi) * kMul;
-    a ^= (a >> 47);
-    uint64_t b = (hi ^ a) * kMul;
-    b ^= (b >> 47);
-    b *= kMul;
-
-    return b;
 }
 
 static int64_t TierPositionHashSetHash(TierPosition key, int64_t mask) {
