@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic TierPosition array implementation.
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -69,16 +67,4 @@ bool TierPositionArrayAppend(TierPositionArray *array,
 
 TierPosition TierPositionArrayBack(const TierPositionArray *array) {
     return array->array[array->size - 1];
-}
-
-bool TierPositionArrayContains(const TierPositionArray *array,
-                               TierPosition target) {
-    for (int64_t i = 0; i < array->size; ++i) {
-        if (array->array[i].position == target.position &&
-            array->array[i].tier == target.tier) {
-            return true;
-        }
-    }
-
-    return false;
 }
