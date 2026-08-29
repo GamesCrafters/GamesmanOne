@@ -30,74 +30,115 @@
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Tier array. */
+/**
+ * @brief Dynamic `Tier` array.
+ */
 typedef Int64Array TierArray;
 
-/** @brief Initializes the Tier ARRAY. */
+/**
+ * @brief Initializes `array`.
+ *
+ * @param[out] array Array to initialize.
+ */
 static inline void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
 
-/** @brief Initializes the DEST tier array as a copy of tier array SRC. */
+/**
+ * @brief Initializes `dest` array to be a copy of the `src` array.
+ *
+ * @details If `src` uses a custom memory allocator, a new reference will be
+ * copied to the `dest` array.
+ *
+ * @param[out] dest Array to initialize.
+ * @param[in] src Source array to copy from.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
+ */
 static inline bool TierArrayInitCopy(TierArray *dest, const TierArray *src) {
     return Int64ArrayInitCopy(dest, src);
 }
 
-/** @brief Destroys the Tier ARRAY. */
+/**
+ * @brief Deallocates `array`.
+ *
+ * @param[in,out] array Array to deallocate.
+ */
 static inline void TierArrayDestroy(TierArray *array) {
     Int64ArrayDestroy(array);
 }
 
 /**
- * @brief Appends TIER to the end of the given Tier ARRAY.
+ * @brief Appends a new `tier` to the back of the `array`.
  *
- * @param array Destination Tier array.
- * @param tier Tier to append.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] array Destination array.
+ * @param[in] tier New tier.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 static inline bool TierArrayAppend(TierArray *array, Tier tier) {
     return Int64ArrayPushBack(array, tier);
 }
 
 /**
- * @brief Removes the first occurrence of TIER from ARRAY if it exists.
+ * @brief Removes the first occurrence of `tier` from `array`, if it exists.
  *
- * @param array Tier array.
- * @param tier Tier to remove.
- * @return true if TIER exists in ARRAY, or
- * @return false otherwise.
+ * @param[in,out] array Array of `Tier`.
+ * @param[in] tier Value to remove.
+ *
+ * @retval true if `tier` exists in `array` and was removed.
+ * @retval false otherwise.
  */
 static inline bool TierArrayRemoveUnordered(TierArray *array, Tier tier) {
     return Int64ArrayRemoveUnordered(array, tier);
 }
 
 /**
- * @brief Pops the item at the back of the ARRAY. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Pops the item at the back of the `array`.
+ *
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in,out] array Array to pop the item from.
  */
 static inline void TierArrayPopBack(TierArray *array) {
     Int64ArrayPopBack(array);
 }
 
 /**
- * @brief Returns the Tier at the back of the array. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Returns the item at the back of `array`.
+ *
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in] array Array to get the item from.
+ *
+ * @return Item at the back of `array`.
  */
 static inline Tier TierArrayBack(const TierArray *array) {
     return Int64ArrayBack(array);
 }
 
-/** @brief Returns true if ARRAY is empty, or false otherwise. */
+/**
+ * @brief Returns whether the given `array` is empty.
+ *
+ * @param[in] array Array to check.
+ *
+ * @retval true if the array is empty.
+ * @retval false otherwise.
+ */
 static inline bool TierArrayEmpty(const TierArray *array) {
     return Int64ArrayEmpty(array);
 }
 
 /**
- * @brief Sorts the given ARRAY according to the given comparison function.
- * @param array The array to be sorted.
- * @param comp 	Comparison function which returns ​a negative integer value if
+ * @brief Sorts the given `array` according to the given comparison function.
+ *
+ * @param[in,out] array The array to be sorted.
+ * @param[in] comp Comparison function which returns a negative integer value if
  * the first argument is less than the second, a positive integer value if the
  * first argument is greater than the second, and zero if the arguments are
- * equivalent. Both parameters are assumed to be pointers to \c Tier objects.
+ * equivalent.
  */
 static inline void TierArraySortExplicit(TierArray *array,
                                          int (*comp)(const void *,

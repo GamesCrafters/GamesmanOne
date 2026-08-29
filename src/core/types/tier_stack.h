@@ -30,49 +30,72 @@
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Tier stack using Int64Array. */
+/**
+ * @brief Dynamic `Tier` stack using `Int64Array`.
+ */
 typedef Int64Array TierStack;
 
-/** @brief Initializes Tier stack STACK. */
+/**
+ * @brief Initializes `stack`.
+ *
+ * @param[out] stack Stack to initialize.
+ */
 static inline void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
 
-/** @brief Destroys Tier stack STACK. */
+/**
+ * @brief Deallocates `stack`.
+ *
+ * @param[in,out] stack Stack to deallocate.
+ */
 static inline void TierStackDestroy(TierStack *stack) {
     Int64ArrayDestroy(stack);
 }
 
 /**
- * @brief Pushes a new TIER into the STACK.
+ * @brief Pushes a new `tier` into the `stack`.
  *
- * @param stack Destination stack.
- * @param tier New tier.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] stack Destination stack.
+ * @param[in] tier New tier.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 static inline bool TierStackPush(TierStack *stack, Tier tier) {
     return Int64ArrayPushBack(stack, tier);
 }
 
 /**
- * @brief Pops a tier from the STACK. Calling this function on an empty STACK
- * results in undefined behavior.
+ * @brief Pops a tier from the `stack`.
  *
- * @param stack Stack to pop the tier from.
+ * @details Calling this function on an empty `stack` results in undefined
+ * behavior.
+ *
+ * @param[in,out] stack Stack to pop the tier from.
  */
 static inline void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
 
 /**
- * @brief Returns the item at the top of the STACK. Calling this function on an
- * empty STACK results in undefined behavior.
+ * @brief Returns the item at the top of the `stack`.
  *
- * @param stack Stack to peak into.
- * @return Tier at the top of STACK.
+ * @details Calling this function on an empty `stack` results in undefined
+ * behavior.
+ *
+ * @param[in] stack Stack to peek into.
+ *
+ * @return Tier at the top of `stack`.
  */
 static inline Tier TierStackTop(const TierStack *stack) {
     return Int64ArrayBack(stack);
 }
 
-/** @brief Returns true if the given STACK is empty, or false otherwise. */
+/**
+ * @brief Returns whether the given `stack` is empty.
+ *
+ * @param[in] stack Stack to check.
+ *
+ * @retval true if the stack is empty.
+ * @retval false otherwise.
+ */
 static inline bool TierStackEmpty(const TierStack *stack) {
     return Int64ArrayEmpty(stack);
 }

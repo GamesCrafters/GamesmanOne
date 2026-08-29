@@ -31,38 +31,69 @@
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Position array. */
+/**
+ * @brief Dynamic `Position` array.
+ */
 typedef Int64Array PositionArray;
 
-/** @brief Initializes the position ARRAY to an empty array. */
+/**
+ * @brief Initializes `array`.
+ *
+ * @param[out] array Array to initialize.
+ */
 static inline void PositionArrayInit(PositionArray *array) {
     Int64ArrayInit(array);
 }
 
+/**
+ * @brief Initializes `array` using `allocator` as the underlying memory
+ * allocator.
+ *
+ * @details If `allocator` is `NULL`, the function call is equivalent to
+ * `PositionArrayInit(array)`. Note that this function does not transfer the
+ * ownership of `allocator` to the new array object. The caller is responsible
+ * for releasing its own copy of the allocator.
+ *
+ * @param[out] array Array to initialize.
+ * @param[in,out] allocator Memory allocator to use.
+ */
 static inline void PositionArrayInitAllocator(PositionArray *array,
                                               GamesmanAllocator *allocator) {
     Int64ArrayInitAllocator(array, allocator);
 }
 
-/** @brief Destroyes the position ARRAY. */
+/**
+ * @brief Deallocates `array`.
+ *
+ * @param[in,out] array Array to deallocate.
+ */
 static inline void PositionArrayDestroy(PositionArray *array) {
     Int64ArrayDestroy(array);
 }
 
 /**
- * @brief Appends POSITION to the end of ARRAY.
+ * @brief Appends a new `position` to the back of the `array`.
  *
- * @param array Destination array.
- * @param position Position to append.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] array Destination array.
+ * @param[in] position New position.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 static inline bool PositionArrayAppend(PositionArray *array,
                                        Position position) {
     return Int64ArrayPushBack(array, position);
 }
 
-/** @brief Returns true if ARRAY contains POSITION, or false otherwise. */
+/**
+ * @brief Returns whether the given `array` contains the given `position`.
+ *
+ * @param[in] array Array to check.
+ * @param[in] position Position to look for.
+ *
+ * @retval true if the array contains the position.
+ * @retval false otherwise.
+ */
 static inline bool PositionArrayContains(PositionArray *array,
                                          Position position) {
     return Int64ArrayContains(array, position);
