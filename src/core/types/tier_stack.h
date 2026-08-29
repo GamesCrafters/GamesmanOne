@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Tier stack.
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,43 +30,74 @@
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Tier stack using Int64Array. */
+/**
+ * @brief Dynamic `Tier` stack using `Int64Array`.
+ */
 typedef Int64Array TierStack;
 
-/** @brief Initializes Tier stack STACK. */
-void TierStackInit(TierStack *stack);
-
-/** @brief Destroys Tier stack STACK. */
-void TierStackDestroy(TierStack *stack);
+/**
+ * @brief Initializes `stack`.
+ *
+ * @param[out] stack Stack to initialize.
+ */
+static inline void TierStackInit(TierStack *stack) { Int64ArrayInit(stack); }
 
 /**
- * @brief Pushes a new TIER into the STACK.
+ * @brief Deallocates `stack`.
  *
- * @param stack Destination stack.
- * @param tier New tier.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] stack Stack to deallocate.
  */
-bool TierStackPush(TierStack *stack, Tier tier);
+static inline void TierStackDestroy(TierStack *stack) {
+    Int64ArrayDestroy(stack);
+}
 
 /**
- * @brief Pops a tier from the STACK. Calling this function on an empty STACK
- * results in undefined behavior.
+ * @brief Pushes a new `tier` into the `stack`.
  *
- * @param stack Stack to pop the tier from.
+ * @param[in,out] stack Destination stack.
+ * @param[in] tier New tier.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
-void TierStackPop(TierStack *stack);
+static inline bool TierStackPush(TierStack *stack, Tier tier) {
+    return Int64ArrayPushBack(stack, tier);
+}
 
 /**
- * @brief Returns the item at the top of the STACK. Calling this function on an
- * empty STACK results in undefined behavior.
+ * @brief Pops a tier from the `stack`.
  *
- * @param stack Stack to peak into.
- * @return Tier at the top of STACK.
+ * @details Calling this function on an empty `stack` results in undefined
+ * behavior.
+ *
+ * @param[in,out] stack Stack to pop the tier from.
  */
-Tier TierStackTop(const TierStack *stack);
+static inline void TierStackPop(TierStack *stack) { Int64ArrayPopBack(stack); }
 
-/** @brief Returns true if the given STACK is empty, or false otherwise. */
-bool TierStackEmpty(const TierStack *stack);
+/**
+ * @brief Returns the item at the top of the `stack`.
+ *
+ * @details Calling this function on an empty `stack` results in undefined
+ * behavior.
+ *
+ * @param[in] stack Stack to peek into.
+ *
+ * @return Tier at the top of `stack`.
+ */
+static inline Tier TierStackTop(const TierStack *stack) {
+    return Int64ArrayBack(stack);
+}
+
+/**
+ * @brief Returns whether the given `stack` is empty.
+ *
+ * @param[in] stack Stack to check.
+ *
+ * @retval true if the stack is empty.
+ * @retval false otherwise.
+ */
+static inline bool TierStackEmpty(const TierStack *stack) {
+    return Int64ArrayEmpty(stack);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_STACK_H_

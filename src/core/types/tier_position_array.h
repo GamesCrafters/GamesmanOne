@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic TierPosition array.
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,40 +30,51 @@
 
 #include "core/types/base.h"
 
-/** @brief Dynamic TierPosition Array. */
+/**
+ * @brief Dynamic `TierPosition` array.
+ */
 typedef struct TierPositionArray {
-    TierPosition *array; /**< Array contents. */
-    int64_t size;        /**< Size of the array in number of items. */
-    int64_t capacity;    /**< Capacity of the array in number of items. */
+    TierPosition *array; /**< The actual array. */
+    int64_t size;        /**< Number of items in the array. */
+    int64_t capacity;    /**< Current capacity of the array. */
 } TierPositionArray;
 
-/** @brief Initializes the TierPosition ARRAY to an empty array. */
+/**
+ * @brief Initializes `array`.
+ *
+ * @param[out] array Array to initialize.
+ */
 void TierPositionArrayInit(TierPositionArray *array);
 
-/** @brief Destroyes the TierPosition ARRAY. */
+/**
+ * @brief Deallocates `array`.
+ *
+ * @param[in,out] array Array to deallocate.
+ */
 void TierPositionArrayDestroy(TierPositionArray *array);
 
 /**
- * @brief Appends TIER_POSITION to the end of ARRAY.
+ * @brief Appends a new `tier_position` to the back of the `array`.
  *
- * @param array Destination array.
- * @param position Tier position to append.
- * @return true on success,
- * @return false otherwise.
+ * @param[in,out] array Destination array.
+ * @param[in] tier_position New item.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
 bool TierPositionArrayAppend(TierPositionArray *array,
                              TierPosition tier_position);
 
 /**
- * @brief Returns the last TierPosition in ARRAY.
+ * @brief Returns the item at the back of `array`.
  *
- * @param array Source tier position array.
- * @return Last item in ARRAY.
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in] array Array to get the item from.
+ *
+ * @return Item at the back of `array`.
  */
 TierPosition TierPositionArrayBack(const TierPositionArray *array);
-
-/** @brief Returns whether the given TierPosition ARRAY contains the TARGET. */
-bool TierPositionArrayContains(const TierPositionArray *array,
-                               TierPosition target);
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_ARRAY_H_

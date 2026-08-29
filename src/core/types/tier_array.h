@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic tier array.
- * @version 1.1.0
- * @date 2024-09-07
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,62 +30,120 @@
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Tier array. */
+/**
+ * @brief Dynamic `Tier` array.
+ */
 typedef Int64Array TierArray;
 
-/** @brief Initializes the Tier ARRAY. */
-void TierArrayInit(TierArray *array);
-
-/** @brief Initializes the DEST tier array as a copy of tier array SRC. */
-bool TierArrayInitCopy(TierArray *dest, const TierArray *src);
-
-/** @brief Destroys the Tier ARRAY. */
-void TierArrayDestroy(TierArray *array);
-
 /**
- * @brief Appends TIER to the end of the given Tier ARRAY.
+ * @brief Initializes `array`.
  *
- * @param array Destination Tier array.
- * @param tier Tier to append.
- * @return true on success,
- * @return false otherwise.
+ * @param[out] array Array to initialize.
  */
-bool TierArrayAppend(TierArray *array, Tier tier);
+static inline void TierArrayInit(TierArray *array) { Int64ArrayInit(array); }
 
 /**
- * @brief Removes the first occurrence of TIER from ARRAY if it exists.
+ * @brief Initializes `dest` array to be a copy of the `src` array.
  *
- * @param array Tier array.
- * @param tier Tier to remove.
- * @return true if TIER exists in ARRAY, or
- * @return false otherwise.
+ * @details If `src` uses a custom memory allocator, a new reference will be
+ * copied to the `dest` array.
+ *
+ * @param[out] dest Array to initialize.
+ * @param[in] src Source array to copy from.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
-bool TierArrayRemoveUnordered(TierArray *array, Tier tier);
+static inline bool TierArrayInitCopy(TierArray *dest, const TierArray *src) {
+    return Int64ArrayInitCopy(dest, src);
+}
 
 /**
- * @brief Pops the item at the back of the ARRAY. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Deallocates `array`.
+ *
+ * @param[in,out] array Array to deallocate.
  */
-void TierArrayPopBack(TierArray *array);
+static inline void TierArrayDestroy(TierArray *array) {
+    Int64ArrayDestroy(array);
+}
 
 /**
- * @brief Returns the Tier at the back of the array. Calling this function on an
- * empty ARRAY results in undefined behavior.
+ * @brief Appends a new `tier` to the back of the `array`.
+ *
+ * @param[in,out] array Destination array.
+ * @param[in] tier New tier.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
  */
-Tier TierArrayBack(const TierArray *array);
-
-/** @brief Returns true if ARRAY is empty, or false otherwise. */
-bool TierArrayEmpty(const TierArray *array);
+static inline bool TierArrayAppend(TierArray *array, Tier tier) {
+    return Int64ArrayPushBack(array, tier);
+}
 
 /**
- * @brief Sorts the given ARRAY according to the given comparison function.
- * @param array The array to be sorted.
- * @param comp 	Comparison function which returns ​a negative integer value if
+ * @brief Removes the first occurrence of `tier` from `array`, if it exists.
+ *
+ * @param[in,out] array Array of `Tier`.
+ * @param[in] tier Value to remove.
+ *
+ * @retval true if `tier` exists in `array` and was removed.
+ * @retval false otherwise.
+ */
+static inline bool TierArrayRemoveUnordered(TierArray *array, Tier tier) {
+    return Int64ArrayRemoveUnordered(array, tier);
+}
+
+/**
+ * @brief Pops the item at the back of the `array`.
+ *
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in,out] array Array to pop the item from.
+ */
+static inline void TierArrayPopBack(TierArray *array) {
+    Int64ArrayPopBack(array);
+}
+
+/**
+ * @brief Returns the item at the back of `array`.
+ *
+ * @details Calling this function on an empty `array` results in undefined
+ * behavior.
+ *
+ * @param[in] array Array to get the item from.
+ *
+ * @return Item at the back of `array`.
+ */
+static inline Tier TierArrayBack(const TierArray *array) {
+    return Int64ArrayBack(array);
+}
+
+/**
+ * @brief Returns whether the given `array` is empty.
+ *
+ * @param[in] array Array to check.
+ *
+ * @retval true if the array is empty.
+ * @retval false otherwise.
+ */
+static inline bool TierArrayEmpty(const TierArray *array) {
+    return Int64ArrayEmpty(array);
+}
+
+/**
+ * @brief Sorts the given `array` according to the given comparison function.
+ *
+ * @param[in,out] array The array to be sorted.
+ * @param[in] comp Comparison function which returns a negative integer value if
  * the first argument is less than the second, a positive integer value if the
  * first argument is greater than the second, and zero if the arguments are
- * equivalent. Both parameters are assumed to be pointers to \c Tier objects.
+ * equivalent.
  */
-void TierArraySortExplicit(TierArray *array,
-                           int (*comp)(const void *, const void *));
+static inline void TierArraySortExplicit(TierArray *array,
+                                         int (*comp)(const void *,
+                                                     const void *)) {
+    Int64ArraySortExplicit(array, comp);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_ARRAY_H_

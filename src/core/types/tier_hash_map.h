@@ -5,8 +5,6 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing Tier hash map that maps Tiers to 64-bit signed
  * integers.
- * @version 1.0.1
- * @date 2024-09-02
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -55,7 +53,9 @@ typedef Int64HashMapIterator TierHashMapIterator;
  * value will be set to 0.25 and 0.75, respectively, regardless of the
  * user-specified value.
  */
-void TierHashMapInit(TierHashMap *map, double max_load_factor);
+static inline void TierHashMapInit(TierHashMap *map, double max_load_factor) {
+    Int64HashMapInit(map, max_load_factor);
+}
 
 /**
  * @brief Initializes the given \p map to an empty map with maximum load
@@ -73,11 +73,16 @@ void TierHashMapInit(TierHashMap *map, double max_load_factor);
  * @param allocator Memory allocator to use. If \c NULL is passed, the effect is
  * equivalent to calling TierHashMapInit.
  */
-void TierHashMapInitAllocator(TierHashMap *map, double max_load_factor,
-                              GamesmanAllocator *allocator);
+static inline void TierHashMapInitAllocator(TierHashMap *map,
+                                            double max_load_factor,
+                                            GamesmanAllocator *allocator) {
+    Int64HashMapInitAllocator(map, max_load_factor, allocator);
+}
 
 /** @brief Destroys the Tier hash map MAP. */
-void TierHashMapDestroy(TierHashMap *map);
+static inline void TierHashMapDestroy(TierHashMap *map) {
+    Int64HashMapDestroy(map);
+}
 
 /**
  * @brief Returns an iterator to the MAP entry containing the given KEY.
@@ -89,7 +94,9 @@ void TierHashMapDestroy(TierHashMap *map);
  * @return TierHashMapIterator pointing to the entry with KEY, or invalid
  * if KEY is not found in MAP.
  */
-TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key);
+static inline TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key) {
+    return Int64HashMapGet(map, key);
+}
 
 /**
  * @brief Sets the entry with key equal to TIER in MAP to the given VALUE and
@@ -103,13 +110,17 @@ TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key);
  * @return true on success,
  * @return false otherwise.
  */
-bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value);
+static inline bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value) {
+    return Int64HashMapSet(map, tier, value);
+}
 
 /**
  * @brief Returns true if the given MAP contains an entry with key equal to
  * TIER, or false otherwise.
  */
-bool TierHashMapContains(const TierHashMap *map, Tier tier);
+static inline bool TierHashMapContains(const TierHashMap *map, Tier tier) {
+    return Int64HashMapContains(map, tier);
+}
 
 /**
  * @brief Returns an invalid iterator to the entry before the first entry of
@@ -118,18 +129,10 @@ bool TierHashMapContains(const TierHashMap *map, Tier tier);
  * @note This function is designed to be used in conjunction with
  * TierHashMapIteratorNext to iterate through all the entries in the Tier hash
  * map.
- *
- * @example
- * TierHashMapIterator it = TierHashMapBegin(map);
- * Tier key;
- * int64_t value;
- *
- * // While the next entry exists...
- * while (TierHashMapIteratorNext(&it, &key, &value)) {
- *     // Do stuff with key and value...
- * }
  */
-TierHashMapIterator TierHashMapBegin(TierHashMap *map);
+static inline TierHashMapIterator TierHashMapBegin(TierHashMap *map) {
+    return Int64HashMapBegin(map);
+}
 
 /**
  * @brief Returns the Tier that was used as the key to the entry IT is pointing
@@ -140,7 +143,9 @@ TierHashMapIterator TierHashMapBegin(TierHashMap *map);
  * @param it Tier hash map iterator.
  * @return Key to the entry.
  */
-Tier TierHashMapIteratorKey(const TierHashMapIterator *it);
+static inline Tier TierHashMapIteratorKey(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorKey(it);
+}
 
 /**
  * @brief Returns the value of the entry IT is pointing to. The user should
@@ -151,10 +156,14 @@ Tier TierHashMapIteratorKey(const TierHashMapIterator *it);
  * @param it Tier hash map iterator.
  * @return Value of the entry.
  */
-int64_t TierHashMapIteratorValue(const TierHashMapIterator *it);
+static inline int64_t TierHashMapIteratorValue(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorValue(it);
+}
 
 /** @brief Returns true if the given IT-erator is valid, or false otherwise. */
-bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
+static inline bool TierHashMapIteratorIsValid(const TierHashMapIterator *it) {
+    return Int64HashMapIteratorIsValid(it);
+}
 
 /**
  * @brief Moves iterator IT to the next valid entry inside the Tier hash map
@@ -174,7 +183,9 @@ bool TierHashMapIteratorIsValid(const TierHashMapIterator *it);
  * @return true if next entry exists,
  * @return false otherwise.
  */
-bool TierHashMapIteratorNext(TierHashMapIterator *iterator, Tier *tier,
-                             int64_t *value);
+static inline bool TierHashMapIteratorNext(TierHashMapIterator *iterator,
+                                           Tier *tier, int64_t *value) {
+    return Int64HashMapIteratorNext(iterator, tier, value);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_HASH_MAP_H_

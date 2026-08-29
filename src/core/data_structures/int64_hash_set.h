@@ -43,7 +43,14 @@
 #define INT64_HASH_SET_EMPTY_KEY INT64_MIN
 
 /**
- * @brief A hash set optimized for storing 64-bit integer keys.
+ * @brief Highly optimized linear probing hash set for storing 64-bit integer
+ * keys.
+ *
+ * @note `INT64_MIN` (`INT64_HASH_SET_EMPTY_KEY`) is reserved as a sentinel
+ * value for the hash table to represent an empty slot for optimization
+ * purposes. Because of this, `Int64HashSet` cannot be used to store
+ * `INT64_MIN`. The user must make sure that `INT64_MIN` is never inserted as a
+ * key.
  */
 typedef struct Int64HashSet {
     int64_t *keys;    /**< Array of keys in the hash set. */

@@ -29,6 +29,10 @@
 
 #include <stdint.h>
 
+#ifdef GAMESMAN_HAS_BMI1
+#include <immintrin.h>
+#endif  // GAMESMAN_HAS_BMI1
+
 /**
  * @brief 128-bit SIMD vector of 16 signed 8-bit integers.
  */
@@ -43,12 +47,6 @@ typedef uint8_t U8x16 __attribute__((vector_size(16)));
  * @brief 128-bit SIMD vector of 2 unsigned 64-bit integers.
  */
 typedef uint64_t U64x2 __attribute__((vector_size(16)));
-
-#include <stdint.h>
-
-#ifdef GAMESMAN_HAS_BMI1
-#include <immintrin.h>
-#endif  // GAMESMAN_HAS_BMI1
 
 /**
  * @brief Extract bits from unsigned 64-bit integer `val` at the corresponding

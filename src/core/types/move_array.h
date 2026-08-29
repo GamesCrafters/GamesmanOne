@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic Move array.
- * @version 2.0.0
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,48 +30,80 @@
 #include "core/data_structures/int64_array.h"
 #include "core/types/base.h"
 
-/** @brief Dynamic Move array. */
+/**
+ * @brief Dynamic `Move` array.
+ */
 typedef Int64Array MoveArray;
 
-/** @brief Initializes the move ARRAY to an empty array. */
-void MoveArrayInit(MoveArray *array);
-
-/** @brief Destroyes the move ARRAY. */
-void MoveArrayDestroy(MoveArray *array);
-
 /**
- * @brief Appends MOVE to the end of ARRAY.
+ * @brief Initializes `array`.
  *
- * @param array Destination array.
- * @param move Move to append.
- * @return true on success,
- * @return false otherwise.
+ * @param[out] array Array to initialize.
  */
-bool MoveArrayAppend(MoveArray *array, Move move);
+static inline void MoveArrayInit(MoveArray *array) { Int64ArrayInit(array); }
 
 /**
- * @brief Removes the last Move in ARRAY.
+ * @brief Deallocates `array`.
  *
- * @param array Target array.
- * @return true on success,
- * @return false if ARRAY is empty.
+ * @param[in,out] array Array to deallocate.
  */
-bool MoveArrayPopBack(MoveArray *array);
+static inline void MoveArrayDestroy(MoveArray *array) {
+    Int64ArrayDestroy(array);
+}
 
 /**
- * @brief Sorts the move ARRAY in ascending order using the given COMP-arison
- * function.
+ * @brief Appends a new `move` to the back of the `array`.
  *
- * @param array Array to be sorted.
- * @param comp Comparison function which returns ​a negative integer value if
+ * @param[in,out] array Destination array.
+ * @param[in] move New move.
+ *
+ * @retval true on success.
+ * @retval false otherwise.
+ */
+static inline bool MoveArrayAppend(MoveArray *array, Move move) {
+    return Int64ArrayPushBack(array, move);
+}
+
+/**
+ * @brief Pops the move at the back of the `array`.
+ *
+ * @param[in,out] array Array to pop the move from.
+ *
+ * @retval true on success.
+ * @retval false if the array is empty.
+ */
+static inline bool MoveArrayPopBack(MoveArray *array) {
+    if (array->size <= 0) return false;
+    --array->size;
+    return true;
+}
+
+/**
+ * @brief Sorts the given `array` according to the given comparison function.
+ *
+ * @param[in,out] array The array to be sorted.
+ * @param[in] comp Comparison function which returns a negative integer value if
  * the first argument is less than the second, a positive integer value if the
- * first argument is greater than the second and zero if the arguments are
+ * first argument is greater than the second, and zero if the arguments are
  * equivalent.
  */
-void MoveArraySortExplicit(MoveArray *array,
-                           int (*comp)(const void *, const void *));
+static inline void MoveArraySortExplicit(MoveArray *array,
+                                         int (*comp)(const void *,
+                                                     const void *)) {
+    Int64ArraySortExplicit(array, comp);
+}
 
-/** @brief Returns true if ARRAY contains MOVE, or false otherwise. */
-bool MoveArrayContains(const MoveArray *array, Move move);
+/**
+ * @brief Returns whether the given `array` contains the given `move`.
+ *
+ * @param[in] array Array to check.
+ * @param[in] move Move to look for.
+ *
+ * @retval true if the array contains the move.
+ * @retval false otherwise.
+ */
+static inline bool MoveArrayContains(const MoveArray *array, Move move) {
+    return Int64ArrayContains(array, move);
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_MOVE_ARRAY_H_
