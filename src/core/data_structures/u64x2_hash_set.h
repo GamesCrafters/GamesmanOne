@@ -108,8 +108,10 @@ static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
     uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
     uint64_t idx = Hash128to64(key[0], key[1]) & capacity_mask;
 
-    while (hs->state[idx]) {
-        if (U64x2Equal(hs->keys[idx], key)) {
+    const U64x2 *keys = hs->keys;
+    const uint8_t *state = hs->state;
+    while (state[idx]) {
+        if (U64x2Equal(keys[idx], key)) {
             return false;
         }
         idx = (idx + 1ULL) & capacity_mask;
@@ -138,8 +140,10 @@ static inline bool U64x2HashSetContains(const U64x2HashSet *hs, U64x2 key) {
     uint64_t start_idx = Hash128to64(key[0], key[1]) & capacity_mask;
     uint64_t idx = start_idx;
 
-    while (hs->state[idx]) {
-        if (U64x2Equal(hs->keys[idx], key)) {
+    const U64x2 *keys = hs->keys;
+    const uint8_t *state = hs->state;
+    while (state[idx]) {
+        if (U64x2Equal(keys[idx], key)) {
             return true;
         }
 
