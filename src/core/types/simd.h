@@ -27,11 +27,12 @@
 #ifndef GAMESMANONE_CORE_TYPES_SIMD_H_
 #define GAMESMANONE_CORE_TYPES_SIMD_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
-#ifdef GAMESMAN_HAS_BMI1
+#ifdef GAMESMAN_HAS_SSE4_1
 #include <immintrin.h>
-#endif  // GAMESMAN_HAS_BMI1
+#endif  // GAMESMAN_HAS_SSE4_1
 
 /**
  * @brief 128-bit SIMD vector of 16 signed 8-bit integers.
@@ -47,6 +48,15 @@ typedef uint8_t U8x16 __attribute__((vector_size(16)));
  * @brief 128-bit SIMD vector of 2 unsigned 64-bit integers.
  */
 typedef uint64_t U64x2 __attribute__((vector_size(16)));
+
+static inline bool U64x2Equal(U64x2 a, U64x2 b) {
+#ifdef GAMESMAN_HAS_SSE4_1
+    __m128i diff = _mm_xor_si128((__m128i)a, (__m128i)b);
+    return _mm_testz_si128(diff, diff);
+#else
+    return a[0] == b[0] && a[1] == b[1];
+#endif  // GAMESMAN_HAS_SSE4_1
+}
 
 /**
  * @brief Extract bits from unsigned 64-bit integer `val` at the corresponding

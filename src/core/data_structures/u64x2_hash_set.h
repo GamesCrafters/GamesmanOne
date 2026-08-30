@@ -113,23 +113,6 @@ static inline uint64_t U64x2HashSetInternalHash128to64(U64x2 v) {
 }
 
 /**
- * @copyright Adapted from Stack Overflow user responses.
- * Source:
- * https://stackoverflow.com/questions/26880863/testing-equality-between-two-m128i-variables
- *
- * @brief Tests two `U64x2` variables for equality.
- *
- * @param[in] a The first `U64x2` variable.
- * @param[in] b The second `U64x2` variable.
- *
- * @retval true If `a` and `b` are bitwise equal.
- * @retval false If `a` and `b` are not bitwise equal.
- */
-static inline bool U64x2HashSetInternalM128Equal(U64x2 a, U64x2 b) {
-    return a[0] == b[0] && a[1] == b[1];
-}
-
-/**
  * @brief Initializes the given hash set `hs` to an empty set.
  *
  * @param[out] hs Hash set to initialize.
@@ -162,7 +145,7 @@ static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
     uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
     uint64_t idx = U64x2HashSetInternalHash128to64(key) & capacity_mask;
     while (hs->state[idx]) {
-        if (U64x2HashSetInternalM128Equal(hs->keys[idx], key)) {
+        if (U64x2Equal(hs->keys[idx], key)) {
             return false;
         }
         idx = (idx + 1ULL) & capacity_mask;
@@ -192,7 +175,7 @@ static inline bool U64x2HashSetContains(const U64x2HashSet *hs, U64x2 key) {
     uint64_t idx = start_idx;
 
     while (hs->state[idx]) {
-        if (U64x2HashSetInternalM128Equal(hs->keys[idx], key)) {
+        if (U64x2Equal(hs->keys[idx], key)) {
             return true;
         }
 
