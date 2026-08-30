@@ -59,6 +59,10 @@
  *     // No dynamic allocation and no need to deallocate set
  * }
  * ```
+ *
+ * Implementation note: benchmark results show that keeping the state array is
+ * faster than relying on a sentinel value for keys due to expensive SIMD
+ * comparison operations.
  */
 typedef struct {
     /** Elements in the set. */
@@ -103,6 +107,7 @@ static inline void U64x2HashSetInit(U64x2HashSet *hs) {
 static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
     uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
     uint64_t idx = Hash128to64(key[0], key[1]) & capacity_mask;
+
     while (hs->state[idx]) {
         if (U64x2Equal(hs->keys[idx], key)) {
             return false;
