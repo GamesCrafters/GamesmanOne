@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "core/data_structures/hash.h"
 #include "core/types/simd.h"
 
 #ifndef U64X2_HASH_SET_SIZE
@@ -71,48 +72,6 @@ typedef struct {
 } U64x2HashSet;
 
 /**
- * Copyright (c) 2011 Google, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * CityHash, by Geoff Pike and Jyrki Alakuijala
- * http://code.google.com/p/cityhash/
- *
- * @brief Hashes a 128-bit integer into a 64-bit integer.
- *
- * @param[in] v The 128-bit integer to hash.
- *
- * @returns The resulting 64-bit hash value.
- */
-static inline uint64_t U64x2HashSetInternalHash128to64(U64x2 v) {
-    // Murmur-inspired hashing.
-    const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-    uint64_t a = (v[0] ^ v[1]) * kMul;
-    a ^= (a >> 47);
-    uint64_t b = (v[1] ^ a) * kMul;
-    b ^= (b >> 47);
-    b *= kMul;
-
-    return b;
-}
-
-/**
  * @brief Initializes the given hash set `hs` to an empty set.
  *
  * @param[out] hs Hash set to initialize.
@@ -143,7 +102,7 @@ static inline void U64x2HashSetInit(U64x2HashSet *hs) {
  */
 static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
     uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
-    uint64_t idx = U64x2HashSetInternalHash128to64(key) & capacity_mask;
+    uint64_t idx = Hash128to64(key[0], key[1]) & capacity_mask;
     while (hs->state[idx]) {
         if (U64x2Equal(hs->keys[idx], key)) {
             return false;
@@ -171,7 +130,7 @@ static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
  */
 static inline bool U64x2HashSetContains(const U64x2HashSet *hs, U64x2 key) {
     uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
-    uint64_t start_idx = U64x2HashSetInternalHash128to64(key) & capacity_mask;
+    uint64_t start_idx = Hash128to64(key[0], key[1]) & capacity_mask;
     uint64_t idx = start_idx;
 
     while (hs->state[idx]) {
