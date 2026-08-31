@@ -23,21 +23,15 @@ static void BM_Int64HashSetAdd(benchmark::State& state) {
     double max_load_factor = state.range(1) / 100.0;
 
     for (auto _ : state) {
-        // Pause timing to exclude initialization overhead
-        state.PauseTiming();
         Int64HashSet set;
         Int64HashSetInit(&set, max_load_factor);
-        state.ResumeTiming();
 
         // Benchmark the Add operation
         for (int64_t i = 0; i < num_elements; ++i) {
             benchmark::DoNotOptimize(Int64HashSetAdd(&set, i));
         }
 
-        // Pause timing to exclude destruction overhead
-        state.PauseTiming();
         Int64HashSetDestroy(&set);
-        state.ResumeTiming();
     }
 
     // Track throughput (items processed per second)
