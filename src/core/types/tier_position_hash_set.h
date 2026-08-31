@@ -3,9 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing TierPosition hash set.
- * @version 2.0.0
- * @date 2025-05-11
+ * @brief Dynamically-sized linear probing TierPosition hash set with sentinel
+ * value optimization.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,76 +27,190 @@
 #define GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
+#include "core/data_structures/hash.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
-/** @brief Entry in a TierPositionHashSet. */
-typedef struct TierPositionHashSetEntry {
-    TierPosition key; /**< Item, which is also used as key for lookup. */
-    bool used;        /**< True if bucket is full, false if empty. */
-} TierPositionHashSetEntry;
+/**
+ * @brief Sentinel values used to represent an empty slot in the hash set.
+ *
+ * The library is aggressively optimized and assumes that a TierPosition
+ * with tier equal to `INT64_MIN` is never inserted as a key.
+ */
+#define TIER_POSITION_HASH_SET_EMPTY_TIER INT64_MIN
 
-/** @brief Linear-probing TierPosition hash set. */
+/**
+ * @brief Highly optimized linear probing hash set for storing TierPosition
+ * keys.
+ */
 typedef struct TierPositionHashSet {
-    TierPositionHashSetEntry *entries; /**< Array of buckets. */
-    int64_t size;           /**< Number of items stored in the set. */
-    double max_load_factor; /**< Maximum load factor of the set. */
-
-    /** Number of buckets - 1, for fast bucket indexing. */
-    int64_t capacity_mask;
+    TierPosition *keys; /**< Array of keys in the hash set. */
+    uint64_t mask;      /**< Bitmask used for indexing into the keys. */
+    int64_t size;       /**< Current number of elements in the set. */
+    int64_t max_size;   /**< Maximum elements before expansion is needed. */
+    double inv_max_load_factor; /**< Equals to `1.0 / max_load_factor`. */
 } TierPositionHashSet;
 
 /**
  * @brief Initializes TierPosition hash set SET to an empty set with maximum
  * load factor MAX_LOAD_FACTOR.
  *
- * @param set Set to initialize.
- * @param max_load_factor Set maximum load factor of SET to this value. The hash
- * set will automatically expand its capacity if (double)size/capacity is
- * greater than this value. A small max_load_factor trades memory for
- * speed whereas a large max_load_factor trades speed for memory. This value is
- * restricted to be in the range [0.25, 0.75]. If the user passes a
- * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
- * value will be set to 0.25 and 0.75, respectively, regardless of the
- * user-specified value.
+ * @param[out] set The `TierPositionHashSet` to initialize.
+ * @param[in] max_load_factor The maximum load factor, clamped to [0.5, 0.8].
  */
-void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor);
+static inline void TierPositionHashSetInit(TierPositionHashSet *set,
+                                           double max_load_factor) {
+    // Clamp max_load_factor to [0.5, 0.8]
+    if (max_load_factor < 0.5) {
+        max_load_factor = 0.5;
+    } else if (max_load_factor > 0.8) {
+        max_load_factor = 0.8;
+    }
+
+    set->keys = NULL;
+    set->mask = 0x0ULL;
+    set->size = 0L;
+    set->max_size = 0L;
+    set->inv_max_load_factor = 1.0 / max_load_factor;
+}
 
 /**
- * @brief Attempts to reserve space for \p size Tier Positions in \p set. If
- * \c true is returned, the target hash set \p set is guaranteed to have space
- * for at least \p size Tier Positions before it expands internally. If \c false
- * is returned, the hash set remains unchanged.
- * @note This function takes O( \p size ) time due to the initialization of the
- * internal array. This may become a bottleneck in a hot loop if the size of the
- * set exceeds L1 cache size.
+ * @brief [INTERNAL] Expands the hash set to a specific capacity derived from a
+ * new mask.
  *
- * @param set Target hash set.
- * @param size Number of Tier Positions to reserve space for.
- * @return \c true on success,
- * @return \c false otherwise.
+ * @warning Internal function exposed for optimization purposes.
  */
-bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size);
+bool TierPositionHashSetInternalExpandExplicit(TierPositionHashSet *set,
+                                               uint64_t new_mask);
 
-/** @brief Destroys the TierPosition hash set SET. */
-void TierPositionHashSetDestroy(TierPositionHashSet *set);
+/**
+ * @brief Reserves space in the hash set for at least the specified size.
+ *
+ * @param[in,out] set The `TierPositionHashSet` to modify.
+ * @param[in] size The minimum number of elements to reserve space for.
+ *
+ * @retval true The capacity is sufficient or was successfully expanded.
+ * @retval false Memory allocation failed during expansion.
+ */
+static inline bool TierPositionHashSetReserve(TierPositionHashSet *set,
+                                              int64_t size) {
+    if (size <= set->max_size) {
+        return true;
+    }
+
+    uint64_t required_capacity =
+        (uint64_t)((double)size * set->inv_max_load_factor);
+
+    // Prevents UB (shifting left by 64). No need to check if required_capacity
+    // == 0 here because size is strictly positive and inv_max_load_factor > 1.
+    if (required_capacity >= (1ULL << 63)) {
+        return false;
+    }
+
+    // Calculate the next power of 2 strictly greater than required_capacity
+    // Subtracting from 64 gives the position of the highest set bit + 1.
+    uint64_t needed_capacity = 1ULL
+                               << (64 - __builtin_clzll(required_capacity));
+
+    return TierPositionHashSetInternalExpandExplicit(set, needed_capacity - 1);
+}
+
+/**
+ * @brief Frees the memory associated with the hash set and resets its state.
+ *
+ * @param[in,out] set The `TierPositionHashSet` to destroy.
+ */
+static inline void TierPositionHashSetDestroy(TierPositionHashSet *set) {
+    GamesmanFree(set->keys);  // NULL-safe
+    set->keys = NULL;
+    set->mask = 0x0ULL;
+    set->size = 0L;
+    set->max_size = 0L;
+    set->inv_max_load_factor = 0.0;
+}
 
 /**
  * @brief Returns true if the TierPosition hash set SET contains KEY, or
  * false otherwise.
+ *
+ * @param[in] set The `TierPositionHashSet` to search.
+ * @param[in] key The `TierPosition` key to look up.
+ *
+ * @retval true The `key` is present in the set.
+ * @retval false The `key` is not in the set, or the set is empty.
  */
-bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key);
+static inline bool TierPositionHashSetContains(const TierPositionHashSet *set,
+                                               TierPosition key) {
+    const TierPosition *__restrict keys = set->keys;
+
+    // Return false if set has not been lazily initialized
+    if (!keys) {
+        return false;
+    }
+
+    const uint64_t mask = set->mask;
+
+    // Look for key in the set
+    uint64_t index = Hash128to64(key.tier, key.position) & mask;
+    while (keys[index].tier != TIER_POSITION_HASH_SET_EMPTY_TIER) {
+        if (keys[index].tier == key.tier &&
+            keys[index].position == key.position) {
+            return true;
+        }
+        index = (index + 1) & mask;
+        // We don't need to worry about infinite loop here because
+        // max_load_factor is strictly less than 0.8.
+    }
+
+    return false;
+}
 
 /**
- * @brief Adds \p key to \p set or does nothing if \p set already contains
- * \p key.
+ * @brief [INTERNAL] Expands the internal capacity of the hash set.
  *
- * @param set Set to add \p key to.
- * @param key Key to add to \p set.
- * @return \c true if \p key was added to \p set as a new key, or
- * @return \c false if \p set already contains \p key or an error occurred.
+ * @warning Internal function exposed for optimization purposes.
  */
-bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key);
+bool TierPositionHashSetInternalExpand(TierPositionHashSet *set);
+
+/**
+ * @brief Adds a TierPosition key to the hash set.
+ *
+ * @param[in,out] set The `TierPositionHashSet` to add the key to.
+ * @param[in] key The `TierPosition` value to add. The tier must not be equal to
+ * `TIER_POSITION_HASH_SET_EMPTY_TIER` (`INT64_MIN`).
+ *
+ * @retval true The `key` was successfully added.
+ * @retval false The `key` already exists, or memory allocation failed.
+ */
+static inline bool TierPositionHashSetAdd(TierPositionHashSet *set,
+                                          TierPosition key) {
+    if (set->size >= set->max_size) {
+        if (!TierPositionHashSetInternalExpand(set)) {
+            return false;
+        }
+    }
+
+    // Hoist pointers and values to locals so the compiler
+    // doesn't worry about memory aliasing during the loop.
+    TierPosition *__restrict keys = set->keys;
+    uint64_t mask = set->mask;
+
+    // Add key to the set
+    uint64_t index = Hash128to64(key.tier, key.position) & mask;
+    while (keys[index].tier != TIER_POSITION_HASH_SET_EMPTY_TIER) {
+        if (keys[index].tier == key.tier &&
+            keys[index].position == key.position) {
+            return false;
+        }
+        index = (index + 1) & mask;
+    }
+    keys[index] = key;
+    ++set->size;
+
+    return true;
+}
 
 #endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_

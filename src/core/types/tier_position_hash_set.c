@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set implementation.
- * @version 2.0.0
- * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,115 +32,55 @@
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
-void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
-    set->entries = NULL;
-    set->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    set->max_load_factor = max_load_factor;
-    set->capacity_mask = -1;
+bool TierPositionHashSetInternalExpand(TierPositionHashSet *set) {
+    // If keys is non-NULL, this is a normal expansion step;
+    // if keys is NULL, this is the lazy initialization step.
+    // Initial capacity is 128, so the mask 127 (0x7F).
+    uint64_t new_mask = set->keys ? ((set->mask << 1) | 1ULL) : 0x7F;
+
+    return TierPositionHashSetInternalExpandExplicit(set, new_mask);
 }
 
-static int64_t TierPositionHashSetHash(TierPosition key, int64_t mask) {
-    int64_t a = (int64_t)key.tier;
-    int64_t b = (int64_t)key.position;
+bool TierPositionHashSetInternalExpandExplicit(TierPositionHashSet *set,
+                                               uint64_t new_mask) {
+    // Allocate new array and initialize it
+    TierPosition *__restrict new_keys =
+        (TierPosition *)GamesmanMalloc((new_mask + 1) * sizeof(TierPosition));
+    if (new_keys == NULL) {
+        return false;
+    }
+    for (uint64_t i = 0; i <= new_mask; ++i) {
+        new_keys[i].tier = TIER_POSITION_HASH_SET_EMPTY_TIER;
+    }
 
-    return Hash128to64(a, b) & mask;
-}
+    // Hoist pointer to local so the compiler doesn't worry about memory
+    // aliasing during the loop.
+    TierPosition *__restrict old_keys = set->keys;
 
-static bool TierPositionHashSetExpand(TierPositionHashSet *set,
-                                      int64_t new_mask) {
-    TierPositionHashSetEntry *new_entries =
-        (TierPositionHashSetEntry *)GamesmanCallocWhole(
-            new_mask + 1, sizeof(TierPositionHashSetEntry));
-    if (new_entries == NULL) return false;
-
-    for (int64_t i = 0; i <= set->capacity_mask; ++i) {
-        if (set->entries[i].used) {
-            int64_t new_index =
-                TierPositionHashSetHash(set->entries[i].key, new_mask);
-            while (new_entries[new_index].used) {
-                new_index = (new_index + 1) & new_mask;
+    // Only attempt to rehash if we had existing keys
+    if (old_keys != NULL) {
+        uint64_t old_mask = set->mask;
+        for (uint64_t i = 0; i <= old_mask; ++i) {
+            TierPosition key = old_keys[i];
+            // We only need to check the tier to see if the slot is empty
+            if (key.tier != TIER_POSITION_HASH_SET_EMPTY_TIER) {
+                uint64_t new_index =
+                    Hash128to64((int64_t)key.tier, (int64_t)key.position) &
+                    new_mask;
+                while (new_keys[new_index].tier !=
+                       TIER_POSITION_HASH_SET_EMPTY_TIER) {
+                    new_index = (new_index + 1) & new_mask;
+                }
+                new_keys[new_index] = key;
             }
-            new_entries[new_index] = set->entries[i];
         }
     }
-    GamesmanFree(set->entries);
-    set->entries = new_entries;
-    set->capacity_mask = new_mask;
 
-    return true;
-}
-
-static int64_t MinCapacityMask(int64_t capacity) {
-    if (capacity <= 0) return -1;
-
-    capacity--;
-    capacity |= capacity >> 1;
-    capacity |= capacity >> 2;
-    capacity |= capacity >> 4;
-    capacity |= capacity >> 8;
-    capacity |= capacity >> 16;
-    capacity |= capacity >> 32;
-
-    return capacity;
-}
-
-bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size) {
-    int64_t target_capacity_mask =
-        MinCapacityMask((int64_t)((double)size / set->max_load_factor));
-    if (target_capacity_mask <= set->capacity_mask) return true;
-
-    return TierPositionHashSetExpand(set, target_capacity_mask);
-}
-
-void TierPositionHashSetDestroy(TierPositionHashSet *set) {
-    GamesmanFree(set->entries);
-    set->entries = NULL;
-    set->size = 0;
-    set->max_load_factor = 0.0;
-    set->capacity_mask = -1;
-}
-
-bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {
-    // Edge case: return false if set is empty.
-    if (set->capacity_mask < 0) return false;
-
-    int64_t index = TierPositionHashSetHash(key, set->capacity_mask);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
-        }
-        index = (index + 1) & set->capacity_mask;
-    }
-
-    return false;
-}
-
-// Assumes 64-bit integer overflow is not possible.
-bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
-    // Check if resizing is needed.
-    if (set->capacity_mask < 0) {
-        if (!TierPositionHashSetExpand(set, 1)) return false;
-    } else if ((double)(set->size + 1) >
-               (double)(set->capacity_mask + 1) * set->max_load_factor) {
-        int64_t new_capacity_mask = (set->capacity_mask << 1) | 1;
-        if (!TierPositionHashSetExpand(set, new_capacity_mask)) return false;
-    }
-
-    // Set value at key.
-    int64_t index = TierPositionHashSetHash(key, set->capacity_mask);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return false;
-        }
-        index = (index + 1) & set->capacity_mask;
-    }
-    set->entries[index].key = key;
-    set->entries[index].used = true;
-    ++set->size;
+    // Update internal data
+    GamesmanFree(old_keys);
+    set->keys = new_keys;
+    set->mask = new_mask;
+    set->max_size = (int64_t)((new_mask + 1) / set->inv_max_load_factor);
 
     return true;
 }
