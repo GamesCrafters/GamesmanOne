@@ -1,0 +1,79 @@
+#include <benchmark/benchmark.h>
+
+#include <algorithm>
+#include <random>
+#include <vector>
+
+extern "C" {
+#include "core/types/base.h"
+#include "core/types/tier_position_hash_set.h"
+}
+
+// Helper function to generate N elements where ~75% are duplicates.
+static std::vector<TierPosition> GenerateElements(int N) {
+    std::vector<TierPosition> elements;
+    elements.reserve(N);
+
+    // To get ~75% duplicates, we need ~25% unique items.
+    int unique_count = std::max(1, N / 4);
+
+    for (int i = 0; i < N; ++i) {
+        TierPosition tp;
+        // Cycle through the unique elements to generate duplicates
+        tp.tier = i % unique_count;
+        tp.position =
+            (i % unique_count) * 1000003LL;  // arbitrary hashing factor
+        elements.push_back(tp);
+    }
+
+    // Shuffle to simulate realistic random insertion orders
+    std::mt19937 rng(42);
+    std::shuffle(elements.begin(), elements.end(), rng);
+
+    return elements;
+}
+
+// Pattern 1: Initialize (0.5), DO NOT reserve, add N elements, destroy.
+static void BM_TierPositionHashSetAddNoReserve(benchmark::State& state) {
+    const int N = state.range(0);
+    std::vector<TierPosition> elements = GenerateElements(N);
+
+    for (auto _ : state) {
+        TierPositionHashSet set;
+        TierPositionHashSetInit(&set, 0.5);
+
+        for (const auto& el : elements) {
+            TierPositionHashSetAdd(&set, el);
+        }
+
+        TierPositionHashSetDestroy(&set);
+    }
+
+    // This tells Google Benchmark to calculate and print items/sec
+    state.SetItemsProcessed(state.iterations() * N);
+}
+BENCHMARK(BM_TierPositionHashSetAddNoReserve)
+    ->RangeMultiplier(4)
+    ->Range(2, 4096);
+
+// Pattern 2: Initialize (0.5), reserve N, add N elements, destroy.
+static void BM_TierPositionHashSetAddReserve(benchmark::State& state) {
+    const int N = state.range(0);
+    std::vector<TierPosition> elements = GenerateElements(N);
+
+    for (auto _ : state) {
+        TierPositionHashSet set;
+        TierPositionHashSetInit(&set, 0.5);
+        TierPositionHashSetReserve(&set, N);
+
+        for (const auto& el : elements) {
+            TierPositionHashSetAdd(&set, el);
+        }
+
+        TierPositionHashSetDestroy(&set);
+    }
+
+    // This tells Google Benchmark to calculate and print items/sec
+    state.SetItemsProcessed(state.iterations() * N);
+}
+BENCHMARK(BM_TierPositionHashSetAddReserve)->RangeMultiplier(4)->Range(2, 4096);
