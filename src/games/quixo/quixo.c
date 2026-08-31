@@ -774,24 +774,27 @@ static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tp.position,
                                          t.unpacked[0], t.unpacked[1]);
 
-    // Find unique boards from all 8 symmetries
+    // 8 symmetries
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, side_length);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, side_length);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, side_length);
+
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, side_length);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, side_length);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, side_length);
+
+    // Find unique boards
     U64x2HashSet dedup;
     U64x2HashSetInit(&dedup);
     U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
+    U64x2HashSetAdd(&dedup, v);
+    U64x2HashSetAdd(&dedup, h);
+    U64x2HashSetAdd(&dedup, vh);
+    U64x2HashSetAdd(&dedup, d);
+    U64x2HashSetAdd(&dedup, dv);
+    U64x2HashSetAdd(&dedup, dh);
+    U64x2HashSetAdd(&dedup, dvh);
 
     return dedup.size;
 }

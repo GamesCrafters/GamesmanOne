@@ -567,16 +567,16 @@ static U64x2 SwapInnerOuterRings(U64x2 board) {
 
 static U64x2 GetCanonicalBoardRotation(U64x2 board) {
     U64x2 canonical = board;
-    int8_t padded = PaddedSideLength();
+    int8_t padded_side_length = PaddedSideLength();
 
-    U64x2 v = SimdTwoPieceHashFlipVertical(board, padded);
-    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, padded);
-    U64x2 vh = SimdTwoPieceHashFlipVertical(h, padded);
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, padded_side_length);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, padded_side_length);
 
     U64x2 d = SimdTwoPieceHashFlipDiag(board);
-    U64x2 dv = SimdTwoPieceHashFlipVertical(d, padded);
-    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded);
-    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, padded_side_length);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded_side_length);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded_side_length);
 
     if (SimdTwoPieceHashBoardLessThan(v, canonical)) canonical = v;
     if (SimdTwoPieceHashBoardLessThan(h, canonical)) canonical = h;
@@ -930,23 +930,26 @@ static int MillsGetCanonicalParentPositions(
 }
 
 static void CollectRotationSymmetries(U64x2HashSet *dedup, U64x2 board) {
-    // Rotations 8x
-    U64x2HashSetAdd(dedup, board);
     int8_t padded_side_length = PaddedSideLength();
-    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+
+    // 8 symmetries
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, padded_side_length);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, padded_side_length);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, padded_side_length);
+
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, padded_side_length);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded_side_length);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded_side_length);
+
     U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, padded_side_length);
-    U64x2HashSetAdd(dedup, board);
+    U64x2HashSetAdd(dedup, v);
+    U64x2HashSetAdd(dedup, h);
+    U64x2HashSetAdd(dedup, vh);
+    U64x2HashSetAdd(dedup, d);
+    U64x2HashSetAdd(dedup, dv);
+    U64x2HashSetAdd(dedup, dh);
+    U64x2HashSetAdd(dedup, dvh);
 }
 
 static int MillsGetNumberOfSymmetries(TierPosition tp) {
