@@ -40,10 +40,10 @@
 
 #include "core/types/game/game.h"
 
-#define U64X2_HASH_SET_SIZE 16ULL
+#define U64X2_STATIC_HASH_SET_SIZE 16ULL
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/data_structures/u64x2_hash_set.h"
+#include "core/data_structures/u64x2_static_hash_set.h"
 #include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
@@ -929,7 +929,7 @@ static int MillsGetCanonicalParentPositions(
     return 0;
 }
 
-static void CollectRotationSymmetries(U64x2HashSet *dedup, U64x2 board) {
+static void CollectRotationSymmetries(U64x2StaticHashSet *dedup, U64x2 board) {
     int8_t padded_side_length = PaddedSideLength();
 
     // 8 symmetries
@@ -942,14 +942,14 @@ static void CollectRotationSymmetries(U64x2HashSet *dedup, U64x2 board) {
     U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, padded_side_length);
     U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, padded_side_length);
 
-    U64x2HashSetAdd(dedup, board);
-    U64x2HashSetAdd(dedup, v);
-    U64x2HashSetAdd(dedup, h);
-    U64x2HashSetAdd(dedup, vh);
-    U64x2HashSetAdd(dedup, d);
-    U64x2HashSetAdd(dedup, dv);
-    U64x2HashSetAdd(dedup, dh);
-    U64x2HashSetAdd(dedup, dvh);
+    U64x2StaticHashSetAdd(dedup, board);
+    U64x2StaticHashSetAdd(dedup, v);
+    U64x2StaticHashSetAdd(dedup, h);
+    U64x2StaticHashSetAdd(dedup, vh);
+    U64x2StaticHashSetAdd(dedup, d);
+    U64x2StaticHashSetAdd(dedup, dv);
+    U64x2StaticHashSetAdd(dedup, dh);
+    U64x2StaticHashSetAdd(dedup, dvh);
 }
 
 static int MillsGetNumberOfSymmetries(TierPosition tp) {
@@ -959,8 +959,8 @@ static int MillsGetNumberOfSymmetries(TierPosition tp) {
     bool not_fixed_turn;
     U64x2 board = UnhashSimd(tp, &t, &turn, &not_fixed_turn);
 
-    U64x2HashSet dedup;
-    U64x2HashSetInit(&dedup);
+    U64x2StaticHashSet dedup;
+    U64x2StaticHashSetInit(&dedup);
     CollectRotationSymmetries(&dedup, board);
 
     // Ring swap symmetries 2x are present in certain board variants

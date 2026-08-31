@@ -1,5 +1,5 @@
 /**
- * @file u64x2_hash_set.h
+ * @file u64x2_static_hash_set.h
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  * @brief Fixed-capacity linear-probing U64x2 (packed unsigned 64-bit integer
@@ -21,8 +21,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_HASH_SET_H_
-#define GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_HASH_SET_H_
+#ifndef GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_STATIC_HASH_SET_H_
+#define GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_STATIC_HASH_SET_H_
 
 #include <stdalign.h>
 #include <stdbool.h>
@@ -33,28 +33,28 @@
 #include "core/data_structures/hash.h"
 #include "core/types/simd.h"
 
-#ifndef U64X2_HASH_SET_SIZE
+#ifndef U64X2_STATIC_HASH_SET_SIZE
 /** Default capacity for the hash set if not defined at compile time. */
-#define U64X2_HASH_SET_SIZE 1024ULL
+#define U64X2_STATIC_HASH_SET_SIZE 1024ULL
 #endif
 
 /**
  * @brief Fixed-capacity linear probing `U64x2` hash set.
  *
  * @details The capacity of the hash set in each translation unit can be defined
- * at compile time by defining `U64X2_HASH_SET_SIZE` to a positive integer
- * value before including this header. If `U64X2_HASH_SET_SIZE` is not
- * defined at compile time, a default capacity of 1024 will be used.
- * `U64X2_HASH_SET_SIZE`, whether defined or not before the inclusion of
+ * at compile time by defining `U64X2_STATIC_HASH_SET_SIZE` to a positive
+ * integer value before including this header. If `U64X2_STATIC_HASH_SET_SIZE`
+ * is not defined at compile time, a default capacity of 1024 will be used.
+ * `U64X2_STATIC_HASH_SET_SIZE`, whether defined or not before the inclusion of
  * this header, will become undefined after the inclusion.
  *
  * Example usage:
  * ```c
- * #define U64X2_HASH_SET_SIZE 32ULL
- * #include "core/data_structures/U64X2_hash_set.h"
+ * #define U64X2_STATIC_HASH_SET_SIZE 32ULL
+ * #include "core/data_structures/U64X2_static_hash_set.h"
  * void foo(void) {
- *     U64x2HashSet set;
- *     U64x2HashSetInit(&set);
+ *     U64x2StaticHashSet set;
+ *     U64x2StaticHashSetInit(&set);
  *     // Add elements, test contains...
  *     // No dynamic allocation and no need to deallocate set
  * }
@@ -66,21 +66,21 @@
  */
 typedef struct {
     /** Elements in the set. */
-    alignas(GM_CACHE_LINE_SIZE) U64x2 keys[U64X2_HASH_SET_SIZE];
+    alignas(GM_CACHE_LINE_SIZE) U64x2 keys[U64X2_STATIC_HASH_SET_SIZE];
 
     /** Bucket state: 0 (empty) or 1 (occupied). */
-    uint8_t state[U64X2_HASH_SET_SIZE];
+    uint8_t state[U64X2_STATIC_HASH_SET_SIZE];
 
     /** Number of elements in the set. */
     int size;
-} U64x2HashSet;
+} U64x2StaticHashSet;
 
 /**
  * @brief Initializes the given hash set `hs` to an empty set.
  *
  * @param[out] hs Hash set to initialize.
  */
-static inline void U64x2HashSetInit(U64x2HashSet *hs) {
+static inline void U64x2StaticHashSetInit(U64x2StaticHashSet *hs) {
     hs->size = 0;
     memset(hs->state, 0, sizeof(hs->state));
 }
@@ -95,8 +95,8 @@ static inline void U64x2HashSetInit(U64x2HashSet *hs) {
  * @brief Adds `key` as a new key in `hs`.
  *
  * @details Does nothing and returns `false` if `hs` already contains `key`. If
- * `hs` already contains `U64X2_HASH_SET_SIZE` elements (1024 by default),
- * the behavior is undefined.
+ * `hs` already contains `U64X2_STATIC_HASH_SET_SIZE` elements (1024 by
+ * default), the behavior is undefined.
  *
  * @param[in,out] hs Destination hash set.
  * @param[in] key Key to add to the hash set.
@@ -104,8 +104,8 @@ static inline void U64x2HashSetInit(U64x2HashSet *hs) {
  * @retval true If `key` is successfully added as a new key.
  * @retval false If `hs` already contains `key`.
  */
-static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
-    uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
+static inline bool U64x2StaticHashSetAdd(U64x2StaticHashSet *hs, U64x2 key) {
+    uint64_t capacity_mask = U64X2_STATIC_HASH_SET_SIZE - 1ULL;
     uint64_t idx = Hash128to64(key[0], key[1]) & capacity_mask;
 
     const U64x2 *keys = hs->keys;
@@ -135,8 +135,9 @@ static inline bool U64x2HashSetAdd(U64x2HashSet *hs, U64x2 key) {
  * @retval true If `hs` contains `key`.
  * @retval false If `hs` does not contain `key`.
  */
-static inline bool U64x2HashSetContains(const U64x2HashSet *hs, U64x2 key) {
-    uint64_t capacity_mask = U64X2_HASH_SET_SIZE - 1ULL;
+static inline bool U64x2StaticHashSetContains(const U64x2StaticHashSet *hs,
+                                              U64x2 key) {
+    uint64_t capacity_mask = U64X2_STATIC_HASH_SET_SIZE - 1ULL;
     uint64_t start_idx = Hash128to64(key[0], key[1]) & capacity_mask;
     uint64_t idx = start_idx;
 
@@ -159,6 +160,6 @@ static inline bool U64x2HashSetContains(const U64x2HashSet *hs, U64x2 key) {
     return false;
 }
 
-#undef U64X2_HASH_SET_SIZE
+#undef U64X2_STATIC_HASH_SET_SIZE
 
-#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_HASH_SET_H_
+#endif  // GAMESMANONE_CORE_DATA_STRUCTURES_U64X2_STATIC_HASH_SET_H_

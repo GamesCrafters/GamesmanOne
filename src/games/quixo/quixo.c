@@ -41,10 +41,10 @@
 
 #include "core/types/game/game.h"
 
-#define U64X2_HASH_SET_SIZE 16ULL
+#define U64X2_STATIC_HASH_SET_SIZE 16ULL
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/data_structures/u64x2_hash_set.h"
+#include "core/data_structures/u64x2_static_hash_set.h"
 #include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
@@ -785,16 +785,16 @@ static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, side_length);
 
     // Find unique boards
-    U64x2HashSet dedup;
-    U64x2HashSetInit(&dedup);
-    U64x2HashSetAdd(&dedup, board);
-    U64x2HashSetAdd(&dedup, v);
-    U64x2HashSetAdd(&dedup, h);
-    U64x2HashSetAdd(&dedup, vh);
-    U64x2HashSetAdd(&dedup, d);
-    U64x2HashSetAdd(&dedup, dv);
-    U64x2HashSetAdd(&dedup, dh);
-    U64x2HashSetAdd(&dedup, dvh);
+    U64x2StaticHashSet dedup;
+    U64x2StaticHashSetInit(&dedup);
+    U64x2StaticHashSetAdd(&dedup, board);
+    U64x2StaticHashSetAdd(&dedup, v);
+    U64x2StaticHashSetAdd(&dedup, h);
+    U64x2StaticHashSetAdd(&dedup, vh);
+    U64x2StaticHashSetAdd(&dedup, d);
+    U64x2StaticHashSetAdd(&dedup, dv);
+    U64x2StaticHashSetAdd(&dedup, dh);
+    U64x2StaticHashSetAdd(&dedup, dvh);
 
     return dedup.size;
 }
