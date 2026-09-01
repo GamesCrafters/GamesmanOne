@@ -58,7 +58,7 @@
 #include "core/types/move_array.h"
 #include "core/types/position_hash_set.h"
 #include "core/types/simd.h"
-#include "core/types/tier_position_hash_set.h"
+#include "core/types/tier_position_static_hash_set.h"
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
@@ -631,19 +631,15 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
-    TierPositionHashSet dedup;
-    TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, 64);
+    DECLARE_TIER_POSITION_STATIC_HASH_SET(dedup, 128);
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        TierPositionHashSetAdd(&dedup, child);
+        TierPositionStaticHashSetAdd(&dedup, child);
     }
-    int ret = (int)dedup.size;
-    TierPositionHashSetDestroy(&dedup);
 
-    return ret;
+    return dedup.size;
 }
 
 static int QuixoGetCanonicalChildPositions(
@@ -660,17 +656,16 @@ static int QuixoGetCanonicalChildPositions(
     int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
-    TierPositionHashSet dedup;
-    TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, 64);
+    DECLARE_TIER_POSITION_STATIC_HASH_SET(dedup, 128);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetAdd(&dedup, child)) children[ret++] = child;
+        if (TierPositionStaticHashSetAdd(&dedup, child)) {
+            children[ret++] = child;
+        }
     }
-    TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
