@@ -35,14 +35,31 @@
 #include "core/data_structures/hash.h"
 #include "core/types/base.h"
 
+/**
+ * @brief Sentinel value used to represent an empty slot in the hash set.
+ *
+ * A `TierPosition` with tier equal to `INT64_MIN` should never inserted.
+ * Otherwise the behavior is undefined.
+ */
 #define TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER INT64_MIN
 
+/**
+ * @brief Fixed-capacity linear probing hash set for storing `TierPosition`
+ * keys on the stack or in static memory.
+ */
 typedef struct {
-    alignas(GM_CACHE_LINE_SIZE) TierPosition *keys;
-    uint64_t capacity_mask;
-    int size;
+    alignas(GM_CACHE_LINE_SIZE) TierPosition *keys; /**< Key array. */
+    uint64_t capacity_mask; /**< Bitmask used for indexing (`capacity - 1`). */
+    int size;               /**< Current number of elements in the set. */
 } TierPositionStaticHashSet;
 
+/**
+ * @brief Macro helper to declare and initialize a stack-allocated
+ * `TierPositionStaticHashSet` instance along with its underlying key array.
+ *
+ * @param[out] name Name of the `TierPositionStaticHashSet` variable to create.
+ * @param[in] cap Capacity of the hash set; must be a power of 2.
+ */
 #define DECLARE_TIER_POSITION_STATIC_HASH_SET(name, cap)                \
     TierPosition name##_keys[cap];                                      \
     for (uint64_t i = 0; i < (cap); ++i) {                              \
@@ -50,6 +67,15 @@ typedef struct {
     }                                                                   \
     TierPositionStaticHashSet name = {name##_keys, (cap) - 1, 0}
 
+/**
+ * @brief Adds a `TierPosition` key to the static hash set.
+ *
+ * @param[in,out] set The `TierPositionStaticHashSet` to modify.
+ * @param[in] key The `TierPosition` value to add.
+ *
+ * @retval true The `key` was successfully inserted into the set.
+ * @retval false The `key` already exists in the set.
+ */
 static inline bool TierPositionStaticHashSetAdd(TierPositionStaticHashSet *set,
                                                 TierPosition key) {
     const uint64_t capacity_mask = set->capacity_mask;
