@@ -26,6 +26,7 @@
 #ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_
 #define GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_
 
+#include <assert.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -58,13 +59,16 @@ typedef struct {
  * `TierPositionStaticHashSet` instance along with its underlying key array.
  *
  * @param[out] name Name of the `TierPositionStaticHashSet` variable to create.
- * @param[in] cap Capacity of the hash set; must be a power of 2.
+ * @param[in] cap Capacity of the hash set; must be a compile-time constant
+ * positive integral value and a power of 2.
  */
-#define DECLARE_TIER_POSITION_STATIC_HASH_SET(name, cap)                \
-    TierPosition name##_keys[cap];                                      \
-    for (uint64_t i = 0; i < (cap); ++i) {                              \
-        name##_keys[i].tier = TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER; \
-    }                                                                   \
+#define DECLARE_TIER_POSITION_STATIC_HASH_SET(name, cap)                       \
+    static_assert((cap) > 0 && ((cap) & ((cap) - 1)) == 0,                     \
+                  "Static hash set capacity (" #cap ") must be a power of 2"); \
+    TierPosition name##_keys[cap];                                             \
+    for (uint64_t i = 0; i < (uint64_t)(cap); ++i) {                           \
+        name##_keys[i].tier = TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER;        \
+    }                                                                          \
     TierPositionStaticHashSet name = {name##_keys, (cap) - 1, 0}
 
 /**
