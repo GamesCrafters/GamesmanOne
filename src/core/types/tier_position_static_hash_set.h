@@ -30,7 +30,6 @@
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "config.h"
 #include "core/data_structures/hash.h"
