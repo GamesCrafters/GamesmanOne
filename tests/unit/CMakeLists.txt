@@ -129,4 +129,5 @@ gtest_discover_tests(gamesman_test
     PROPERTIES
     LABELS "unit"
     LABELS "gamesman_core"
+    TIMEOUT 60
 )
