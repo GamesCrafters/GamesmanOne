@@ -37,13 +37,13 @@
 /**
  * @brief Sentinel values used to represent an empty slot in the hash set.
  *
- * The library is aggressively optimized and assumes that a TierPosition
+ * The library is aggressively optimized and assumes that a `TierPosition`
  * with tier equal to `INT64_MIN` is never inserted as a key.
  */
 #define TIER_POSITION_HASH_SET_EMPTY_TIER INT64_MIN
 
 /**
- * @brief Highly optimized linear probing hash set for storing TierPosition
+ * @brief Highly optimized linear probing hash set for storing `TierPosition`
  * keys.
  */
 typedef struct TierPositionHashSet {
@@ -55,8 +55,8 @@ typedef struct TierPositionHashSet {
 } TierPositionHashSet;
 
 /**
- * @brief Initializes TierPosition hash set SET to an empty set with maximum
- * load factor MAX_LOAD_FACTOR.
+ * @brief Initializes `TierPosition` hash set `set` to an empty set with
+ * maximum load factor `max_load_factor`.
  *
  * @param[out] set The `TierPositionHashSet` to initialize.
  * @param[in] max_load_factor The maximum load factor, clamped to [0.5, 0.8].
@@ -78,10 +78,16 @@ static inline void TierPositionHashSetInit(TierPositionHashSet *set,
 }
 
 /**
- * @brief [INTERNAL] Expands the hash set to a specific capacity derived from a
- * new mask.
+ * @brief Expands the hash set to a specific capacity derived from a new mask.
  *
- * @warning Internal function exposed for optimization purposes.
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
+ *
+ * @param[in,out] set The `TierPositionHashSet` to modify.
+ * @param[in] new_mask Bitmask corresponding to the new set capacity minus 1.
+ *
+ * @retval true Expansion succeeded.
+ * @retval false Memory allocation failed during expansion.
  */
 bool TierPositionHashSetInternalExpandExplicit(TierPositionHashSet *set,
                                                uint64_t new_mask);
@@ -133,8 +139,7 @@ static inline void TierPositionHashSetDestroy(TierPositionHashSet *set) {
 }
 
 /**
- * @brief Returns true if the TierPosition hash set SET contains KEY, or
- * false otherwise.
+ * @brief Checks if the `TierPosition` hash set contains `key`.
  *
  * @param[in] set The `TierPositionHashSet` to search.
  * @param[in] key The `TierPosition` key to look up.
@@ -169,14 +174,20 @@ static inline bool TierPositionHashSetContains(const TierPositionHashSet *set,
 }
 
 /**
- * @brief [INTERNAL] Expands the internal capacity of the hash set.
+ * @brief Expands the internal capacity of the hash set.
  *
- * @warning Internal function exposed for optimization purposes.
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
+ *
+ * @param[in,out] set The `TierPositionHashSet` to expand.
+ *
+ * @retval true Expansion succeeded.
+ * @retval false Memory allocation failed during expansion.
  */
 bool TierPositionHashSetInternalExpand(TierPositionHashSet *set);
 
 /**
- * @brief Adds a TierPosition key to the hash set.
+ * @brief Adds a `TierPosition` key to the hash set.
  *
  * @param[in,out] set The `TierPositionHashSet` to add the key to.
  * @param[in] key The `TierPosition` value to add. The tier must not be equal to
