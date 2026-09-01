@@ -1,0 +1,71 @@
+/**
+ * @file tier_position_static_hash_set.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Fixed-capacity linear probing TierPosition hash set with sentinel
+ * value optimization.
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_
+#define GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_
+
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "config.h"
+#include "core/data_structures/hash.h"
+#include "core/types/base.h"
+
+#define TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER INT64_MIN
+
+typedef struct {
+    alignas(GM_CACHE_LINE_SIZE) TierPosition *keys;
+    uint64_t capacity_mask;
+    int size;
+} TierPositionStaticHashSet;
+
+#define DECLARE_TIER_POSITION_STATIC_HASH_SET(name, cap)                \
+    TierPosition name##_keys[cap];                                      \
+    for (uint64_t i = 0; i < (cap); ++i) {                              \
+        name##_keys[i].tier = TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER; \
+    }                                                                   \
+    TierPositionStaticHashSet name = {name##_keys, (cap) - 1, 0}
+
+static inline bool TierPositionStaticHashSetAdd(TierPositionStaticHashSet *set,
+                                                TierPosition key) {
+    const uint64_t capacity_mask = set->capacity_mask;
+    uint64_t idx = Hash128to64(key.tier, key.position) & capacity_mask;
+
+    const TierPosition *keys = set->keys;
+    while (keys[idx].tier != TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER) {
+        if (keys[idx].tier == key.tier && keys[idx].position == key.position) {
+            return false;
+        }
+        idx = (idx + 1ULL) & capacity_mask;
+    }
+    set->keys[idx] = key;
+    ++set->size;
+
+    return true;
+}
+
+#endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_

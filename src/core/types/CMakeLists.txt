@@ -17,6 +17,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_position_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_position_hash_set.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/tier_position_static_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_queue.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_stack.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_to_ptr_chained_hash_map.h)
