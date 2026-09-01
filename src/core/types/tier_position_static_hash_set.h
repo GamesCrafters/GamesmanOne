@@ -45,7 +45,7 @@
 
 /**
  * @brief Fixed-capacity linear probing hash set for storing `TierPosition`
- * keys on the stack or in static memory.
+ * keys on the stack.
  */
 typedef struct {
     alignas(GM_CACHE_LINE_SIZE) TierPosition *keys; /**< Key array. */
