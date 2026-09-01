@@ -39,7 +39,7 @@
 /**
  * @brief Sentinel value used to represent an empty slot in the hash set.
  *
- * A `TierPosition` with tier equal to `INT64_MIN` should never inserted.
+ * A `TierPosition` with tier equal to `INT64_MIN` should never be inserted.
  * Otherwise the behavior is undefined.
  */
 #define TIER_POSITION_STATIC_HASH_SET_EMPTY_TIER INT64_MIN
