@@ -639,7 +639,7 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         TierPositionStaticHashSetAdd(&dedup, child);
     }
 
-    return dedup.size;
+    return TierPositionStaticHashSetGetSize(&dedup);
 }
 
 static int QuixoGetCanonicalChildPositions(

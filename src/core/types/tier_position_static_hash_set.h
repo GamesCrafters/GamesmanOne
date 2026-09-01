@@ -94,4 +94,16 @@ static inline bool TierPositionStaticHashSetAdd(TierPositionStaticHashSet *set,
     return true;
 }
 
+/**
+ * @brief Returns the number of elements in the static hash set.
+ *
+ * @param[in] set The `TierPositionStaticHashSet` to inspect.
+ *
+ * @return The number of elements in `set`.
+ */
+static inline int TierPositionStaticHashSetGetSize(
+    const TierPositionStaticHashSet *set) {
+    return set->size;
+}
+
 #endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_STATIC_HASH_SET_H_
