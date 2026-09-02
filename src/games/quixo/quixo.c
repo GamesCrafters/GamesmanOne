@@ -9,8 +9,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 2.2.0
- * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -56,7 +54,7 @@
 #include "core/types/gameplay_api/gameplay_api_tier.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
-#include "core/types/position_hash_set.h"
+#include "core/types/position_static_hash_set.h"
 #include "core/types/simd.h"
 #include "core/types/tier_position_static_hash_set.h"
 #include "core/types/uwapi/autogui.h"
@@ -697,9 +695,7 @@ static int QuixoGetCanonicalParentPositions(
     int opp_turn = !turn;
     uint64_t shift, src;
     bool same_tier = (child_t.hash == parent_t.hash);
-    PositionHashSet dedup;
-    PositionHashSetInit(&dedup, 0.5);
-    PositionHashSetReserve(&dedup, 128);
+    DECLARE_POSITION_STATIC_HASH_SET(dedup, 128);
     int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
@@ -711,7 +707,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -725,7 +721,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -739,7 +735,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -753,12 +749,11 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
     }
-    PositionHashSetDestroy(&dedup);
 
     return ret;
 }
