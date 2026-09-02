@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
+#include "core/types/base.h"
 #include "core/types/tier_position_static_hash_set.h"
 }
 
