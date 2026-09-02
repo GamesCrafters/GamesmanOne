@@ -11,6 +11,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/move_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/position_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/position_hash_set.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/position_static_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/simd.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_array.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tier_hash_map.h
