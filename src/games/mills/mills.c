@@ -38,9 +38,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/types/game/game.h"
-
-#define U64X2_STATIC_HASH_SET_SIZE 16ULL
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_static_hash_set.h"
@@ -48,6 +45,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
+#include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/gameplay_api/gameplay_api.h"
 #include "core/types/gameplay_api/gameplay_api_common.h"
@@ -959,8 +957,7 @@ static int MillsGetNumberOfSymmetries(TierPosition tp) {
     bool not_fixed_turn;
     U64x2 board = UnhashSimd(tp, &t, &turn, &not_fixed_turn);
 
-    U64x2StaticHashSet dedup;
-    U64x2StaticHashSetInit(&dedup);
+    DECLARE_U64X2_STATIC_HASH_SET(dedup, 16);
     CollectRotationSymmetries(&dedup, board);
 
     // Ring swap symmetries 2x are present in certain board variants
@@ -969,7 +966,7 @@ static int MillsGetNumberOfSymmetries(TierPosition tp) {
         CollectRotationSymmetries(&dedup, swapped);
     }
 
-    return dedup.size;
+    return U64x2StaticHashSetGetSize(&dedup);
 }
 
 static bool IsPlacementTier(MillsTier t) { return t.unpacked.remaining[1]; }

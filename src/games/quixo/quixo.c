@@ -37,9 +37,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/types/game/game.h"
-
-#define U64X2_STATIC_HASH_SET_SIZE 16ULL
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/data_structures/u64x2_static_hash_set.h"
@@ -47,6 +44,7 @@
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
+#include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/game/game_variant_option.h"
 #include "core/types/gameplay_api/gameplay_api.h"
@@ -775,8 +773,7 @@ static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, side_length);
 
     // Find unique boards
-    U64x2StaticHashSet dedup;
-    U64x2StaticHashSetInit(&dedup);
+    DECLARE_U64X2_STATIC_HASH_SET(dedup, 16);
     U64x2StaticHashSetAdd(&dedup, board);
     U64x2StaticHashSetAdd(&dedup, v);
     U64x2StaticHashSetAdd(&dedup, h);
@@ -786,7 +783,7 @@ static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     U64x2StaticHashSetAdd(&dedup, dh);
     U64x2StaticHashSetAdd(&dedup, dvh);
 
-    return dedup.size;
+    return U64x2StaticHashSetGetSize(&dedup);
 }
 
 static int8_t GetNumBlanks(QuixoTier t) {

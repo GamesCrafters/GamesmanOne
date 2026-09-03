@@ -13,160 +13,230 @@
 
 #include <cstdint>
 
-#define TEST_SET_CAPACITY 32
 extern "C" {
-#define U64X2_STATIC_HASH_SET_SIZE TEST_SET_CAPACITY
 #include "core/data_structures/u64x2_static_hash_set.h"
 #include "core/types/simd.h"
 }
 
-// Verifies that a newly initialized hash set is completely empty and
-// structurally ready for insertions.
-TEST(U64x2StaticHashSetTest, Initialization) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+// ======================= DECLARE_U64X2_STATIC_HASH_SET =======================
 
-    EXPECT_EQ(set.size, 0);
-
-    // An arbitrary key to ensure false is returned rather than undefined memory
-    // being accessed.
-    U64x2 key = {0xCAFEBABE, 0xDEADBEEF};
-    EXPECT_FALSE(U64x2StaticHashSetContains(&set, key));
+TEST(U64x2StaticHashSetTest, InitializesSizeToZero) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 0)
+        << "A newly declared hash set must initialize its size to zero.";
 }
 
-// Verifies that adding a single unique element correctly updates the set's
-// state and size.
-TEST(U64x2StaticHashSetTest, AddSingleElement) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+TEST(U64x2StaticHashSetTest, CompilesWithSmallestPowerOfTwo) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 1);
+    EXPECT_EQ(set.capacity_mask, 0)
+        << "Capacity mask for capacity 1 must be exactly 0 (1 - 1).";
+    EXPECT_EQ(set.size, 0)
+        << "Size must be exactly 0 for an initialized set of capacity 1.";
+}
+
+#if 0
+
+// Verifies that attempting to declare a set with a non-power-of-two capacity
+// triggers a compilation failure.
+TEST(U64x2StaticHashSetTest, FailsCompileOnNonPowerOfTwo) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 10);
+}
+
+// Verifies that attempting to declare a set with zero capacity triggers a
+// compilation failure.
+TEST(U64x2StaticHashSetTest, FailsCompileOnZeroCapacity) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 0);
+}
+
+#endif
+
+// ======================== Basic Insertion Operations ========================
+
+TEST(U64x2StaticHashSetTest, SizeIncrementsOnSuccessfulAdd) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
     U64x2 key = {0xCAFEBABE, 0xDEADBEEF};
 
-    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key));
-    EXPECT_EQ(set.size, 1);
-    EXPECT_TRUE(U64x2StaticHashSetContains(&set, key));
+    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key))
+        << "Adding a unique key into an empty set must return true.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 1)
+        << "Size must be exactly 1 after a single successful insertion.";
+    EXPECT_TRUE(U64x2StaticHashSetContains(&set, key))
+        << "Set must contain the key just inserted.";
 }
 
-// Verifies that the hash set correctly identifies identical SIMD vectors and
-// rejects duplicate insertions.
 TEST(U64x2StaticHashSetTest, AddDuplicateElement) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
     U64x2 key = {0xCAFEBABE, 0xDEADBEEF};
 
-    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key));
-
-    EXPECT_FALSE(U64x2StaticHashSetAdd(&set, key));
-    EXPECT_EQ(set.size, 1);
+    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key))
+        << "Adding a unique key into an empty set must return true.";
+    EXPECT_FALSE(U64x2StaticHashSetAdd(&set, key))
+        << "Adding the same key to the set should return false.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 1)
+        << "Size of the set should remain 1 when adding the same key twice.";
 }
 
-// Verifies that the hash set correctly accepts insertion of different SIMD
-// vectors with a common lane instead of rejecting them as duplicates
 TEST(U64x2StaticHashSetTest, AddDifferentElementsWithCommonLanes) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
     U64x2 key1 = {1, 1};
     U64x2 key2 = {1, 2};
     U64x2 key3 = {2, 1};
 
-    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key1));
-    EXPECT_EQ(set.size, 1);
+    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key1))
+        << "Adding unique key 1 to the set must return true.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 1)
+        << "The size of the set should be 1 after adding the first unique key.";
 
-    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key2));
-    EXPECT_EQ(set.size, 2);
+    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key2))
+        << "Adding unique key 2 to the set must return true.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 2)
+        << "The size of the set should be 2 after adding the second unique "
+           "key.";
 
-    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key3));
-    EXPECT_EQ(set.size, 3);
+    ASSERT_TRUE(U64x2StaticHashSetAdd(&set, key3))
+        << "Adding unique key 3 to the set must return true.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 3)
+        << "The size of the set should be 3 after adding the third unique key.";
 }
 
-// Verifies that querying for an element that was never inserted correctly
-// returns false, even if the set is populated.
 TEST(U64x2StaticHashSetTest, ContainsMissingElement) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
     U64x2 key1 = {1, 1};
     U64x2 key2 = {2, 2};
 
     U64x2StaticHashSetAdd(&set, key1);
 
-    EXPECT_FALSE(U64x2StaticHashSetContains(&set, key2));
+    EXPECT_FALSE(U64x2StaticHashSetContains(&set, key2))
+        << "Querying for an element never inserted should return false.";
 }
 
-// Verifies that a fully zeroed vector is handled correctly, proving that the
-// implementation relies on the state array rather than using zero as an
-// internal sentinel value.
+TEST(U64x2StaticHashSetTest, AddMultipleElements) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
+
+    constexpr int count = 32 / 2;
+    for (int i = 0; i < count; ++i) {
+        U64x2 key = {static_cast<uint64_t>(i), static_cast<uint64_t>(i)};
+        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key))
+            << "Failed to insert key {" << i << ", " << i
+            << "} during linear probing test.";
+    }
+
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), count)
+        << "Set size must equal the number of sequentially inserted elements ("
+        << count << ").";
+
+    for (int i = 0; i < count; ++i) {
+        U64x2 key = {static_cast<uint64_t>(i), static_cast<uint64_t>(i)};
+        EXPECT_TRUE(U64x2StaticHashSetContains(&set, key))
+            << "Set must retain key {" << i << ", " << i
+            << "} without linear probing overwriting it.";
+    }
+}
+
+// ================================ Edge Cases ================================
+
 TEST(U64x2StaticHashSetTest, ZeroVector) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
     U64x2 zero = {0, 0};
 
-    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, zero));
-    EXPECT_TRUE(U64x2StaticHashSetContains(&set, zero));
-    EXPECT_EQ(set.size, 1);
+    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, zero))
+        << "Adding a zeroed vector {0, 0} should succeed and not be treated as "
+           "a sentinel.";
+    EXPECT_TRUE(U64x2StaticHashSetContains(&set, zero))
+        << "Set must contain the zeroed vector {0, 0} after insertion.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 1)
+        << "Set size must be 1 after inserting a zeroed vector.";
 }
 
-// Verifies that linear probing handles sequential additions properly without
-// incorrectly overwriting elements.
-TEST(U64x2StaticHashSetTest, AddMultipleElements) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
-
-    const int count = TEST_SET_CAPACITY / 2;
-    for (int i = 0; i < count; ++i) {
-        U64x2 key = {static_cast<uint64_t>(i), static_cast<uint64_t>(i)};
-        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key));
-    }
-
-    EXPECT_EQ(set.size, count);
-
-    for (int i = 0; i < count; ++i) {
-        U64x2 key = {static_cast<uint64_t>(i), static_cast<uint64_t>(i)};
-        EXPECT_TRUE(U64x2StaticHashSetContains(&set, key));
-    }
-}
-
-// Verifies that the hash set can be filled to its maximum defined capacity
-// without dropping data or incorrectly rejecting novel keys due to high load
-// factor.
 TEST(U64x2StaticHashSetTest, MaximumCapacity) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
 
-    for (int i = 0; i < TEST_SET_CAPACITY; ++i) {
+    for (int i = 0; i < 32; ++i) {
         U64x2 key = {static_cast<uint64_t>(~i), static_cast<uint64_t>(i)};
-        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key));
+        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key))
+            << "Failed to insert key at index " << i
+            << " when filling set to capacity.";
     }
 
-    EXPECT_EQ(set.size, TEST_SET_CAPACITY);
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 32)
+        << "Set size must reach maximum capacity (32) after 32 unique "
+           "insertions.";
 
-    for (int i = 0; i < TEST_SET_CAPACITY; ++i) {
+    for (int i = 0; i < 32; ++i) {
         U64x2 key = {static_cast<uint64_t>(~i), static_cast<uint64_t>(i)};
-        EXPECT_TRUE(U64x2StaticHashSetContains(&set, key));
+        EXPECT_TRUE(U64x2StaticHashSetContains(&set, key))
+            << "Set must contain key at index " << i
+            << " when completely full.";
     }
 }
 
-// Verifies that querying a completely full hash set for a non-existent element
-// correctly returns false instead of getting trapped in an infinite linear
-// probing loop.
-TEST(U64x2StaticHashSetTest, MissingElementInFullSet) {
-    U64x2StaticHashSet set;
-    U64x2StaticHashSetInit(&set);
+TEST(U64x2StaticHashSetTest, CapacityOne) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 1);
 
-    // Fill the hash set to its absolute maximum capacity.
-    for (int i = 0; i < TEST_SET_CAPACITY; ++i) {
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 0)
+        << "Initial size for capacity-1 set must be 0.";
+
+    U64x2 key = {0x111, 0x222};
+    U64x2 missing_key = {0x333, 0x444};
+
+    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key))
+        << "Inserting into empty capacity-1 set with mask 0 should return "
+           "true.";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 1)
+        << "Size of capacity-1 set must be 1 after insertion.";
+    EXPECT_FALSE(U64x2StaticHashSetAdd(&set, key))
+        << "Re-inserting existing element into full capacity-1 set should "
+           "return false.";
+    EXPECT_TRUE(U64x2StaticHashSetContains(&set, key))
+        << "Capacity-1 set must contain the inserted element.";
+    EXPECT_FALSE(U64x2StaticHashSetContains(&set, missing_key))
+        << "Querying a missing element on a full capacity-1 set must terminate "
+           "and return false.";
+}
+
+TEST(U64x2StaticHashSetTest, CapacityTwo) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 2);
+
+    U64x2 key1 = {0xAAA, 0xBBB};
+    U64x2 key2 = {0xCCC, 0xDDD};
+    U64x2 missing_key = {0xEEE, 0xFFF};
+
+    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key1))
+        << "Adding key1 to capacity-2 set should return true.";
+    EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key2))
+        << "Adding key2 to capacity-2 set should return true (verifying linear "
+           "probing wrap-around).";
+    EXPECT_EQ(U64x2StaticHashSetGetSize(&set), 2)
+        << "Size of capacity-2 set must be 2 after inserting two distinct "
+           "keys.";
+
+    EXPECT_TRUE(U64x2StaticHashSetContains(&set, key1))
+        << "Set must contain key1.";
+    EXPECT_TRUE(U64x2StaticHashSetContains(&set, key2))
+        << "Set must contain key2.";
+
+    EXPECT_FALSE(U64x2StaticHashSetContains(&set, missing_key))
+        << "Probing for missing key in full capacity-2 set must terminate "
+           "safely and return false.";
+}
+
+TEST(U64x2StaticHashSetTest, MissingElementInFullSet) {
+    DECLARE_U64X2_STATIC_HASH_SET(set, 32);
+
+    for (int i = 0; i < 32; ++i) {
         U64x2 key = {static_cast<uint64_t>(i), static_cast<uint64_t>(i)};
-        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key));
+        EXPECT_TRUE(U64x2StaticHashSetAdd(&set, key))
+            << "Failed to populate set with key {" << i << ", " << i << "}.";
     }
 
-    // Query a key that is strictly outside the integer range of the inserted
-    // values to guarantee it is missing.
-    U64x2 missing_key = {TEST_SET_CAPACITY, TEST_SET_CAPACITY};
+    U64x2 missing_key = {32, 32};
 
-    // If the loop-break logic fails, this assertion will never be reached and
-    // the test will hang indefinitely.
-    EXPECT_FALSE(U64x2StaticHashSetContains(&set, missing_key));
+    EXPECT_FALSE(U64x2StaticHashSetContains(&set, missing_key))
+        << "Querying missing key in a completely full set must return false "
+           "without hanging or looping indefinitely.";
 }

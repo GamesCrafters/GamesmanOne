@@ -14,11 +14,6 @@
 #include <random>
 #include <vector>
 
-// Define the capacity of the hash set to 1024 to allow up to 512 elements
-// while keeping the load factor <= 0.5.
-#define U64X2_STATIC_HASH_SET_SIZE 1024ULL
-constexpr size_t kMaxElements = 512;
-
 extern "C" {
 #include "core/data_structures/u64x2_static_hash_set.h"
 #include "core/types/simd.h"
@@ -41,16 +36,15 @@ static std::vector<U64x2> GenerateKeys(size_t count, unsigned int seed = 42) {
 // Benchmark: U64x2StaticHashSetAdd
 // Measures the time it takes to add N items to an empty hash set.
 // ------------------------------------------------------------------------
+template <uint64_t N>
 static void BM_U64x2StaticHashSetAdd(benchmark::State& state) {
-    size_t num_elements = state.range(0);
-    std::vector<U64x2> keys = GenerateKeys(num_elements);
+    std::vector<U64x2> keys = GenerateKeys(N);
 
     for (auto _ : state) {
-        U64x2StaticHashSet hs;
-        U64x2StaticHashSetInit(&hs);
+        DECLARE_U64X2_STATIC_HASH_SET(hs, static_cast<uint64_t>(N << 1));
 
-        for (size_t i = 0; i < num_elements; ++i) {
-            U64x2StaticHashSetAdd(&hs, keys[i]);
+        for (const auto& key : keys) {
+            U64x2StaticHashSetAdd(&hs, key);
         }
 
         // Ensure the compiler doesn't optimize away our insertions
@@ -58,21 +52,25 @@ static void BM_U64x2StaticHashSetAdd(benchmark::State& state) {
     }
 
     // Normalize time to report the cost per single Add operation
-    state.SetItemsProcessed(state.iterations() * num_elements);
+    state.SetItemsProcessed(state.iterations() * N);
 }
-// Test sizes from 8 up to kMaxElements, doubling each step.
-BENCHMARK(BM_U64x2StaticHashSetAdd)->RangeMultiplier(2)->Range(8, kMaxElements);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 8);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 16);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 32);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 64);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 128);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 256);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetAdd, 512);
 
 // ------------------------------------------------------------------------
 // Benchmark: U64x2StaticHashSetContains (Hit)
 // Measures the time to successfully find elements that exist in the set.
 // ------------------------------------------------------------------------
+template <uint64_t N>
 static void BM_U64x2StaticHashSetContains_Hit(benchmark::State& state) {
-    size_t num_elements = state.range(0);
-    std::vector<U64x2> keys = GenerateKeys(num_elements);
+    std::vector<U64x2> keys = GenerateKeys(N);
 
-    U64x2StaticHashSet hs;
-    U64x2StaticHashSetInit(&hs);
+    DECLARE_U64X2_STATIC_HASH_SET(hs, static_cast<uint64_t>(N << 1));
     for (const auto& key : keys) {
         U64x2StaticHashSetAdd(&hs, key);
     }
@@ -80,45 +78,50 @@ static void BM_U64x2StaticHashSetContains_Hit(benchmark::State& state) {
     size_t idx = 0;
     for (auto _ : state) {
         // Sequentially lookup elements we know are in the set
-        bool found = U64x2StaticHashSetContains(&hs, keys[idx % num_elements]);
+        bool found = U64x2StaticHashSetContains(&hs, keys[idx % N]);
         benchmark::DoNotOptimize(found);
         ++idx;
     }
 
     state.SetItemsProcessed(state.iterations());
 }
-BENCHMARK(BM_U64x2StaticHashSetContains_Hit)
-    ->RangeMultiplier(2)
-    ->Range(8, kMaxElements);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 8);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 16);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 32);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 64);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 128);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 256);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Hit, 512);
 
 // ------------------------------------------------------------------------
 // Benchmark: U64x2StaticHashSetContains (Miss)
 // Measures the time to reject elements that do not exist in the set.
 // ------------------------------------------------------------------------
+template <uint64_t N>
 static void BM_U64x2StaticHashSetContains_Miss(benchmark::State& state) {
-    size_t num_elements = state.range(0);
-
     // Generate one set of keys to populate the hash set...
-    std::vector<U64x2> keys_in_set = GenerateKeys(num_elements, 42);
+    std::vector<U64x2> keys_in_set = GenerateKeys(N, 42);
     // ...and a completely different set of keys to search for.
-    std::vector<U64x2> keys_not_in_set = GenerateKeys(num_elements, 1337);
+    std::vector<U64x2> keys_not_in_set = GenerateKeys(N, 1337);
 
-    U64x2StaticHashSet hs;
-    U64x2StaticHashSetInit(&hs);
+    DECLARE_U64X2_STATIC_HASH_SET(hs, static_cast<uint64_t>(N << 1));
     for (const auto& key : keys_in_set) {
         U64x2StaticHashSetAdd(&hs, key);
     }
 
     size_t idx = 0;
     for (auto _ : state) {
-        bool found = U64x2StaticHashSetContains(
-            &hs, keys_not_in_set[idx % num_elements]);
+        bool found = U64x2StaticHashSetContains(&hs, keys_not_in_set[idx % N]);
         benchmark::DoNotOptimize(found);
         ++idx;
     }
 
     state.SetItemsProcessed(state.iterations());
 }
-BENCHMARK(BM_U64x2StaticHashSetContains_Miss)
-    ->RangeMultiplier(2)
-    ->Range(8, kMaxElements);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 8);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 16);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 32);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 64);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 128);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 256);
+BENCHMARK_TEMPLATE(BM_U64x2StaticHashSetContains_Miss, 512);
