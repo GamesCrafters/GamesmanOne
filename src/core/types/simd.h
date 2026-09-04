@@ -49,6 +49,14 @@ typedef uint8_t U8x16 __attribute__((vector_size(16)));
  */
 typedef uint64_t U64x2 __attribute__((vector_size(16)));
 
+/**
+ * @brief Returns whether two `U64x2` vectors are bitwise equal.
+ *
+ * @param[in] a First vector.
+ * @param[in] b Second vector.
+ * @retval true if `a` and `b` are bit-wise equal,
+ * @retval false otherwise.
+ */
 static inline bool U64x2Equal(U64x2 a, U64x2 b) {
 #ifdef GAMESMAN_HAS_SSE4_1
     __m128i diff = _mm_xor_si128((__m128i)a, (__m128i)b);
