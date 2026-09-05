@@ -637,7 +637,7 @@ static int MillsGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
         child.position = MillsGetCanonicalPosition(child);
         TierPositionHashSetAdd(&dedup, child);
     }
-    int ret = (int)dedup.size;
+    int ret = (int)TierPositionHashSetGetSize(&dedup);
     TierPositionHashSetDestroy(&dedup);
 
     return ret;

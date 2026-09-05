@@ -362,7 +362,8 @@ static int GetChildPositions(
 
     // If the parent position is not a canonical position, then the number of
     // canonical moves is 0. Using multiplication to avoid branching.
-    int num_canonical_moves = (int)dedup.size * IsCanonicalPosition(parent);
+    int num_canonical_moves =
+        (int)TierPositionHashSetGetSize(&dedup) * IsCanonicalPosition(parent);
     TierPositionHashSetDestroy(&dedup);
     AnalysisDiscoverMoves(dest, parent, num_moves, num_canonical_moves);
 

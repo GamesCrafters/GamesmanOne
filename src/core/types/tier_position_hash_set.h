@@ -224,4 +224,15 @@ static inline bool TierPositionHashSetAdd(TierPositionHashSet *set,
     return true;
 }
 
+/**
+ * @brief Returns the number of elements in the set.
+ *
+ * @param set Target set.
+ * @return Number of elements in `set`.
+ */
+static inline int64_t TierPositionHashSetGetSize(
+    const TierPositionHashSet *set) {
+    return set->size;
+}
+
 #endif  // GAMESMANONE_CORE_TYPES_TIER_POSITION_HASH_SET_H_

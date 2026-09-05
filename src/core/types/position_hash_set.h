@@ -49,9 +49,9 @@ typedef Int64HashSet PositionHashSet;
  * The hash set will automatically expand its capacity if (double)size/capacity
  * is greater than `max_load_factor`. A small value trades memory for speed
  * whereas a large value trades speed for memory. This value is restricted to be
- * in the range [0.25, 0.75] to provide optimal performance. The actual max load
- * factor is capped at 0.25 and 0.75 respectively if the user passes a value
- * that is smaller than 0.25 or greater than 0.75.
+ * in the range [0.5, 0.8] to provide optimal performance. The actual max load
+ * factor is capped at 0.5 and 0.8 respectively if the user passes a value
+ * that is smaller than 0.5 or greater than 0.8.
  */
 static inline void PositionHashSetInit(PositionHashSet *set,
                                        double max_load_factor) {
