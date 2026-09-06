@@ -36,9 +36,9 @@
 /**
  * @brief Sentinel value used to represent an empty slot in the hash set.
  *
- * The user of Int64HashSet is responsible for making sure that `INT64_MIN` is
- * never inserted as a key. The library is aggressively optimized and will not
- * check for such insertions.
+ * @details The user of `Int64HashSet` is responsible for making sure that
+ * `INT64_MIN` is never inserted as a key. The library is aggressively
+ * optimized and will not check for such insertions.
  */
 #define INT64_HASH_SET_EMPTY_KEY INT64_MIN
 
@@ -53,11 +53,20 @@
  * key.
  */
 typedef struct Int64HashSet {
-    int64_t *keys;    /**< Array of keys in the hash set. */
-    uint64_t mask;    /**< Bitmask used for indexing into the keys. */
-    int64_t size;     /**< Current number of elements in the set. */
-    int64_t max_size; /**< Maximum elements before expansion is needed. */
-    double inv_max_load_factor; /**< Equals to `1.0 / max_load_factor`. */
+    /** Array of keys in the hash set. */
+    int64_t *keys;
+
+    /** Bitmask used for indexing into the keys. */
+    uint64_t mask;
+
+    /** Current number of elements in the set. */
+    int64_t size;
+
+    /** Maximum elements before expansion is needed. */
+    int64_t max_size;
+
+    /** Equals to `1.0 / max_load_factor`. */
+    double inv_max_load_factor;
 } Int64HashSet;
 
 /**
@@ -84,7 +93,7 @@ static inline void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
 /**
  * @brief [INTERNAL] Expands the internal capacity of the hash set
  * automatically, assuming either `set` has not been lazily initialized or
- * doubling its capacity would satisfy the needs for this expansion..
+ * doubling its capacity would satisfy the needs for this expansion.
  *
  * @warning This is an internal function exposed for optimization purposes.
  * Users of this library should never call this function directly.
@@ -192,6 +201,15 @@ static inline bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
     return true;
 }
 
+/**
+ * @brief Checks if a 64-bit integer key is present in the hash set.
+ *
+ * @param[in] set The `Int64HashSet` to query.
+ * @param[in] key The 64-bit integer key to search for.
+ *
+ * @retval true The `key` is present in the set.
+ * @retval false The `key` is not present, or the set is not initialized.
+ */
 static inline bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
     const int64_t *__restrict keys = set->keys;
 

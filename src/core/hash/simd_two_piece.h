@@ -349,8 +349,8 @@ void SimdTwoPieceHashContextDestroy(SimdTwoPieceHashContext *context);
 static inline int64_t SimdTwoPieceHashGetNumPositionsFixedTurn(
     const SimdTwoPieceHashContext *context, int num_x, int num_o) {
     const int32_t board_size = context->board_size;
-    return context->nCr[board_size - num_o][num_x] *
-           context->nCr[board_size][num_o];
+    return (int64_t)context->nCr[board_size - num_o][num_x] *
+           (int64_t)context->nCr[board_size][num_o];
 }
 
 /**

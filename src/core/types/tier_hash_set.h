@@ -3,7 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing Tier hash set.
+ * @brief Dynamically-sized linear probing Tier hash set with sentinel value
+ * optimization.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,9 +31,13 @@
 #include "core/data_structures/int64_hash_set.h"
 #include "core/types/base.h"
 
+#define TIER_HASH_SET_EMPTY_KEY INT64_HASH_SET_EMPTY_KEY
+
 /**
  * @brief A linear-probing Tier hash set using `Int64HashSet` as the underlying
- * type.
+ * type. Using `INT64_MIN` as the sentinel value to represent empty slots. The
+ * sentinel value must not be inserted or tested as a key or the behavior is
+ * undefined.
  */
 typedef Int64HashSet TierHashSet;
 
@@ -59,7 +64,7 @@ static inline void TierHashSetDestroy(TierHashSet *set) {
  * @brief Checks if a specific Tier is present in the hash set.
  *
  * @param[in] set The `TierHashSet` to search.
- * @param[in] tier The `Tier` value to look for.
+ * @param[in] tier The `Tier` value to look for. Must not be
  *
  * @retval true The `tier` is present in the set.
  * @retval false The `tier` is not present, or the set is uninitialized.
@@ -72,7 +77,8 @@ static inline bool TierHashSetContains(const TierHashSet *set, Tier tier) {
  * @brief Adds a Tier value to the hash set.
  *
  * @param[in,out] set The `TierHashSet` to add the Tier to.
- * @param[in] tier The `Tier` value to add.
+ * @param[in] tier The `Tier` value to add. Must not be equal to
+ * `INT64_MIN` (`TIER_HASH_SET_EMPTY_KEY`).
  *
  * @retval true The `tier` was successfully added.
  * @retval false The `tier` already exists, or memory allocation failed.

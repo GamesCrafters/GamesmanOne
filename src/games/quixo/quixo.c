@@ -9,8 +9,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Quixo implementation.
- * @version 2.2.0
- * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -39,16 +37,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/types/game/game.h"
-
-#define U64X2_HASH_SET_SIZE 16ULL
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
-#include "core/data_structures/u64x2_hash_set.h"
+#include "core/data_structures/u64x2_static_hash_set.h"
 #include "core/hash/simd_two_piece.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
+#include "core/types/game/game.h"
 #include "core/types/game/game_variant.h"
 #include "core/types/game/game_variant_option.h"
 #include "core/types/gameplay_api/gameplay_api.h"
@@ -56,9 +52,9 @@
 #include "core/types/gameplay_api/gameplay_api_tier.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/move_array.h"
-#include "core/types/position_hash_set.h"
+#include "core/types/position_static_hash_set.h"
 #include "core/types/simd.h"
-#include "core/types/tier_position_hash_set.h"
+#include "core/types/tier_position_static_hash_set.h"
 #include "core/types/uwapi/autogui.h"
 #include "core/types/uwapi/uwapi.h"
 #include "core/types/uwapi/uwapi_tier.h"
@@ -631,19 +627,15 @@ static int QuixoGetNumberOfCanonicalChildPositions(TierPosition tier_position) {
     int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
-    TierPositionHashSet dedup;
-    TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, 64);
+    DECLARE_TIER_POSITION_STATIC_HASH_SET(dedup, 128);
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        TierPositionHashSetAdd(&dedup, child);
+        TierPositionStaticHashSetAdd(&dedup, child);
     }
-    int ret = (int)dedup.size;
-    TierPositionHashSetDestroy(&dedup);
 
-    return ret;
+    return TierPositionStaticHashSetGetSize(&dedup);
 }
 
 static int QuixoGetCanonicalChildPositions(
@@ -660,17 +652,16 @@ static int QuixoGetCanonicalChildPositions(
     int num_moves = GenerateMovesInternal(board, turn, moves);
 
     // Collect all unique child positions
-    TierPositionHashSet dedup;
-    TierPositionHashSetInit(&dedup, 0.5);
-    TierPositionHashSetReserve(&dedup, 64);
+    DECLARE_TIER_POSITION_STATIC_HASH_SET(dedup, 128);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         QuixoMove m = {.hash = moves[i]};
         TierPosition child = DoMoveInternal(t, board, turn, m);
         child.position = QuixoGetCanonicalPosition(child);
-        if (TierPositionHashSetAdd(&dedup, child)) children[ret++] = child;
+        if (TierPositionStaticHashSetAdd(&dedup, child)) {
+            children[ret++] = child;
+        }
     }
-    TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
@@ -702,9 +693,7 @@ static int QuixoGetCanonicalParentPositions(
     int opp_turn = !turn;
     uint64_t shift, src;
     bool same_tier = (child_t.hash == parent_t.hash);
-    PositionHashSet dedup;
-    PositionHashSetInit(&dedup, 0.5);
-    PositionHashSetReserve(&dedup, 128);
+    DECLARE_POSITION_STATIC_HASH_SET(dedup, 128);
     int ret = 0;
     for (int i = 0; i < kNumMovesPerDir[curr_variant_idx]; ++i) {
         // Revert a left shifting move
@@ -716,7 +705,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -730,7 +719,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -744,7 +733,7 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
@@ -758,12 +747,11 @@ static int QuixoGetCanonicalParentPositions(
             new_board = GetCanonicalBoard(new_board);
             Position new_pos =
                 SimdTwoPieceHashHash(&hash_context, new_board, opp_turn);
-            if (PositionHashSetAdd(&dedup, new_pos)) {
+            if (PositionStaticHashSetAdd(&dedup, new_pos)) {
                 parents[ret++] = new_pos;
             }
         }
     }
-    PositionHashSetDestroy(&dedup);
 
     return ret;
 }
@@ -774,26 +762,28 @@ static int QuixoGetNumberOfSymmetries(TierPosition tp) {
     U64x2 board = SimdTwoPieceHashUnhash(&hash_context, tp.position,
                                          t.unpacked[0], t.unpacked[1]);
 
-    // Find unique boards from all 8 symmetries
-    U64x2HashSet dedup;
-    U64x2HashSetInit(&dedup);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipDiag(board);
-    U64x2HashSetAdd(&dedup, board);
-    board = SimdTwoPieceHashFlipVertical(board, side_length);
-    U64x2HashSetAdd(&dedup, board);
+    // 8 symmetries
+    U64x2 v = SimdTwoPieceHashFlipVertical(board, side_length);
+    U64x2 h = SimdTwoPieceHashMirrorHorizontal(board, side_length);
+    U64x2 vh = SimdTwoPieceHashFlipVertical(h, side_length);
 
-    return dedup.size;
+    U64x2 d = SimdTwoPieceHashFlipDiag(board);
+    U64x2 dv = SimdTwoPieceHashFlipVertical(d, side_length);
+    U64x2 dh = SimdTwoPieceHashMirrorHorizontal(d, side_length);
+    U64x2 dvh = SimdTwoPieceHashFlipVertical(dh, side_length);
+
+    // Find unique boards
+    DECLARE_U64X2_STATIC_HASH_SET(dedup, 16);
+    U64x2StaticHashSetAdd(&dedup, board);
+    U64x2StaticHashSetAdd(&dedup, v);
+    U64x2StaticHashSetAdd(&dedup, h);
+    U64x2StaticHashSetAdd(&dedup, vh);
+    U64x2StaticHashSetAdd(&dedup, d);
+    U64x2StaticHashSetAdd(&dedup, dv);
+    U64x2StaticHashSetAdd(&dedup, dh);
+    U64x2StaticHashSetAdd(&dedup, dvh);
+
+    return U64x2StaticHashSetGetSize(&dedup);
 }
 
 static int8_t GetNumBlanks(QuixoTier t) {

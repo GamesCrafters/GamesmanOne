@@ -654,7 +654,7 @@ static int DefaultGetNumberOfCanonicalChildPositions(
         child.position = current_api.GetCanonicalPosition(child);
         TierPositionHashSetAdd(&dedup, child);
     }
-    int num_children = (int)dedup.size;
+    int num_children = (int)TierPositionHashSetGetSize(&dedup);
     TierPositionHashSetDestroy(&dedup);
 
     return num_children;

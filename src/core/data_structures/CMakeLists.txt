@@ -7,8 +7,9 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_map.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_queue.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/int64_static_hash_set.h
     ${CMAKE_CURRENT_SOURCE_DIR}/int64_to_ptr_chained_hash_map.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/u64x2_hash_set.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/u64x2_static_hash_set.h)
 
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/bitset.c
