@@ -11,89 +11,14 @@ Usage in root project directory:
 """
 
 import io
-import os
 import random
 import re
+
 import pexpect
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-
-class Game:
-    ALL_QUEENS_CHESS = "all_queens_chess"
-    DOBUTSU_SHOGI = "dobutsu_shogi"
-    FAIR_SHARES_AND_VARIED_PAIRS = "fair_shares_and_varied_pairs"
-    GATES = "gates"
-    GOBBLET_GOBBLERS = "gobblet_gobblers"
-    KAOOA = "kaooa"
-    MILLS = "mills"
-    NEUTRON = "neutron"
-    QUIXO = "quixo"
-    TEEKO = "teeko"
-    TTTIER = "tttier"
-    TTT = "ttt"
-    WINKERS = "winkers"
-
-
-GAMES: list[str] = [
-    Game.ALL_QUEENS_CHESS,
-    Game.DOBUTSU_SHOGI,
-    Game.FAIR_SHARES_AND_VARIED_PAIRS,
-    Game.GATES,
-    Game.GOBBLET_GOBBLERS,
-    Game.KAOOA,
-    Game.MILLS,
-    Game.NEUTRON,
-    Game.QUIXO,
-    Game.TEEKO,
-    Game.TTTIER,
-    Game.TTT,
-    Game.WINKERS,
-]
-
-# Test matrix: [(<game_name>, <game_options>), ...]
-INTERACTIVE_GAMES: list[tuple[str, list[int]]] = [
-    (Game.ALL_QUEENS_CHESS, []),
-    (Game.DOBUTSU_SHOGI, []),
-    (Game.FAIR_SHARES_AND_VARIED_PAIRS, [0]),
-    (Game.FAIR_SHARES_AND_VARIED_PAIRS, [6]),
-    (Game.GATES, []),
-    (Game.GOBBLET_GOBBLERS, []),
-    (Game.KAOOA, []),
-    (Game.MILLS, [0, 1, 0, 0, 0]),
-    (Game.MILLS, [1, 1, 0, 0, 0]),
-    (Game.MILLS, [2, 1, 0, 0, 0]),
-    (Game.MILLS, [3, 1, 0, 0, 0]),
-    (Game.MILLS, [4, 1, 0, 0, 0]),
-    (Game.MILLS, [5, 1, 0, 0, 0]),
-    (Game.MILLS, [6, 1, 0, 0, 0]),
-    (Game.MILLS, [7, 1, 0, 0, 0]),
-    (Game.MILLS, [3, 0, 0, 0, 0]),
-    (Game.MILLS, [3, 1, 1, 0, 0]),
-    (Game.MILLS, [3, 1, 0, 1, 0]),
-    (Game.MILLS, [3, 1, 0, 2, 0]),
-    (Game.MILLS, [3, 1, 0, 0, 1]),
-    (Game.NEUTRON, []),
-    (Game.QUIXO, [0]),
-    (Game.QUIXO, [1]),
-    (Game.QUIXO, [2]),
-    (Game.TEEKO, []),
-    (Game.TTTIER, []),
-    (Game.TTT, []),
-    (Game.WINKERS, []),
-]
-
-
-@pytest.fixture(scope="session")
-def gamesman_bin() -> str:
-    """
-    Determines the binary path based on the GAMESMAN_PRESET.
-    Defaults to release if the environment variable is not set.
-    """
-    preset = os.environ.get("GAMESMAN_PRESET", "release")
-    if preset == "release":
-        return "./bin/gamesman"
-    return f"./build/{preset}/src/gamesman"
+from games import Game, GAMES, INTERACTIVE_GAMES
 
 
 @pytest.mark.parametrize("game_name,game_options", INTERACTIVE_GAMES)
