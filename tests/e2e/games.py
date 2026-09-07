@@ -8,18 +8,40 @@ NOTE: The headless game list is mirrored in .github/workflows/ci.yml for
 per-game CI fan-out. Keep the two in sync when adding/removing games.
 """
 
+
+# ---------------------------------------------------------------------------
+# CLI internal game names — single source of truth for all test lists
+# ---------------------------------------------------------------------------
+
+
+class Game:
+    DSHOGI = "dshogi"
+    FSVP = "fsvp"
+    GATES = "gates"
+    GOBBLETG = "gobbletg"
+    MALLQUEENSCHESS = "mallqueenschess"
+    MILLS = "mills"
+    MKAOOA = "mkaooa"
+    MTTT = "mttt"
+    MTTTIER = "mtttier"
+    NEUTRON = "neutron"
+    QUIXO = "quixo"
+    TEEKO = "teeko"
+    WINKERS = "winkers"
+
+
 # ---------------------------------------------------------------------------
 # Headless (automated) tests — small games that can be solved in CI
 # (game_cli_name, variant_id, has_autogui)
 # ---------------------------------------------------------------------------
 HEADLESS_GAMES: list[tuple[str, int, bool]] = [
-    ("fsvp", 10, False),  # Regular
-    ("mttt", 0, False),  # Regular
-    ("mkaooa", 0, True),  # Regular
-    ("mills", 72, True),  # Tier
-    ("mtttier", 0, True),  # Tier
-    ("quixo", 1, True),  # Tier
-    ("quixo", 2, True),  # Tier
+    (Game.FSVP, 10, False),  # Regular
+    (Game.MTTT, 0, False),  # Regular
+    (Game.MKAOOA, 0, True),  # Regular
+    (Game.MILLS, 72, True),  # Tier
+    (Game.MTTTIER, 0, True),  # Tier
+    (Game.QUIXO, 1, True),  # Tier
+    (Game.QUIXO, 2, True),  # Tier
 ]
 
 # ---------------------------------------------------------------------------
@@ -27,79 +49,58 @@ HEADLESS_GAMES: list[tuple[str, int, bool]] = [
 # (game_cli_name, variant_id, has_autogui)
 # ---------------------------------------------------------------------------
 HEADLESS_MANUAL_GAMES: list[tuple[str, int, bool]] = [
-    ("dshogi", 0, True),  # Regular
-    ("gates", 0, False),  # Tier
-    ("gobbletg", 0, True),  # Tier
-    ("mills", 0, True),  # Tier
-    ("mills", 72, True),  # Tier
-    ("mills", 144, True),  # Tier
-    ("mills", 234, True),  # Tier
-    ("mills", 236, True),  # Tier
-    ("mills", 312, True),  # Tier
-    ("mills", 314, True),  # Tier
-    ("mills", 318, True),  # Tier
-    ("mills", 320, True),  # Tier
-    ("mills", 396, True),  # Tier
-    ("mills", 450, True),  # Tier
-    ("neutron", 0, True),  # Regular
-    ("quixo", 0, True),  # Tier
-    ("teeko", 0, True),  # Regular
-    ("teeko", 1, True),  # Regular
-    ("winkers", 0, True),  # Tier
+    (Game.DSHOGI, 0, True),  # Regular
+    (Game.GATES, 0, False),  # Tier
+    (Game.GOBBLETG, 0, True),  # Tier
+    (Game.MILLS, 0, True),  # Tier
+    (Game.MILLS, 72, True),  # Tier
+    (Game.MILLS, 144, True),  # Tier
+    (Game.MILLS, 234, True),  # Tier
+    (Game.MILLS, 236, True),  # Tier
+    (Game.MILLS, 312, True),  # Tier
+    (Game.MILLS, 314, True),  # Tier
+    (Game.MILLS, 318, True),  # Tier
+    (Game.MILLS, 320, True),  # Tier
+    (Game.MILLS, 396, True),  # Tier
+    (Game.MILLS, 450, True),  # Tier
+    (Game.NEUTRON, 0, True),  # Regular
+    (Game.QUIXO, 0, True),  # Tier
+    (Game.TEEKO, 0, True),  # Regular
+    (Game.TEEKO, 1, True),  # Regular
+    (Game.WINKERS, 0, True),  # Tier
 ]
 
 # ---------------------------------------------------------------------------
-# Interactive tests — game names as shown in the interactive menu
-#
-# NOTE: These names (e.g. "fair_shares_and_varied_pairs") do NOT match the
-# CLI internal game names (e.g. "fsvp"). They are used for snapshot IDs and
-# menu index lookup. A manual refactoring pass to align them is planned.
+# Interactive tests
 # ---------------------------------------------------------------------------
-
-
-class Game:
-    ALL_QUEENS_CHESS = "all_queens_chess"
-    DOBUTSU_SHOGI = "dobutsu_shogi"
-    FAIR_SHARES_AND_VARIED_PAIRS = "fair_shares_and_varied_pairs"
-    GATES = "gates"
-    GOBBLET_GOBBLERS = "gobblet_gobblers"
-    KAOOA = "kaooa"
-    MILLS = "mills"
-    NEUTRON = "neutron"
-    QUIXO = "quixo"
-    TEEKO = "teeko"
-    TTTIER = "tttier"
-    TTT = "ttt"
-    WINKERS = "winkers"
-
 
 # Ordered list matching the interactive menu (sorted by formal name).
 # Used to compute menu selection indices.
 GAMES: list[str] = [
-    Game.ALL_QUEENS_CHESS,
-    Game.DOBUTSU_SHOGI,
-    Game.FAIR_SHARES_AND_VARIED_PAIRS,
+    Game.MALLQUEENSCHESS,
+    Game.DSHOGI,
+    Game.FSVP,
     Game.GATES,
-    Game.GOBBLET_GOBBLERS,
-    Game.KAOOA,
+    Game.GOBBLETG,
+    Game.MKAOOA,
     Game.MILLS,
     Game.NEUTRON,
     Game.QUIXO,
     Game.TEEKO,
-    Game.TTTIER,
-    Game.TTT,
+    Game.MTTTIER,
+    Game.MTTT,
     Game.WINKERS,
 ]
 
 # Interactive test matrix: (game_name, game_options)
 INTERACTIVE_GAMES: list[tuple[str, list[int]]] = [
-    (Game.ALL_QUEENS_CHESS, []),
-    (Game.DOBUTSU_SHOGI, []),
-    (Game.FAIR_SHARES_AND_VARIED_PAIRS, [0]),
-    (Game.FAIR_SHARES_AND_VARIED_PAIRS, [6]),
+    (Game.MALLQUEENSCHESS, []),
+    (Game.DSHOGI, []),
+    (Game.FSVP, [0]),
+    (Game.FSVP, [6]),
     (Game.GATES, []),
-    (Game.GOBBLET_GOBBLERS, []),
-    (Game.KAOOA, []),
+    (Game.GOBBLETG, []),
+    (Game.MKAOOA, []),
     (Game.MILLS, [0, 1, 0, 0, 0]),
     (Game.MILLS, [1, 1, 0, 0, 0]),
     (Game.MILLS, [2, 1, 0, 0, 0]),
@@ -118,7 +119,7 @@ INTERACTIVE_GAMES: list[tuple[str, list[int]]] = [
     (Game.QUIXO, [1]),
     (Game.QUIXO, [2]),
     (Game.TEEKO, []),
-    (Game.TTTIER, []),
-    (Game.TTT, []),
+    (Game.MTTTIER, []),
+    (Game.MTTT, []),
     (Game.WINKERS, []),
 ]

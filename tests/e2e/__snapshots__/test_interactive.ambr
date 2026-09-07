@@ -1,5 +1,5 @@
 # serializer version: 1
-# name: test_gamesman_interactive[all_queens_chess-game_options0][all_queens_chess_interactive_stdout]
+# name: test_gamesman_interactive[mallqueenschess-game_options0][mallqueenschess_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -618,7 +618,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[dobutsu_shogi-game_options1][dobutsu_shogi_interactive_stdout]
+# name: test_gamesman_interactive[dshogi-game_options1][dshogi_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -889,7 +889,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[fair_shares_and_varied_pairs-game_options2][fair_shares_and_varied_pairs_interactive_stdout]
+# name: test_gamesman_interactive[fsvp-game_options2][fsvp_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -1068,7 +1068,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[fair_shares_and_varied_pairs-game_options3][fair_shares_and_varied_pairs_interactive_stdout]
+# name: test_gamesman_interactive[fsvp-game_options3][fsvp_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -2025,7 +2025,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[gobblet_gobblers-game_options5][gobblet_gobblers_interactive_stdout]
+# name: test_gamesman_interactive[gobbletg-game_options5][gobbletg_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -2281,7 +2281,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[kaooa-game_options6][kaooa_interactive_stdout]
+# name: test_gamesman_interactive[mkaooa-game_options6][mkaooa_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -19752,7 +19752,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[ttt-game_options26][ttt_interactive_stdout]
+# name: test_gamesman_interactive[mttt-game_options26][mttt_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
@@ -19907,7 +19907,7 @@
   Thanks for using GAMESMAN!
   '''
 # ---
-# name: test_gamesman_interactive[tttier-game_options25][tttier_interactive_stdout]
+# name: test_gamesman_interactive[mtttier-game_options25][mtttier_interactive_stdout]
   '''
   
     ____              https://gamescrafters.berkeley.edu  : A finite,  two-person
