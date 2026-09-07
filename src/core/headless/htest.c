@@ -75,30 +75,37 @@ static int GetNumVarinats(ReadOnlyString game_name, int *num_variants) {
 
 int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
                  int verbose) {
-    (void)verbose;         // TODO: SolverManagerTest should take in verbose
-    if (variant_id < 0) {  // Test all variants
+    (void)verbose;  // TODO: SolverManagerTest should take in verbose
+    int error = 0;
+    if (variant_id >= 0) {  // Test the given variant
+        error = TestOneVariant(game_name, variant_id, seed);
+    } else {  // Test all variants
         int num_variants;
         int error = GetNumVarinats(game_name, &num_variants);
-        if (error) return error;
+        if (error) {
+            fprintf(stderr,
+                    "HeadlessTest: failed to get the total number of variants "
+                    "of game %s\n",
+                    game_name);
+            return error;
+        }
 
         for (int i = 0; i < num_variants; ++i) {
             error = TestOneVariant(game_name, i, seed);
-            if (error != 0) {
-                fprintf(stderr, "HeadlessTest: test failed with code %d\n",
-                        error);
-                return error;
+            if (error) {
+                break;
             }
         }
-    } else {  // Test the given variant
-        int error = TestOneVariant(game_name, variant_id, seed);
-        if (error != 0) {
-            fprintf(stderr, "HeadlessTest: test failed with code %d\n", error);
-        }
     }
-    puts(
-        "\n****************************\n"
-        "***** ALL TESTS PASSED *****\n"
-        "****************************\n");
 
-    return kSuccess;
+    if (error != 0) {
+        fprintf(stderr, "HeadlessTest: test failed with code %d\n", error);
+    } else {
+        puts(
+            "\n****************************\n"
+            "***** ALL TESTS PASSED *****\n"
+            "****************************\n");
+    }
+
+    return error;
 }
