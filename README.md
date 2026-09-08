@@ -39,7 +39,7 @@ In combinatorial game theory, **strongly solving** a game means determining the 
 
 GamesmanOne provides:
 - **Exhaustive Retrograde Analysis**: Solves both loop-free (DAG) state spaces and loopy games containing cycles and draw conditions.
-- **Extreme Scale**: Optimizations including bit-packed atomic records, SIMD hardware acceleration (SSE2/SSSE3/SSE4.1/BMI2), and custom random-access compression algorithms designed for massive game graphs.
+- **Extreme Scale**: Optimizations including bit-packed atomic records, SIMD hardware acceleration, and custom random-access compression algorithms designed for massive game graphs.
 - **HPC Cluster Integration**: Distributed solving support via MPI and automated SLURM job script generation for supercomputing environments such as UC Berkeley's Savio cluster.
 - **Compressed On-Disk Database**: Employs **XZRA** (*XZ Random Access*), a custom block-indexed XZ/LZMA compression format allowing multi-gigabyte solved databases to remain compressed on disk while supporting fast arbitrary position queries.
 - **Web Frontend Integration**: Connects seamlessly to [GamesCraftersUWAPI](https://github.com/GamesCrafters/GamesCraftersUWAPI) (Universal Web API), which relays position evaluations and game graph data to [GamesmanUni](https://github.com/GamesCrafters/GamesmanUni), the universal web frontend.
