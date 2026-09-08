@@ -18,7 +18,7 @@ import pexpect
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from games import Game, GAMES, INTERACTIVE_GAMES
+from games import GAMES, INTERACTIVE_GAMES
 
 
 @pytest.mark.parametrize("game_name,game_options", INTERACTIVE_GAMES)
