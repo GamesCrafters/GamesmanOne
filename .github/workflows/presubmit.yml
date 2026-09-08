@@ -1,4 +1,4 @@
-name: CI Build and Test
+name: Presubmit
 
 on:
   # Allows manual triggering from the GitHub Actions UI
@@ -42,16 +42,79 @@ jobs:
         run: cmake --workflow --preset ${{ matrix.preset }}
 
   # ==========================================
-  # JOB 2: E2E Headless Tests
+  # JOB 2: E2E Game Tests
   # ==========================================
-  e2e-headless-test:
-    name: E2E Headless Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+  e2e-game-test:
+    name: E2E Game Test (${{ matrix.os }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # NOTE: Keep in sync with GAME_TESTS_PRESUBMIT in tests/e2e/games.py
+        test_case:
+          - { game: "dshogi", variant: "0" }
+          - { game: "fsvp", variant: "0" }
+          - { game: "fsvp", variant: "1" }
+          - { game: "fsvp", variant: "2" }
+          - { game: "fsvp", variant: "3" }
+          - { game: "fsvp", variant: "4" }
+          - { game: "fsvp", variant: "5" }
+          - { game: "fsvp", variant: "6" }
+          - { game: "fsvp", variant: "7" }
+          - { game: "fsvp", variant: "8" }
+          - { game: "fsvp", variant: "9" }
+          - { game: "fsvp", variant: "10" }
+          - { game: "fsvp", variant: "11" }
+          - { game: "fsvp", variant: "12" }
+          - { game: "fsvp", variant: "13" }
+          - { game: "fsvp", variant: "14" }
+          - { game: "gobbletg", variant: "0" }
+          - { game: "mills", variant: "18" }
+          - { game: "mills", variant: "90" }
+          - { game: "mkaooa", variant: "0" }
+          - { game: "mttt", variant: "0" }
+          - { game: "mtttier", variant: "0" }
+          - { game: "quixo", variant: "1" }
+          - { game: "quixo", variant: "2" }
+          - { game: "teeko", variant: "0" }
+          - { game: "teeko", variant: "1" }
+          - { game: "winkers", variant: "0" }
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Configure Gamesman
+        run: |
+          chmod +x gamesman_setup.sh
+          ./gamesman_setup.sh --install-deps
+
+      - name: Configure CMake
+        run: cmake --preset ci-asan
+
+      - name: Build
+        run: cmake --build --preset ci-asan-build
+
+      - name: Run Game Test
+        run: |
+          ./build/ci-asan/src/gamesman test \
+            ${{ matrix.test_case.game }} \
+            ${{ matrix.test_case.variant }} \
+            --seed=42
+
+  # ==========================================
+  # JOB 3: E2E Core System Tests
+  # ==========================================
+  e2e-core-system-test:
+    name: E2E Core System Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         preset: [ci-asan, release]
+        # NOTE: Keep in sync with HEADLESS_GAMES in tests/e2e/games.py
         test_case:
           - { game: "fsvp", variant: "10" }
           - { game: "mttt", variant: "0" }
@@ -92,7 +155,7 @@ jobs:
         run: pytest tests/e2e/test_headless.py -k "${{ matrix.test_case.game }}-${{ matrix.test_case.variant }}" -v
 
   # ==========================================
-  # JOB 3: E2E Interactive Tests
+  # JOB 4: E2E Interactive Tests
   # ==========================================
   e2e-interactive-test:
     name: E2E Interactive Test (${{ matrix.os }}, ${{ matrix.preset }})

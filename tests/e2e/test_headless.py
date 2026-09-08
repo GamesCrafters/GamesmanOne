@@ -30,52 +30,17 @@ Usage in root project directory:
     GAMESMAN_PRESET=<cmake_preset> pytest tests/e2e/test_headless.py --snapshot-update
 """
 
-import os
-from pathlib import Path
-from syrupy.assertion import SnapshotAssertion
 import hashlib
 import json
-import pytest
 import random
 import re
 import subprocess
+from pathlib import Path
 
-# 1. Test matrix [(<game0>, <variant_id0>, <autogui0>), ...]
-GAMES_TO_TEST: list[tuple[str, int, bool]] = [
-    ("fsvp", 10, False),  # Regular
-    ("mttt", 0, False),  # Regular
-    ("mkaooa", 0, True),  # Regular
-    ("mills", 72, True),  # Tier
-    ("mtttier", 0, True),  # Tier
-    ("quixo", 1, True),  # Tier
-    ("quixo", 2, True),  # Tier
-]
+import pytest
+from syrupy.assertion import SnapshotAssertion
 
-
-@pytest.fixture(scope="session")
-def gamesman_config() -> tuple[str, dict[str, str]]:
-    """
-    Determines the binary path and environment variables based on the GAMESMAN_PRESET.
-    Defaults to release if the environment variable is not set.
-    """
-    preset = os.environ.get("GAMESMAN_PRESET", "release")
-
-    # 1. Determine binary path
-    if preset == "release":
-        bin_path = "./bin/gamesman"
-    else:
-        bin_path = f"./build/{preset}/src/gamesman"
-
-    # 2. Configure environment variables (e.g., TSAN_OPTIONS)
-    env = os.environ.copy()
-    if "tsan" in preset.lower():
-        existing_tsan = env.get("TSAN_OPTIONS", "")
-        # Prepend ignore_noninstrumented_modules=1 to prevent OpenMP false positives
-        env["TSAN_OPTIONS"] = (
-            f"ignore_noninstrumented_modules=1 {existing_tsan}".strip()
-        )
-
-    return bin_path, env
+from games import HEADLESS_GAMES
 
 
 @pytest.fixture
@@ -87,7 +52,7 @@ def sandbox_dir(tmp_path: Path) -> Path:
     return tmp_path / "data"
 
 
-@pytest.mark.parametrize("game,variant_id,autogui", GAMES_TO_TEST)
+@pytest.mark.parametrize("game,variant_id,autogui", HEADLESS_GAMES)
 def test_gamesman_e2e(
     game: str,
     variant_id: int,
