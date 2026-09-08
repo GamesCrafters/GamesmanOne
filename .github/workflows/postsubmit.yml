@@ -25,6 +25,7 @@ jobs:
         #       Keep in sync with GAME_TESTS_POSTSUBMIT in tests/e2e/games.py
         test_case:
           - { game: "gates", variant: "0" }
+          - { game: "mallqueenschess", variant: "0" }
           - { game: "mills", variant: "162" }
           - { game: "mills", variant: "216" }
           - { game: "mills", variant: "234" }
@@ -37,6 +38,7 @@ jobs:
           - { game: "mills", variant: "378" }
           - { game: "mills", variant: "450" }
           - { game: "mills", variant: "522" }
+          - { game: "neutron", variant: "0" }
           - { game: "quixo", variant: "0" }
 
     steps:
