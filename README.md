@@ -1,8 +1,8 @@
-# GamesmanOne
+# GamesmanOne: The Finite, Two-Person Perfect-Information Game Generator
 
-GamesmanOne is a highly efficient, parallel two-player abstract strategy game generator and strong solver developed by the [GamesCrafters Research Group](https://gamescrafters.berkeley.edu/) at UC Berkeley (supervised by [Dr. Dan Garcia](https://people.eecs.berkeley.edu/~ddgarcia/)). 
+GamesmanOne is a highly efficient, parallel two-player abstract strategy game generator and strong solver developed by the [GamesCrafters Research Group](https://gamescrafters.berkeley.edu/) at UC Berkeley (supervised by Teaching Professor [Dan Garcia](https://people.eecs.berkeley.edu/~ddgarcia/)). 
 
-Parallelized using **OpenMP** multithreading for shared-memory parallelism and **MPI** for distributed-memory computing, GamesmanOne is built to provide an extensible, modular platform capable of strongly solving and analyzing combinatorial games with state spaces on the **trillion-position scale**.
+The project was inspired by and based heavily on the **GamesmanClassic** project initially created by Dan Garcia. Parallelized using **OpenMP** multithreading for shared-memory parallelism and **MPI** for distributed-memory computing, GamesmanOne is built to provide an extensible, modular platform capable of strongly solving and analyzing combinatorial games with state spaces on the **trillion-position scale**.
 
 ---
 
