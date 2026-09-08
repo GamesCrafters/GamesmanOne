@@ -1,0 +1,62 @@
+name: Postsubmit
+
+on:
+  # Allows manual triggering from the GitHub Actions UI
+  workflow_dispatch:
+
+  # Runs when code is actually pushed/merged into these branches
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  # ==========================================
+  # JOB 1: E2E Game Tests (postsubmit-only variants)
+  # ==========================================
+  e2e-game-test-postsubmit:
+    name: E2E Game Test Postsubmit (${{ matrix.os }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # NOTE: Lists only variants not covered by presubmit.yml.
+        #       Keep in sync with GAME_TESTS_POSTSUBMIT in tests/e2e/games.py
+        test_case:
+          - { game: "gates", variant: "0" }
+          - { game: "mills", variant: "162" }
+          - { game: "mills", variant: "216" }
+          - { game: "mills", variant: "234" }
+          - { game: "mills", variant: "235" }
+          - { game: "mills", variant: "236" }
+          - { game: "mills", variant: "238" }
+          - { game: "mills", variant: "240" }
+          - { game: "mills", variant: "246" }
+          - { game: "mills", variant: "306" }
+          - { game: "mills", variant: "378" }
+          - { game: "mills", variant: "450" }
+          - { game: "mills", variant: "522" }
+          - { game: "quixo", variant: "0" }
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Configure Gamesman
+        run: |
+          chmod +x gamesman_setup.sh
+          ./gamesman_setup.sh --install-deps
+
+      - name: Configure CMake
+        run: cmake --preset ci-asan
+
+      - name: Build
+        run: cmake --build --preset ci-asan-build
+
+      - name: Run Game Test
+        run: |
+          ./build/ci-asan/src/gamesman test \
+            ${{ matrix.test_case.game }} \
+            ${{ matrix.test_case.variant }} \
+            --seed=42

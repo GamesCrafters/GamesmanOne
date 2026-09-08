@@ -4,7 +4,7 @@ Each game entry contains a CLI internal name and variant ID, which are the
 identifiers used by the gamesman binary. Future game implementation tests
 will also use these identifiers.
 
-NOTE: The headless game list is mirrored in .github/workflows/ci.yml for
+NOTE: The headless game list is mirrored in .github/workflows/presubmit.yml for
 per-game CI fan-out. Keep the two in sync when adding/removing games.
 """
 
@@ -71,6 +71,76 @@ HEADLESS_MANUAL_GAMES: list[tuple[str, int, bool]] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Game implementation tests
+#
+# Run via: gamesman test <game> <variant_id> --seed=<GAME_TEST_SEED>
+# A non-zero exit code means the test failed.
+# ---------------------------------------------------------------------------
+
+# Fixed seed for all game implementation tests
+GAME_TEST_SEED = 42
+
+# Presubmit (fast variants, run on every PR)
+# (game_cli_name, variant_id)
+# NOTE: Keep in sync with the e2e-game-test matrix in
+#       .github/workflows/presubmit.yml
+GAME_TESTS_PRESUBMIT: list[tuple[str, int]] = [
+    (Game.DSHOGI, 0),
+    (Game.FSVP, 0),  # size 4
+    (Game.FSVP, 1),  # size 5
+    (Game.FSVP, 2),  # size 6
+    (Game.FSVP, 3),  # size 7
+    (Game.FSVP, 4),  # size 8
+    (Game.FSVP, 5),  # size 9
+    (Game.FSVP, 6),  # size 10
+    (Game.FSVP, 7),  # size 11
+    (Game.FSVP, 8),  # size 12
+    (Game.FSVP, 9),  # size 20
+    (Game.FSVP, 10),  # size 50
+    (Game.FSVP, 11),  # size 60
+    (Game.FSVP, 12),  # size 70
+    (Game.FSVP, 13),  # size 80
+    (Game.FSVP, 14),  # size 90
+    (Game.GOBBLETG, 0),
+    (Game.MALLQUEENSCHESS, 0),
+    (Game.MILLS, 18),
+    (Game.MILLS, 90),
+    (Game.MKAOOA, 0),
+    (Game.MTTT, 0),
+    (Game.MTTTIER, 0),
+    (Game.NEUTRON, 0),
+    (Game.QUIXO, 1),
+    (Game.QUIXO, 2),
+    (Game.TEEKO, 0),
+    (Game.TEEKO, 1),
+    (Game.WINKERS, 0),
+]
+
+# Postsubmit (complete list: all presubmit variants plus slower ones)
+# (game_cli_name, variant_id)
+# NOTE: The CI matrix in postsubmit.yml lists only the *additional* entries
+#       below (not the presubmit ones, which already ran on the same push).
+#       Keep in sync with the e2e-game-test matrix in
+#       .github/workflows/postsubmit.yml
+GAME_TESTS_POSTSUBMIT: list[tuple[str, int]] = [
+    *GAME_TESTS_PRESUBMIT,
+    (Game.GATES, 0),
+    (Game.MILLS, 162),
+    (Game.MILLS, 216),
+    (Game.MILLS, 234),
+    (Game.MILLS, 235),
+    (Game.MILLS, 236),
+    (Game.MILLS, 238),
+    (Game.MILLS, 240),
+    (Game.MILLS, 246),
+    (Game.MILLS, 306),
+    (Game.MILLS, 378),
+    (Game.MILLS, 450),
+    (Game.MILLS, 522),
+    (Game.QUIXO, 0),
+]
+
+# ---------------------------------------------------------------------------
 # Interactive tests
 # ---------------------------------------------------------------------------
 
@@ -111,6 +181,7 @@ INTERACTIVE_GAMES: list[tuple[str, list[int]]] = [
     (Game.MILLS, [7, 1, 0, 0, 0]),
     (Game.MILLS, [3, 0, 0, 0, 0]),
     (Game.MILLS, [3, 1, 1, 0, 0]),
+    (Game.MILLS, [3, 1, 2, 0, 0]),
     (Game.MILLS, [3, 1, 0, 1, 0]),
     (Game.MILLS, [3, 1, 0, 2, 0]),
     (Game.MILLS, [3, 1, 0, 0, 1]),
