@@ -2,7 +2,7 @@
 
 GamesmanOne is a highly efficient, parallel two-player abstract strategy game generator and strong solver developed by the [GamesCrafters Research Group](https://gamescrafters.berkeley.edu/) at UC Berkeley (supervised by Teaching Professor [Dan Garcia](https://people.eecs.berkeley.edu/~ddgarcia/)). 
 
-The project was inspired by and based heavily on the **GamesmanClassic** project initially created by Dan Garcia. Parallelized using **OpenMP** multithreading for shared-memory parallelism and **MPI** for distributed-memory computing, GamesmanOne is built to provide an extensible, modular platform capable of strongly solving and analyzing combinatorial games with state spaces on the **trillion-position scale**.
+The project was inspired by and based heavily on the [**GamesmanClassic**](https://github.com/GamesCrafters/GamesmanClassic) project. Parallelized using **OpenMP** multithreading for shared-memory parallelism and **MPI** for distributed-memory computing, GamesmanOne is built to provide an extensible, modular platform capable of strongly solving and analyzing combinatorial games with state spaces on the **trillion-position scale**.
 
 ---
 
@@ -35,11 +35,11 @@ The project was inspired by and based heavily on the **GamesmanClassic** project
 
 ### Goals & Core Capabilities
 
-In combinatorial game theory, **strongly solving** a game means determining the exact game-theoretic outcome (**Win**, **Lose**, **Tie**, or **Draw**) and the **remoteness** (the number of plies to the optimal outcome under perfect play) for every legal, reachable board position.
+In game theory, **strongly solving** a game means determining the exact game-theoretic outcome (**Win**, **Lose**, **Tie**, or **Draw**) and the **remoteness** (the number of plies to the optimal outcome under perfect play) for every legal, reachable board position.
 
 GamesmanOne provides:
 - **Exhaustive Retrograde Analysis**: Solves both loop-free (DAG) state spaces and loopy games containing cycles and draw conditions.
-- **Extreme Scale**: Optimizations including bit-packed atomic records, SIMD hardware acceleration, and custom random-access compression algorithms designed for massive game graphs.
+- **Extreme Scale**: Optimizations including bit-packed atomic transposition table, SIMD hardware acceleration, and custom random-access compression algorithms designed for massive game graphs.
 - **HPC Cluster Integration**: Distributed solving support via MPI and automated SLURM job script generation for supercomputing environments such as UC Berkeley's Savio cluster.
 - **Compressed On-Disk Database**: Employs **XZRA** (*XZ Random Access*), a custom block-indexed XZ/LZMA compression format allowing multi-gigabyte solved databases to remain compressed on disk while supporting fast arbitrary position queries.
 - **Web Frontend Integration**: Connects seamlessly to [GamesCraftersUWAPI](https://github.com/GamesCrafters/GamesCraftersUWAPI) (Universal Web API), which relays position evaluations and game graph data to [GamesmanUni](https://github.com/GamesCrafters/GamesmanUni), the universal web frontend.
@@ -189,8 +189,7 @@ GamesmanOne provides subcommands for automated batch execution, scripting, and d
 - `solve <game> <variant_id> [--data-path=PATH] [-M MEM_LIMIT_GIB] [-f]`: Solves a game variant and saves the compressed database records.
 - `analyze <game> <variant_id> [--data-path=PATH]`: Analyzes solved game databases and prints outcome distributions, remoteness tables, and longest paths.
 - `getstart <game> <variant_id>`: Returns the initial game state in JSON format (supported on games with AutoGUI enabled).
-- `getrandom <game> <variant_id>`: Returns a valid random game state in JSON format.
-- `query <game> <variant_id> <position_string>`: Evaluates a board position in JSON format, returning its game-theoretic value, remoteness, and legal next moves.
+- `query <game> <variant_id> <position_string>`: Evaluates a board position of a solved game in JSON format, returning its game-theoretic value, remoteness, and legal next moves.
 - `test <game> <variant_id> [--seed=SEED]`: Executes built-in game module verification tests.
 
 #### Executable Examples
