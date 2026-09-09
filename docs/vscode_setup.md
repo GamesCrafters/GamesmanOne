@@ -42,8 +42,8 @@ Refer to [`scripts/.vscode/settings.json`](../scripts/.vscode/settings.json) for
 
 - **`"C_Cpp.clang_format_path": "/usr/bin/clang-format"`**
   Points the C/C++ extension to the system `clang-format` binary. This ensures that in-editor formatting uses the exact same `clang-format` binary and behavior expected by the project's optional pre-commit hook.
-  > [!NOTE]
-  > While strict formatting rules are not actively enforced at this moment, using a consistent formatter binary avoids unintended formatting discrepancies across contributors.
+> [!NOTE]
+> While strict formatting rules are not actively enforced at this moment, using a consistent formatter binary avoids unintended formatting discrepancies across contributors.
 
 - **`"C_Cpp.doxygen.sectionTags"`**
   Configures recognized Doxygen section tags for syntax highlighting, comment block auto-completion, and hover tooltips in C/C++ header and source files. This list aligns with the project's documentation standards specified in [Doxygen Conventions](doxygen_conventions.md).
@@ -129,8 +129,8 @@ To run tests with code coverage and visualize inline line coverage:
 
    <img src="./img/run_test_with_coverage_collection.png" alt="Clicking 'Run Test with Coverage' next to the GamesmanOne test collection dropdown" width="300" />
 
-   > [!IMPORTANT]
-   > As of the writing of this document, clicking the "Run Test with Coverage" icon at the very top next to **"Test Explorer"** will cause VS Code **not** to display inline coverage details in the editor, although coverage statistics will still be collected and shown in the sidebar. To view inline coverage highlights in source files, always use the button next to the **"GamesmanOne"** test collection dropdown.
+> [!IMPORTANT]
+> As of the writing of this document, clicking the "Run Test with Coverage" icon at the very top next to **"Test Explorer"** will cause VS Code **not** to display inline coverage details in the editor, although coverage statistics will still be collected and shown in the sidebar. To view inline coverage highlights in source files, always use the button next to the **"GamesmanOne"** test collection dropdown.
 
 3. **View Inline Coverage Highlights:**
    Open any source file (e.g., in `src/core/`) to see green/red gutter indicators and line highlighting indicating executed and unexecuted code lines (needs to be toggled on from the coverage toolbar).
@@ -145,8 +145,8 @@ To debug any compiled CMake target (such as `gamesman` or a unit test executable
 
 1. **Build with a Debug Preset:**
    Ensure you configure and build with a preset that uses the `Debug` build type (e.g., `ci-coverage`, `ci-coverage-st`, `ci-analyze-gcc`, or `ci-analyze-clang`).
-   > [!TIP]
-   > Look at the preset descriptions in `CMakePresets.json` to check the underlying CMake build type. Choose `Debug` so the compiler does not optimize lines out with optimizations.
+> [!TIP]
+> Look at the preset descriptions in `CMakePresets.json` to check the underlying CMake build type. Choose `Debug` so the compiler does not optimize lines out with optimizations.
 
 2. **Start Debugging:**
    In the CMake Tools sidebar under the **Debug**, select your compiled target binary (e.g., `gamesman`) and click the **Debug** button.
