@@ -41,9 +41,9 @@ To apply these recommended settings to your local workspace:
 Refer to [`scripts/.vscode/settings.json`](../scripts/.vscode/settings.json) for the complete configuration file. Below is an explanation of the key settings and why they are recommended:
 
 - **`"C_Cpp.clang_format_path": "/usr/bin/clang-format"`**
-  Points the C/C++ extension to the system `clang-format` binary. This ensures that in-editor formatting uses the exact same `clang-format` binary and behavior expected by the project's optional pre-commit hook.
+  Points the C/C++ extension to the system `clang-format` binary. With the C/C++ extension installed, formatting C/C++ source files (e.g., via the `Format Document` command) automatically applies the style defined in [`.clang-format`](../.clang-format) using the exact same binary expected by the project's optional pre-commit hook.
 > [!NOTE]
-> While strict formatting rules are not actively enforced at this moment, using a consistent formatter binary avoids unintended formatting discrepancies across contributors.
+> While strict formatting rules are not actively enforced at this moment, using the C/C++ extension to apply the style defined in [`.clang-format`](../.clang-format) helps maintain formatting consistency across contributors.
 
 - **`"C_Cpp.doxygen.sectionTags"`**
   Configures recognized Doxygen section tags for syntax highlighting, comment block auto-completion, and hover tooltips in C/C++ header and source files. This list aligns with the project's documentation standards specified in [Doxygen Conventions](doxygen_conventions.md).
