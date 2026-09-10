@@ -273,7 +273,7 @@ Additional documentation and developer guides:
 - [Developer's Guide](docs/developers_guide.md) *(Planned)*
 - [Doxygen & Code Documentation Conventions](docs/doxygen_conventions.md)
 - [Unit Testing Conventions](docs/unit_testing_conventions.md)
-- [Style Guide & Code Conventions](docs/style_guide.md) *(Planned)*
+- [Style Guide & Code Conventions](docs/style_guide.md)
 - [VS Code Setup Guide](docs/vscode_setup.md)
 - [Frequently Asked Questions (FAQ)](docs/faq.md) *(Planned)*
 
