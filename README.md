@@ -270,7 +270,7 @@ GamesmanOne contains a comprehensive Python E2E test suite built with `pytest`, 
 ## Links & Documentation
 
 Additional documentation and developer guides:
-- [Developer's Guide](docs/developers_guide.md) *(Planned)*
+- [Developer's Guide](docs/developers_guide.md)
 - [Doxygen & Code Documentation Conventions](docs/doxygen_conventions.md)
 - [Unit Testing Conventions](docs/unit_testing_conventions.md)
 - [Style Guide & Code Conventions](docs/style_guide.md)
