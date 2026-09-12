@@ -231,7 +231,7 @@ This directory contains the engine that makes game solving, storing, and queryin
 
 #### `src/games/` — Game Implementations
 
-> For game developers. See [src/games/README.md](../src/games/README.md) *(coming soon)*.
+> For game developers. See [src/games/README.md](../src/games/README.md).
 
 Each subdirectory under `src/games/` contains the implementation of a single game (or a family of closely related variants). 
 
