@@ -275,7 +275,6 @@ Additional documentation and developer guides:
 - [Unit Testing Conventions](docs/unit_testing_conventions.md)
 - [Style Guide & Code Conventions](docs/style_guide.md)
 - [VS Code Setup Guide](docs/vscode_setup.md)
-- [Frequently Asked Questions (FAQ)](docs/faq.md) *(Planned)*
 
 ---
 
