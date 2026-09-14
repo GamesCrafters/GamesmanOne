@@ -335,7 +335,7 @@ cmake --workflow --preset ci-asan-st      # single-threaded
 cmake --workflow --preset ci-coverage     # with coverage instrumentation
 ```
 
-**E2E headless tests** (requires a Python virtual environment; see [root README](../README.md)):
+**E2E headless tests** (requires a Python virtual environment; see [Python Environment](../README.md#python-environment)):
 ```bash
 # Build first:
 cmake --preset ci-asan && cmake --build --preset ci-asan-build
