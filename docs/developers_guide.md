@@ -231,11 +231,11 @@ This directory contains the engine that makes game solving, storing, and queryin
 
 #### `src/games/` — Game Implementations
 
-> For game developers. See [src/games/README.md](../src/games/README.md).
+> For game developers. See [game_developers_guide.md](./game_developers_guide.md).
 
 Each subdirectory under `src/games/` contains the implementation of a single game (or a family of closely related variants). 
 
-The central files [`game_list.h`](../src/games/game_list.h) and [`game_list.c`](../src/games/game_list.c) serve as the game registry — every implemented game must be registered here to be accessible via the CLI. The game developer's guide (linked above, coming soon) covers the full interface a game implementation must provide.
+The central files [`game_list.h`](../src/games/game_list.h) and [`game_list.c`](../src/games/game_list.c) serve as the game registry — every implemented game must be registered here to be accessible via the CLI. The game developer's guide (linked above) covers the full interface a game implementation must provide.
 
 #### `src/libs/` — Utility Libraries
 
@@ -335,7 +335,7 @@ cmake --workflow --preset ci-asan-st      # single-threaded
 cmake --workflow --preset ci-coverage     # with coverage instrumentation
 ```
 
-**E2E headless tests** (requires a Python virtual environment; see README):
+**E2E headless tests** (requires a Python virtual environment; see [root README](../README.md)):
 ```bash
 # Build first:
 cmake --preset ci-asan && cmake --build --preset ci-asan-build
