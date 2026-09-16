@@ -12,34 +12,205 @@ on:
 
 jobs:
   # ==========================================
+  # Change Detection
+  # ==========================================
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      run_game_tests: ${{ steps.filter.outputs.run_game_tests }}
+      game_test_matrix: ${{ steps.filter.outputs.game_test_matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Analyze changed files
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # ── Full test case matrix ───────────────────────────────────
+          # NOTE: Lists only variants not covered by presubmit.yml.
+          #       Keep in sync with GAME_TESTS_POSTSUBMIT (the additional
+          #       entries beyond GAME_TESTS_PRESUBMIT) in tests/e2e/games.py
+          FULL_GAME_TEST_MATRIX=$(jq -c '.' <<'MATRIX'
+          [
+            {"game":"gates","variant":"0"},
+            {"game":"mallqueenschess","variant":"0"},
+            {"game":"mills","variant":"162"},
+            {"game":"mills","variant":"216"},
+            {"game":"mills","variant":"234"},
+            {"game":"mills","variant":"235"},
+            {"game":"mills","variant":"236"},
+            {"game":"mills","variant":"238"},
+            {"game":"mills","variant":"240"},
+            {"game":"mills","variant":"246"},
+            {"game":"mills","variant":"306"},
+            {"game":"mills","variant":"378"},
+            {"game":"mills","variant":"450"},
+            {"game":"mills","variant":"522"},
+            {"game":"neutron","variant":"0"},
+            {"game":"quixo","variant":"0"}
+          ]
+          MATRIX
+          )
+
+          # ── Helpers ─────────────────────────────────────────────────
+          output_run_all() {
+            {
+              echo "run_game_tests=true"
+              echo "game_test_matrix=${FULL_GAME_TEST_MATRIX}"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          output_skip_all() {
+            {
+              echo "run_game_tests=false"
+              echo "game_test_matrix=[]"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          # ── Determine base commit ───────────────────────────────────
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "::notice::Workflow manually triggered — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          BASE_SHA="$PUSH_BEFORE_SHA"
+
+          if [[ -z "$BASE_SHA" \
+                || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "::notice::Initial push or missing base — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          # ── Get changed files ───────────────────────────────────────
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$CURRENT_SHA" || true)
+
+          if [[ -z "$CHANGED_FILES" ]]; then
+            echo "::notice::No changed files detected — skipping all tests"
+            output_skip_all
+            exit 0
+          fi
+
+          echo "::group::Changed files"
+          echo "$CHANGED_FILES"
+          echo "::endgroup::"
+
+          # ── Classify changed files ──────────────────────────────────
+          system_changed=false
+          any_game_changed=false
+          workflow_changed=false
+
+          # Game source directory → CLI name mapping
+          declare -A DIR_TO_CLI=(
+            [dshogi]=dshogi [fsvp]=fsvp [gates]=gates [gobblet]=gobbletg
+            [kaooa]=mkaooa [mallqueenschess]=mallqueenschess [mills]=mills
+            [mttt]=mttt [mtttier]=mtttier [neutron]=neutron
+            [quixo]=quixo [teeko]=teeko [winkers]=winkers
+          )
+          declare -A changed_game_cli=()
+
+          while IFS= read -r file; do
+            # Workflow file → run everything
+            if [[ "$file" == ".github/workflows/postsubmit.yml" ]]; then
+              workflow_changed=true
+              continue
+            fi
+
+            # Documentation and no-test files → skip
+            case "$file" in
+              README.md|COPYING|THIRD_PARTY_LICENSES) continue ;;
+              .clang-format|.clang-tidy|.gitignore) continue ;;
+              docs/*|.github/*) continue ;;
+              src/games/kaooa_rs/*|benchmarks/*) continue ;;
+            esac
+
+            # System C/Build files (affect all compiled binaries)
+            case "$file" in
+              CMakeLists.txt|CMakePresets.json|config.h.in) system_changed=true ;;
+              gamesman_setup.sh|scripts/cacheline.c) system_changed=true ;;
+              cmake/*) system_changed=true ;;
+              src/main.c|src/CMakeLists.txt) system_changed=true ;;
+              src/core/*|src/libs/*) system_changed=true ;;
+              src/games/game_list.c|src/games/game_list.h) system_changed=true ;;
+              src/games/CMakeLists.txt) system_changed=true ;;
+            esac
+
+            # Game-specific source files
+            if [[ "$file" =~ ^src/games/([^/]+)/ ]]; then
+              dir="${BASH_REMATCH[1]}"
+              if [[ -n "${DIR_TO_CLI[$dir]+x}" ]]; then
+                changed_game_cli["${DIR_TO_CLI[$dir]}"]=1
+                any_game_changed=true
+              fi
+            fi
+          done <<< "$CHANGED_FILES"
+
+          echo "::group::Classification"
+          echo "system_changed=$system_changed"
+          echo "any_game_changed=$any_game_changed"
+          echo "workflow_changed=$workflow_changed"
+          [[ "$any_game_changed" == "true" ]] \
+            && echo "changed_games: ${!changed_game_cli[*]}"
+          echo "::endgroup::"
+
+          # ── Workflow or system change → run everything ──────────────
+          if [[ "$workflow_changed" == "true" || "$system_changed" == "true" ]]; then
+            echo "::notice::System or workflow change — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          # ── Game-specific filtering ─────────────────────────────────
+          if [[ "$any_game_changed" == "true" ]]; then
+            games_json="["
+            first=true
+            for g in "${!changed_game_cli[@]}"; do
+              [[ "$first" == "true" ]] && first=false || games_json+=","
+              games_json+="\"$g\""
+            done
+            games_json+="]"
+
+            filtered=$(echo "$FULL_GAME_TEST_MATRIX" | jq -c \
+              --argjson g "$games_json" \
+              '[.[] | select(.game as $n | $g | index($n))]')
+
+            if [[ "$filtered" == "[]" ]]; then
+              echo "run_game_tests=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_game_tests=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "game_test_matrix=${filtered}" >> "$GITHUB_OUTPUT"
+          else
+            output_skip_all
+          fi
+
+  # ==========================================
   # JOB 1: E2E Game Tests (postsubmit-only variants)
   # ==========================================
   e2e-game-test-postsubmit:
     name: E2E Game Test Postsubmit (${{ matrix.os }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_game_tests == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        # Dynamically filtered by detect-changes.
         # NOTE: Lists only variants not covered by presubmit.yml.
-        #       Keep in sync with GAME_TESTS_POSTSUBMIT in tests/e2e/games.py
-        test_case:
-          - { game: "gates", variant: "0" }
-          - { game: "mallqueenschess", variant: "0" }
-          - { game: "mills", variant: "162" }
-          - { game: "mills", variant: "216" }
-          - { game: "mills", variant: "234" }
-          - { game: "mills", variant: "235" }
-          - { game: "mills", variant: "236" }
-          - { game: "mills", variant: "238" }
-          - { game: "mills", variant: "240" }
-          - { game: "mills", variant: "246" }
-          - { game: "mills", variant: "306" }
-          - { game: "mills", variant: "378" }
-          - { game: "mills", variant: "450" }
-          - { game: "mills", variant: "522" }
-          - { game: "neutron", variant: "0" }
-          - { game: "quixo", variant: "0" }
+        #       Keep the full list in detect-changes in sync with
+        #       GAME_TESTS_POSTSUBMIT in tests/e2e/games.py
+        test_case: ${{ fromJson(needs.detect-changes.outputs.game_test_matrix) }}
 
     steps:
       - name: Checkout code
