@@ -102,13 +102,11 @@ GAME_TESTS_PRESUBMIT: list[tuple[str, int]] = [
     (Game.FSVP, 13),  # size 80
     (Game.FSVP, 14),  # size 90
     (Game.GOBBLETG, 0),
-    (Game.MALLQUEENSCHESS, 0),
     (Game.MILLS, 18),
     (Game.MILLS, 90),
     (Game.MKAOOA, 0),
     (Game.MTTT, 0),
     (Game.MTTTIER, 0),
-    (Game.NEUTRON, 0),
     (Game.QUIXO, 1),
     (Game.QUIXO, 2),
     (Game.TEEKO, 0),
@@ -125,6 +123,7 @@ GAME_TESTS_PRESUBMIT: list[tuple[str, int]] = [
 GAME_TESTS_POSTSUBMIT: list[tuple[str, int]] = [
     *GAME_TESTS_PRESUBMIT,
     (Game.GATES, 0),
+    (Game.MALLQUEENSCHESS, 0),
     (Game.MILLS, 162),
     (Game.MILLS, 216),
     (Game.MILLS, 234),
@@ -137,6 +136,7 @@ GAME_TESTS_POSTSUBMIT: list[tuple[str, int]] = [
     (Game.MILLS, 378),
     (Game.MILLS, 450),
     (Game.MILLS, 522),
+    (Game.NEUTRON, 0),
     (Game.QUIXO, 0),
 ]
 

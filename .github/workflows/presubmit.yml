@@ -18,10 +18,311 @@ on:
 
 jobs:
   # ==========================================
+  # Change Detection
+  # ==========================================
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      run_unit_tests: ${{ steps.filter.outputs.run_unit_tests }}
+      run_game_tests: ${{ steps.filter.outputs.run_game_tests }}
+      game_test_matrix: ${{ steps.filter.outputs.game_test_matrix }}
+      run_core_system_tests: ${{ steps.filter.outputs.run_core_system_tests }}
+      core_system_test_matrix: ${{ steps.filter.outputs.core_system_test_matrix }}
+      run_interactive_tests: ${{ steps.filter.outputs.run_interactive_tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Analyze changed files
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # ── Full test case matrices ─────────────────────────────────
+          # NOTE: Keep in sync with GAME_TESTS_PRESUBMIT in tests/e2e/games.py
+          FULL_GAME_TEST_MATRIX=$(jq -c '.' <<'MATRIX'
+          [
+            {"game":"dshogi","variant":"0"},
+            {"game":"fsvp","variant":"0"},
+            {"game":"fsvp","variant":"1"},
+            {"game":"fsvp","variant":"2"},
+            {"game":"fsvp","variant":"3"},
+            {"game":"fsvp","variant":"4"},
+            {"game":"fsvp","variant":"5"},
+            {"game":"fsvp","variant":"6"},
+            {"game":"fsvp","variant":"7"},
+            {"game":"fsvp","variant":"8"},
+            {"game":"fsvp","variant":"9"},
+            {"game":"fsvp","variant":"10"},
+            {"game":"fsvp","variant":"11"},
+            {"game":"fsvp","variant":"12"},
+            {"game":"fsvp","variant":"13"},
+            {"game":"fsvp","variant":"14"},
+            {"game":"gobbletg","variant":"0"},
+            {"game":"mills","variant":"18"},
+            {"game":"mills","variant":"90"},
+            {"game":"mkaooa","variant":"0"},
+            {"game":"mttt","variant":"0"},
+            {"game":"mtttier","variant":"0"},
+            {"game":"quixo","variant":"1"},
+            {"game":"quixo","variant":"2"},
+            {"game":"teeko","variant":"0"},
+            {"game":"teeko","variant":"1"},
+            {"game":"winkers","variant":"0"}
+          ]
+          MATRIX
+          )
+
+          # NOTE: Keep in sync with HEADLESS_GAMES in tests/e2e/games.py
+          FULL_CORE_SYSTEM_MATRIX=$(jq -c '.' <<'MATRIX'
+          [
+            {"game":"fsvp","variant":"10"},
+            {"game":"mttt","variant":"0"},
+            {"game":"mkaooa","variant":"0"},
+            {"game":"mills","variant":"72"},
+            {"game":"mtttier","variant":"0"},
+            {"game":"quixo","variant":"1"},
+            {"game":"quixo","variant":"2"}
+          ]
+          MATRIX
+          )
+
+          # ── Helpers ─────────────────────────────────────────────────
+          output_run_all() {
+            {
+              echo "run_unit_tests=true"
+              echo "run_game_tests=true"
+              echo "game_test_matrix=${FULL_GAME_TEST_MATRIX}"
+              echo "run_core_system_tests=true"
+              echo "core_system_test_matrix=${FULL_CORE_SYSTEM_MATRIX}"
+              echo "run_interactive_tests=true"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          output_skip_all() {
+            {
+              echo "run_unit_tests=false"
+              echo "run_game_tests=false"
+              echo "game_test_matrix=[]"
+              echo "run_core_system_tests=false"
+              echo "core_system_test_matrix=[]"
+              echo "run_interactive_tests=false"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          # ── Determine base commit ───────────────────────────────────
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "::notice::Workflow manually triggered — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA="$PR_BASE_SHA"
+          else
+            BASE_SHA="$PUSH_BEFORE_SHA"
+          fi
+
+          if [[ -z "$BASE_SHA" \
+                || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "::notice::Initial push or missing base — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          # ── Get changed files ───────────────────────────────────────
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$CURRENT_SHA" || true)
+
+          if [[ -z "$CHANGED_FILES" ]]; then
+            echo "::notice::No changed files detected — skipping all tests"
+            output_skip_all
+            exit 0
+          fi
+
+          echo "::group::Changed files"
+          echo "$CHANGED_FILES"
+          echo "::endgroup::"
+
+          # ── Classify changed files ──────────────────────────────────
+          system_changed=false
+          any_game_changed=false
+          unit_test_changed=false
+          e2e_infra_changed=false
+          headless_test_changed=false
+          headless_snapshot_changed=false
+          has_source_changes=false
+          workflow_changed=false
+
+          # Game source directory → CLI name mapping
+          declare -A DIR_TO_CLI=(
+            [dshogi]=dshogi [fsvp]=fsvp [gates]=gates [gobblet]=gobbletg
+            [kaooa]=mkaooa [mallqueenschess]=mallqueenschess [mills]=mills
+            [mttt]=mttt [mtttier]=mtttier [neutron]=neutron
+            [quixo]=quixo [teeko]=teeko [winkers]=winkers
+          )
+          declare -A changed_game_cli=()
+
+          while IFS= read -r file; do
+            # Workflow file → run everything
+            if [[ "$file" == ".github/workflows/presubmit.yml" ]]; then
+              workflow_changed=true
+              continue
+            fi
+
+            # Documentation and no-test files → skip
+            case "$file" in
+              README.md|COPYING|THIRD_PARTY_LICENSES) continue ;;
+              .clang-format|.clang-tidy|.gitignore) continue ;;
+              docs/*|.github/*) continue ;;
+              src/games/kaooa_rs/*|benchmarks/*) continue ;;
+            esac
+
+            # Anything past here is a source change
+            has_source_changes=true
+
+            # System C/Build files (affect all compiled binaries)
+            case "$file" in
+              CMakeLists.txt|CMakePresets.json|config.h.in) system_changed=true ;;
+              gamesman_setup.sh|scripts/cacheline.c) system_changed=true ;;
+              cmake/*) system_changed=true ;;
+              src/main.c|src/CMakeLists.txt) system_changed=true ;;
+              src/core/*|src/libs/*) system_changed=true ;;
+              src/games/game_list.c|src/games/game_list.h) system_changed=true ;;
+              src/games/CMakeLists.txt) system_changed=true ;;
+            esac
+
+            # Game-specific source files
+            if [[ "$file" =~ ^src/games/([^/]+)/ ]]; then
+              dir="${BASH_REMATCH[1]}"
+              if [[ -n "${DIR_TO_CLI[$dir]+x}" ]]; then
+                changed_game_cli["${DIR_TO_CLI[$dir]}"]=1
+                any_game_changed=true
+              fi
+            fi
+
+            # Unit test files
+            case "$file" in
+              tests/CMakeLists.txt|tests/unit/*) unit_test_changed=true ;;
+            esac
+
+            # E2E test infrastructure
+            case "$file" in
+              tests/e2e/conftest.py|tests/e2e/games.py) e2e_infra_changed=true ;;
+              requirements.txt) e2e_infra_changed=true ;;
+            esac
+
+            # Headless test / snapshot
+            case "$file" in
+              tests/e2e/test_headless.py) headless_test_changed=true ;;
+              tests/e2e/__snapshots__/test_headless.ambr) headless_snapshot_changed=true ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          echo "::group::Classification"
+          echo "system_changed=$system_changed"
+          echo "any_game_changed=$any_game_changed"
+          echo "unit_test_changed=$unit_test_changed"
+          echo "e2e_infra_changed=$e2e_infra_changed"
+          echo "headless_test_changed=$headless_test_changed"
+          echo "headless_snapshot_changed=$headless_snapshot_changed"
+          echo "has_source_changes=$has_source_changes"
+          echo "workflow_changed=$workflow_changed"
+          [[ "$any_game_changed" == "true" ]] \
+            && echo "changed_games: ${!changed_game_cli[*]}"
+          echo "::endgroup::"
+
+          # ── Workflow file changed → run everything ──────────────────
+          if [[ "$workflow_changed" == "true" ]]; then
+            echo "::notice::Workflow file changed — running all tests"
+            output_run_all
+            exit 0
+          fi
+
+          # ── Build JSON array of changed game CLI names ──────────────
+          games_json="[]"
+          if [[ "$any_game_changed" == "true" ]]; then
+            games_json="["
+            first=true
+            for g in "${!changed_game_cli[@]}"; do
+              [[ "$first" == "true" ]] && first=false || games_json+=","
+              games_json+="\"$g\""
+            done
+            games_json+="]"
+          fi
+
+          # ── Unit tests ──────────────────────────────────────────────
+          if [[ "$system_changed" == "true" \
+                || "$any_game_changed" == "true" \
+                || "$unit_test_changed" == "true" ]]; then
+            echo "run_unit_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_unit_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # ── E2E game tests (dynamic matrix) ─────────────────────────
+          if [[ "$system_changed" == "true" ]]; then
+            echo "run_game_tests=true" >> "$GITHUB_OUTPUT"
+            echo "game_test_matrix=${FULL_GAME_TEST_MATRIX}" >> "$GITHUB_OUTPUT"
+          elif [[ "$any_game_changed" == "true" ]]; then
+            filtered=$(echo "$FULL_GAME_TEST_MATRIX" | jq -c \
+              --argjson g "$games_json" \
+              '[.[] | select(.game as $n | $g | index($n))]')
+            if [[ "$filtered" == "[]" ]]; then
+              echo "run_game_tests=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_game_tests=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "game_test_matrix=${filtered}" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_game_tests=false" >> "$GITHUB_OUTPUT"
+            echo "game_test_matrix=[]" >> "$GITHUB_OUTPUT"
+          fi
+
+          # ── E2E core system tests (dynamic matrix) ──────────────────
+          if [[ "$system_changed" == "true" \
+                || "$e2e_infra_changed" == "true" \
+                || "$headless_test_changed" == "true" \
+                || "$headless_snapshot_changed" == "true" ]]; then
+            echo "run_core_system_tests=true" >> "$GITHUB_OUTPUT"
+            echo "core_system_test_matrix=${FULL_CORE_SYSTEM_MATRIX}" \
+              >> "$GITHUB_OUTPUT"
+          elif [[ "$any_game_changed" == "true" ]]; then
+            filtered=$(echo "$FULL_CORE_SYSTEM_MATRIX" | jq -c \
+              --argjson g "$games_json" \
+              '[.[] | select(.game as $n | $g | index($n))]')
+            if [[ "$filtered" == "[]" ]]; then
+              echo "run_core_system_tests=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_core_system_tests=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "core_system_test_matrix=${filtered}" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_core_system_tests=false" >> "$GITHUB_OUTPUT"
+            echo "core_system_test_matrix=[]" >> "$GITHUB_OUTPUT"
+          fi
+
+          # ── E2E interactive tests ───────────────────────────────────
+          if [[ "$has_source_changes" == "true" ]]; then
+            echo "run_interactive_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_interactive_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ==========================================
   # JOB 1: Unit Tests
   # ==========================================
   unit-test:
     name: Unit Test (${{ matrix.os }}, ${{ matrix.preset }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_unit_tests == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -46,40 +347,17 @@ jobs:
   # ==========================================
   e2e-game-test:
     name: E2E Game Test (${{ matrix.os }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_game_tests == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        # NOTE: Keep in sync with GAME_TESTS_PRESUBMIT in tests/e2e/games.py
-        test_case:
-          - { game: "dshogi", variant: "0" }
-          - { game: "fsvp", variant: "0" }
-          - { game: "fsvp", variant: "1" }
-          - { game: "fsvp", variant: "2" }
-          - { game: "fsvp", variant: "3" }
-          - { game: "fsvp", variant: "4" }
-          - { game: "fsvp", variant: "5" }
-          - { game: "fsvp", variant: "6" }
-          - { game: "fsvp", variant: "7" }
-          - { game: "fsvp", variant: "8" }
-          - { game: "fsvp", variant: "9" }
-          - { game: "fsvp", variant: "10" }
-          - { game: "fsvp", variant: "11" }
-          - { game: "fsvp", variant: "12" }
-          - { game: "fsvp", variant: "13" }
-          - { game: "fsvp", variant: "14" }
-          - { game: "gobbletg", variant: "0" }
-          - { game: "mills", variant: "18" }
-          - { game: "mills", variant: "90" }
-          - { game: "mkaooa", variant: "0" }
-          - { game: "mttt", variant: "0" }
-          - { game: "mtttier", variant: "0" }
-          - { game: "quixo", variant: "1" }
-          - { game: "quixo", variant: "2" }
-          - { game: "teeko", variant: "0" }
-          - { game: "teeko", variant: "1" }
-          - { game: "winkers", variant: "0" }
+        # Dynamically filtered by detect-changes.
+        # NOTE: Keep the full list in detect-changes in sync with
+        #       GAME_TESTS_PRESUBMIT in tests/e2e/games.py
+        test_case: ${{ fromJson(needs.detect-changes.outputs.game_test_matrix) }}
 
     steps:
       - name: Checkout code
@@ -108,21 +386,18 @@ jobs:
   # ==========================================
   e2e-core-system-test:
     name: E2E Core System Test (${{ matrix.os }}, ${{ matrix.preset }}, ${{ matrix.test_case.game }}-${{ matrix.test_case.variant }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_core_system_tests == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         preset: [ci-asan, release]
-        # NOTE: Keep in sync with HEADLESS_GAMES in tests/e2e/games.py
-        test_case:
-          - { game: "fsvp", variant: "10" }
-          - { game: "mttt", variant: "0" }
-          - { game: "mkaooa", variant: "0" }
-          - { game: "mills", variant: "72" }
-          - { game: "mtttier", variant: "0" }
-          - { game: "quixo", variant: "1" }
-          - { game: "quixo", variant: "2" }
+        # Dynamically filtered by detect-changes.
+        # NOTE: Keep the full list in detect-changes in sync with
+        #       HEADLESS_GAMES in tests/e2e/games.py
+        test_case: ${{ fromJson(needs.detect-changes.outputs.core_system_test_matrix) }}
 
     steps:
       - name: Checkout code
@@ -159,6 +434,8 @@ jobs:
   # ==========================================
   e2e-interactive-test:
     name: E2E Interactive Test (${{ matrix.os }}, ${{ matrix.preset }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_interactive_tests == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
