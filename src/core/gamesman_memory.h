@@ -41,19 +41,6 @@ static_assert(
 static_assert((GM_CACHE_LINE_SIZE & (GM_CACHE_LINE_SIZE - 1)) == 0,
               "GM_CACHE_LINE_SIZE is not defined as a power of 2");
 
-/**
- * @brief Returns the number of bytes to be padded to an object of size `n` so
- * that its size becomes a multiple of `GM_CACHE_LINE_SIZE`.
- *
- * @param[in] n Size of the object in bytes.
- *
- * @return The number of bytes to be padded.
- */
-#define GM_CACHE_LINE_PAD(n)                                    \
-    ((((n) + (GM_CACHE_LINE_SIZE) - 1) / (GM_CACHE_LINE_SIZE) * \
-      (GM_CACHE_LINE_SIZE)) -                                   \
-     (n))
-
 // ================================= Allocator =================================
 
 /**

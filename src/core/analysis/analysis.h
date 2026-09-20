@@ -27,6 +27,7 @@
 #ifndef GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
 #define GAMESMANONE_CORE_ANALYSIS_ANALYSIS_H_
 
+#include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -112,9 +113,7 @@ typedef struct Analysis {
  * in an array.
  */
 typedef struct CacheAlignedAnalysis {
-    Analysis data; /**< Unpadded data. */
-    /** Padding CacheAlignedAnalysis to GM_CACHE_LINE_SIZE bytes. */
-    char padding[GM_CACHE_LINE_PAD(sizeof(Analysis))];
+    alignas(GM_CACHE_LINE_SIZE) Analysis data; /**< Cache-line-aligned data. */
 } CacheAlignedAnalysis;
 
 /**

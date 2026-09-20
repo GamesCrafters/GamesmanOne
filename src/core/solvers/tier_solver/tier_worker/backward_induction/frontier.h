@@ -33,6 +33,7 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_TIER_WORKER_BACKWARD_INDUCTION_FRONTIER_H_
 
+#include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -96,9 +97,8 @@ typedef struct FrontierInternal {
  * with remoteness i.
  */
 typedef struct Frontier {
-    FrontierInternal f; /**< Unpadded frontier object. */
-    /** Padding Frontier to GM_CACHE_LINE_SIZE bytes. */
-    char padding[GM_CACHE_LINE_PAD(sizeof(FrontierInternal))];
+    /** Cache-line-aligned frontier. */
+    alignas(GM_CACHE_LINE_SIZE) FrontierInternal f;
 } Frontier;
 
 /**
