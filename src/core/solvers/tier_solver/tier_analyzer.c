@@ -27,6 +27,7 @@
 #include "core/solvers/tier_solver/tier_analyzer.h"
 
 #include <assert.h>
+#include <stdalign.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -84,8 +85,7 @@ static ConcurrentBitset **child_tier_maps;
 static int num_threads;  // Number of threads available.
 
 typedef struct {
-    PositionArray a;
-    char padding[GM_CACHE_LINE_PAD(sizeof(PositionArray))];
+    alignas(GM_CACHE_LINE_SIZE) PositionArray a;
 } PaddedPositionArray;
 static PaddedPositionArray *fringe;  // Discovered but unprocessed positions.
 static PaddedPositionArray *discovered;  // Newly discovered positions.

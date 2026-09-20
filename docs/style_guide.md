@@ -184,7 +184,6 @@ typedef enum Value {
 * All macros (whether representing constant expressions, sentinels, or function-like macros) must use `SCREAMING_SNAKE_CASE`:
 ```c
 #define INT64_HASH_SET_EMPTY_KEY INT64_MIN
-#define GM_CACHE_LINE_PAD(n) ((((n) + (GM_CACHE_LINE_SIZE) - 1) / (GM_CACHE_LINE_SIZE) * (GM_CACHE_LINE_SIZE)) - (n))
 #define DECLARE_INT64_STATIC_HASH_SET(name, cap) ...
 ```
 
@@ -282,13 +281,7 @@ static_assert((GM_CACHE_LINE_SIZE & (GM_CACHE_LINE_SIZE - 1)) == 0,
 ```
 
 ### 5.4 Macro Safety
-* When defining macros with parameters, enclose all parameter usages and the entire macro expression in parentheses to avoid operator precedence issues:
-```c
-#define GM_CACHE_LINE_PAD(n)                                    \
-    ((((n) + (GM_CACHE_LINE_SIZE) - 1) / (GM_CACHE_LINE_SIZE) * \
-      (GM_CACHE_LINE_SIZE)) -                                   \
-     (n))
-```
+* When defining macros with parameters, enclose all parameter usages and the entire macro expression in parentheses to avoid operator precedence issues。
 * Prefer `static inline` functions over function-like macros whenever feasible.
 
 ### 5.5 Array Bounds and Restrict Qualifiers

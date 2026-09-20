@@ -36,56 +36,6 @@ extern "C" const char *__asan_default_options() {
 }
 #endif
 
-// =================================== Macro ===================================
-
-// Verifies that a size of exactly zero correctly evaluates to needing zero
-// bytes of padding.
-TEST(CacheLinePadTest, ZeroSize) { EXPECT_EQ(GM_CACHE_LINE_PAD(0), 0); }
-
-// Verifies that sizes that are exact multiples of the cache line size require
-// no additional padding.
-TEST(CacheLinePadTest, ExactMultiple) {
-    EXPECT_EQ(GM_CACHE_LINE_PAD(GM_CACHE_LINE_SIZE), 0);
-    EXPECT_EQ(GM_CACHE_LINE_PAD(GM_CACHE_LINE_SIZE * 2), 0);
-    EXPECT_EQ(GM_CACHE_LINE_PAD(GM_CACHE_LINE_SIZE * 10), 0);
-}
-
-// Verifies that a single byte allocation forces almost an entire cache line of
-// padding to reach the next boundary.
-TEST(CacheLinePadTest, SmallValue) {
-    EXPECT_EQ(GM_CACHE_LINE_PAD(1), GM_CACHE_LINE_SIZE - 1);
-}
-
-// Verifies the upper boundary condition where the size falls exactly one byte
-// short of a full cache line multiple.
-TEST(CacheLinePadTest, OneByteUnder) {
-    EXPECT_EQ(GM_CACHE_LINE_PAD(GM_CACHE_LINE_SIZE - 1), 1);
-    EXPECT_EQ(GM_CACHE_LINE_PAD((GM_CACHE_LINE_SIZE * 3) - 1), 1);
-}
-
-// Verifies the lower boundary condition where the size spills exactly one byte
-// over a full cache line multiple.
-TEST(CacheLinePadTest, OneByteOver) {
-    EXPECT_EQ(GM_CACHE_LINE_PAD(GM_CACHE_LINE_SIZE + 1),
-              GM_CACHE_LINE_SIZE - 1);
-    EXPECT_EQ(GM_CACHE_LINE_PAD((GM_CACHE_LINE_SIZE * 4) + 1),
-              GM_CACHE_LINE_SIZE - 1);
-}
-
-// Verifies that the macro safely handles larger memory block padding math
-// without truncating or evaluating poorly.
-TEST(CacheLinePadTest, LargeMemoryBlock) {
-    // 1MB memory block plus half a cache line offset to verify boundary
-    // arithmetic at higher scales
-    const size_t one_mb = 1 << 20;
-    ASSERT_TRUE(one_mb % GM_CACHE_LINE_SIZE == 0)
-        << "GM_CACHE_LINE_SIZE == " << GM_CACHE_LINE_SIZE
-        << " does not divide 1 MiB. This is very likely the result of a bug "
-           "in the cache line size detection program.";
-    const size_t large_size = one_mb + (GM_CACHE_LINE_SIZE / 2);
-    EXPECT_EQ(GM_CACHE_LINE_PAD(large_size), GM_CACHE_LINE_SIZE / 2);
-}
-
 // ================================= Allocator =================================
 
 // Verifies that populating default options behaves as specified.
