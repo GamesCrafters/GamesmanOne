@@ -362,12 +362,6 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(Int64HashMapTest, IteratesOverEmptyMap) {
     Int64HashMap map;
     Int64HashMapInit(&map, 0.5);
-
-    // Force allocation so Begin/Next have something to iterate over.
-    Int64HashMapSet(&map, 1, 1);
-    Int64HashMapDestroy(&map);
-    Int64HashMapInit(&map, 0.5);
-
     Int64HashMapIterator it = Int64HashMapBegin(&map);
     int64_t key, value;
 

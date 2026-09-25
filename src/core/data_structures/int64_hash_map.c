@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing (open addressing) int64_t to int64_t hash map.
- * @version 1.0.4
- * @date 2025-04-26
+ * @brief `Int64HashMap` implementation (cold-path functions).
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,147 +32,64 @@
 #include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
 
-static int64_t Hash(int64_t key, int64_t capacity_mask) {
-    return (int64_t)Splitmix64((uint64_t)key) & capacity_mask;
-}
+static bool ExpandTo(Int64HashMap *map, uint64_t new_mask) {
+    uint64_t new_capacity = new_mask + 1;
 
-static int64_t NextIndex(int64_t index, int64_t capacity_mask) {
-    return (index + 1) & capacity_mask;
-}
-
-void Int64HashMapInit(Int64HashMap *map, double max_load_factor) {
-    Int64HashMapInitAllocator(map, max_load_factor, NULL);
-}
-
-void Int64HashMapInitAllocator(Int64HashMap *map, double max_load_factor,
-                               GamesmanAllocator *allocator) {
-    map->allocator = GamesmanAllocatorAddRef(allocator);
-    map->entries = NULL;
-    map->capacity_mask = -1;
-    map->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    map->max_load_factor = max_load_factor;
-}
-
-void Int64HashMapDestroy(Int64HashMap *map) {
-    GamesmanAllocatorDeallocate(map->allocator, map->entries);
-    GamesmanAllocatorRelease(map->allocator);
-    map->allocator = NULL;
-    map->entries = NULL;
-    map->capacity_mask = -1;
-    map->size = 0;
-}
-
-static Int64HashMapIterator NewIterator(const Int64HashMap *map,
-                                        int64_t index) {
-    Int64HashMapIterator iterator;
-    iterator.map = map;
-    iterator.index = index;
-    return iterator;
-}
-
-static Int64HashMapIterator NewInvalidIterator(const Int64HashMap *map) {
-    return NewIterator(map, map->capacity_mask + 1);
-}
-
-Int64HashMapIterator Int64HashMapGet(const Int64HashMap *map, int64_t key) {
-    // Edge case: return invalid iterator if map is empty.
-    if (map->capacity_mask < 0) return NewIterator(map, -1);
-
-    int64_t index = Hash(key, map->capacity_mask);
-    while (map->entries[index].used) {
-        if (map->entries[index].key == key) {
-            return NewIterator(map, index);
-        }
-        index = NextIndex(index, map->capacity_mask);
+    // Allocate new key array.
+    int64_t *__restrict new_keys = (int64_t *)GamesmanAllocatorAllocate(
+        map->allocator, new_capacity * sizeof(int64_t));
+    if (new_keys == NULL) {
+        return false;
     }
 
-    return NewInvalidIterator(map);
-}
+    // Allocate new value array.
+    int64_t *__restrict new_values = (int64_t *)GamesmanAllocatorAllocate(
+        map->allocator, new_capacity * sizeof(int64_t));
+    if (new_values == NULL) {
+        GamesmanAllocatorDeallocate(map->allocator, new_keys);
+        return false;
+    }
 
-static bool Expand(Int64HashMap *map, int64_t new_mask) {
-    size_t alloc_size = (new_mask + 1) * sizeof(Int64HashMapEntry);
-    Int64HashMapEntry *new_entries =
-        (Int64HashMapEntry *)GamesmanAllocatorAllocate(map->allocator,
-                                                       alloc_size);
-    if (new_entries == NULL) return false;
-    memset(new_entries, 0, alloc_size);
+    // Initialize all key slots to the sentinel.
+    for (uint64_t i = 0; i < new_capacity; ++i) {
+        new_keys[i] = INT64_HASH_MAP_EMPTY_KEY;
+    }
 
-    for (int64_t i = 0; i <= map->capacity_mask; ++i) {
-        if (map->entries[i].used) {
-            int64_t new_index = Hash(map->entries[i].key, new_mask);
-            while (new_entries[new_index].used) {
-                new_index = NextIndex(new_index, new_mask);
+    // Hoist old pointers to locals.
+    int64_t *__restrict old_keys = map->keys;
+    int64_t *__restrict old_values = map->values;
+
+    // Rehash existing entries if any.
+    if (old_keys != NULL) {
+        uint64_t old_mask = map->mask;
+        for (uint64_t i = 0; i <= old_mask; ++i) {
+            int64_t key = old_keys[i];
+            if (key != INT64_HASH_MAP_EMPTY_KEY) {
+                uint64_t new_index = Splitmix64(key) & new_mask;
+                while (new_keys[new_index] != INT64_HASH_MAP_EMPTY_KEY) {
+                    new_index = (new_index + 1) & new_mask;
+                }
+                new_keys[new_index] = key;
+                new_values[new_index] = old_values[i];
             }
-            new_entries[new_index] = map->entries[i];
         }
     }
-    GamesmanAllocatorDeallocate(map->allocator, map->entries);
-    map->entries = new_entries;
-    map->capacity_mask = new_mask;
+
+    GamesmanAllocatorDeallocate(map->allocator, old_keys);
+    GamesmanAllocatorDeallocate(map->allocator, old_values);
+    map->keys = new_keys;
+    map->mask = new_mask;
+    map->max_size = (int64_t)((new_mask + 1) / map->inv_max_load_factor);
+    map->values = new_values;
 
     return true;
 }
 
-bool Int64HashMapSet(Int64HashMap *map, int64_t key, int64_t value) {
-    // Check if resizing is needed.
-    if (map->capacity_mask < 0) {
-        if (!Expand(map, 1)) return false;
-    } else if ((double)(map->size + 1) >
-               (double)(map->capacity_mask + 1) * map->max_load_factor) {
-        int64_t new_capacity_mask = (map->capacity_mask << 1) | 1;
-        if (!Expand(map, new_capacity_mask)) return false;
-    }
+bool Int64HashMapInternalExpand(Int64HashMap *map) {
+    // If keys is non-NULL, this is a normal expansion step;
+    // if keys is NULL, this is the lazy initialization step.
+    // Initial capacity is 128, so the mask is 127 (0x7F).
+    uint64_t new_mask = map->keys ? ((map->mask << 1) | 1ULL) : 0x7F;
 
-    // Set value at key.
-    int64_t index = Hash(key, map->capacity_mask);
-    while (map->entries[index].used) {
-        if (map->entries[index].key == key) {
-            map->entries[index].value = value;
-            return true;
-        }
-        index = NextIndex(index, map->capacity_mask);
-    }
-    map->entries[index].key = key;
-    map->entries[index].value = value;
-    map->entries[index].used = true;
-    ++map->size;
-
-    return true;
-}
-
-bool Int64HashMapContains(const Int64HashMap *map, int64_t key) {
-    Int64HashMapIterator it = Int64HashMapGet(map, key);
-    return Int64HashMapIteratorIsValid(&it);
-}
-
-Int64HashMapIterator Int64HashMapBegin(Int64HashMap *map) {
-    return (Int64HashMapIterator){.map = map, .index = -1};
-}
-
-int64_t Int64HashMapIteratorKey(const Int64HashMapIterator *it) {
-    return it->map->entries[it->index].key;
-}
-
-int64_t Int64HashMapIteratorValue(const Int64HashMapIterator *it) {
-    return it->map->entries[it->index].value;
-}
-
-bool Int64HashMapIteratorIsValid(const Int64HashMapIterator *it) {
-    return it->index >= 0 && it->index <= it->map->capacity_mask;
-}
-
-bool Int64HashMapIteratorNext(Int64HashMapIterator *it, int64_t *key,
-                              int64_t *value) {
-    const Int64HashMap *map = it->map;
-    while (++it->index <= map->capacity_mask) {
-        if (map->entries[it->index].used) {
-            if (key) *key = map->entries[it->index].key;
-            if (value) *value = map->entries[it->index].value;
-            return true;
-        }
-    }
-
-    return false;
+    return ExpandTo(map, new_mask);
 }
