@@ -174,6 +174,18 @@ static inline int64_t Int64HashMapSize(const Int64HashMap *map) {
 // =========================== Insertion and Lookup ===========================
 
 /**
+ * @brief [INTERNAL] Expands `map` to a strictly larger capacity.
+ *
+ * @warning This is an internal function exposed for optimization purposes.
+ * Users of this library should never call this function directly.
+ *
+ * @param map Map to expand.
+ * @retval true on success.
+ * @retval false otherwise.
+ */
+bool Int64HashMapInternalExpand(Int64HashMap *map);
+
+/**
  * @brief Sets the value associated with `key` in `map` to `value`.
  *
  * @details Creates a new entry if `key` does not exist in `map`. If `key`
@@ -191,8 +203,6 @@ static inline int64_t Int64HashMapSize(const Int64HashMap *map) {
 static inline bool Int64HashMapSet(Int64HashMap *map, int64_t key,
                                    int64_t value) {
     if (map->size >= map->max_size) {
-        // Declared in int64_hash_map.c; handles parallel values rehashing.
-        bool Int64HashMapInternalExpand(Int64HashMap * map);
         if (!Int64HashMapInternalExpand(map)) {
             return false;
         }
