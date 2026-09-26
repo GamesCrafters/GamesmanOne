@@ -5,6 +5,7 @@ add_library_test(data_structures_test data_structures
     cstring_test.cpp
     hash_test.cpp
     int64_array_test.cpp
+    int64_hash_map_test.cpp
     int64_hash_set_test.cpp
     int64_queue_test.cpp
     int64_static_hash_set_test.cpp

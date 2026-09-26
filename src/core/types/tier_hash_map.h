@@ -3,7 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing Tier hash map that maps Tiers to 64-bit signed
+ * @brief Linear-probing `Tier` hash map that maps `Tier`s to 64-bit signed
  * integers.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
@@ -33,45 +33,45 @@
 #include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
-/** @brief Linear-probing Tier to int64_t hash map using Int64HashMap. */
+/**
+ * @brief Linear-probing `Tier` to `int64_t` hash map using `Int64HashMap`.
+ *
+ * @warning This typedef should be treated as opaque. Use accessor and mutator
+ * functions to interact with the hash map.
+ */
 typedef Int64HashMap TierHashMap;
 
-/** @brief Iterator for TierHashMap. */
+/**
+ * @brief Iterator for `TierHashMap`.
+ *
+ * @warning This typedef should be treated as opaque. Use accessor and mutator
+ * functions to interact with the iterator.
+ */
 typedef Int64HashMapIterator TierHashMapIterator;
 
 /**
- * @brief Initializes Tier hash map MAP to an empty map with maximum load
- * factor MAX_LOAD_FACTOR.
+ * @brief Initializes the given `map`.
  *
- * @param map Map to initialize.
- * @param max_load_factor Set maximum load factor of MAP to this value. The hash
- * map will automatically expand its capacity if (double)size/capacity is
- * greater than this value. A small max_load_factor trades memory for
- * speed whereas a large max_load_factor trades speed for memory. This value is
- * restricted to be in the range [0.25, 0.75]. If the user passes a
- * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
- * value will be set to 0.25 and 0.75, respectively, regardless of the
- * user-specified value.
+ * @details No memory is allocated until the first insertion or reservation.
+ * The `max_load_factor` is clamped to [0.5, 0.8].
+ *
+ * @param[out] map The `TierHashMap` to initialize.
+ * @param[in] max_load_factor The maximum load factor, clamped to [0.5, 0.8].
  */
 static inline void TierHashMapInit(TierHashMap *map, double max_load_factor) {
     Int64HashMapInit(map, max_load_factor);
 }
 
 /**
- * @brief Initializes the given \p map to an empty map with maximum load
- * factor \p max_load_factor using the given memory \p allocator .
+ * @brief Initializes the given `map` using the given memory `allocator`.
  *
- * @param map Map to initialize.
- * @param max_load_factor Set maximum load factor of \p map to this value. The
- * hash map will automatically expand its capacity if (double)size/capacity is
- * greater than this value. A small max_load_factor trades memory for
- * speed whereas a large max_load_factor trades speed for memory. This value is
- * restricted to be in the range [0.25, 0.75]. If the user passes a
- * max_load_factor that is smaller than 0.25 or greater than 0.75, the internal
- * value will be set to 0.25 and 0.75, respectively, regardless of the
- * user-specified value.
- * @param allocator Memory allocator to use. If \c NULL is passed, the effect is
- * equivalent to calling TierHashMapInit.
+ * @details No memory is allocated until the first insertion or reservation.
+ * The `max_load_factor` is clamped to [0.5, 0.8]. If `allocator` is `NULL`,
+ * the effect is equivalent to calling `TierHashMapInit`.
+ *
+ * @param[out] map The `TierHashMap` to initialize.
+ * @param[in] max_load_factor The maximum load factor, clamped to [0.5, 0.8].
+ * @param[in] allocator Memory allocator to use, or `NULL` for default.
  */
 static inline void TierHashMapInitAllocator(TierHashMap *map,
                                             double max_load_factor,
@@ -79,109 +79,129 @@ static inline void TierHashMapInitAllocator(TierHashMap *map,
     Int64HashMapInitAllocator(map, max_load_factor, allocator);
 }
 
-/** @brief Destroys the Tier hash map MAP. */
+/**
+ * @brief Frees the memory associated with the hash map and resets its state.
+ *
+ * @param[in,out] map The `TierHashMap` to destroy.
+ */
 static inline void TierHashMapDestroy(TierHashMap *map) {
     Int64HashMapDestroy(map);
 }
 
 /**
- * @brief Returns an iterator to the MAP entry containing the given KEY.
- * Returns an invalid iterator if KEY is not found in MAP. The user should
- * test if the iterator is valid using TierHashMapIteratorIsValid.
+ * @brief Returns an iterator pointing to the entry with the given `key` in
+ * `map`, or an invalid iterator if `key` is not found.
  *
- * @param map Tier hash map to get the entry from.
- * @param key Tier value as key to the desired entry.
- * @return TierHashMapIterator pointing to the entry with KEY, or invalid
- * if KEY is not found in MAP.
+ * @details Use `TierHashMapIteratorIsValid` to check whether `key` was found.
+ *
+ * @param[in] map The `TierHashMap` to search.
+ * @param[in] key The key to search for.
+ *
+ * @return A `TierHashMapIterator` pointing to the entry with `key`, or an
+ * invalid iterator if `key` is not found.
  */
 static inline TierHashMapIterator TierHashMapGet(TierHashMap *map, Tier key) {
     return Int64HashMapGet(map, key);
 }
 
 /**
- * @brief Sets the entry with key equal to TIER in MAP to the given VALUE and
- * returns true. Creates a new entry if TIER does not exist in MAP. If the
- * operation fails for any reason, MAP remains unchanged and the function
- * returns false.
+ * @brief Sets the value associated with `tier` in `map` to `value`.
  *
- * @param map Destination hash map.
- * @param tier Tier as the key to the entry.
- * @param value Value of the entry.
- * @return true on success,
- * @return false otherwise.
+ * @details Creates a new entry if `tier` does not exist in `map`. If `tier`
+ * already exists, its value is updated to `value`. If the operation fails for
+ * any reason, `map` remains unchanged.
+ *
+ * @param[in,out] map The `TierHashMap` to modify.
+ * @param[in] tier The key of the entry.
+ * @param[in] value The value to associate with `tier`.
+ *
+ * @retval true The entry was successfully set.
+ * @retval false Memory allocation failed during expansion.
  */
 static inline bool TierHashMapSet(TierHashMap *map, Tier tier, int64_t value) {
     return Int64HashMapSet(map, tier, value);
 }
 
 /**
- * @brief Returns true if the given MAP contains an entry with key equal to
- * TIER, or false otherwise.
+ * @brief Returns whether `map` contains an entry with the given `tier`.
+ *
+ * @param[in] map The `TierHashMap` to search.
+ * @param[in] tier The key to search for.
+ *
+ * @retval true The `tier` is present in the map.
+ * @retval false The `tier` is not present, or the map is not initialized.
  */
 static inline bool TierHashMapContains(const TierHashMap *map, Tier tier) {
     return Int64HashMapContains(map, tier);
 }
 
 /**
- * @brief Returns an invalid iterator to the entry before the first entry of
- * MAP.
+ * @brief Returns an iterator positioned before the first entry of `map`.
  *
- * @note This function is designed to be used in conjunction with
- * TierHashMapIteratorNext to iterate through all the entries in the Tier hash
- * map.
+ * @details This function is designed to be used with `TierHashMapIteratorNext`
+ * to iterate through all entries in the hash map.
+ *
+ * @param[in] map The `TierHashMap` to iterate over.
+ *
+ * @return A `TierHashMapIterator` positioned before the first entry.
  */
 static inline TierHashMapIterator TierHashMapBegin(TierHashMap *map) {
     return Int64HashMapBegin(map);
 }
 
 /**
- * @brief Returns the Tier that was used as the key to the entry IT is pointing
- * to. The user should validate the iterator using TierHashMapIteratorIsValid
- * before calling this function. Calling this function on an invalid iterator
- * results in undefined behavior.
+ * @brief Returns the key of the entry that `it` is pointing to.
  *
- * @param it Tier hash map iterator.
- * @return Key to the entry.
+ * @warning Calling this function on an invalid iterator results in undefined
+ * behavior. Use `TierHashMapIteratorIsValid` to validate the iterator first.
+ *
+ * @param[in] it The `TierHashMapIterator` to read.
+ *
+ * @return The key of the entry.
  */
 static inline Tier TierHashMapIteratorKey(const TierHashMapIterator *it) {
     return Int64HashMapIteratorKey(it);
 }
 
 /**
- * @brief Returns the value of the entry IT is pointing to. The user should
- * validate the iterator using TierHashMapIteratorIsValid before calling this
- * function. Calling this function on an invalid iterator results in undefined
- * behavior.
+ * @brief Returns the value of the entry that `it` is pointing to.
  *
- * @param it Tier hash map iterator.
- * @return Value of the entry.
+ * @warning Calling this function on an invalid iterator results in undefined
+ * behavior. Use `TierHashMapIteratorIsValid` to validate the iterator first.
+ *
+ * @param[in] it The `TierHashMapIterator` to read.
+ *
+ * @return The value of the entry.
  */
 static inline int64_t TierHashMapIteratorValue(const TierHashMapIterator *it) {
     return Int64HashMapIteratorValue(it);
 }
 
-/** @brief Returns true if the given IT-erator is valid, or false otherwise. */
+/**
+ * @brief Returns whether the given iterator `it` is valid.
+ *
+ * @param[in] it The `TierHashMapIterator` to validate.
+ *
+ * @retval true The iterator points to a valid entry.
+ * @retval false The iterator is invalid.
+ */
 static inline bool TierHashMapIteratorIsValid(const TierHashMapIterator *it) {
     return Int64HashMapIteratorIsValid(it);
 }
 
 /**
- * @brief Moves iterator IT to the next valid entry inside the Tier hash map
- * that IT was initialized with, sets TIER to the key and VALUE to the value of
- * that next entry, and returns true. Sets IT to an invalid state and returns
- * false if no valid next entry exists.
+ * @brief Advances `iterator` to the next valid entry and returns `true`, or
+ * returns `false` if no more entries exist.
  *
- * @note This function is designed to be used in conjunction with
- * TierHashMapBegin to iterate through all entries in the Tier hash map. Calling
- * this function on an uninitialized iterator results in undefined behavior.
+ * @details This function is designed to be used with `TierHashMapBegin` to
+ * iterate through all entries in the hash map.
  *
- * @param iterator Initialized iterator.
- * @param tier Pointer to enough space to hold a Tier object, or NULL if the
- * key to the next entry is not needed.
- * @param value Pointer to enough space to hold an int64_t object, or NULL if
- * the value to the next entry is not needed.
- * @return true if next entry exists,
- * @return false otherwise.
+ * @param[in,out] iterator The `TierHashMapIterator` to advance.
+ * @param[out] tier Pointer to receive the key, or `NULL` if not needed.
+ * @param[out] value Pointer to receive the value, or `NULL` if not needed.
+ *
+ * @retval true The iterator was advanced to a valid entry.
+ * @retval false No more entries exist.
  */
 static inline bool TierHashMapIteratorNext(TierHashMapIterator *iterator,
                                            Tier *tier, int64_t *value) {
