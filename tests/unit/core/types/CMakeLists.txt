@@ -7,6 +7,7 @@ target_sources(gamesman_test PRIVATE
     tier_array_test.cpp
     tier_hash_map_test.cpp
     tier_hash_set_test.cpp
+    tier_position_array_test.cpp
     tier_position_hash_set_test.cpp
     tier_position_static_hash_set_test.cpp
     tier_stack_test.cpp

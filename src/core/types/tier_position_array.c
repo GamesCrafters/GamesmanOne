@@ -28,8 +28,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <string.h>
 
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 void TierPositionArrayInit(TierPositionArray *array) {
@@ -39,7 +40,7 @@ void TierPositionArrayInit(TierPositionArray *array) {
 }
 
 void TierPositionArrayDestroy(TierPositionArray *array) {
-    free(array->array);
+    GamesmanFree(array->array);
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
@@ -47,21 +48,29 @@ void TierPositionArrayDestroy(TierPositionArray *array) {
 
 static bool TierPositionArrayExpand(TierPositionArray *array) {
     int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
-    TierPosition *new_array = (TierPosition *)realloc(
-        array->array, new_capacity * sizeof(TierPosition));
-    if (!new_array) return false;
+    TierPosition *new_array =
+        (TierPosition *)GamesmanMalloc(new_capacity * sizeof(TierPosition));
+    if (!new_array) {
+        return false;
+    }
+
+    memcpy(new_array, array->array, array->capacity * sizeof(TierPosition));
+    GamesmanFree(array->array);
     array->array = new_array;
     array->capacity = new_capacity;
+
     return true;
 }
 
 bool TierPositionArrayAppend(TierPositionArray *array,
                              TierPosition tier_position) {
     if (array->size == array->capacity) {
-        if (!TierPositionArrayExpand(array)) return false;
+        if (!TierPositionArrayExpand(array)) {
+            return false;
+        }
     }
-    assert(array->size < array->capacity);
     array->array[array->size++] = tier_position;
+
     return true;
 }
 
