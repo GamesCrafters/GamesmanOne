@@ -1,3 +1,5 @@
+add_subdirectory(uwapi)
+
 target_sources(gamesman_test PRIVATE
     move_array_test.cpp
     position_array_test.cpp
