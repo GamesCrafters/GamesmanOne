@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of PartmoveArray.
- * @version 1.0.0
- * @date 2025-05-26
+ * @brief Implementation of `PartmoveArray`.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -23,15 +21,17 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "core/types/uwapi/partmove_array.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "core/data_structures/cstring.h"
+#include "core/gamesman_memory.h"
 #include "core/types/gamesman_status.h"
 #include "core/types/uwapi/partmove.h"
 
@@ -41,20 +41,25 @@ void PartmoveArrayDestroy(PartmoveArray *pa) {
     for (int64_t i = 0; i < pa->size; ++i) {
         PartMoveDestroy(&pa->array[i]);
     }
-    free(pa->array);
+    GamesmanFree(pa->array);
     memset(pa, 0, sizeof(*pa));
 }
 
-static int PartmoveArrayExpand(PartmoveArray *pa) {
+static bool PartmoveArrayExpand(PartmoveArray *pa) {
     int64_t new_capacity = (pa->capacity == 0) ? 1 : pa->capacity * 2;
     Partmove *new_array =
-        (Partmove *)realloc(pa->array, new_capacity * sizeof(Partmove));
-    if (new_array == NULL) return 1;
+        (Partmove *)GamesmanMalloc(new_capacity * sizeof(Partmove));
+    if (new_array == NULL) {
+        return false;
+    }
+
+    memcpy(new_array, pa->array, pa->capacity * sizeof(Partmove));
+    GamesmanFree(pa->array);
 
     pa->array = new_array;
     pa->capacity = new_capacity;
 
-    return 0;
+    return true;
 }
 
 int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
@@ -62,10 +67,10 @@ int PartmoveArrayEmplaceBack(PartmoveArray *pa, CString *autogui_move,
                              CString *full) {
     // Make sure there is enough space for the new entry in PA.
     if (pa->size == pa->capacity) {
-        int error = PartmoveArrayExpand(pa);
-        if (error) return kMallocFailureError;
+        if (!PartmoveArrayExpand(pa)) {
+            return kMallocFailureError;
+        }
     }
-    assert(pa->size < pa->capacity);
 
     CStringInitMove(&pa->array[pa->size].autogui_move, autogui_move);
     CStringInitMove(&pa->array[pa->size].formal_move, formal_move);
