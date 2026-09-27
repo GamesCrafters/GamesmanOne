@@ -17,7 +17,7 @@ extern "C" {
 #include "core/types/simd.h"
 }
 
-// ============================== U64x2Equal ==============================
+// ================================ U64x2Equal ================================
 
 // Verifies that U64x2Equal returns true for identical vectors.
 TEST(SimdTest, U64x2Equal_Identical) {
@@ -53,7 +53,7 @@ TEST(SimdTest, U64x2Equal_DiffBoth) {
     EXPECT_FALSE(U64x2Equal(a, b));
 }
 
-// ================================ PextU64 ================================
+// ================================== PextU64 ==================================
 
 // Verifies PextU64 behavior with simple masks.
 TEST(SimdTest, PextU64_Basic) {
@@ -93,7 +93,7 @@ TEST(SimdTest, PextU64_ComplexPattern) {
     EXPECT_EQ(PextU64(val, val), 0xFFFFFFFFULL);  // Extracts all 32 1s
 }
 
-// ================================ PdepU64 ================================
+// ================================== PdepU64 ==================================
 
 // Verifies PdepU64 behavior with simple masks.
 TEST(SimdTest, PdepU64_Basic) {
@@ -131,7 +131,7 @@ TEST(SimdTest, PdepU64_ComplexPattern) {
     EXPECT_EQ(PdepU64(val, mask), mask);
 }
 
-// ================================ BlsrU64 ================================
+// ================================== BlsrU64 ==================================
 
 // Verifies BlsrU64 clears the lowest set bit.
 TEST(SimdTest, BlsrU64_Basic) {
@@ -154,7 +154,7 @@ TEST(SimdTest, BlsrU64_AllBits) {
 // Verifies BlsrU64 when value is 0 (edge case, should return 0).
 TEST(SimdTest, BlsrU64_Zero) { EXPECT_EQ(BlsrU64(0), 0); }
 
-// ================================ BlsiU64 ================================
+// ================================== BlsiU64 ==================================
 
 // Verifies BlsiU64 extracts the lowest set bit.
 TEST(SimdTest, BlsiU64_Basic) {
