@@ -12,4 +12,5 @@ target_sources(gamesman_test PRIVATE
     tier_position_static_hash_set_test.cpp
     tier_queue_test.cpp
     tier_stack_test.cpp
+    tier_to_ptr_chained_hash_map_test.cpp
 )
