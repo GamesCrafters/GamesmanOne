@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Implementation of the GameVariant type.
- * @version 1.1.0
- * @date 2025-05-11
+ * @brief Implementation of the `GameVariant` type.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,17 +24,13 @@
 
 #include "core/types/game/game_variant.h"
 
-#include <stddef.h>
-
 #include "core/data_structures/int64_array.h"
-
-static int GameVariantGetNumOptions(const GameVariant *variant);
-
-// -----------------------------------------------------------------------------
 
 int GameVariantGetNumVariants(const GameVariant *variant) {
     int ret = 1;
-    if (variant == NULL) return ret;
+    if (!variant) {
+        return ret;
+    }
 
     for (int i = 0; variant->options[i].num_choices > 0; ++i) {
         ret *= variant->options[i].num_choices;
@@ -46,7 +40,9 @@ int GameVariantGetNumVariants(const GameVariant *variant) {
 }
 
 int GameVariantToIndex(const GameVariant *variant) {
-    if (variant == NULL) return 0;
+    if (!variant) {
+        return 0;
+    }
 
     int ret = 0;
     for (int i = 0; variant->options[i].num_choices > 0; ++i) {
@@ -56,11 +52,23 @@ int GameVariantToIndex(const GameVariant *variant) {
     return ret;
 }
 
+// Assumes `variant` is not `NULL`.
+static int GameVariantGetNumOptions(const GameVariant *variant) {
+    int ret = 0;
+    while (variant->options[ret].num_choices > 0) {
+        ++ret;
+    }
+
+    return ret;
+}
+
 Int64Array VariantIndexToSelections(int index, const GameVariant *variant) {
     int num_options = GameVariantGetNumOptions(variant);
     Int64Array ret;
     Int64ArrayInit(&ret);
-    if (!Int64ArrayResize(&ret, num_options)) return ret;
+    if (!Int64ArrayResize(&ret, num_options)) {
+        return ret;
+    }
 
     for (int i = num_options - 1; i >= 0; --i) {
         int selection = index % variant->options[i].num_choices;
@@ -68,16 +76,5 @@ Int64Array VariantIndexToSelections(int index, const GameVariant *variant) {
         index /= variant->options[i].num_choices;
     }
 
-    return ret;
-}
-
-// -----------------------------------------------------------------------------
-
-// Assumes VARIANT is not NULL.
-static int GameVariantGetNumOptions(const GameVariant *variant) {
-    int ret = 0;
-    while (variant->options[ret].num_choices > 0) {
-        ++ret;
-    }
     return ret;
 }
