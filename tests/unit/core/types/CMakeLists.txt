@@ -1,3 +1,4 @@
+add_subdirectory(game)
 add_subdirectory(uwapi)
 
 target_sources(gamesman_test PRIVATE
