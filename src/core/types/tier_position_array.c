@@ -54,7 +54,9 @@ static bool TierPositionArrayExpand(TierPositionArray *array) {
         return false;
     }
 
-    memcpy(new_array, array->array, array->capacity * sizeof(TierPosition));
+    if (array->capacity > 0) {
+        memcpy(new_array, array->array, array->capacity * sizeof(TierPosition));
+    }
     GamesmanFree(array->array);
     array->array = new_array;
     array->capacity = new_capacity;
