@@ -53,7 +53,9 @@ static bool PartmoveArrayExpand(PartmoveArray *pa) {
         return false;
     }
 
-    memcpy(new_array, pa->array, pa->capacity * sizeof(Partmove));
+    if (pa->capacity > 0) {
+        memcpy(new_array, pa->array, pa->capacity * sizeof(Partmove));
+    }
     GamesmanFree(pa->array);
 
     pa->array = new_array;
