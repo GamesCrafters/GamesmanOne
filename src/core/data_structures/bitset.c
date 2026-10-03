@@ -41,7 +41,10 @@ struct Bitset {
 };
 
 static int64_t NumBitsToNumBlocks(int64_t num_bits) {
-    return (num_bits + kBitsPerBlock - 1) / kBitsPerBlock;
+    if (num_bits == 0) {
+        return 0;
+    }
+    return (num_bits - 1) / kBitsPerBlock + 1;
 }
 
 size_t BitsetMemRequired(int64_t num_bits) {
