@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The generic GameVariant type.
- * @version 1.1.0
- * @date 2025-05-11
+ * @brief The generic `GameVariant` type.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -36,18 +34,18 @@
  * @details A game variant is determined by a set of variant options. Each
  * variant option decides some aspect of the game rule. The game developer is
  * responsible for providing the possible choices for each one of the variant
- * options as strings (see GameVariantOption::choices). The user of GAMESMAN
+ * options as strings (see `GameVariantOption::choices`). The user of GAMESMAN
  * interactive can then set the variant by selecting a value for each option
- * using the SetVariantOption method provided by the game module.
+ * using the `SetVariantOption` method provided by the game module.
  *
- * @example A Tic-Tac-Toe game can be generalized and played on a M by N board
+ * Example: A Tic-Tac-Toe game can be generalized and played on a M by N board
  * with a goal of connecting K pieces in a row. Then, we can have three game
  * variant options "dimension M", "dimension N", and "number of pieces to
  * connect (K)." A board too small can make the game less interesting, whereas a
  * board too large can render the game unsolvable. Therefore, the game developer
  * decides to allow M, N, and K to be all within the range [2, 5], and sets the
  * corresponding choices to {"2", "3", "4", "5"}, for each one of the three
- * GameVariantOptions.
+ * `GameVariantOption`s.
  */
 typedef struct GameVariant {
     /**
@@ -65,32 +63,34 @@ typedef struct GameVariant {
 
 /**
  * @brief Returns the total number of variants that can be created given the
- * options in \p variant .
+ * options in `variant`.
  *
- * @param variant A game variant that belongs to some game.
+ * @param[in] variant A game variant that belongs to some game.
+ *
  * @return Total number of variants that can be created.
  */
 int GameVariantGetNumVariants(const GameVariant *variant);
 
 /**
- * @brief Returns the index of the given game VARIANT according to its option
+ * @brief Returns the index of the given game variant according to its option
  * selections.
  *
- * @param variant A game variant that belongs to some game.
- * @return Index of the game variant or
- * @return 0 if VARIANT is NULL.
+ * @param[in] variant A game variant that belongs to some game.
+ *
+ * @return Index of the game variant, or 0 if `variant` is `NULL`.
  */
 int GameVariantToIndex(const GameVariant *variant);
 
 /**
  * @brief Returns an array of option selections that corresponds to the given
- * VARIANT, which is assumed to be non-NULL.
+ * variant index. `variant` is assumed to be non-`NULL`.
  *
- * @param index Index of the game variant.
- * @param variant A dummy variant object from which the options available for
- * that game is extracted.
+ * @param[in] index Index of the game variant.
+ * @param[in] variant A dummy variant object from which the options available
+ * for that game is extracted.
+ *
  * @return An array of option selections that corresponds to the given
- * VARIANT.
+ * variant index.
  */
 Int64Array VariantIndexToSelections(int index, const GameVariant *variant);
 

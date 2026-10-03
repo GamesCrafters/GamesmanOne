@@ -163,7 +163,10 @@ static int TierGetCanonicalParentPositionsFromReverseGraph(
     (void)parent_tier;
     PositionArray parents_array =
         ReverseGraphPopParentsOf(&reverse_graph, child);
-    memcpy(parents, parents_array.array, parents_array.size * sizeof(Position));
+    if (parents_array.size > 0) {
+        memcpy(parents, parents_array.array,
+               parents_array.size * sizeof(Position));
+    }
     int ret = (int)parents_array.size;
     PositionArrayDestroy(&parents_array);
 
