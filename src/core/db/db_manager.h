@@ -35,6 +35,8 @@
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
 
+extern const Database *db_manager_current_db;
+
 /**
  * @brief Initializes the database system and load the chosen DB module.
  *
@@ -65,7 +67,13 @@ int DbManagerInitDb(const Database *db, bool read_only,
  * @brief Finalizes the database system, freeing all dynamically allocated
  * space.
  */
-void DbManagerFinalizeDb(void);
+static inline void DbManagerFinalizeDb(void) {
+    if (db_manager_current_db) {
+        db_manager_current_db->Finalize();
+    }
+
+    db_manager_current_db = NULL;
+}
 
 // ----------------------------- Solving Interface -----------------------------
 
@@ -79,7 +87,9 @@ void DbManagerFinalizeDb(void);
  * @param size Number of positions in TIER.
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerCreateSolvingTier(Tier tier, int64_t size);
+static inline int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
+    return db_manager_current_db->CreateSolvingTier(tier, size);
+}
 
 /**
  * @brief Creates a new solving \p tier of size \p size positions that allows
@@ -92,7 +102,10 @@ int DbManagerCreateSolvingTier(Tier tier, int64_t size);
  * @return kSuccess on success,
  * @return non-zero error code otherwise.
  */
-int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
+static inline int DbManagerCreateConcurrentSolvingTier(Tier tier,
+                                                       int64_t size) {
+    return db_manager_current_db->CreateConcurrentSolvingTier(tier, size);
+}
 
 /**
  * @brief Flushes the solving tier in memory to disk.
@@ -105,7 +118,9 @@ int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size);
  * @param aux Auxiliary parameter.
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerFlushSolvingTier(void *aux);
+static inline int DbManagerFlushSolvingTier(void *aux) {
+    return db_manager_current_db->FlushSolvingTier(aux);
+}
 
 /**
  * @brief Frees the solving tier in memory. Does nothing if the solving tier has
@@ -115,7 +130,9 @@ int DbManagerFlushSolvingTier(void *aux);
  *
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerFreeSolvingTier(void);
+static inline int DbManagerFreeSolvingTier(void) {
+    return db_manager_current_db->FreeSolvingTier();
+}
 
 /**
  * @brief Sets the current game as solved.
@@ -125,7 +142,9 @@ int DbManagerFreeSolvingTier(void);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerSetGameSolved(void);
+static inline int DbManagerSetGameSolved(void) {
+    return db_manager_current_db->SetGameSolved();
+}
 
 /**
  * @brief Sets the value of POSITION in the solving tier to VALUE.
@@ -138,7 +157,9 @@ int DbManagerSetGameSolved(void);
  *
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerSetValue(Position position, Value value);
+static inline int DbManagerSetValue(Position position, Value value) {
+    return db_manager_current_db->SetValue(position, value);
+}
 
 /**
  * @brief Sets the remoteness of POSITION in the solving tier to REMOTENESS.
@@ -151,7 +172,9 @@ int DbManagerSetValue(Position position, Value value);
  *
  * @return int 0 on success, non-zero otherwise.
  */
-int DbManagerSetRemoteness(Position position, int remoteness);
+static inline int DbManagerSetRemoteness(Position position, int remoteness) {
+    return db_manager_current_db->SetRemoteness(position, remoteness);
+}
 
 /**
  * @brief Sets the \p value and \p remoteness of \p position in the solving
@@ -163,7 +186,11 @@ int DbManagerSetRemoteness(Position position, int remoteness);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
+static inline int DbManagerSetValueRemoteness(Position position, Value value,
+                                              int remoteness) {
+    return db_manager_current_db->SetValueRemoteness(position, value,
+                                                     remoteness);
+}
 
 /**
  * @brief Replaces the value and remoteness of \p position in the solving tier
@@ -185,10 +212,12 @@ int DbManagerSetValueRemoteness(Position position, Value value, int remoteness);
  * the original value-remoteness pair and the old pair is replaced;
  * @return \c false otherwise.
  */
-bool DbManagerMaximizeValueRemoteness(Position position, Value value,
-                                      int remoteness,
-                                      int (*compare)(Value v1, int r1, Value v2,
-                                                     int r2));
+static inline bool DbManagerMaximizeValueRemoteness(
+    Position position, Value value, int remoteness,
+    int (*compare)(Value v1, int r1, Value v2, int r2)) {
+    return db_manager_current_db->MaximizeValueRemoteness(position, value,
+                                                          remoteness, compare);
+}
 
 /**
  * @brief Subtracts one from the number of undecided children of \p position and
@@ -208,7 +237,9 @@ bool DbManagerMaximizeValueRemoteness(Position position, Value value,
  * subtraction, or
  * @return 0 if the operation is not performed.
  */
-int DbManagerDecrementNumUndecidedChildren(Position position);
+static inline int DbManagerDecrementNumUndecidedChildren(Position position) {
+    return db_manager_current_db->DecrementNumUndecidedChildren(position);
+}
 
 /**
  * @brief Sets the number of undecided children of \p position to zero and
@@ -227,7 +258,9 @@ int DbManagerDecrementNumUndecidedChildren(Position position);
  * or
  * @return 0 if the operation is not performed.
  */
-int DbManagerClearNumUndecidedChildren(Position position);
+static inline int DbManagerClearNumUndecidedChildren(Position position) {
+    return db_manager_current_db->ClearNumUndecidedChildren(position);
+}
 
 /**
  * @brief Returns the value of POSITION in the solving tier.
@@ -238,7 +271,9 @@ int DbManagerClearNumUndecidedChildren(Position position);
  * @note This function is thread-safe if the solving tier is created via
  * DbManagerCreateConcurrentSolvingTier.
  */
-Value DbManagerGetValue(Position position);
+static inline Value DbManagerGetValue(Position position) {
+    return db_manager_current_db->GetValue(position);
+}
 
 /**
  * @brief Returns the remoteness of POSITION in the solving tier.
@@ -249,7 +284,9 @@ Value DbManagerGetValue(Position position);
  * @note This function is thread-safe if the solving tier is created via
  * DbManagerCreateConcurrentSolvingTier.
  */
-int DbManagerGetRemoteness(Position position);
+static inline int DbManagerGetRemoteness(Position position) {
+    return db_manager_current_db->GetRemoteness(position);
+}
 
 /**
  * @brief Returns the number of undecided children of \p position if its value
@@ -267,7 +304,9 @@ int DbManagerGetRemoteness(Position position);
  * \c kUndecided , or
  * @return 0 otherwise.
  */
-int DbManagerGetNumUndecidedChildren(Position position);
+static inline int DbManagerGetNumUndecidedChildren(Position position) {
+    return db_manager_current_db->GetNumUndecidedChildren(position);
+}
 
 /**
  * @brief Returns the maximum number of segment buffers supported by the
@@ -275,7 +314,9 @@ int DbManagerGetNumUndecidedChildren(Position position);
  *
  * @return Maximum number of segment buffers supported.
  */
-int DbManagerSegmentationMaxNumBuffers(void);
+static inline int DbManagerSegmentationMaxNumBuffers(void) {
+    return db_manager_current_db->segmentation.MaxNumBuffers();
+}
 
 /**
  * @brief Make \p num_segments segment buffers available for solving the
@@ -288,8 +329,12 @@ int DbManagerSegmentationMaxNumBuffers(void);
  * @return \c kMallocFailureError on memory allocation failure, or
  * @return other non-zero error code otherwise.
  */
-int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
-                                       int64_t size);
+static inline int DbManagerSegmentationCreateBuffers(Tier tier,
+                                                     int num_segments,
+                                                     int64_t size) {
+    return db_manager_current_db->segmentation.CreateBuffers(tier, num_segments,
+                                                             size);
+}
 
 /**
  * @brief Loads the \p seg_idx -th segment from disk into the \p buf_idx
@@ -303,7 +348,9 @@ int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
  * failed to read the segment from disk, or
  * @return other non-zero error code otherwise.
  */
-int DbManagerSegmentationLoad(int buf_idx, int seg_idx);
+static inline int DbManagerSegmentationLoad(int buf_idx, int seg_idx) {
+    return db_manager_current_db->segmentation.Load(buf_idx, seg_idx);
+}
 
 /**
  * @brief Flushes the contents of the \p buf_idx -th segment buffer to
@@ -316,7 +363,9 @@ int DbManagerSegmentationLoad(int buf_idx, int seg_idx);
  * @return \c kFileSystemError if failed to write to disk, or
  * @return other non-zero error code otherwise.
  */
-int DbManagerSegmentationFlush(int buf_idx, int seg_idx);
+static inline int DbManagerSegmentationFlush(int buf_idx, int seg_idx) {
+    return db_manager_current_db->segmentation.Flush(buf_idx, seg_idx);
+}
 
 /**
  * @brief Deallocates all active segment buffers.
@@ -324,7 +373,9 @@ int DbManagerSegmentationFlush(int buf_idx, int seg_idx);
  * @return \c kSuccess on success, or
  * @return other non-zero error code otherwise.
  */
-int DbManagerSegmentationFreeBuffers(void);
+static inline int DbManagerSegmentationFreeBuffers(void) {
+    return db_manager_current_db->segmentation.FreeBuffers();
+}
 
 /**
  * @brief Returns the value of the position at the given \p offset
@@ -339,7 +390,9 @@ int DbManagerSegmentationFreeBuffers(void);
  * @return Value of the position at the given \p offset in the target
  * segment buffer.
  */
-Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset);
+static inline Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset) {
+    return db_manager_current_db->segmentation.GetValue(buf_idx, offset);
+}
 
 /**
  * @brief Returns the remoteness of the position at the given \p offset
@@ -354,7 +407,10 @@ Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset);
  * @return Remoteness of the position at the given \p offset in the
  * target segment buffer.
  */
-int DbManagerSegmentationGetRemoteness(int buf_idx, int64_t offset);
+static inline int DbManagerSegmentationGetRemoteness(int buf_idx,
+                                                     int64_t offset) {
+    return db_manager_current_db->segmentation.GetRemoteness(buf_idx, offset);
+}
 
 /**
  * @brief Sets the value and remoteness of the position at the given
@@ -369,8 +425,13 @@ int DbManagerSegmentationGetRemoteness(int buf_idx, int64_t offset);
  * @param value New value.
  * @param remoteness New remoteness.
  */
-void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
-                                             Value value, int remoteness);
+static inline void DbManagerSegmentationSetValueRemoteness(int buf_idx,
+                                                           int64_t offset,
+                                                           Value value,
+                                                           int remoteness) {
+    db_manager_current_db->segmentation.SetValueRemoteness(buf_idx, offset,
+                                                           value, remoteness);
+}
 
 /**
  * @brief Merges all \p num_segments segments on disk into the normal
@@ -385,7 +446,11 @@ void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
  * segment or saving the output failed, or
  * @return other non-zero error code otherwise.
  */
-int DbManagerSegmentationConsolidate(int64_t tier_size, int num_segments);
+static inline int DbManagerSegmentationConsolidate(int64_t tier_size,
+                                                   int num_segments) {
+    return db_manager_current_db->segmentation.Consolidate(tier_size,
+                                                           num_segments);
+}
 
 /**
  * @brief Returns whether there exists a checkpoint for \p tier. A
@@ -397,7 +462,9 @@ int DbManagerSegmentationConsolidate(int64_t tier_size, int num_segments);
  * @return \c true if there exists a checkpoint for \p tier, or
  * @return \c false otherwise.
  */
-bool DbManagerCheckpointExists(Tier tier);
+static inline bool DbManagerCheckpointExists(Tier tier) {
+    return db_manager_current_db->CheckpointExists(tier);
+}
 
 /**
  * @brief Saves a checkpoint for the current solving tier, including the
@@ -411,7 +478,10 @@ bool DbManagerCheckpointExists(Tier tier);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerCheckpointSave(const void *status, size_t status_size);
+static inline int DbManagerCheckpointSave(const void *status,
+                                          size_t status_size) {
+    return db_manager_current_db->CheckpointSave(status, status_size);
+}
 
 /**
  * @brief Creates an in-memory DB for solving of the given \p tier of size
@@ -431,8 +501,11 @@ int DbManagerCheckpointSave(const void *status, size_t status_size);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
-                            size_t status_size);
+static inline int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
+                                          size_t status_size) {
+    return db_manager_current_db->CheckpointLoad(tier, size, status,
+                                                 status_size);
+}
 
 /**
  * @brief Removes the checkpoint for \p tier if exists.
@@ -444,7 +517,9 @@ int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
  * @return \c kFileSystemError if no checkpoint is found for \p tier, or
  * @return any other non-zero error code on failure.
  */
-int DbManagerCheckpointRemove(Tier tier);
+static inline int DbManagerCheckpointRemove(Tier tier) {
+    return db_manager_current_db->CheckpointRemove(tier);
+}
 
 // ----------------------------- Loading Interface -----------------------------
 
@@ -458,7 +533,9 @@ int DbManagerCheckpointRemove(Tier tier);
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage in bytes.
  */
-size_t DbManagerTierMemUsage(Tier tier, int64_t size);
+static inline size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
+    return db_manager_current_db->TierMemUsage(tier, size);
+}
 
 /**
  * @brief Returns an upper bound, in bytes, on the amount of memory that
@@ -470,7 +547,9 @@ size_t DbManagerTierMemUsage(Tier tier, int64_t size);
  * @param size Size of \p tier in number of positions.
  * @return An upper bound on memory usage in bytes.
  */
-size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size);
+static inline size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
+    return db_manager_current_db->ConcurrentTierMemUsage(tier, size);
+}
 
 /**
  * @brief Loads the given \p tier of \p size positions into memory.
@@ -483,7 +562,9 @@ size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerLoadTier(Tier tier, int64_t size);
+static inline int DbManagerLoadTier(Tier tier, int64_t size) {
+    return db_manager_current_db->LoadTier(tier, size);
+}
 
 /**
  * @brief Unloads the given \p tier from memory if it was previously loaded.
@@ -493,7 +574,9 @@ int DbManagerLoadTier(Tier tier, int64_t size);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-int DbManagerUnloadTier(Tier tier);
+static inline int DbManagerUnloadTier(Tier tier) {
+    return db_manager_current_db->UnloadTier(tier);
+}
 
 /**
  * @brief Returns whether the given \p tier has been loaded.
@@ -503,7 +586,9 @@ int DbManagerUnloadTier(Tier tier);
  * @return \c kSuccess on success, or
  * @return non-zero error code otherwise.
  */
-bool DbManagerIsTierLoaded(Tier tier);
+static inline bool DbManagerIsTierLoaded(Tier tier) {
+    return db_manager_current_db->IsTierLoaded(tier);
+}
 
 /**
  * @brief Returns the value of position \p position in tier \p tier if
@@ -517,7 +602,9 @@ bool DbManagerIsTierLoaded(Tier tier);
  * @return The value of \p position in \p tier on success, or
  * @return \c kErrorValue otherwise.
  */
-Value DbManagerGetValueFromLoaded(Tier tier, Position position);
+static inline Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
+    return db_manager_current_db->GetValueFromLoaded(tier, position);
+}
 
 /**
  * @brief Returns the remoteness of position \p position in tier \p tier if
@@ -531,7 +618,10 @@ Value DbManagerGetValueFromLoaded(Tier tier, Position position);
  * @return The remoteness of \p position in \p tier on success, or
  * @return \c kErrorRemoteness otherwise.
  */
-int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
+static inline int DbManagerGetRemotenessFromLoaded(Tier tier,
+                                                   Position position) {
+    return db_manager_current_db->GetRemotenessFromLoaded(tier, position);
+}
 
 // ----------------------------- Probing Interface -----------------------------
 
@@ -540,14 +630,18 @@ int DbManagerGetRemotenessFromLoaded(Tier tier, Position position);
  *
  * @note This function is not thread-safe.
  */
-int DbManagerProbeInit(DbProbe *probe);
+static inline int DbManagerProbeInit(DbProbe *probe) {
+    return db_manager_current_db->ProbeInit(probe);
+}
 
 /**
  * @brief Destroys PROBE using the method provided by the current database.
  *
  * @note This function is not thread-safe.
  */
-int DbManagerProbeDestroy(DbProbe *probe);
+static inline int DbManagerProbeDestroy(DbProbe *probe) {
+    return db_manager_current_db->ProbeDestroy(probe);
+}
 
 /**
  * @brief Reads the value of TIER_POSITION in the current database from disk
@@ -563,7 +657,10 @@ int DbManagerProbeDestroy(DbProbe *probe);
  * given TIER has not been solved, the given POSITION is out of bounds, or any
  * other error occurred.
  */
-Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
+static inline Value DbManagerProbeValue(DbProbe *probe,
+                                        TierPosition tier_position) {
+    return db_manager_current_db->ProbeValue(probe, tier_position);
+}
 
 /**
  * @brief Reads the remoteness of TIER_POSITION in the current database from
@@ -579,7 +676,10 @@ Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position);
  * if the given TIER has not been solved, the given POSITION is out of bounds,
  * or any other error occurred.
  */
-int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
+static inline int DbManagerProbeRemoteness(DbProbe *probe,
+                                           TierPosition tier_position) {
+    return db_manager_current_db->ProbeRemoteness(probe, tier_position);
+}
 
 /**
  * @brief Returns the status of TIER.
@@ -593,7 +693,9 @@ int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position);
  * @return \c kDbTierStatusCheckError if an error occurred when checking the
  * status of TIER.
  */
-int DbManagerTierStatus(Tier tier);
+static inline int DbManagerTierStatus(Tier tier) {
+    return db_manager_current_db->TierStatus(tier);
+}
 
 /**
  * @brief Returns the solving status of the current game.
@@ -605,7 +707,9 @@ int DbManagerTierStatus(Tier tier);
  * @return \c kDbGameStatusCheckError if an error occurred when checking the
  * status of the current game.
  */
-int DbManagerGameStatus(void);
+static inline int DbManagerGameStatus(void) {
+    return db_manager_current_db->GameStatus();
+}
 
 // ------------------------- External Access Interface -------------------------
 
@@ -615,6 +719,8 @@ int DbManagerGameStatus(void);
  * @return The path the Database is initialized with, or
  * @return \c NULL if the Database is not initialized.
  */
-const char *DbManagerGetPath(void);
+static inline const char *DbManagerGetPath(void) {
+    return db_manager_current_db->GetPath();
+}
 
 #endif  // GAMESMANONE_CORE_DB_DB_MANAGER_H_
