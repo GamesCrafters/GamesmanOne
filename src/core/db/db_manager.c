@@ -30,10 +30,11 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "core/constants.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
@@ -72,7 +73,7 @@ int DbManagerInitDb(const Database *db, bool read_only,
     }
 
     int error = current_db->Init(game_name, variant, path, GetTierName, aux);
-    free(path);
+    GamesmanFree(path);
 
     return error;
 }
@@ -246,7 +247,7 @@ static bool BasicDbApiImplemented(const Database *db) {
         fprintf(stderr,
                 "BasicDbApiImplemented: (BUG) A Database does not have its "
                 "name properly initialized. Aborting...\n");
-        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
+        _exit(kNotImplementedError);
     }
     if (db->Init == NULL) return false;
     if (db->FlushSolvingTier == NULL) return false;
@@ -283,7 +284,7 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
     path_length += (int)strlen(game_name) + 1;
     path_length += kInt32Base10StringLengthMax + 1;
     path_length += (int)strlen(db->name) + 1;
-    path = (char *)calloc((path_length + 1), sizeof(char));
+    path = (char *)GamesmanCallocWhole((path_length + 1), sizeof(char));
     if (path == NULL) {
         fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
         return NULL;
@@ -295,14 +296,14 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         fprintf(stderr,
                 "SetupDbPath: (BUG) not enough space was allocated for path. "
                 "Please check the implementation of this function.\n");
-        free(path);
+        GamesmanFree(path);
         return NULL;
     }
 
     if (!read_only && MkdirRecursive(path) != 0) {
         fprintf(stderr,
                 "SetupDbPath: failed to create path in the file system.\n");
-        free(path);
+        GamesmanFree(path);
         return NULL;
     }
 
