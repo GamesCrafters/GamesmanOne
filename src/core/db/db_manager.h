@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module.
- * @version 2.1.0
- * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -38,24 +36,25 @@
 extern const Database *db_manager_current_db;
 
 /**
- * @brief Initializes the database system and load the chosen DB module.
+ * @brief Initializes the database system and loads the chosen DB module.
  *
- * @note This function must be called before any of the other DbManager
+ * @note This function must be called before any of the other `DbManager`
  * functions are used. Otherwise, calling those functions will result in
  * undefined behavior.
  *
- * @param db DB to use.
- * @param read_only True if initializing in read-only mode, false otherwise.
- * If initialized in read-only mode, the database manager will assume that the
- * current game has been solved and will not create a directory for the chosen
- * database under the current data path.
- * @param game_name Internal name of the game.
- * @param variant Index of the game variant as an integer.
- * @param data_path Absolute or relative path to the data directory if non-NULL.
- * The default path "data" will be used if set to NULL.
- * @param GetTierName Function that converts a tier to its name. If set to
- * NULL, a fallback method will be used instead.
- * @param aux Auxiliary parameter.
+ * @param[in] db DB to use.
+ * @param[in] read_only `true` if initializing in read-only mode, `false`
+ * otherwise. If initialized in read-only mode, the database manager will assume
+ * that the current game has been solved and will not create a directory for the
+ * chosen database under the current data path.
+ * @param[in] game_name Internal name of the game.
+ * @param[in] variant Index of the game variant as an integer.
+ * @param[in] data_path Absolute or relative path to the data directory if
+ * non-`NULL`. The default path "data" will be used if set to `NULL`.
+ * @param[in] GetTierName Function that converts a tier to its name. If set to
+ * `NULL`, a fallback method will be used instead.
+ * @param[in,out] aux Auxiliary parameter.
+ *
  * @return 0 on success, non-zero otherwise.
  */
 int DbManagerInitDb(const Database *db, bool read_only,
@@ -78,29 +77,30 @@ static inline void DbManagerFinalizeDb(void) {
 // ----------------------------- Solving Interface -----------------------------
 
 /**
- * @brief Creates a new TIER of size SIZE (measured in positions) for solving in
- * memory.
+ * @brief Creates a new `tier` of size `size` (measured in positions) for
+ * solving in memory.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Tier to create.
- * @param size Number of positions in TIER.
- * @return int 0 on success, non-zero otherwise.
+ * @param[in] tier Tier to create.
+ * @param[in] size Number of positions in `tier`.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
     return db_manager_current_db->CreateSolvingTier(tier, size);
 }
 
 /**
- * @brief Creates a new solving \p tier of size \p size positions that allows
+ * @brief Creates a new solving `tier` of size `size` positions that allows
  * concurrent read and write access to records.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Tier to create.
- * @param size Number of positions in \p tier.
- * @return kSuccess on success,
- * @return non-zero error code otherwise.
+ * @param[in] tier Tier to create.
+ * @param[in] size Number of positions in `tier`.
+ *
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerCreateConcurrentSolvingTier(Tier tier,
                                                        int64_t size) {
@@ -112,11 +112,11 @@ static inline int DbManagerCreateConcurrentSolvingTier(Tier tier,
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
- *
  * @note This function is not thread-safe.
  *
- * @param aux Auxiliary parameter.
- * @return int 0 on success, non-zero otherwise.
+ * @param[in,out] aux Auxiliary parameter.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerFlushSolvingTier(void *aux) {
     return db_manager_current_db->FlushSolvingTier(aux);
@@ -128,7 +128,7 @@ static inline int DbManagerFlushSolvingTier(void *aux) {
  *
  * @note This function is not thread-safe.
  *
- * @return int 0 on success, non-zero otherwise.
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerFreeSolvingTier(void) {
     return db_manager_current_db->FreeSolvingTier();
@@ -139,52 +139,57 @@ static inline int DbManagerFreeSolvingTier(void) {
  *
  * @note This function is not thread-safe.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerSetGameSolved(void) {
     return db_manager_current_db->SetGameSolved();
 }
 
 /**
- * @brief Sets the value of POSITION in the solving tier to VALUE.
+ * @brief Sets the value of `position` in the solving tier to `value`.
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
- *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @return int 0 on success, non-zero otherwise.
+ * @param[in] position Position to modify.
+ * @param[in] value Value to set.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerSetValue(Position position, Value value) {
     return db_manager_current_db->SetValue(position, value);
 }
 
 /**
- * @brief Sets the remoteness of POSITION in the solving tier to REMOTENESS.
+ * @brief Sets the remoteness of `position` in the solving tier to `remoteness`.
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
- *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @return int 0 on success, non-zero otherwise.
+ * @param[in] position Position to modify.
+ * @param[in] remoteness Remoteness to set.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerSetRemoteness(Position position, int remoteness) {
     return db_manager_current_db->SetRemoteness(position, remoteness);
 }
 
 /**
- * @brief Sets the \p value and \p remoteness of \p position in the solving
- * tier.
+ * @brief Sets the `value` and `remoteness` of `position` in the solving tier.
  *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @param[in] position Position to modify.
+ * @param[in] value Value to set.
+ * @param[in] remoteness Remoteness to set.
+ *
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerSetValueRemoteness(Position position, Value value,
                                               int remoteness) {
@@ -193,24 +198,25 @@ static inline int DbManagerSetValueRemoteness(Position position, Value value,
 }
 
 /**
- * @brief Replaces the value and remoteness of \p position in the solving tier
+ * @brief Replaces the value and remoteness of `position` in the solving tier
  * with the maximum of its original value-remoteness pair and the one provided
- * by \p val and \p remoteness . The order of value-remoteness pairs are
- * determined by the \p compare function.
+ * by `value` and `remoteness`. The order of value-remoteness pairs is
+ * determined by the `compare` function.
  *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @param position Target position.
- * @param val Candidate value.
- * @param remoteness Candidate remoteness.
- * @param compare Pointer to a value-remoteness pair comparison function that
- * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
- * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
- * (v2, r2), or zero if they are equal.
- * @return \c true if the provided \p value - \p remoteness pair is greater than
- * the original value-remoteness pair and the old pair is replaced;
- * @return \c false otherwise.
+ * @param[in] position Target position.
+ * @param[in] value Candidate value.
+ * @param[in] remoteness Candidate remoteness.
+ * @param[in] compare Pointer to a value-remoteness pair comparison function
+ * that takes in two value-remoteness pairs (`v1`, `r1`) and (`v2`, `r2`) and
+ * returns a negative integer if (`v1`, `r1`) < (`v2`, `r2`), a positive integer
+ * if (`v1`, `r1`) > (`v2`, `r2`), or zero if they are equal.
+ *
+ * @retval true If the provided `value`-`remoteness` pair is greater than
+ * the original value-remoteness pair and the old pair is replaced.
+ * @retval false Otherwise.
  */
 static inline bool DbManagerMaximizeValueRemoteness(
     Position position, Value value, int remoteness,
@@ -220,89 +226,92 @@ static inline bool DbManagerMaximizeValueRemoteness(
 }
 
 /**
- * @brief Subtracts one from the number of undecided children of \p position and
- * returns the value immediately preceding the operation if the value of the
- * position is \c kUndecided and its number of undecided children is at least
+ * @brief Subtracts one from the number of undecided children of `position` and
+ * returns the count immediately preceding the operation if the value of the
+ * position is `kUndecided` and its number of undecided children is at least
  * one. Does nothing otherwise.
  *
  * @note By convention, we overload the remoteness field of a record as the
  * counter for the number of undecided children of that position when its value
- * is \c kUndecided .
- *
+ * is `kUndecided`.
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @param position Target position.
+ * @param[in] position Target position.
+ *
  * @return The number of undecided children immediately preceding the
- * subtraction, or
- * @return 0 if the operation is not performed.
+ * subtraction, or 0 if the operation is not performed.
  */
 static inline int DbManagerDecrementNumUndecidedChildren(Position position) {
     return db_manager_current_db->DecrementNumUndecidedChildren(position);
 }
 
 /**
- * @brief Sets the number of undecided children of \p position to zero and
- * returns the value immediately preceding the operation if the value of the
- * position is \c kUndecided . Does nothing otherwise.
+ * @brief Sets the number of undecided children of `position` to zero and
+ * returns the count immediately preceding the operation if the value of the
+ * position is `kUndecided`. Does nothing otherwise.
  *
  * @note By convention, we overload the remoteness field of a record as the
  * counter for the number of undecided children of that position when its value
- * is \c kUndecided .
- *
+ * is `kUndecided`.
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @param position Target position.
+ * @param[in] position Target position.
+ *
  * @return The number of undecided children immediately preceding the operation,
- * or
- * @return 0 if the operation is not performed.
+ * or 0 if the operation is not performed.
  */
 static inline int DbManagerClearNumUndecidedChildren(Position position) {
     return db_manager_current_db->ClearNumUndecidedChildren(position);
 }
 
 /**
- * @brief Returns the value of POSITION in the solving tier.
+ * @brief Returns the value of `position` in the solving tier.
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
- *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
+ *
+ * @param[in] position Position to query.
+ *
+ * @return The value of `position` in the solving tier.
  */
 static inline Value DbManagerGetValue(Position position) {
     return db_manager_current_db->GetValue(position);
 }
 
 /**
- * @brief Returns the remoteness of POSITION in the solving tier.
+ * @brief Returns the remoteness of `position` in the solving tier.
  *
  * @note Assumes the solving tier has been created. Results in undefined
  * behavior if not.
- *
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
+ *
+ * @param[in] position Position to query.
+ *
+ * @return The remoteness of `position` in the solving tier.
  */
 static inline int DbManagerGetRemoteness(Position position) {
     return db_manager_current_db->GetRemoteness(position);
 }
 
 /**
- * @brief Returns the number of undecided children of \p position if its value
- * is \c kUndecided . Returns 0 otherwise.
+ * @brief Returns the number of undecided children of `position` if its value
+ * is `kUndecided`. Returns 0 otherwise.
  *
  * @note By convention, we overload the remoteness field of a record as the
  * counter for the number of undecided children of that position when its value
- * is \c kUndecided .
- *
+ * is `kUndecided`.
  * @note This function is thread-safe if the solving tier is created via
- * DbManagerCreateConcurrentSolvingTier.
+ * `DbManagerCreateConcurrentSolvingTier`.
  *
- * @param position Target position.
- * @return The number of undecided children of \p position if its value is
- * \c kUndecided , or
- * @return 0 otherwise.
+ * @param[in] position Target position.
+ *
+ * @return The number of undecided children of `position` if its value is
+ * `kUndecided`, or 0 otherwise.
  */
 static inline int DbManagerGetNumUndecidedChildren(Position position) {
     return db_manager_current_db->GetNumUndecidedChildren(position);
@@ -310,7 +319,7 @@ static inline int DbManagerGetNumUndecidedChildren(Position position) {
 
 /**
  * @brief Returns the maximum number of segment buffers supported by the
- * Database.
+ * database.
  *
  * @return Maximum number of segment buffers supported.
  */
@@ -319,15 +328,15 @@ static inline int DbManagerSegmentationMaxNumBuffers(void) {
 }
 
 /**
- * @brief Make \p num_segments segment buffers available for solving the
- * given \p tier , where each segment is of \p size positions
+ * @brief Makes `num_segments` segment buffers available for solving the
+ * given `tier`, where each segment is of `size` positions.
  *
- * @param tier Tier to be solved.
- * @param num_segments Number of segment buffers to create.
- * @param size Number of positions in each segment.
- * @return \c kSuccess on success,
- * @return \c kMallocFailureError on memory allocation failure, or
- * @return other non-zero error code otherwise.
+ * @param[in] tier Tier to be solved.
+ * @param[in] num_segments Number of segment buffers to create.
+ * @param[in] size Number of positions in each segment.
+ *
+ * @return `kSuccess` on success, `kMallocFailureError` on memory allocation
+ * failure, or another non-zero error code otherwise.
  */
 static inline int DbManagerSegmentationCreateBuffers(Tier tier,
                                                      int num_segments,
@@ -337,31 +346,30 @@ static inline int DbManagerSegmentationCreateBuffers(Tier tier,
 }
 
 /**
- * @brief Loads the \p seg_idx -th segment from disk into the \p buf_idx
- * -th segment buffer.
+ * @brief Loads the `seg_idx`-th segment from disk into the `buf_idx`-th
+ * segment buffer.
  *
- * @param buf_idx Index of the destination segment buffer.
- * @param seg_idx Index of the segment to load.
- * @return \c kSuccess on success,
- * @return \c kIllegalArgumentError if \p buf_idx is not active,
- * @return \c kFileSystemError if \p seg_idx does not exist on disk or
- * failed to read the segment from disk, or
- * @return other non-zero error code otherwise.
+ * @param[in] buf_idx Index of the destination segment buffer.
+ * @param[in] seg_idx Index of the segment to load.
+ *
+ * @return `kSuccess` on success, `kIllegalArgumentError` if `buf_idx` is not
+ * active, `kFileSystemError` if `seg_idx` does not exist on disk or failed to
+ * read the segment from disk, or another non-zero error code otherwise.
  */
 static inline int DbManagerSegmentationLoad(int buf_idx, int seg_idx) {
     return db_manager_current_db->segmentation.Load(buf_idx, seg_idx);
 }
 
 /**
- * @brief Flushes the contents of the \p buf_idx -th segment buffer to
- * disk as the \p seg_idx -th segment of the current tier.
+ * @brief Flushes the contents of the `buf_idx`-th segment buffer to
+ * disk as the `seg_idx`-th segment of the current tier.
  *
- * @param buf_idx Index of the source segment buffer.
- * @param seg_idx Index of the segment.
- * @return \c kSuccess on success,
- * @return \c kIllegalArgument if \p buf_idx is not active,
- * @return \c kFileSystemError if failed to write to disk, or
- * @return other non-zero error code otherwise.
+ * @param[in] buf_idx Index of the source segment buffer.
+ * @param[in] seg_idx Index of the segment.
+ *
+ * @return `kSuccess` on success, `kIllegalArgument` if `buf_idx` is not
+ * active, `kFileSystemError` if failed to write to disk, or another non-zero
+ * error code otherwise.
  */
 static inline int DbManagerSegmentationFlush(int buf_idx, int seg_idx) {
     return db_manager_current_db->segmentation.Flush(buf_idx, seg_idx);
@@ -370,24 +378,24 @@ static inline int DbManagerSegmentationFlush(int buf_idx, int seg_idx) {
 /**
  * @brief Deallocates all active segment buffers.
  *
- * @return \c kSuccess on success, or
- * @return other non-zero error code otherwise.
+ * @return `kSuccess` on success, or another non-zero error code otherwise.
  */
 static inline int DbManagerSegmentationFreeBuffers(void) {
     return db_manager_current_db->segmentation.FreeBuffers();
 }
 
 /**
- * @brief Returns the value of the position at the given \p offset
+ * @brief Returns the value of the position at the given `offset`
  * relative to the first position in the segment currently loaded in the
- * \p buf_idx -th segment buffer.
+ * `buf_idx`-th segment buffer.
  *
- * @param buf_idx Index of the segment buffer, which is assumed to be
+ * @param[in] buf_idx Index of the segment buffer, which is assumed to be
  * active.
- * @param offset Position offset relative to the first position in the
+ * @param[in] offset Position offset relative to the first position in the
  * segment loaded in the target segment buffer. The offset is assumed to
  * be valid.
- * @return Value of the position at the given \p offset in the target
+ *
+ * @return Value of the position at the given `offset` in the target
  * segment buffer.
  */
 static inline Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset) {
@@ -395,16 +403,17 @@ static inline Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset) {
 }
 
 /**
- * @brief Returns the remoteness of the position at the given \p offset
+ * @brief Returns the remoteness of the position at the given `offset`
  * relative to the first position in the segment currently loaded in the
- * \p buf_idx -th segment buffer.
+ * `buf_idx`-th segment buffer.
  *
- * @param buf_idx Index of the segment buffer, which is assumed to be
+ * @param[in] buf_idx Index of the segment buffer, which is assumed to be
  * active.
- * @param offset Position offset relative to the first position in the
+ * @param[in] offset Position offset relative to the first position in the
  * segment loaded in the target segment buffer. The offset is assumed to
  * be valid.
- * @return Remoteness of the position at the given \p offset in the
+ *
+ * @return Remoteness of the position at the given `offset` in the
  * target segment buffer.
  */
 static inline int DbManagerSegmentationGetRemoteness(int buf_idx,
@@ -414,16 +423,16 @@ static inline int DbManagerSegmentationGetRemoteness(int buf_idx,
 
 /**
  * @brief Sets the value and remoteness of the position at the given
- * \p offset relative to the first position in the segment currently
- * loaded in the \p buf_idx -th segment buffer.
+ * `offset` relative to the first position in the segment currently
+ * loaded in the `buf_idx`-th segment buffer.
  *
- * @param buf_idx Index of the segment buffer, which is assumed to be
+ * @param[in] buf_idx Index of the segment buffer, which is assumed to be
  * active.
- * @param offset Position offset relative to the first position in the
+ * @param[in] offset Position offset relative to the first position in the
  * segment loaded in the target segment buffer. The offset is assumed to
  * be valid.
- * @param value New value.
- * @param remoteness New remoteness.
+ * @param[in] value New value.
+ * @param[in] remoteness New remoteness.
  */
 static inline void DbManagerSegmentationSetValueRemoteness(int buf_idx,
                                                            int64_t offset,
@@ -434,17 +443,17 @@ static inline void DbManagerSegmentationSetValueRemoteness(int buf_idx,
 }
 
 /**
- * @brief Merges all \p num_segments segments on disk into the normal
- * Database archive. The output is equivalent to the output of
- * \c Database::FlushSolvingTier in the non-segmented methods.
+ * @brief Merges all `num_segments` segments on disk into the normal
+ * database archive. The output is equivalent to the output of
+ * `Database::FlushSolvingTier` in the non-segmented methods.
  *
- * @param tier_size Number of positions in the solving tier.
- * @param num_segments Total number of segments, where all segments are
+ * @param[in] tier_size Number of positions in the solving tier.
+ * @param[in] num_segments Total number of segments, where all segments are
  * assumed to have been solved and flushed to disk.
- * @return \c kSuccess on success,
- * @return \c kFileSystemError if any file operation such as reading a
- * segment or saving the output failed, or
- * @return other non-zero error code otherwise.
+ *
+ * @return `kSuccess` on success, `kFileSystemError` if any file operation such
+ * as reading a segment or saving the output failed, or another non-zero error
+ * code otherwise.
  */
 static inline int DbManagerSegmentationConsolidate(int64_t tier_size,
                                                    int num_segments) {
@@ -453,14 +462,15 @@ static inline int DbManagerSegmentationConsolidate(int64_t tier_size,
 }
 
 /**
- * @brief Returns whether there exists a checkpoint for \p tier. A
+ * @brief Returns whether there exists a checkpoint for `tier`. A
  * checkpoint can be used to restore the solving progress of a tier.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Check for any existing checkpoints for this tier.
- * @return \c true if there exists a checkpoint for \p tier, or
- * @return \c false otherwise.
+ * @param[in] tier Check for any existing checkpoints for this tier.
+ *
+ * @retval true If there exists a checkpoint for `tier`.
+ * @retval false Otherwise.
  */
 static inline bool DbManagerCheckpointExists(Tier tier) {
     return db_manager_current_db->CheckpointExists(tier);
@@ -468,15 +478,14 @@ static inline bool DbManagerCheckpointExists(Tier tier) {
 
 /**
  * @brief Saves a checkpoint for the current solving tier, including the
- * current solving \p status, overwriting any existing checkpoint.
+ * current solving `status`, overwriting any existing checkpoint.
  *
  * @note This function is not thread-safe.
  *
- * @param status Pointer to data that stores the current solving status.
- * @param status_size Size of \p status in bytes.
+ * @param[in] status Pointer to data that stores the current solving status.
+ * @param[in] status_size Size of `status` in bytes.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerCheckpointSave(const void *status,
                                           size_t status_size) {
@@ -484,22 +493,21 @@ static inline int DbManagerCheckpointSave(const void *status,
 }
 
 /**
- * @brief Creates an in-memory DB for solving of the given \p tier of size
- * \p size by loading its checkpoint and previous solving status. Does nothing
- * and returns an error if a checkpoint cannot be found for \p tier.
+ * @brief Creates an in-memory DB for solving the given `tier` of size
+ * `size` by loading its checkpoint and previous solving status. Does nothing
+ * and returns an error if a checkpoint cannot be found for `tier`.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Tier to be initialized and loaded.
- * @param size Size of \p tier in number of positions.
- * @param status (Output parameter) Pointer to a buffer of size at least \p
- * status_size bytes which will be used to load the solving status from the
- * checkpoint. Must be of the same format and size as used when the
- * checkpoint was saved with \c Database::CheckpointSave.
- * @param status_size Size of \p status in bytes.
+ * @param[in] tier Tier to be initialized and loaded.
+ * @param[in] size Size of `tier` in number of positions.
+ * @param[out] status Pointer to a buffer of size at least `status_size` bytes
+ * which will be used to load the solving status from the checkpoint. Must be
+ * of the same format and size as used when the checkpoint was saved with
+ * `Database::CheckpointSave`.
+ * @param[in] status_size Size of `status` in bytes.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
                                           size_t status_size) {
@@ -508,14 +516,14 @@ static inline int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
 }
 
 /**
- * @brief Removes the checkpoint for \p tier if exists.
+ * @brief Removes the checkpoint for `tier` if it exists.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Remove the checkpoint for this tier.
- * @return \c kSuccess on success,
- * @return \c kFileSystemError if no checkpoint is found for \p tier, or
- * @return any other non-zero error code on failure.
+ * @param[in] tier Remove the checkpoint for this tier.
+ *
+ * @return `kSuccess` on success, `kFileSystemError` if no checkpoint is found
+ * for `tier`, or any other non-zero error code on failure.
  */
 static inline int DbManagerCheckpointRemove(Tier tier) {
     return db_manager_current_db->CheckpointRemove(tier);
@@ -525,12 +533,13 @@ static inline int DbManagerCheckpointRemove(Tier tier) {
 
 /**
  * @brief Returns an upper bound, in bytes, on the amount of memory that
- * will be used to load \p tier of \p size positions.
+ * will be used to load `tier` of `size` positions.
  *
  * @note This function is thread-safe.
  *
- * @param tier Tier to be loaded.
- * @param size Size of \p tier in number of positions.
+ * @param[in] tier Tier to be loaded.
+ * @param[in] size Size of `tier` in number of positions.
+ *
  * @return An upper bound on memory usage in bytes.
  */
 static inline size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
@@ -539,12 +548,13 @@ static inline size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
 
 /**
  * @brief Returns an upper bound, in bytes, on the amount of memory that
- * will be used to store a concurrent solving tier \p tier of \p size positions.
+ * will be used to store a concurrent solving tier `tier` of `size` positions.
  *
  * @note This function is thread-safe.
  *
- * @param tier Concurrent solving tier to be created in memory.
- * @param size Size of \p tier in number of positions.
+ * @param[in] tier Concurrent solving tier to be created in memory.
+ * @param[in] size Size of `tier` in number of positions.
+ *
  * @return An upper bound on memory usage in bytes.
  */
 static inline size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
@@ -552,71 +562,73 @@ static inline size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
 }
 
 /**
- * @brief Loads the given \p tier of \p size positions into memory.
+ * @brief Loads the given `tier` of `size` positions into memory.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Tier to be loaded.
- * @param size Size of \p tier in number of positions.
+ * @param[in] tier Tier to be loaded.
+ * @param[in] size Size of `tier` in number of positions.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerLoadTier(Tier tier, int64_t size) {
     return db_manager_current_db->LoadTier(tier, size);
 }
 
 /**
- * @brief Unloads the given \p tier from memory if it was previously loaded.
+ * @brief Unloads the given `tier` from memory if it was previously loaded.
  *
  * @note This function is not thread-safe.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @param[in] tier Tier to unload.
+ *
+ * @return `kSuccess` on success, or a non-zero error code otherwise.
  */
 static inline int DbManagerUnloadTier(Tier tier) {
     return db_manager_current_db->UnloadTier(tier);
 }
 
 /**
- * @brief Returns whether the given \p tier has been loaded.
+ * @brief Returns whether the given `tier` has been loaded.
  *
  * @note This function is thread-safe.
  *
- * @return \c kSuccess on success, or
- * @return non-zero error code otherwise.
+ * @param[in] tier Tier to check.
+ *
+ * @retval true If `tier` has been loaded.
+ * @retval false Otherwise.
  */
 static inline bool DbManagerIsTierLoaded(Tier tier) {
     return db_manager_current_db->IsTierLoaded(tier);
 }
 
 /**
- * @brief Returns the value of position \p position in tier \p tier if
- * \p tier has been loaded. Returns \c kErrorValue otherwise.
+ * @brief Returns the value of position `position` in tier `tier` if
+ * `tier` has been loaded. Returns `kErrorValue` otherwise.
  *
  * @note This function is thread-safe.
  *
- * @param tier A loaded tier.
- * @param position Query the value of this position.
+ * @param[in] tier A loaded tier.
+ * @param[in] position Query the value of this position.
  *
- * @return The value of \p position in \p tier on success, or
- * @return \c kErrorValue otherwise.
+ * @return The value of `position` in `tier` on success, or
+ * `kErrorValue` otherwise.
  */
 static inline Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
     return db_manager_current_db->GetValueFromLoaded(tier, position);
 }
 
 /**
- * @brief Returns the remoteness of position \p position in tier \p tier if
- * \p tier has been loaded. Returns \c kErrorRemoteness otherwise.
+ * @brief Returns the remoteness of position `position` in tier `tier` if
+ * `tier` has been loaded. Returns `kErrorRemoteness` otherwise.
  *
  * @note This function is thread-safe.
  *
- * @param tier A loaded tier.
- * @param position Query the remoteness of this position.
+ * @param[in] tier A loaded tier.
+ * @param[in] position Query the remoteness of this position.
  *
- * @return The remoteness of \p position in \p tier on success, or
- * @return \c kErrorRemoteness otherwise.
+ * @return The remoteness of `position` in `tier` on success, or
+ * `kErrorRemoteness` otherwise.
  */
 static inline int DbManagerGetRemotenessFromLoaded(Tier tier,
                                                    Position position) {
@@ -626,36 +638,44 @@ static inline int DbManagerGetRemotenessFromLoaded(Tier tier,
 // ----------------------------- Probing Interface -----------------------------
 
 /**
- * @brief Initializes PROBE using the method provided by the current database.
+ * @brief Initializes `probe` using the method provided by the current database.
  *
  * @note This function is not thread-safe.
+ *
+ * @param[in,out] probe Probe to initialize.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerProbeInit(DbProbe *probe) {
     return db_manager_current_db->ProbeInit(probe);
 }
 
 /**
- * @brief Destroys PROBE using the method provided by the current database.
+ * @brief Destroys `probe` using the method provided by the current database.
  *
  * @note This function is not thread-safe.
+ *
+ * @param[in,out] probe Probe to destroy.
+ *
+ * @return 0 on success, non-zero otherwise.
  */
 static inline int DbManagerProbeDestroy(DbProbe *probe) {
     return db_manager_current_db->ProbeDestroy(probe);
 }
 
 /**
- * @brief Reads the value of TIER_POSITION in the current database from disk
- * using the given initialized PROBE and returns it.
+ * @brief Reads the value of `tier_position` in the current database from disk
+ * using the given initialized `probe` and returns it.
  *
- * @note Results in undefined behavior if PROBE has not been initialized.
- *
+ * @note Results in undefined behavior if `probe` has not been initialized.
  * @note This function is not thread-safe.
  *
- * @param probe Initialized database probe.
- * @param tier_position TierPosition to read.
- * @return Value of the given TIER_POSITION in database; kErrorValue if the
- * given TIER has not been solved, the given POSITION is out of bounds, or any
- * other error occurred.
+ * @param[in,out] probe Initialized database probe.
+ * @param[in] tier_position Tier position to read.
+ *
+ * @return Value of the given `tier_position` in the database, or `kErrorValue`
+ * if the given tier has not been solved, the given position is out of bounds,
+ * or any other error occurred.
  */
 static inline Value DbManagerProbeValue(DbProbe *probe,
                                         TierPosition tier_position) {
@@ -663,18 +683,18 @@ static inline Value DbManagerProbeValue(DbProbe *probe,
 }
 
 /**
- * @brief Reads the remoteness of TIER_POSITION in the current database from
- * disk using the given initialized PROBE and returns it.
+ * @brief Reads the remoteness of `tier_position` in the current database from
+ * disk using the given initialized `probe` and returns it.
  *
- * @note Results in undefined behavior if PROBE has not been initialized.
- *
+ * @note Results in undefined behavior if `probe` has not been initialized.
  * @note This function is not thread-safe.
  *
- * @param probe Initialized database probe.
- * @param tier_position TierPosition to read.
- * @return Remoteness of the given TIER_POSITION in database; a negative value
- * if the given TIER has not been solved, the given POSITION is out of bounds,
- * or any other error occurred.
+ * @param[in,out] probe Initialized database probe.
+ * @param[in] tier_position Tier position to read.
+ *
+ * @return Remoteness of the given `tier_position` in the database, or a
+ * negative value if the given tier has not been solved, the given position is
+ * out of bounds, or any other error occurred.
  */
 static inline int DbManagerProbeRemoteness(DbProbe *probe,
                                            TierPosition tier_position) {
@@ -682,16 +702,17 @@ static inline int DbManagerProbeRemoteness(DbProbe *probe,
 }
 
 /**
- * @brief Returns the status of TIER.
+ * @brief Returns the status of `tier`.
  *
  * @note This function is not thread-safe.
  *
- * @param tier Tier to check.
- * @return \c kDbTierStatusSolved if solved,
- * @return \c kDbTierStatusCorrupted if corrupted,
- * @return \c kDbTierStatusMissing if not solved, or
- * @return \c kDbTierStatusCheckError if an error occurred when checking the
- * status of TIER.
+ * @param[in] tier Tier to check.
+ *
+ * @retval kDbTierStatusSolved If solved.
+ * @retval kDbTierStatusCorrupted If corrupted.
+ * @retval kDbTierStatusMissing If not solved.
+ * @retval kDbTierStatusCheckError If an error occurred when checking the
+ * status of `tier`.
  */
 static inline int DbManagerTierStatus(Tier tier) {
     return db_manager_current_db->TierStatus(tier);
@@ -702,9 +723,9 @@ static inline int DbManagerTierStatus(Tier tier) {
  *
  * @note This function is not thread-safe.
  *
- * @return \c kDbGameStatusSolved if solved,
- * @return \c kDbGameStatusIncomplete if not fully solved, or
- * @return \c kDbGameStatusCheckError if an error occurred when checking the
+ * @retval kDbGameStatusSolved If solved.
+ * @retval kDbGameStatusIncomplete If not fully solved.
+ * @retval kDbGameStatusCheckError If an error occurred when checking the
  * status of the current game.
  */
 static inline int DbManagerGameStatus(void) {
@@ -714,10 +735,10 @@ static inline int DbManagerGameStatus(void) {
 // ------------------------- External Access Interface -------------------------
 
 /**
- * @brief Returns the path the Database is initialized with.
+ * @brief Returns the path the database is initialized with.
  *
- * @return The path the Database is initialized with, or
- * @return \c NULL if the Database is not initialized.
+ * @return The path the database is initialized with, or `NULL` if the database
+ * is not initialized.
  */
 static inline const char *DbManagerGetPath(void) {
     return db_manager_current_db->GetPath();
