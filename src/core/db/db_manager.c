@@ -43,29 +43,39 @@ const Database *db_manager_current_db = NULL;
 
 static bool IsValidDbName(ReadOnlyString name) {
     bool terminates = false;
+    // LCOV_EXCL_BR_START: Covered by InitUnterminatedFormalNameDeath
     for (int i = 0; i < kDbFormalNameLengthMax + 1; ++i) {
+        // LCOV_EXCL_STOP
         if (name[i] == '\0') {
             terminates = true;
             break;
         }
     }
+
+    // LCOV_EXCL_START: Covered by InitEmptyFormalNameDeath and
+    // InitUnterminatedFormalNameDeath.
     if (!terminates) {  // Uninitialized name.
         return false;
     }
+
     if (name[0] == '\0') {  // Empty name is not allowed.
         return false;
     }
+    // LCOV_EXCL_STOP
 
     return true;
 }
 
 static bool BasicDbApiImplemented(const Database *db) {
+    // LCOV_EXCL_START: Covered by InitInvalidFormalNameDeath
     if (!IsValidDbName(db->formal_name)) {
         fprintf(stderr,
                 "BasicDbApiImplemented: (BUG) A Database does not have its "
                 "name properly initialized. Aborting...\n");
         _exit(kNotImplementedError);
     }
+    // LCOV_EXCL_STOP
+
     if (db->Init == NULL) {
         return false;
     }
@@ -112,6 +122,8 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
 
     int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
                                  game_name, variant, db->name);
+    // LCOV_EXCL_START: This block is equivalent to an assertion that shouldn't
+    // be triggered in normal run.
     if (actual_length >= path_length) {
         fprintf(stderr,
                 "SetupDbPath: (BUG) not enough space was allocated for path. "
@@ -119,6 +131,7 @@ static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
         GamesmanFree(path);
         return NULL;
     }
+    // LCOV_EXCL_STOP
 
     if (!read_only && MkdirRecursive(path) != 0) {
         fprintf(stderr,

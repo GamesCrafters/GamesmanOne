@@ -71,8 +71,8 @@ enum DatabaseGameStatus {
 /**
  * @brief Tier name getter function signature.
  */
-typedef int (*GetTierNameFunc)(Tier tier,
-                               char name[static kDbFileNameLengthMax + 1]);
+typedef int (*GetTierNameFunc)(
+    Tier tier, char name[ARRAY_PARAM_STATIC kDbFileNameLengthMax + 1]);
 
 /**
  * @brief Generic Tier Database type.

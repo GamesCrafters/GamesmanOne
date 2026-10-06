@@ -27,6 +27,12 @@
 #ifndef GAMESMANONE_CORE_TYPES_BASE_H_
 #define GAMESMANONE_CORE_TYPES_BASE_H_
 
+#ifdef __cplusplus
+#define ARRAY_PARAM_STATIC
+#else
+#define ARRAY_PARAM_STATIC static
+#endif
+
 #include <inttypes.h>
 #include <stdint.h>
 
