@@ -55,6 +55,9 @@ extern const Database *db_manager_current_db;
  * `NULL`, a fallback method will be used instead.
  * @param[in,out] aux Auxiliary parameter.
  *
+ * @note If the provided `db` has an uninitialized or empty `formal_name`, this
+ * function will fatally exit the program.
+ *
  * @return 0 on success, non-zero otherwise.
  */
 int DbManagerInitDb(const Database *db, bool read_only,
