@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Global constants.
- * @version 2.0.0
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -28,56 +26,55 @@
 
 #include "core/types/base.h"
 
-/** @brief String representations for all possible Values. */
+/** String representations for all possible `Value`s. */
 extern ConstantReadOnlyString kValueStrings[];
 
-/**
- * @brief Precalculated string length limits for integers of different types.
- */
+/** Precalculated string length limits for integers of different types. */
 enum IntBase10StringLengthLimits {
-    /** int8_t: [-128, 127] */
+    /** `int8_t`: [-128, 127] */
     kInt8Base10StringLengthMax = 4,
 
-    /** uint8_t: [0, 255] */
+    /** `uint8_t`: [0, 255] */
     kUint8Base10StringLengthMax = 3,
 
-    /** int16_t: [-32768, 32767] */
+    /** `int16_t`: [-32768, 32767] */
     kInt16Base10StringLengthMax = 6,
 
-    /** uint16_t: [0, 65535] */
+    /** `uint16_t`: [0, 65535] */
     kUint16Base10StringLengthMax = 5,
 
-    /** int32_t: [-2147483648, 2147483647] */
+    /** `int32_t`: [-2147483648, 2147483647] */
     kInt32Base10StringLengthMax = 11,
 
-    /** uint32_t: [0, 4294967295] */
+    /** `uint32_t`: [0, 4294967295] */
     kUint32Base10StringLengthMax = 10,
 
-    /** int64_t: [-9223372036854775808, 9223372036854775807] */
+    /** `int64_t`: [-9223372036854775808, 9223372036854775807] */
     kInt64Base10StringLengthMax = 20,
 
-    /** uint64_t: [0, 18446744073709551615] */
+    /** `uint64_t`: [0, 18446744073709551615] */
     kUint64Base10StringLengthMax = 20,
 };
 
-/** @brief Constants that are used as common knowledge. */
+/** Constants that are used as common knowledge. */
 enum CommonConstants {
     kIllegalSize = -1, /**< Valid sizes are non-negative. */
     kBitsPerByte = 8,  /**< 8 bits per byte. */
 };
 
-/** @brief Gamesman constants. */
+/** Gamesman constants. */
 enum GamesmanConstants {
     /** Illegal remoteness which can be returned as an error. */
     kErrorRemoteness = -1,
+
     /** Illegal variant which can be returned as an error. */
     kIllegalVariantIndex = -1,
 };
 
 /**
- * @brief Largest supported remoteness.
+ * Largest supported remoteness.
  *
- * @note Increase the values here and recompile if the old limit is not large
+ * Increase the values here and recompile if the old limit is not large
  * enough for a new game in the future.
  */
 enum RemotenessLimits {
@@ -85,24 +82,24 @@ enum RemotenessLimits {
     kNumRemotenesses,      /**< Number of values a remoteness can take. */
 };
 
-/** @brief Limiting constants on MPI implementation. */
+/** Limiting constants on MPI implementation. */
 enum MpiLimits {
     /**
-     * The Savio cluster currently support at most 24 nodes allocated per job.
+     * The Savio cluster currently supports at most 24 nodes allocated per job.
      */
     kMpiNumNodesMax = 24,
 };
 
-/** @brief Default tier for games that are not implemented as tier games. */
+/** Default `Tier` for games that are not implemented as tier games. */
 extern const Tier kDefaultTier;
 
-/** @brief Illegal tier which can be returned as an error. */
+/** Illegal `Tier` which can be returned as an error. */
 extern const Tier kIllegalTier;
 
-/** @brief Illegal position which can be returned as an error. */
+/** Illegal `Position` which can be returned as an error. */
 extern const Position kIllegalPosition;
 
-/** @brief Illegal tier position which can be returned as an error. */
+/** Illegal `TierPosition` which can be returned as an error. */
 extern const TierPosition kIllegalTierPosition;
 
 #endif  // GAMESMANONE_CORE_CONSTANTS_H_
