@@ -55,7 +55,7 @@ enum {
  * @returns Value field of `rec`.
  */
 static inline Value RecordGetValue(const Record *rec) {
-    return (*rec) >> kRecordNumRemotenessBits;
+    return (Value)((*rec) >> kRecordNumRemotenessBits);
 }
 
 /**
