@@ -33,11 +33,20 @@
 #include "core/db/arraydb/record.h"
 #include "core/gamesman_memory.h"
 
+#if defined(__cplusplus) && defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 /** Fixed-length `Record` array. */
 typedef struct RecordArray {
     int64_t size;     /**< Number of `Record`s. */
     Record records[]; /**< Array of `Record`s. */
 } RecordArray;
+
+#if defined(__cplusplus) && defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 /**
  * @brief Creates a new `RecordArray` of `size` elements.
