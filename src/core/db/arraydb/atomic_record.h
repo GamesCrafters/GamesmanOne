@@ -26,12 +26,22 @@
 #ifndef GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_H_
 #define GAMESMANONE_CORE_DB_ARRAYDB_ATOMIC_RECORD_H_
 
-#include <stdatomic.h>
-
 #include "core/db/arraydb/record.h"
 
+#ifdef __cplusplus
+#include <atomic>
+/** The atomic `Record` type. */
+typedef std::atomic<Record> AtomicRecord;
+using std::atomic_compare_exchange_weak_explicit;
+using std::atomic_init;
+using std::atomic_load_explicit;
+using std::atomic_store_explicit;
+using std::memory_order_relaxed;
+#else
+#include <stdatomic.h>
 /** The atomic `Record` type. */
 typedef _Atomic Record AtomicRecord;
+#endif
 
 /**
  * @brief Initializes `ar` with the given `value` and `remoteness`.
@@ -110,7 +120,7 @@ static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
  */
 static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
     Record old_rec = AtomicRecordLoad(ar);
-    for (;;) {
+    for (;;) {  // LCOV_EXCL_LINE
         Record new_rec = old_rec;
         RecordSetValue(&new_rec, val);
         if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
@@ -129,7 +139,7 @@ static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
  */
 static inline void AtomicRecordSetRemoteness(AtomicRecord *ar, int remoteness) {
     Record old_rec = AtomicRecordLoad(ar);
-    for (;;) {
+    for (;;) {  // LCOV_EXCL_LINE
         Record new_rec = old_rec;
         RecordSetRemoteness(&new_rec, remoteness);
         if (atomic_compare_exchange_weak_explicit(ar, &old_rec, new_rec,
@@ -180,7 +190,9 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
     Record old_rec = AtomicRecordLoad(ar);
     Value old_val = RecordGetValue(&old_rec);
     int old_rmt = RecordGetRemoteness(&old_rec);
-    if (compare(old_val, old_rmt, val, remoteness) >= 0) return false;
+    if (compare(old_val, old_rmt, val, remoteness) >= 0) {
+        return false;
+    }
 
     Record new_rec;
     RecordSetValueRemoteness(&new_rec, val, remoteness);
