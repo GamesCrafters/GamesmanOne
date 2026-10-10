@@ -282,7 +282,7 @@ typedef struct {
  *
  * @param[in] num_slots Number of effective slots.
  *
- * @returns Amount of memory required to initialize the hash system.
+ * @return Amount of memory required to initialize the hash system.
  * @retval SIZE_MAX if `num_slots` is negative, zero, or greater than
  * `kSimdTwoPieceHashBoardSizeMax`.
  */
@@ -343,7 +343,7 @@ void SimdTwoPieceHashContextDestroy(SimdTwoPieceHashContext *context);
  * @param[in] num_x Number of X's on the board.
  * @param[in] num_o Number of O's on the board.
  *
- * @returns Total number of positions in the tier with `num_x` X's and
+ * @return Total number of positions in the tier with `num_x` X's and
  * `num_o` O's on the board, assuming it is always one of the players' turn.
  */
 static inline int64_t SimdTwoPieceHashGetNumPositionsFixedTurn(
@@ -363,7 +363,7 @@ static inline int64_t SimdTwoPieceHashGetNumPositionsFixedTurn(
  * @param[in] num_x Number of X's on the board.
  * @param[in] num_o Number of O's on the board.
  *
- * @returns Total number of positions in the tier with `num_x` X's and
+ * @return Total number of positions in the tier with `num_x` X's and
  * `num_o` O's on the board, including either player's turn.
  */
 static inline int64_t SimdTwoPieceHashGetNumPositions(
@@ -384,7 +384,7 @@ static inline int64_t SimdTwoPieceHashGetNumPositions(
  * @param[in] context Hash context.
  * @param[in] board Board to hash.
  *
- * @returns Hash value of the given position.
+ * @return Hash value of the given position.
  */
 static inline Position SimdTwoPieceHashHashFixedTurn(
     const SimdTwoPieceHashContext *context, U64x2 board) {
@@ -421,7 +421,7 @@ static inline Position SimdTwoPieceHashHashFixedTurn(
  * @param[in] turn 0 if it is the first player's turn, 1 if it is the second
  * player's turn.
  *
- * @returns Hash value of the given position.
+ * @return Hash value of the given position.
  */
 static inline Position SimdTwoPieceHashHash(
     const SimdTwoPieceHashContext *context, U64x2 board, int turn) {
@@ -444,7 +444,7 @@ static inline Position SimdTwoPieceHashHash(
  * @param[in] num_x Number of X's on the board.
  * @param[in] num_o Number of O's on the board.
  *
- * @returns Unhashed board represented as two 64-bit piece patterns packed into
+ * @return Unhashed board represented as two 64-bit piece patterns packed into
  * a 128-bit SIMD vector consisting of two unsigned 64-bit integers.
  */
 static inline U64x2 SimdTwoPieceHashUnhashFixedTurn(
@@ -477,7 +477,7 @@ static inline U64x2 SimdTwoPieceHashUnhashFixedTurn(
  * @param[in] num_x Number of X's on the board.
  * @param[in] num_o Number of O's on the board.
  *
- * @returns Unhashed board represented as two 64-bit piece patterns packed into
+ * @return Unhashed board represented as two 64-bit piece patterns packed into
  * a 128-bit SIMD vector consisting of two unsigned 64-bit integers.
  */
 static inline U64x2 SimdTwoPieceHashUnhash(
@@ -521,7 +521,7 @@ static inline int SimdTwoPieceHashGetTurn(Position hash) { return hash & 1; }
  *
  * @param[in] board Packed 64-bit patterns.
  *
- * @returns Flipped board.
+ * @return Flipped board.
  *
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Diagonal
@@ -559,7 +559,7 @@ static inline U64x2 SimdTwoPieceHashFlipDiag(U64x2 board) {
  * @param[in] board Packed 64-bit patterns.
  * @param[in] rows Number of effective rows in the board.
  *
- * @returns Flipped board.
+ * @return Flipped board.
  *
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Vertical
@@ -603,7 +603,7 @@ static inline U64x2 SimdTwoPieceHashFlipVertical(U64x2 board, int rows) {
  * @param[in] board Packed 64-bit patterns.
  * @param[in] cols Number of effective columns in the board.
  *
- * @returns Mirrored board.
+ * @return Mirrored board.
  *
  * @see
  * https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#Horizontal
@@ -657,7 +657,7 @@ static inline U64x2 SimdTwoPieceHashMirrorHorizontal(U64x2 board, int cols) {
  *
  * @param[in] board Packed 64-bit patterns.
  *
- * @returns Board after swapping X and O pieces.
+ * @return Board after swapping X and O pieces.
  */
 static inline U64x2 SimdTwoPieceHashSwapPieces(U64x2 board) {
     U64x2 swapped = {board[1], board[0]};
@@ -726,7 +726,7 @@ static inline bool SimdTwoPieceHashBoardLessThan(U64x2 a, U64x2 b) {
  * @param[in] a Board A.
  * @param[in] b Board B.
  *
- * @returns Either `a` or `b`, whichever is smaller.
+ * @return Either `a` or `b`, whichever is smaller.
  */
 static inline U64x2 SimdTwoPieceHashMinBoard(U64x2 a, U64x2 b) {
     // Cast the boolean result to an unsigned 64-bit integer.

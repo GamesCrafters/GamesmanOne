@@ -52,7 +52,7 @@ static inline void AtmoicRecordInit(AtomicRecord *ar, Value value,
  *
  * @param[in] ar Source `AtomicRecord`.
  *
- * @returns Raw `Record` value stored in `ar`.
+ * @return Raw `Record` value stored in `ar`.
  */
 static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
     return atomic_load_explicit(ar, memory_order_relaxed);
@@ -63,7 +63,7 @@ static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
  *
  * @param[in] ar Source `AtomicRecord`.
  *
- * @returns Value field of `ar`.
+ * @return Value field of `ar`.
  */
 static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
     Record rec = AtomicRecordLoad(ar);
@@ -76,7 +76,7 @@ static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
  *
  * @param[in] ar Source `AtomicRecord`.
  *
- * @returns Remoteness field of `ar`.
+ * @return Remoteness field of `ar`.
  */
 static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
     Record rec = AtomicRecordLoad(ar);
@@ -93,7 +93,7 @@ static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
  *
  * @param[in] ar Source `AtomicRecord`.
  *
- * @returns The number of undecided children of `ar`, or 0 if its value is
+ * @return The number of undecided children of `ar`, or 0 if its value is
  * not `kUndecided`.
  */
 static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
@@ -210,7 +210,7 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
  *
  * @param[in,out] ar Target `AtomicRecord`.
  *
- * @returns Number of undecided children immediately preceding the subtraction,
+ * @return Number of undecided children immediately preceding the subtraction,
  * or 0 if the subtraction is not performed.
  */
 static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
@@ -240,7 +240,7 @@ static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
  *
  * @param[in,out] ar Target `AtomicRecord`.
  *
- * @returns Number of undecided children immediately preceding the operation, or
+ * @return Number of undecided children immediately preceding the operation, or
  * 0 if the operation is not performed.
  */
 static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {

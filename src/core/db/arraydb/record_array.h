@@ -53,7 +53,7 @@ typedef struct RecordArray {
  *
  * @param[in] size Size of the new array in number of `Record`s.
  *
- * @returns Pointer to the new `RecordArray` on success, or `NULL` on malloc
+ * @return Pointer to the new `RecordArray` on success, or `NULL` on malloc
  * failure.
  */
 static inline RecordArray *RecordArrayCreate(int64_t size) {
@@ -166,7 +166,7 @@ static inline bool RecordArrayMaximize(RecordArray *array, Position position,
  * @param[in,out] array Target array.
  * @param[in] position Position.
  *
- * @returns Number of undecided children immediately preceding the subtraction,
+ * @return Number of undecided children immediately preceding the subtraction,
  * or 0 if the subtraction is not performed.
  */
 static inline int RecordArrayDecrementNumUndecidedChildren(RecordArray *array,
@@ -188,7 +188,7 @@ static inline int RecordArrayDecrementNumUndecidedChildren(RecordArray *array,
  * @param[in,out] array Target array.
  * @param[in] position Position.
  *
- * @returns Number of undecided children immediately preceding the operation, or
+ * @return Number of undecided children immediately preceding the operation, or
  * 0 if the operation is not performed.
  */
 static inline int RecordArrayClearNumUndecidedChildren(RecordArray *array,
@@ -205,7 +205,7 @@ static inline int RecordArrayClearNumUndecidedChildren(RecordArray *array,
  * @param[in] array Source array.
  * @param[in] position Position.
  *
- * @returns `Value` of `position`.
+ * @return `Value` of `position`.
  */
 static inline Value RecordArrayGetValue(const RecordArray *array,
                                         Position position) {
@@ -220,7 +220,7 @@ static inline Value RecordArrayGetValue(const RecordArray *array,
  * @param[in] array Source array.
  * @param[in] position Position.
  *
- * @returns Remoteness of `position`.
+ * @return Remoteness of `position`.
  */
 static inline int RecordArrayGetRemoteness(const RecordArray *array,
                                            Position position) {
@@ -238,7 +238,7 @@ static inline int RecordArrayGetRemoteness(const RecordArray *array,
  * @param[in] array Source array.
  * @param[in] position Position.
  *
- * @returns Number of undecided children of `position` if its value is
+ * @return Number of undecided children of `position` if its value is
  * `kUndecided`, or 0 otherwise.
  */
 static inline int RecordArrayGetNumUndecidedChildren(const RecordArray *array,
@@ -252,7 +252,7 @@ static inline int RecordArrayGetNumUndecidedChildren(const RecordArray *array,
  *
  * @param[in] array Source array.
  *
- * @returns Read-only direct pointer to the raw array.
+ * @return Read-only direct pointer to the raw array.
  */
 static inline const void *RecordArrayGetReadOnlyData(const RecordArray *array) {
     return (const void *)array->records;
@@ -264,7 +264,7 @@ static inline const void *RecordArrayGetReadOnlyData(const RecordArray *array) {
  *
  * @param[in,out] array Source array.
  *
- * @returns Direct pointer to the raw array.
+ * @return Direct pointer to the raw array.
  */
 static inline void *RecordArrayGetData(RecordArray *array) {
     return (void *)array->records;
@@ -275,7 +275,7 @@ static inline void *RecordArrayGetData(RecordArray *array) {
  *
  * @param[in] array Target array.
  *
- * @returns Size of `array` in number of `Record`s.
+ * @return Size of `array` in number of `Record`s.
  */
 static inline int64_t RecordArrayGetSize(const RecordArray *array) {
     return array->size;
@@ -286,7 +286,7 @@ static inline int64_t RecordArrayGetSize(const RecordArray *array) {
  *
  * @param[in] array Target array.
  *
- * @returns Size of `array` in bytes.
+ * @return Size of `array` in bytes.
  */
 static inline size_t RecordArrayGetRawSize(const RecordArray *array) {
     return array->size * sizeof(Record);

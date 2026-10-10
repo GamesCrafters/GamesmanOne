@@ -52,7 +52,7 @@ enum {
  *
  * @param[in] rec Source `Record`.
  *
- * @returns Value field of `rec`.
+ * @return Value field of `rec`.
  */
 static inline Value RecordGetValue(const Record *rec) {
     return (Value)((*rec) >> kRecordNumRemotenessBits);
@@ -63,7 +63,7 @@ static inline Value RecordGetValue(const Record *rec) {
  *
  * @param[in] rec Source `Record`.
  *
- * @returns Remoteness field of `rec`.
+ * @return Remoteness field of `rec`.
  */
 static inline int RecordGetRemoteness(const Record *rec) {
     const uint16_t remoteness_mask = (1U << kRecordNumRemotenessBits) - 1;
@@ -80,7 +80,7 @@ static inline int RecordGetRemoteness(const Record *rec) {
  *
  * @param[in] rec Source `Record`.
  *
- * @returns The number of undecided children of `Record` `rec`, or 0 if its
+ * @return The number of undecided children of `Record` `rec`, or 0 if its
  * value is not `kUndecided`.
  */
 static inline int RecordGetNumUndecidedChildren(const Record *rec) {
@@ -179,7 +179,7 @@ static inline bool RecordMaximize(Record *rec, Value val, int remoteness,
  *
  * @param[in,out] rec Target `Record`.
  *
- * @returns Number of undecided children immediately preceding the subtraction,
+ * @return Number of undecided children immediately preceding the subtraction,
  * or 0 if the subtraction is not performed.
  */
 static inline int RecordDecrementNumUndecidedChildren(Record *rec) {
@@ -207,7 +207,7 @@ static inline int RecordDecrementNumUndecidedChildren(Record *rec) {
  *
  * @param[in,out] rec Target `Record`.
  *
- * @returns Number of undecided children immediately preceding the operation, or
+ * @return Number of undecided children immediately preceding the operation, or
  * 0 if the operation is not performed.
  */
 static inline int RecordClearNumUndecidedChildren(Record *rec) {

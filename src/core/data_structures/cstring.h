@@ -38,7 +38,7 @@ typedef struct CString {
 /**
  * @brief Returns a null `CString` object.
  *
- * @returns A `CString` struct initialized to the null state.
+ * @return A `CString` struct initialized to the null state.
  */
 CString CStringGetNull(void);
 

@@ -17,13 +17,13 @@
 
 ## 3. Function and function-like macro rules
 - Only out-of-line comment blocks are allowed for documenting functions.
-- Functions may use the following tags in the exact order: `@brief`, `@deprecated`, `@details`, `@warning`, `@note`, `@tparam` (C++), `@param`, `@pre`, `@invariant`, `@post`, `@returns`, `@retval`, `@throws` (C++), `@since`, `@bug`, `@see`, `@sa`.
+- Functions may use the following tags in the exact order: `@brief`, `@deprecated`, `@details`, `@warning`, `@note`, `@tparam` (C++), `@param`, `@pre`, `@invariant`, `@post`, `@return`, `@retval`, `@throws` (C++), `@since`, `@bug`, `@see`, `@sa`.
 - All `@param` tags must strictly follow the left-to-right order of the arguments in the actual C/C++ function signature.
 - All `@param` tags should use parameter direction annotations (`@param[in]`, `@param[out]`, `@param[in,out]`) to explicitly state the direction of data flow. Note that there is no space after the comma in `@param[in,out]`.
-- Use `@return` to describe the type of data being passed back and `@retval` directly underneath it to document specific, discrete values that carry special meaning. The `@retval` tags may be used only when all possible return values are enumerated, in which case the `@returns` tag may be omitted.
+- Use `@return` to describe the type of data being passed back and `@retval` directly underneath it to document specific, discrete values that carry special meaning. The `@retval` tags may be used only when all possible return values are enumerated, in which case the `@return` tag may be omitted.
 - Markdown formatting of HTTP links (`[Text](URL)`) are highly encouraged to reduce cluttering in generated document. If a link is longer than 2 lines, consider placing it under the `@see` or `@sa` tags.
 - The links provided in the `@see` and `@sa` sections should NOT use the Markdown formatting.
-- The same tags should be grouped by inserting empty lines between each group of tags. There are two exceptions to this rule: (a) `@returns` and `@retval` must be grouped together even though they are not the same tag; (b) multiple `@see` and `@sa` tags must be separated with exactly one empty line in between and NOT be grouped together because otherwise the links will appear on the same line with no separator in between.
+- The same tags should be grouped by inserting empty lines between each group of tags. There are two exceptions to this rule: (a) `@return` and `@retval` must be grouped together even though they are not the same tag; (b) multiple `@see` and `@sa` tags must be separated with exactly one empty line in between and NOT be grouped together because otherwise the links will appear on the same line with no separator in between.
 - In the special case where a single function was copied from an open source project, place the original license on top of the function documentation. If the original source does not come with a license (e.g., copied from Stack Overflow), list the author and source under a `@copyright` tag.
 
 ## 4. Extern variable and constant macro rules

@@ -74,7 +74,7 @@ static inline bool U64x2Equal(U64x2 a, U64x2 b) {
  * @param[in] val The 64-bit value to extract bits from.
  * @param[in] mask The 64-bit mask specifying which bits to extract.
  *
- * @returns The extracted bits packed into the lower bits of the result.
+ * @return The extracted bits packed into the lower bits of the result.
  */
 static inline uint64_t PextU64(uint64_t val, uint64_t mask) {
 #ifdef GAMESMAN_HAS_BMI2
@@ -99,7 +99,7 @@ static inline uint64_t PextU64(uint64_t val, uint64_t mask) {
  * @param[in] val The 64-bit value providing the contiguous bits to deposit.
  * @param[in] mask The 64-bit mask specifying where to scatter the bits.
  *
- * @returns The deposited bits dispersed according to `mask`.
+ * @return The deposited bits dispersed according to `mask`.
  */
 static inline uint64_t PdepU64(uint64_t val, uint64_t mask) {
 #ifdef GAMESMAN_HAS_BMI2
@@ -121,7 +121,7 @@ static inline uint64_t PdepU64(uint64_t val, uint64_t mask) {
  *
  * @param[in] x The 64-bit integer to operate on.
  *
- * @returns The value of `x` with its lowest set bit cleared to 0.
+ * @return The value of `x` with its lowest set bit cleared to 0.
  */
 static inline uint64_t BlsrU64(uint64_t x) {
 #ifdef GAMESMAN_HAS_BMI1
@@ -136,7 +136,7 @@ static inline uint64_t BlsrU64(uint64_t x) {
  *
  * @param[in] x The 64-bit integer to operate on.
  *
- * @returns A 64-bit integer where only the lowest set bit of `x` is set.
+ * @return A 64-bit integer where only the lowest set bit of `x` is set.
  */
 static inline uint64_t BlsiU64(uint64_t x) {
 #ifdef GAMESMAN_HAS_BMI1

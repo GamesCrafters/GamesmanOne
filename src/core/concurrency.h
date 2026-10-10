@@ -233,7 +233,7 @@ static inline void ConcurrentBoolInit(ConcurrentBool *cb, bool val) {
  * @param[in] cb Pointer to the `ConcurrentBool` variable to load the value
  *               from.
  *
- * @returns The current value of the `ConcurrentBool` variable.
+ * @return The current value of the `ConcurrentBool` variable.
  */
 static inline bool ConcurrentBoolLoad(const ConcurrentBool *cb) {
 #ifdef _OPENMP
@@ -251,7 +251,7 @@ static inline bool ConcurrentBoolLoad(const ConcurrentBool *cb) {
  *               from.
  * @param[in] order The explicit memory order to use for the load operation.
  *
- * @returns The current value of the `ConcurrentBool` variable.
+ * @return The current value of the `ConcurrentBool` variable.
  */
 static inline bool ConcurrentBoolLoadExplicit(const ConcurrentBool *cb,
                                               ConcurrencyMemoryOrder order) {
@@ -325,7 +325,7 @@ static inline void ConcurrentIntInit(ConcurrentInt *ci, int val) {
  * @param[in] ci Pointer to the `ConcurrentInt` variable to load the value
  *               from.
  *
- * @returns The current value of the `ConcurrentInt` variable.
+ * @return The current value of the `ConcurrentInt` variable.
  */
 static inline int ConcurrentIntLoad(const ConcurrentInt *ci) {
 #ifdef _OPENMP
@@ -343,7 +343,7 @@ static inline int ConcurrentIntLoad(const ConcurrentInt *ci) {
  *               from.
  * @param[in] order The explicit memory order to use for the load operation.
  *
- * @returns The current value of the `ConcurrentInt` variable.
+ * @return The current value of the `ConcurrentInt` variable.
  */
 static inline int ConcurrentIntLoadExplicit(const ConcurrentInt *ci,
                                             ConcurrencyMemoryOrder order) {
@@ -400,7 +400,7 @@ static inline void ConcurrentIntStoreExplicit(ConcurrentInt *ci, int val,
  *                   maximum value into.
  * @param[in] val Another value.
  *
- * @returns The value pointed by `ci` immediately preceding the effects of this
+ * @return The value pointed by `ci` immediately preceding the effects of this
  *          function.
  */
 static inline int ConcurrentIntMax(ConcurrentInt *ci, int val) {
@@ -431,7 +431,7 @@ static inline int ConcurrentIntMax(ConcurrentInt *ci, int val) {
  * @param[in] failure The explicit memory order to use for the compare and
  *                    exchange operation on failure.
  *
- * @returns The value pointed by `ci` immediately preceding the effects of this
+ * @return The value pointed by `ci` immediately preceding the effects of this
  *          function.
  */
 static inline int ConcurrentIntMaxExplicit(ConcurrentInt *ci, int val,
@@ -480,7 +480,7 @@ static inline void ConcurrentInt64Init(ConcurrentInt64 *ci64, int64_t val) {
  * @param[in] ci64 Pointer to the `ConcurrentInt64` variable to load the value
  *                 from.
  *
- * @returns The current value of the `ConcurrentInt64` variable.
+ * @return The current value of the `ConcurrentInt64` variable.
  */
 static inline int64_t ConcurrentInt64Load(const ConcurrentInt64 *ci64) {
 #ifdef _OPENMP
@@ -498,7 +498,7 @@ static inline int64_t ConcurrentInt64Load(const ConcurrentInt64 *ci64) {
  *                 from.
  * @param[in] order The explicit memory order to use for the load operation.
  *
- * @returns The current value of the `ConcurrentInt64` variable.
+ * @return The current value of the `ConcurrentInt64` variable.
  */
 static inline int64_t ConcurrentInt64LoadExplicit(
     const ConcurrentInt64 *ci64, ConcurrencyMemoryOrder order) {
@@ -574,7 +574,7 @@ static inline void ConcurrentSizeTypeInit(ConcurrentSizeType *cs, size_t val) {
  * @param[in] cs Pointer to the `ConcurrentSizeType` variable to load the value
  *               from.
  *
- * @returns The current value of the `ConcurrentSizeType` variable.
+ * @return The current value of the `ConcurrentSizeType` variable.
  */
 static inline size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs) {
 #ifdef _OPENMP
@@ -592,7 +592,7 @@ static inline size_t ConcurrentSizeTypeLoad(const ConcurrentSizeType *cs) {
  *               from.
  * @param[in] order The explicit memory order to use for the load operation.
  *
- * @returns The current value of the `ConcurrentSizeType` variable.
+ * @return The current value of the `ConcurrentSizeType` variable.
  */
 static inline size_t ConcurrentSizeTypeLoadExplicit(
     const ConcurrentSizeType *cs, ConcurrencyMemoryOrder order) {
@@ -682,7 +682,7 @@ static inline bool ConcurrentSizeTypeSubtractIfGreaterEqualExplicit(
  *                   value to.
  * @param[in] val Value to add.
  *
- * @returns The original value in `cs` before the addition.
+ * @return The original value in `cs` before the addition.
  */
 static inline size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
 #ifdef _OPENMP
@@ -703,7 +703,7 @@ static inline size_t ConcurrentSizeTypeAdd(ConcurrentSizeType *cs, size_t val) {
  * @param[in] val Value to add.
  * @param[in] order The explicit memory order to use for the addition.
  *
- * @returns The original value in `cs` before the addition.
+ * @return The original value in `cs` before the addition.
  */
 static inline size_t ConcurrentSizeTypeAddExplicit(
     ConcurrentSizeType *cs, size_t val, ConcurrencyMemoryOrder order) {
@@ -728,7 +728,7 @@ static inline size_t ConcurrentSizeTypeAddExplicit(
  *                   the value from.
  * @param[in] val Value to subtract.
  *
- * @returns The original value in `cs` before the subtraction.
+ * @return The original value in `cs` before the subtraction.
  */
 static inline size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs,
                                                 size_t val) {
@@ -750,7 +750,7 @@ static inline size_t ConcurrentSizeTypeSubtract(ConcurrentSizeType *cs,
  * @param[in] val Value to subtract.
  * @param[in] order The explicit memory order to use for the subtraction.
  *
- * @returns The original value in `cs` before the subtraction.
+ * @return The original value in `cs` before the subtraction.
  */
 static inline size_t ConcurrentSizeTypeSubtractExplicit(
     ConcurrentSizeType *cs, size_t val, ConcurrencyMemoryOrder order) {
@@ -770,7 +770,7 @@ static inline size_t ConcurrentSizeTypeSubtractExplicit(
  * @brief Returns the number of OpenMP threads available. Returns `1` if
  *        OpenMP is disabled.
  *
- * @returns Number of OpenMP threads available.
+ * @return Number of OpenMP threads available.
  */
 static inline int ConcurrencyGetOmpNumThreads(void) {
 #ifdef _OPENMP
@@ -784,7 +784,7 @@ static inline int ConcurrencyGetOmpNumThreads(void) {
  * @brief Returns the caller's OpenMP thread ID. Returns `0` if OpenMP is
  *        disabled.
  *
- * @returns The caller's OpenMP thread ID.
+ * @return The caller's OpenMP thread ID.
  */
 static inline int ConcurrencyGetOmpThreadId(void) {
 #ifdef _OPENMP
