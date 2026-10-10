@@ -3,10 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The atomic version of the basic record type for the Array Database
+ * @brief The atomic version of the basic `Record` type for the Array Database
  * storing only values and remotenesses.
- * @version 1.0.0
- * @date 2025-06-09
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,15 +30,15 @@
 
 #include "core/db/arraydb/record.h"
 
-/** @brief The atomic record type. */
+/** The atomic `Record` type. */
 typedef _Atomic Record AtomicRecord;
 
 /**
- * @brief Initializes record \p ar with the given \p value and \p remoteness .
+ * @brief Initializes `ar` with the given `value` and `remoteness`.
  *
- * @param ar Pointer to the AtmoicRecord to initialize.
- * @param value Initial value.
- * @param remoteness Initial remoteness.
+ * @param[out] ar Pointer to the `AtomicRecord` to initialize.
+ * @param[in] value Initial `Value`.
+ * @param[in] remoteness Initial remoteness.
  */
 static inline void AtmoicRecordInit(AtomicRecord *ar, Value value,
                                     int remoteness) {
@@ -50,20 +48,22 @@ static inline void AtmoicRecordInit(AtomicRecord *ar, Value value,
 }
 
 /**
- * @brief Retrieves the raw Record value from \p ar .
+ * @brief Retrieves the raw `Record` value from `ar`.
  *
- * @param ar Source record.
- * @return Raw Record value stored in \p ar .
+ * @param[in] ar Source `AtomicRecord`.
+ *
+ * @returns Raw `Record` value stored in `ar`.
  */
 static inline Record AtomicRecordLoad(const AtomicRecord *ar) {
     return atomic_load_explicit(ar, memory_order_relaxed);
 }
 
 /**
- * @brief Returns the value field of record \p ar .
+ * @brief Returns the value field of `ar`.
  *
- * @param ar Source record.
- * @return Value field of \p ar.
+ * @param[in] ar Source `AtomicRecord`.
+ *
+ * @returns Value field of `ar`.
  */
 static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
     Record rec = AtomicRecordLoad(ar);
@@ -72,10 +72,11 @@ static inline Value AtomicRecordGetValue(const AtomicRecord *ar) {
 }
 
 /**
- * @brief Returns the remoteness field of record \p ar.
+ * @brief Returns the remoteness field of `ar`.
  *
- * @param ar Source record.
- * @return Remoteness field of \p ar.
+ * @param[in] ar Source `AtomicRecord`.
+ *
+ * @returns Remoteness field of `ar`.
  */
 static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
     Record rec = AtomicRecordLoad(ar);
@@ -84,16 +85,16 @@ static inline int AtomicRecordGetRemoteness(const AtomicRecord *ar) {
 }
 
 /**
- * @brief Returns the number of undecided children of record \p ar , if exists.
- * Returns 0 otherwise.
+ * @brief Returns the number of undecided children of `ar`. Returns 0 if its
+ * value is not `kUndecided`.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param ar Source record.
- * @return The number of undecided children of record \p ar , if exists.
- * @return 0 otherwise.
+ * @param[in] ar Source `AtomicRecord`.
+ *
+ * @returns The number of undecided children of `ar`, or 0 if its value is
+ * not `kUndecided`.
  */
 static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
     Record rec = AtomicRecordLoad(ar);
@@ -102,10 +103,10 @@ static inline int AtomicRecordGetNumUndecidedChildren(const AtomicRecord *ar) {
 }
 
 /**
- * @brief Atomically sets the value field of record \p ar to \p val .
+ * @brief Atomically sets the value field of `ar` to `val`.
  *
- * @param ar Target record.
- * @param val New value.
+ * @param[in,out] ar Target `AtomicRecord`.
+ * @param[in] val New `Value`.
  */
 static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
     Record old_rec = AtomicRecordLoad(ar);
@@ -121,11 +122,10 @@ static inline void AtomicRecordSetValue(AtomicRecord *ar, Value val) {
 }
 
 /**
- * @brief Atomically sets the remoteness field of record \p ar to \p remoteness
- * .
+ * @brief Atomically sets the remoteness field of `ar` to `remoteness`.
  *
- * @param ar Target record.
- * @param remoteness New remoteness.
+ * @param[in,out] ar Target `AtomicRecord`.
+ * @param[in] remoteness New remoteness.
  */
 static inline void AtomicRecordSetRemoteness(AtomicRecord *ar, int remoteness) {
     Record old_rec = AtomicRecordLoad(ar);
@@ -141,12 +141,12 @@ static inline void AtomicRecordSetRemoteness(AtomicRecord *ar, int remoteness) {
 }
 
 /**
- * @brief Atomically sets the value and remoteness fields of record \p ar to
- * \p val and \p remoteness , respectively.
+ * @brief Atomically sets the value and remoteness fields of `ar` to
+ * `val` and `remoteness`, respectively.
  *
- * @param ar Target record.
- * @param val New value.
- * @param remoteness New remoteness.
+ * @param[in,out] ar Target `AtomicRecord`.
+ * @param[in] val New `Value`.
+ * @param[in] remoteness New remoteness.
  */
 static inline void AtomicRecordSetValueRemoteness(AtomicRecord *ar, Value val,
                                                   int remoteness) {
@@ -156,21 +156,22 @@ static inline void AtomicRecordSetValueRemoteness(AtomicRecord *ar, Value val,
 }
 
 /**
- * @brief Atomically replaces the value and remoteness fields of record \p ar
+ * @brief Atomically replaces the value and remoteness fields of `ar`
  * with the maximum of its original value-remoteness pair and the one provided
- * by \p val and \p remoteness . The order of value-remoteness pairs are
- * determined by the \p compare function.
+ * by `val` and `remoteness`. The order of value-remoteness pairs is
+ * determined by the `compare` function.
  *
- * @param ar Target record.
- * @param val Candidate value.
- * @param remoteness Candidate remoteness.
- * @param compare Pointer to a value-remoteness pair comparison function that
- * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
+ * @param[in,out] ar Target `AtomicRecord`.
+ * @param[in] val Candidate `Value`.
+ * @param[in] remoteness Candidate remoteness.
+ * @param[in] compare Pointer to a value-remoteness pair comparison function
+ * that takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
  * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
  * (v2, r2), or zero if they are equal.
- * @return \c true if the provided \p value - \p remoteness pair is greater than
- * the original value-remoteness pair and the old pair is replaced;
- * @return \c false otherwise.
+ *
+ * @retval true If the provided `val`-`remoteness` pair is greater than
+ * the original value-remoteness pair and the old pair is replaced.
+ * @retval false Otherwise.
  */
 static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
                                         int remoteness,
@@ -198,18 +199,19 @@ static inline bool AtomicRecordMaximize(AtomicRecord *ar, Value val,
 
 /**
  * @brief Atomically subtracts one from the number of undecided children of
- * record \p ar and returns the value immediately preceding the subtraction
- * if the value field of \p ar is set to \c kUndecided and the number of
- * undecided children is at least one. Does nothing and returns 0 otherwise.
+ * `ar` and returns the number of undecided children immediately preceding the
+ * subtraction if the value field of `ar` is set to `kUndecided` and the number
+ * of undecided children is at least one. Does nothing and returns 0 if the
+ * value field of `ar` is not `kUndecided` or the number of undecided children
+ * is zero.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param ar Target record.
- * @return Number of undecided children immediately preceding the subtraction,
- * or
- * @return 0 if the subtraction is not performed.
+ * @param[in,out] ar Target `AtomicRecord`.
+ *
+ * @returns Number of undecided children immediately preceding the subtraction,
+ * or 0 if the subtraction is not performed.
  */
 static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
     Record old_rec = AtomicRecordLoad(ar);
@@ -228,18 +230,18 @@ static inline int AtomicRecordDecrementNumUndecidedChildren(AtomicRecord *ar) {
 }
 
 /**
- * @brief Atomically sets the number of undecided children of record \p ar to
- * zero and returns the value immediately preceding the operation if the value
- * field of \p ar is set to \c kUndecided . Does nothing and returns 0
- * otherwise.
+ * @brief Atomically sets the number of undecided children of `ar` to
+ * zero and returns the number of undecided children immediately preceding the
+ * operation if the value field of `ar` is set to `kUndecided`. Does nothing
+ * and returns 0 if the value field of `ar` is not `kUndecided`.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param ar Target record.
- * @return Number of undecided children immediately preceding the operation, or
- * @return 0 if the operation is not performed.
+ * @param[in,out] ar Target `AtomicRecord`.
+ *
+ * @returns Number of undecided children immediately preceding the operation, or
+ * 0 if the operation is not performed.
  */
 static inline int AtomicRecordClearNumUndecidedChildren(AtomicRecord *ar) {
     Record old_rec = AtomicRecordLoad(ar);
