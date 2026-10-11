@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Fixed-length \c AtomicRecord array for the Array Database.
- * @version 1.0.0
- * @date 2025-06-09
+ * @brief Fixed-length `AtomicRecord` array for the Array Database.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,23 +32,26 @@
 #include "core/db/arraydb/record.h"
 #include "core/gamesman_memory.h"
 
-/** @brief Fixed-length \c Record array. */
+/** Fixed-length `AtomicRecord` array. */
 typedef struct AtomicRecordArray {
     int64_t size;           /**< Number of elements in the array. */
-    AtomicRecord records[]; /**< Array or atomic records. */
+    AtomicRecord records[]; /**< Array of `AtomicRecord`s. */
 } AtomicRecordArray;
 
 /**
- * @brief Creates a new AtomicRecordArray of \p size elements.
+ * @brief Creates a new `AtomicRecordArray` of `size` elements.
  *
- * @param size Size of the new array in number of \c Records .
- * @return Pointer to the new AtomicRecordArray on success,
- * @return \c NULL on malloc failure.
+ * @param[in] size Size of the new array in number of `AtomicRecord`s.
+ *
+ * @return Pointer to the new `AtomicRecordArray` on success.
+ * @retval NULL On memory allocation failure.
  */
 static inline AtomicRecordArray *AtomicRecordArrayCreate(int64_t size) {
     AtomicRecordArray *ret = (AtomicRecordArray *)GamesmanMalloc(
         sizeof(int64_t) + size * sizeof(AtomicRecord));
-    if (ret == NULL) return NULL;
+    if (ret == NULL) {
+        return NULL;
+    }
 
     ret->size = size;
     for (int64_t i = 0; i < size; ++i) {
@@ -61,22 +62,22 @@ static inline AtomicRecordArray *AtomicRecordArrayCreate(int64_t size) {
 }
 
 /**
- * @brief Deallocates the \p array .
+ * @brief Deallocates the `array`.
  *
- * @param array Array to deallocate.
+ * @param[in,out] array Array to deallocate.
  */
 static inline void AtomicRecordArrayDestroy(AtomicRecordArray *array) {
     GamesmanFree(array);
 }
 
 /**
- * @brief Atomically sets the value of position \p position in \p array to
- * \p val . Assumes \p position is greater than or equal to 0 and smaller than
- * the size of \p array .
+ * @brief Atomically sets the value of `position` in `array` to `val`. Assumes
+ * `position` is greater than or equal to 0 and smaller than the size of
+ * `array`.
  *
- * @param array Target array.
- * @param position Position to set the value for.
- * @param val New value for the \p position .
+ * @param[in,out] array Target array.
+ * @param[in] position Position to set the value for.
+ * @param[in] val New `Value` for `position`.
  */
 static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
                                              Position position, Value val) {
@@ -85,13 +86,13 @@ static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
 }
 
 /**
- * @brief Atomically sets the remoteness of position \p position in \p array to
- * \p remoteness . Assumes \p position is greater than or equal to 0 and smaller
- * than the size of \p array .
+ * @brief Atomically sets the remoteness of `position` in `array` to
+ * `remoteness`. Assumes `position` is greater than or equal to 0 and smaller
+ * than the size of `array`.
  *
- * @param array Target array.
- * @param position Position to set the remoteness for.
- * @param remoteness New remoteness for the \p position.
+ * @param[in,out] array Target array.
+ * @param[in] position Position to set the remoteness for.
+ * @param[in] remoteness New remoteness for `position`.
  */
 static inline void AtomicRecordArraySetRemoteness(AtomicRecordArray *array,
                                                   Position position,
@@ -101,14 +102,14 @@ static inline void AtomicRecordArraySetRemoteness(AtomicRecordArray *array,
 }
 
 /**
- * @brief Atomically sets the value and remoteness of \p position in \p array to
- * \p val and \p remoteness , respectively. Assumes \p position is greater than
- * or equal to 0 and smaller than the size of \p array .
+ * @brief Atomically sets the value and remoteness of `position` in `array` to
+ * `val` and `remoteness`, respectively. Assumes `position` is greater than or
+ * equal to 0 and smaller than the size of `array`.
  *
- * @param array Target array.
- * @param position Position to set the value and remoteness for.
- * @param val New value for the \p position .
- * @param remoteness New remoteness for the \p position .
+ * @param[in,out] array Target array.
+ * @param[in] position Position to set the value and remoteness for.
+ * @param[in] val New `Value` for `position`.
+ * @param[in] remoteness New remoteness for `position`.
  */
 static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
                                                        Position position,
@@ -119,22 +120,23 @@ static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
 }
 
 /**
- * @brief Atomically replaces the value and remoteness of position \p position
- * in \p array with the maximum of its original value-remoteness pair and the
- * one provided by \p val and \p remoteness . The order of value-remoteness
- * pairs are determined by the \p compare function.
+ * @brief Atomically replaces the value and remoteness of `position` in
+ * `array` with the maximum of its original value-remoteness pair and the one
+ * provided by `val` and `remoteness`. The order of value-remoteness pairs is
+ * determined by the `compare` function.
  *
- * @param array Target array.
- * @param position Position to replace the value and remoteness for.
- * @param val Candidate new value for the \p position .
- * @param remoteness Candidate new remoteness for the \p position .
- * @param compare Pointer to a value-remoteness pair comparison function that
- * takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
+ * @param[in,out] array Target array.
+ * @param[in] position Position to replace the value and remoteness for.
+ * @param[in] val Candidate new `Value` for `position`.
+ * @param[in] remoteness Candidate new remoteness for `position`.
+ * @param[in] compare Pointer to a value-remoteness pair comparison function
+ * that takes in two value-remoteness pairs (v1, r1) and (v2, r2) and returns a
  * negative integer if (v1, r1) < (v2, r2), a positive integer if (v1, r1) >
  * (v2, r2), or zero if they are equal.
- * @return \c true if the provided \p val - \p remoteness pair is greater than
- * the original value-remoteness pair and the old pair is replaced;
- * @return \c false otherwise.
+ *
+ * @retval true If the provided `val`-`remoteness` pair is greater than the
+ * original value-remoteness pair and the old pair is replaced.
+ * @retval false Otherwise.
  */
 static inline bool AtomicRecordArrayMaximize(
     AtomicRecordArray *array, Position position, Value val, int remoteness,
@@ -147,21 +149,21 @@ static inline bool AtomicRecordArrayMaximize(
 
 /**
  * @brief Atomically subtracts one from the number of undecided children of
- * position \p position in \p array and returns the number of undecided children
- * immediately preceding the subtraction if the value field of \p position is
- * set to \c kUndecided and the number of undecided children is at least one.
- * Does nothing if the value field of \p position is not \c kUndecided and
- * returns 0.
+ * `position` in `array` and returns the number of undecided children
+ * immediately preceding the subtraction if the value field of `position` is
+ * set to `kUndecided` and the number of undecided children is at least one.
+ * Does nothing and returns 0 if the value field of `position` is not
+ * `kUndecided` or the number of undecided children is zero.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param array Target array.
- * @param position Position to decrement the number of undecided children for.
+ * @param[in,out] array Target array.
+ * @param[in] position Position to decrement the number of undecided children
+ * for.
+ *
  * @return Number of undecided children immediately preceding the subtraction,
- * or
- * @return 0 if the subtraction is not performed.
+ * or 0 if the subtraction is not performed.
  */
 static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
@@ -171,20 +173,20 @@ static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
 }
 
 /**
- * @brief Atomically sets the number of undecided children of position
- * \p position in \p array to zero if the value field of \p position is set to
- * \c kUndecided , and returns the number of undecided children immediately
- * preceding the operation. Does nothing if the value field of \p position is
- * not \c kUndecided and returns 0.
+ * @brief Atomically sets the number of undecided children of `position` in
+ * `array` to zero if the value field of `position` is set to `kUndecided`, and
+ * returns the number of undecided children immediately preceding the
+ * operation. Does nothing and returns 0 if the value field of `position` is not
+ * `kUndecided`.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param array Target array.
- * @param position Position to set the number of undecided children for.
+ * @param[in,out] array Target array.
+ * @param[in] position Position to set the number of undecided children for.
+ *
  * @return Number of undecided children immediately preceding the operation, or
- * @return 0 if the operation is not performed.
+ * 0 if the operation is not performed.
  */
 static inline int AtomicRecordArrayClearNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
@@ -194,13 +196,14 @@ static inline int AtomicRecordArrayClearNumUndecidedChildren(
 }
 
 /**
- * @brief Returns the value of \p position in the given \p array, assumes
- * \p position is greater than or equal to 0 and smaller than the size of
- * \p array.
+ * @brief Returns the value of `position` in the given `array`. Assumes
+ * `position` is greater than or equal to 0 and smaller than the size of
+ * `array`.
  *
- * @param array Source array.
- * @param position Position to get the value of.
- * @return Value of \p position.
+ * @param[in] array Source array.
+ * @param[in] position Position to get the value of.
+ *
+ * @return `Value` of `position`.
  */
 static inline Value AtomicRecordArrayGetValue(const AtomicRecordArray *array,
                                               Position position) {
@@ -208,13 +211,14 @@ static inline Value AtomicRecordArrayGetValue(const AtomicRecordArray *array,
 }
 
 /**
- * @brief Returns the remoteness of \p position in the given \p array, assumes
- * \p position is greater than or equal to 0 and smaller than the size of
- * \p array.
+ * @brief Returns the remoteness of `position` in the given `array`. Assumes
+ * `position` is greater than or equal to 0 and smaller than the size of
+ * `array`.
  *
- * @param array Source array.
- * @param position Position to get the remoteness of.
- * @return Remoteness of \p position.
+ * @param[in] array Source array.
+ * @param[in] position Position to get the remoteness of.
+ *
+ * @return Remoteness of `position`.
  */
 static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
                                                  Position position) {
@@ -222,19 +226,18 @@ static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
 }
 
 /**
- * @brief Returns the number of undecided children of position \p position in
- * \p array if the value field of \p position is set to \c kUndecided . Returns
- * 0 otherwise.
+ * @brief Returns the number of undecided children of `position` in `array`
+ * if the value field of `position` is set to `kUndecided`. Returns 0
+ * otherwise.
  *
- * @note The remoteness field of a record is overloaded as the counter for the
- * number of undecided children of that position when its value is \c kUndecided
- * .
+ * @note The remoteness field of a `Record` is overloaded as the counter for the
+ * number of undecided children of that position when its value is `kUndecided`.
  *
- * @param array Source array.
- * @param position Position to get the number of undecided children of.
- * @return Number of undecided children of \p position if its value is
- * \c kUndecided , or
- * @return 0 otherwise.
+ * @param[in] array Source array.
+ * @param[in] position Position to get the number of undecided children of.
+ *
+ * @return Number of undecided children of `position` if its value is
+ * `kUndecided`, or 0 otherwise.
  */
 static inline int AtomicRecordArrayGetNumUndecidedChildren(
     const AtomicRecordArray *array, Position position) {
@@ -244,10 +247,11 @@ static inline int AtomicRecordArrayGetNumUndecidedChildren(
 }
 
 /**
- * @brief Returns the size of \p array after it is serialized in bytes.
+ * @brief Returns the serialized size of `array` in bytes.
  *
- * @param array Target array.
- * @return Size of \p array after it is serialized in bytes.
+ * @param[in] array Target array.
+ *
+ * @return Serialized size of `array` in bytes.
  */
 static inline size_t AtomicRecordArrayGetSerializedSize(
     const AtomicRecordArray *array) {
@@ -256,25 +260,30 @@ static inline size_t AtomicRecordArrayGetSerializedSize(
 }
 
 /**
- * @brief Serializes at most \p buf_size bytes of raw contents of \p array into
- * \p buf , which is assumed to be of size at least \p buf_size bytes. The first
- * call to this function should have \p offset set to 0. Then, the function may
- * be called multiple times, each time continuing from the given \p offset ,
- * which is set to the total amount of serialized data in bytes, for streaming.
- * The function returns 0 when no data is left for serialization.
+ * @brief Serializes up to `buf_size` bytes of raw contents from `array` into
+ * `buf`.
  *
- * @param array Array to serialize.
- * @param offset Total amount of serialized data.
- * @param buf Output buffer.
- * @param buf_size Size of the output buffer.
- * @return Size of serialized data available in the output buffer in bytes.
+ * @details The buffer `buf` is assumed to have a capacity of at least
+ * `buf_size` bytes. For streaming serialization, the first call should set
+ * `offset` to 0. Subsequent calls can then advance `offset` by the number of
+ * bytes serialized so far to stream the remaining data.
+ *
+ * @param[in] array Array to serialize.
+ * @param[in] offset Total amount of data previously serialized in bytes.
+ * @param[out] buf Output buffer.
+ * @param[in] buf_size Size of the output buffer in bytes.
+ *
+ * @return Size of serialized data written to the output buffer in bytes.
+ * @retval 0 If no data remains to be serialized.
  */
 static inline size_t AtomicRecordArraySerializeStreaming(
     const AtomicRecordArray *array, size_t offset, void *buf, size_t buf_size) {
     //
     assert(offset % sizeof(Record) == 0);
     size_t total_bytes = AtomicRecordArrayGetSerializedSize(array);
-    if (offset >= total_bytes) return 0;
+    if (offset >= total_bytes) {
+        return 0;
+    }
 
     size_t start_rec = offset / sizeof(Record);        // Starting index
     size_t total_recs = total_bytes / sizeof(Record);  // Total records in array
