@@ -47,7 +47,7 @@ constexpr int kIterationsPerThread = 2500;  // 4 * 2500 = 10000 total
 // ============================= AtmoicRecordInit =============================
 
 // Verifies basic initialization with a typical value and remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, InitBasic) {
+TEST(ArrayDbAtomicRecordTest, InitBasic) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 42);
 
@@ -58,7 +58,7 @@ TEST(ArrayDbAtomicRecordArrayTest, InitBasic) {
 }
 
 // Verifies initialization with kUndecided and zero remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, InitUndecidedZeroRemoteness) {
+TEST(ArrayDbAtomicRecordTest, InitUndecidedZeroRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -69,7 +69,7 @@ TEST(ArrayDbAtomicRecordArrayTest, InitUndecidedZeroRemoteness) {
 }
 
 // Verifies initialization with the maximum supported remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, InitMaxRemoteness) {
+TEST(ArrayDbAtomicRecordTest, InitMaxRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, kRemotenessMax);
 
@@ -80,7 +80,7 @@ TEST(ArrayDbAtomicRecordArrayTest, InitMaxRemoteness) {
 }
 
 // Verifies initialization round-trips correctly for all five Value types.
-TEST(ArrayDbAtomicRecordArrayTest, InitAllValues) {
+TEST(ArrayDbAtomicRecordTest, InitAllValues) {
     constexpr int kFixedRemoteness = 99;
     const Value kAllValues[] = {kUndecided, kLose, kDraw, kTie, kWin};
 
@@ -99,7 +99,7 @@ TEST(ArrayDbAtomicRecordArrayTest, InitAllValues) {
 // ============================= AtomicRecordLoad =============================
 
 // Verifies that Load returns a Record with the expected fields.
-TEST(ArrayDbAtomicRecordArrayTest, LoadReturnsInitializedRecord) {
+TEST(ArrayDbAtomicRecordTest, LoadReturnsInitializedRecord) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kTie, 55);
 
@@ -114,7 +114,7 @@ TEST(ArrayDbAtomicRecordArrayTest, LoadReturnsInitializedRecord) {
 // =========================== AtomicRecordGetValue ===========================
 
 // Verifies GetValue after initialization for each Value.
-TEST(ArrayDbAtomicRecordArrayTest, GetValueAfterInit) {
+TEST(ArrayDbAtomicRecordTest, GetValueAfterInit) {
     const Value kAllValues[] = {kUndecided, kLose, kDraw, kTie, kWin};
 
     for (Value val : kAllValues) {
@@ -127,7 +127,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetValueAfterInit) {
 }
 
 // Verifies GetValue reflects a subsequent SetValue.
-TEST(ArrayDbAtomicRecordArrayTest, GetValueAfterSetValue) {
+TEST(ArrayDbAtomicRecordTest, GetValueAfterSetValue) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 10);
 
@@ -140,7 +140,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetValueAfterSetValue) {
 // ========================= AtomicRecordGetRemoteness =========================
 
 // Verifies GetRemoteness returns 0 when initialized with zero remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessZero) {
+TEST(ArrayDbAtomicRecordTest, GetRemotenessZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 0);
 
@@ -149,7 +149,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessZero) {
 }
 
 // Verifies GetRemoteness returns 1 when initialized with remoteness 1.
-TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessOne) {
+TEST(ArrayDbAtomicRecordTest, GetRemotenessOne) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 1);
 
@@ -158,7 +158,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessOne) {
 }
 
 // Verifies GetRemoteness returns kRemotenessMax.
-TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessMax) {
+TEST(ArrayDbAtomicRecordTest, GetRemotenessMax) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, kRemotenessMax);
 
@@ -167,7 +167,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessMax) {
 }
 
 // Verifies GetRemoteness reflects a subsequent SetRemoteness.
-TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessAfterSetRemoteness) {
+TEST(ArrayDbAtomicRecordTest, GetRemotenessAfterSetRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -181,7 +181,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetRemotenessAfterSetRemoteness) {
 
 // Verifies the overloaded remoteness field is returned when value is
 // kUndecided.
-TEST(ArrayDbAtomicRecordArrayTest, GetNumUndecidedChildrenWhenUndecided) {
+TEST(ArrayDbAtomicRecordTest, GetNumUndecidedChildrenWhenUndecided) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 7);
 
@@ -191,7 +191,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetNumUndecidedChildrenWhenUndecided) {
 }
 
 // Verifies that zero undecided children is reported correctly.
-TEST(ArrayDbAtomicRecordArrayTest, GetNumUndecidedChildrenZeroWhenUndecided) {
+TEST(ArrayDbAtomicRecordTest, GetNumUndecidedChildrenZeroWhenUndecided) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -200,8 +200,7 @@ TEST(ArrayDbAtomicRecordArrayTest, GetNumUndecidedChildrenZeroWhenUndecided) {
 }
 
 // Verifies that non-kUndecided values always yield 0.
-TEST(ArrayDbAtomicRecordArrayTest,
-     GetNumUndecidedChildrenZeroWhenNotUndecided) {
+TEST(ArrayDbAtomicRecordTest, GetNumUndecidedChildrenZeroWhenNotUndecided) {
     const Value kNonUndecided[] = {kLose, kDraw, kTie, kWin};
 
     for (Value val : kNonUndecided) {
@@ -217,7 +216,7 @@ TEST(ArrayDbAtomicRecordArrayTest,
 // =========================== AtomicRecordSetValue ===========================
 
 // Verifies basic SetValue functionality.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueBasic) {
+TEST(ArrayDbAtomicRecordTest, SetValueBasic) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 42);
 
@@ -228,7 +227,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueBasic) {
 }
 
 // Verifies that SetValue does not corrupt the remoteness field.
-TEST(ArrayDbAtomicRecordArrayTest, SetValuePreservesRemoteness) {
+TEST(ArrayDbAtomicRecordTest, SetValuePreservesRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 42);
 
@@ -241,7 +240,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValuePreservesRemoteness) {
 }
 
 // Verifies that a second SetValue call overwrites the first.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueOverwritesPreviousValue) {
+TEST(ArrayDbAtomicRecordTest, SetValueOverwritesPreviousValue) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 0);
 
@@ -253,7 +252,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueOverwritesPreviousValue) {
 }
 
 // Verifies SetValue round-trips for all five Value types.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueAllValues) {
+TEST(ArrayDbAtomicRecordTest, SetValueAllValues) {
     const Value kAllValues[] = {kUndecided, kLose, kDraw, kTie, kWin};
 
     for (Value val : kAllValues) {
@@ -270,7 +269,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueAllValues) {
 // ========================= AtomicRecordSetRemoteness =========================
 
 // Verifies basic SetRemoteness functionality.
-TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessBasic) {
+TEST(ArrayDbAtomicRecordTest, SetRemotenessBasic) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -281,7 +280,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessBasic) {
 }
 
 // Verifies that SetRemoteness does not corrupt the value field.
-TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessPreservesValue) {
+TEST(ArrayDbAtomicRecordTest, SetRemotenessPreservesValue) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kTie, 100);
 
@@ -294,7 +293,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessPreservesValue) {
 }
 
 // Verifies that a second SetRemoteness call overwrites the first.
-TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessOverwritesPreviousRemoteness) {
+TEST(ArrayDbAtomicRecordTest, SetRemotenessOverwritesPreviousRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 0);
 
@@ -306,7 +305,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessOverwritesPreviousRemoteness) {
 }
 
 // Verifies SetRemoteness to zero.
-TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessZero) {
+TEST(ArrayDbAtomicRecordTest, SetRemotenessZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 50);
 
@@ -317,7 +316,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessZero) {
 }
 
 // Verifies SetRemoteness to kRemotenessMax.
-TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessMax) {
+TEST(ArrayDbAtomicRecordTest, SetRemotenessMax) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 0);
 
@@ -330,7 +329,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetRemotenessMax) {
 // ====================== AtomicRecordSetValueRemoteness ======================
 
 // Verifies that setting both fields at once works for a typical case.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessBasic) {
+TEST(ArrayDbAtomicRecordTest, SetValueRemotenessBasic) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -343,7 +342,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessBasic) {
 }
 
 // Verifies combined set with zero remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessZeroRemoteness) {
+TEST(ArrayDbAtomicRecordTest, SetValueRemotenessZeroRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 100);
 
@@ -356,7 +355,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessZeroRemoteness) {
 }
 
 // Verifies combined set with maximum remoteness.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessMaxRemoteness) {
+TEST(ArrayDbAtomicRecordTest, SetValueRemotenessMaxRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -369,7 +368,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessMaxRemoteness) {
 }
 
 // Verifies that SetValueRemoteness overwrites both fields from a prior state.
-TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessOverwritesBothFields) {
+TEST(ArrayDbAtomicRecordTest, SetValueRemotenessOverwritesBothFields) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 100);
 
@@ -384,7 +383,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetValueRemotenessOverwritesBothFields) {
 // =========================== AtomicRecordMaximize ===========================
 
 // Verifies that a strictly greater candidate replaces the current record.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeReplacesWhenCandidateGreater) {
+TEST(ArrayDbAtomicRecordTest, MaximizeReplacesWhenCandidateGreater) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 0);
 
@@ -399,7 +398,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeReplacesWhenCandidateGreater) {
 }
 
 // Verifies that a strictly smaller candidate does not replace the record.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsWhenCandidateSmaller) {
+TEST(ArrayDbAtomicRecordTest, MaximizeKeepsWhenCandidateSmaller) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -414,7 +413,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsWhenCandidateSmaller) {
 }
 
 // Verifies that an equal candidate does not replace the current record.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsWhenEqual) {
+TEST(ArrayDbAtomicRecordTest, MaximizeKeepsWhenEqual) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kTie, 5);
 
@@ -429,7 +428,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsWhenEqual) {
 }
 
 // Verifies that a candidate with the same value but higher remoteness replaces.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeReplacesOnRemotenessAlone) {
+TEST(ArrayDbAtomicRecordTest, MaximizeReplacesOnRemotenessAlone) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 3);
 
@@ -445,7 +444,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeReplacesOnRemotenessAlone) {
 
 // Verifies that a candidate with the same value but lower remoteness does not
 // replace.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsOnRemotenessAlone) {
+TEST(ArrayDbAtomicRecordTest, MaximizeKeepsOnRemotenessAlone) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 7);
 
@@ -460,7 +459,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeKeepsOnRemotenessAlone) {
 }
 
 // Verifies that Maximize correctly delegates ordering to the comparator.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeWithAlternativeComparator) {
+TEST(ArrayDbAtomicRecordTest, MaximizeWithAlternativeComparator) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -479,7 +478,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeWithAlternativeComparator) {
 // ================= AtomicRecordDecrementNumUndecidedChildren =================
 
 // Verifies that decrementing from a positive count works correctly.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementFromPositiveCount) {
+TEST(ArrayDbAtomicRecordTest, DecrementFromPositiveCount) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 5);
 
@@ -491,7 +490,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementFromPositiveCount) {
 }
 
 // Verifies that decrementing from 1 reaches zero.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementToZero) {
+TEST(ArrayDbAtomicRecordTest, DecrementToZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 1);
 
@@ -503,7 +502,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementToZero) {
 }
 
 // Verifies that decrementing when the count is already zero is a no-op.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenAlreadyZero) {
+TEST(ArrayDbAtomicRecordTest, DecrementWhenAlreadyZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -516,7 +515,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenAlreadyZero) {
 }
 
 // Verifies that decrementing is a no-op when value is kLose.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenNotUndecidedLose) {
+TEST(ArrayDbAtomicRecordTest, DecrementWhenNotUndecidedLose) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 5);
 
@@ -529,7 +528,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenNotUndecidedLose) {
 }
 
 // Verifies that decrementing is a no-op when value is kWin.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenNotUndecidedWin) {
+TEST(ArrayDbAtomicRecordTest, DecrementWhenNotUndecidedWin) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -542,7 +541,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementWhenNotUndecidedWin) {
 }
 
 // Verifies that successive decrements correctly drain the count to zero.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementSuccessivelyToZero) {
+TEST(ArrayDbAtomicRecordTest, DecrementSuccessivelyToZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 3);
 
@@ -561,7 +560,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementSuccessivelyToZero) {
 // =================== AtomicRecordClearNumUndecidedChildren ===================
 
 // Verifies that clearing from a positive count works correctly.
-TEST(ArrayDbAtomicRecordArrayTest, ClearFromPositiveCount) {
+TEST(ArrayDbAtomicRecordTest, ClearFromPositiveCount) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 10);
 
@@ -573,7 +572,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ClearFromPositiveCount) {
 }
 
 // Verifies that clearing when the count is already zero is a no-op.
-TEST(ArrayDbAtomicRecordArrayTest, ClearWhenAlreadyZero) {
+TEST(ArrayDbAtomicRecordTest, ClearWhenAlreadyZero) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -586,7 +585,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ClearWhenAlreadyZero) {
 }
 
 // Verifies that clearing is a no-op when value is kLose.
-TEST(ArrayDbAtomicRecordArrayTest, ClearWhenNotUndecidedLose) {
+TEST(ArrayDbAtomicRecordTest, ClearWhenNotUndecidedLose) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 5);
 
@@ -599,7 +598,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ClearWhenNotUndecidedLose) {
 }
 
 // Verifies that clearing is a no-op when value is kWin.
-TEST(ArrayDbAtomicRecordArrayTest, ClearWhenNotUndecidedWin) {
+TEST(ArrayDbAtomicRecordTest, ClearWhenNotUndecidedWin) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kWin, 10);
 
@@ -612,7 +611,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ClearWhenNotUndecidedWin) {
 }
 
 // Verifies that clearing preserves the value field.
-TEST(ArrayDbAtomicRecordArrayTest, ClearPreservesValue) {
+TEST(ArrayDbAtomicRecordTest, ClearPreservesValue) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 7);
 
@@ -626,8 +625,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ClearPreservesValue) {
 
 // Verifies the interplay between SetValueRemoteness and
 // GetNumUndecidedChildren.
-TEST(ArrayDbAtomicRecordArrayTest,
-     SetValueRemotenessThenGetNumUndecidedChildren) {
+TEST(ArrayDbAtomicRecordTest, SetValueRemotenessThenGetNumUndecidedChildren) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 3);
 
@@ -643,7 +641,7 @@ TEST(ArrayDbAtomicRecordArrayTest,
 }
 
 // Verifies that decrementing followed by clearing works correctly together.
-TEST(ArrayDbAtomicRecordArrayTest, DecrementThenClear) {
+TEST(ArrayDbAtomicRecordTest, DecrementThenClear) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 5);
 
@@ -659,7 +657,7 @@ TEST(ArrayDbAtomicRecordArrayTest, DecrementThenClear) {
 }
 
 // Verifies that Maximize results are readable through the getters.
-TEST(ArrayDbAtomicRecordArrayTest, MaximizeThenGetFields) {
+TEST(ArrayDbAtomicRecordTest, MaximizeThenGetFields) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 0);
 
@@ -672,7 +670,7 @@ TEST(ArrayDbAtomicRecordArrayTest, MaximizeThenGetFields) {
 }
 
 // Verifies a round-trip set-and-get for every legal Value.
-TEST(ArrayDbAtomicRecordArrayTest, SetAllValuesRoundTrip) {
+TEST(ArrayDbAtomicRecordTest, SetAllValuesRoundTrip) {
     constexpr int kFixedRemoteness = 99;
     const Value kAllValues[] = {kUndecided, kLose, kDraw, kTie, kWin};
 
@@ -690,7 +688,7 @@ TEST(ArrayDbAtomicRecordArrayTest, SetAllValuesRoundTrip) {
 
 // Verifies that Init, Load, and field getters on the loaded Record are
 // consistent.
-TEST(ArrayDbAtomicRecordArrayTest, InitThenLoadThenGetFields) {
+TEST(ArrayDbAtomicRecordTest, InitThenLoadThenGetFields) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kDraw, 77);
 
@@ -711,7 +709,7 @@ TEST(ArrayDbAtomicRecordArrayTest, InitThenLoadThenGetFields) {
 // ============================ Multithreaded Tests ============================
 
 // Verifies that concurrent SetValue calls do not corrupt the remoteness field.
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentSetValuePreservesRemoteness) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentSetValuePreservesRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 42);
 
@@ -735,7 +733,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ConcurrentSetValuePreservesRemoteness) {
 }
 
 // Verifies that concurrent SetRemoteness calls do not corrupt the value field.
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentSetRemotenessPreservesValue) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentSetRemotenessPreservesValue) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kTie, 0);
 
@@ -761,7 +759,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ConcurrentSetRemotenessPreservesValue) {
 
 // Verifies that concurrent decrements return values whose sum equals the
 // triangular number of the initial count.
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentDecrementTotalIsCorrect) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentDecrementTotalIsCorrect) {
     constexpr int kInitialCount = 1000;
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, kInitialCount);
@@ -797,7 +795,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ConcurrentDecrementTotalIsCorrect) {
 }
 
 // Verifies that concurrent clears result in exactly one nonzero return value.
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentClearReturnsSingleNonzero) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentClearReturnsSingleNonzero) {
     constexpr int kInitialCount = 100;
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, kInitialCount);
@@ -836,7 +834,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ConcurrentClearReturnsSingleNonzero) {
 }
 
 // Verifies that concurrent Maximize calls converge to the maximum candidate.
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentMaximizeConvergesToMax) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentMaximizeConvergesToMax) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kUndecided, 0);
 
@@ -867,7 +865,7 @@ TEST(ArrayDbAtomicRecordArrayTest, ConcurrentMaximizeConvergesToMax) {
 
 // Verifies that concurrent SetValueRemoteness always produces a consistent
 // record (no torn writes).
-TEST(ArrayDbAtomicRecordArrayTest, ConcurrentSetValueRemoteness) {
+TEST(ArrayDbAtomicRecordTest, ConcurrentSetValueRemoteness) {
     AtomicRecord ar;
     AtmoicRecordInit(&ar, kLose, 0);
 
