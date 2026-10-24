@@ -49,7 +49,7 @@ typedef struct AtomicRecordArray {
 static inline AtomicRecordArray *AtomicRecordArrayCreate(int64_t size) {
     AtomicRecordArray *ret = (AtomicRecordArray *)GamesmanMalloc(
         sizeof(int64_t) + size * sizeof(AtomicRecord));
-    if (ret == NULL) {
+    if (!ret) {
         return NULL;
     }
 
@@ -81,7 +81,7 @@ static inline void AtomicRecordArrayDestroy(AtomicRecordArray *array) {
  */
 static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
                                              Position position, Value val) {
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     AtomicRecordSetValue(&array->records[position], val);
 }
 
@@ -97,7 +97,7 @@ static inline void AtomicRecordArraySetValue(AtomicRecordArray *array,
 static inline void AtomicRecordArraySetRemoteness(AtomicRecordArray *array,
                                                   Position position,
                                                   int remoteness) {
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     AtomicRecordSetRemoteness(&array->records[position], remoteness);
 }
 
@@ -115,7 +115,7 @@ static inline void AtomicRecordArraySetValueRemoteness(AtomicRecordArray *array,
                                                        Position position,
                                                        Value val,
                                                        int remoteness) {
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     AtomicRecordSetValueRemoteness(&array->records[position], val, remoteness);
 }
 
@@ -142,7 +142,7 @@ static inline bool AtomicRecordArrayMaximize(
     AtomicRecordArray *array, Position position, Value val, int remoteness,
     int (*compare)(Value v1, int r1, Value v2, int r2)) {
     //
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     return AtomicRecordMaximize(&array->records[position], val, remoteness,
                                 compare);
 }
@@ -168,7 +168,7 @@ static inline bool AtomicRecordArrayMaximize(
 static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
     //
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     return AtomicRecordDecrementNumUndecidedChildren(&array->records[position]);
 }
 
@@ -191,7 +191,7 @@ static inline int AtomicRecordArrayDecrementNumUndecidedChildren(
 static inline int AtomicRecordArrayClearNumUndecidedChildren(
     AtomicRecordArray *array, Position position) {
     //
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     return AtomicRecordClearNumUndecidedChildren(&array->records[position]);
 }
 
@@ -242,7 +242,7 @@ static inline int AtomicRecordArrayGetRemoteness(const AtomicRecordArray *array,
 static inline int AtomicRecordArrayGetNumUndecidedChildren(
     const AtomicRecordArray *array, Position position) {
     //
-    assert(position >= 0 && position < array->size);
+    assert(position >= 0 && position < array->size);  // LCOV_EXCL_BR_LINE
     return AtomicRecordGetNumUndecidedChildren(&array->records[position]);
 }
 
@@ -279,7 +279,7 @@ static inline size_t AtomicRecordArrayGetSerializedSize(
 static inline size_t AtomicRecordArraySerializeStreaming(
     const AtomicRecordArray *array, size_t offset, void *buf, size_t buf_size) {
     //
-    assert(offset % sizeof(Record) == 0);
+    assert(offset % sizeof(Record) == 0);  // LCOV_EXCL_BR_LINE
     size_t total_bytes = AtomicRecordArrayGetSerializedSize(array);
     if (offset >= total_bytes) {
         return 0;
