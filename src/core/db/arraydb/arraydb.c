@@ -257,7 +257,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
     lzma_options.level = options->lzma_level;
     lzma_options.extreme = options->lzma_extreme;
 
-    assert(sandbox_path == NULL);
+    assert(sandbox_path == NULL);  // LCOV_EXCL_BR_LINE
     sandbox_path = (char *)GamesmanMalloc((strlen(path) + 1) * sizeof(char));
     if (!sandbox_path) {
         fprintf(stderr, "ArrayDbInit: failed to malloc path.\n");
@@ -736,7 +736,7 @@ static int ConvertLz4UtilsDecompressFileError(Lz4UtilsStatus status) {
 }
 
 static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
-    if (buf_idx >= segments.num_active) {
+    if (buf_idx < 0 || buf_idx >= segments.num_active) {
         return kIllegalArgumentError;
     }
 
@@ -755,7 +755,7 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
 }
 
 static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
-    if (buf_idx >= segments.num_active) {
+    if (buf_idx < 0 || buf_idx >= segments.num_active) {
         return kIllegalArgumentError;
     }
 
