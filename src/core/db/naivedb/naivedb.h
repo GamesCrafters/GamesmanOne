@@ -3,10 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Naive database which stores Values and Remotenesses in uncompressed
- * raw bytes.
- * @version 1.2.4
- * @date 2025-04-26
+ * @brief Naive database storing value-remoteness pairs in an uncompressed
+ * integer pair array.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,8 +29,10 @@
 #include "core/types/database/database.h"
 
 /**
- * @brief Naive database which stores Values and Remotenesses in uncompressed
- * raw bytes.
+ * @brief Naive database storing value-remoteness pairs in an uncompressed
+ * integer pair array.
+ *
+ * @details This implementation is intended for testing purposes.
  */
 extern const Database kNaiveDb;
 
