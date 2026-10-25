@@ -3,14 +3,8 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Simple array database which stores value-remoteness pairs in a 16-bit
- * record array.
- * @details The in-memory database is an uncompressed 16-bit record array of
- * length equal to the size of the given tier. The array is block-compressed
- * using LZMA provided by the XZ Utils library wrapped in the XZRA (XZ with
- * random access) library.
- * @version 1.2.0
- * @date 2025-06-23
+ * @brief Array database storing value-remoteness pairs in a 16-bit record
+ * array.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -35,41 +29,50 @@
 #include "core/types/database/database.h"
 
 /**
- * @brief Simple array database which stores value-remoteness pairs in a 16-bit
- * record array.
+ * @brief Array database storing value-remoteness pairs in a 16-bit record
+ * array.
+ *
+ * @details Conceptually, the database is an uncompressed 16-bit record array
+ * with a length equal to the size of the given tier. The array is
+ * block-compressed using LZMA provided by the XZ Utils library, which is
+ * wrapped in the XZRA (XZ with random access) library.
  */
 extern const Database kArrayDb;
 
 /**
- * @brief ArrayDb options. Pass a pointer to an instance of this type to the
- * initialization function (kArrayDb::Init) to use custom settings, or pass
- * \c NULL for default options.
+ * @brief `ArrayDb` options. Pass a pointer to an instance of this type to the
+ * initialization function (`kArrayDb::Init`) to use custom settings, or pass
+ * `NULL` for default options.
  */
 typedef struct ArrayDbOptions {
-    /** Size of each LZMA compression block in bytes. Larger blocks provides
-     * better compression ratio at the cost of increased random-access delay.
-     * Default: 1048576 (1 MiB). */
+    /**
+     * Size of each LZMA compression block in bytes. Larger blocks provide a
+     * better compression ratio at the cost of increased random-access delay
+     * after a cache miss. Default: 1048576 (1 MiB).
+     */
     int block_size;
 
-    /** LZMA compression level. Ranges from 0 (store) to 9 (ultra). Using levels
-     * 7-9 may increase memory usage. Default: 6. */
+    /**
+     * LZMA compression level. Ranges from 0 (store) to 9 (ultra). Using levels
+     * 7-9 may increase memory usage. Default: 6.
+     */
     int lzma_level;
 
-    /** Set this to 1 to enable extreme LZMA compression, which slightly
-     * improves compression ratio at the cost of significantly increased
-     * (typically doubled) compression time. */
+    /**
+     * Set this to 1 to enable extreme LZMA compression, which slightly improves
+     * the compression ratio at the cost of significantly increasing (typically
+     * doubling) the compression time.
+     */
     int lzma_extreme;
+
 } ArrayDbOptions;
 
 /**
- * @brief Default \c ArrayDbOptions for convenient initialization of
- * ArrayDbOptions instances.
+ * @brief Default `ArrayDbOptions` for convenient initialization of
+ * `ArrayDbOptions` instances.
  */
 extern const ArrayDbOptions kArrayDbOptionsInit;
 
-/**
- * @brief Size of each ArrayDb record.
- */
-extern const int kArrayDbRecordSize;
+extern const int kArrayDbRecordSize; /**< Size of each `ArrayDb` record. */
 
 #endif  // GAMESMANONE_CORE_DB_ARRAYDB_ARRAYDB_H_
