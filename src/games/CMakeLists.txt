@@ -1,4 +1,5 @@
 # Add subdirectories for each component
+add_subdirectory(breakthrough)
 add_subdirectory(dshogi)
 add_subdirectory(fsvp)
 add_subdirectory(gates)
