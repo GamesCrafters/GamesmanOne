@@ -13,9 +13,21 @@
  * square or an opponent piece (capture). The player to move loses if the
  * opponent has a piece on the mover's home row, or if the mover has no moves.
  *
- * Tiers: (number of 'o' pieces, number of 'x' pieces). A capture moves to a
- * child tier with one fewer opponent piece; every other move stays in the same
- * tier. Pieces only move forward, so every tier is loop-free.
+ * Goal-row-aware tiers and hashing. While the game is still going, no 'o' can
+ * be on the top row and no 'x' on the bottom row (reaching it ends the game).
+ * Positions are grouped into tiers (o, x, g):
+ *   o, x = number of 'o' and 'x' pieces,
+ *   g    = 0 game still going (either player to move),
+ *          1 an 'o' just reached the top row ('x' to move, and has lost),
+ *          2 an 'x' just reached the bottom row ('o' to move, and has lost).
+ * Inside a tier, the board is split into three regions (bottom row, middle
+ * rows, top row). Boards are grouped by a = 'o's on the bottom row and b =
+ * 'x's on the top row; the hash is the group's offset (BIAS) plus the board's
+ * rank inside the group, where each region is ranked as a multiset
+ * permutation and the three ranks are combined (see the GamesCrafters hashing
+ * slides). Only boards that obey the goal-row rule get a hash value, so far
+ * fewer slots are wasted than with a plain piece-count hash. Pieces only move
+ * forward, so every tier is loop-free.
  *
  * Moves use the Python encoding (src << 3) | (dr_bit << 2) | dir, where dir is
  * 0 = straight, 1 = diag-left, 2 = diag-right and dr_bit is 1 iff the piece
@@ -51,7 +63,6 @@
 #include <string.h>
 
 #include "core/data_structures/cstring.h"
-#include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
@@ -82,6 +93,11 @@ static int BreakthroughGenerateMoves(TierPosition tier_position,
 static Value BreakthroughPrimitive(TierPosition tier_position);
 static TierPosition BreakthroughDoMove(TierPosition tier_position, Move move);
 static bool BreakthroughIsLegalPosition(TierPosition tier_position);
+static int BreakthroughGetNumberOfCanonicalChildPositions(
+    TierPosition tier_position);
+static int BreakthroughGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]);
 static int BreakthroughGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier,
     Position parents[static kTierSolverNumParentPositionsMax]);
@@ -123,7 +139,9 @@ static const TierSolverApi kSolverApi = {
     .DoMove = &BreakthroughDoMove,
     .IsLegalPosition = &BreakthroughIsLegalPosition,
     .GetCanonicalPosition = NULL,
-    .GetCanonicalChildPositions = NULL,
+    .GetNumberOfCanonicalChildPositions =
+        &BreakthroughGetNumberOfCanonicalChildPositions,
+    .GetCanonicalChildPositions = &BreakthroughGetCanonicalChildPositions,
     .GetCanonicalParentPositions = &BreakthroughGetCanonicalParentPositions,
     .GetPositionInSymmetricTier = NULL,
     .GetChildTiers = &BreakthroughGetChildTiers,
@@ -198,8 +216,9 @@ const Game kBreakthrough = {
 // Helper Types and Global Variables
 
 enum {
-    kBoardSizeMax = 24,  // Largest variant: 4 cols x 6 rows.
-    kTierBase = 256,     // tier = num_o * kTierBase + num_x.
+    kBoardSizeMax = 36,  // Room for boards up to 6 x 6.
+    kColsMax = 6,
+    kPawnsMax = 18,  // Three rows of pawns on a 6-wide board.
     kStraight = 0,
     kDiagLeft = 1,
     kDiagRight = 2,
@@ -209,7 +228,7 @@ static const char kEmpty = '-';
 static const char kO = 'o';
 static const char kX = 'x';
 
-/** Generic hash turn values: 1 = 'o' (moves first), 2 = 'x'. */
+/** Turn values: 1 = 'o' (moves first), 2 = 'x'. */
 static const char kPlayerPiece[3] = {'-', 'o', 'x'};
 
 /** Variant table. Choice names are cols x rows, as in GamesmanPy. */
@@ -242,10 +261,16 @@ static int num_pawns;  // Starting pieces per side.
 
 // Helper Functions
 
-static bool InitGenericHash(void);
-static Tier MakeTier(int num_o, int num_x);
-static int TierNumO(Tier tier);
-static int TierNumX(Tier tier);
+static void InitHashTables(void);
+static Tier MakeTier(int o, int x, int g);
+static void SplitTier(Tier tier, int *o, int *x, int *g);
+static int64_t RegionCount(int size, int num_o, int num_x);
+static bool RegionCounts(int o, int x, int g, int a, int b, int counts[3][2]);
+static int64_t TierSize(Tier tier);
+static bool TierFromBoard(const char *board, int turn, Tier *tier);
+static bool BoardGroup(const char *board, int turn, Tier *tier, int *a,
+                       int *b);
+static TierPosition HashBoard(const char *board, int turn);
 static int UnhashBoard(TierPosition tier_position, char *board);
 static char Opponent(char player);
 static int GetIndex(int row, int col);
@@ -263,12 +288,8 @@ static int BreakthroughInit(void *aux) {
     return BreakthroughSetVariantOption(0, 0);
 }
 
-/** @brief Releases all generic hash contexts. */
-static int BreakthroughFinalize(void) {
-    GenericHashReinitialize();
-
-    return kSuccess;
-}
+/** @brief Nothing to release: the hash tables are static. */
+static int BreakthroughFinalize(void) { return kSuccess; }
 
 /** @brief Returns the current variant (board size option). */
 static const GameVariant *BreakthroughGetCurrentVariant(void) {
@@ -277,7 +298,7 @@ static const GameVariant *BreakthroughGetCurrentVariant(void) {
 
 /**
  * @brief Switches to board size SELECTION (0 = 3x4, 1 = 3x5, 2 = 4x5,
- * 3 = 4x6) and rebuilds the hash contexts, since the board size changes.
+ * 3 = 4x6) and sets the board dimensions used by the hash.
  */
 static int BreakthroughSetVariantOption(int option, int selection) {
     // There is only one option, and the selection must be in range.
@@ -292,15 +313,17 @@ static int BreakthroughSetVariantOption(int option, int selection) {
     board_size = rows * cols;
     num_pawns = kVariantPawnRows[selection] * cols;
 
-    return InitGenericHash() ? kSuccess : kGenericHashError;
+    InitHashTables();
+
+    return kSuccess;
 }
 
-/** @brief Returns the tier with all pieces on the board. */
+/** @brief Returns the starting tier: all pieces on the board, game going. */
 static Tier BreakthroughGetInitialTier(void) {
-    return MakeTier(num_pawns, num_pawns);
+    return MakeTier(num_pawns, num_pawns, 0);
 }
 
-/** @brief Mirrors Breakthrough.start. Assumes generic hash is initialized. */
+/** @brief Mirrors Breakthrough.start. */
 static Position BreakthroughGetInitialPosition(void) {
     char board[kBoardSizeMax];
     int pawn_rows = num_pawns / cols;
@@ -315,13 +338,11 @@ static Position BreakthroughGetInitialPosition(void) {
         }
     }
 
-    return GenericHashHashLabel(BreakthroughGetInitialTier(), board, 1);
+    return HashBoard(board, 1).position;
 }
 
 /** @brief Returns the number of hash values in TIER. */
-static int64_t BreakthroughGetTierSize(Tier tier) {
-    return GenericHashNumPositionsLabel(tier);
-}
+static int64_t BreakthroughGetTierSize(Tier tier) { return TierSize(tier); }
 
 /** @brief Mirrors Breakthrough.generate_moves. */
 static int BreakthroughGenerateMoves(
@@ -386,8 +407,8 @@ static Value BreakthroughPrimitive(TierPosition tier_position) {
 }
 
 /**
- * @brief Mirrors Breakthrough.do_move. A capture moves to the child tier with
- * one fewer opponent piece; other moves stay in the same tier.
+ * @brief Mirrors Breakthrough.do_move. The child's tier is worked out from the
+ * resulting board (piece counts, goal-row pieces, whether the game just ended).
  */
 static TierPosition BreakthroughDoMove(TierPosition tier_position, Move move) {
     char board[kBoardSizeMax];
@@ -396,43 +417,74 @@ static TierPosition BreakthroughDoMove(TierPosition tier_position, Move move) {
     DecodeMove(move, &src, &target_row, &target_col);
     int end = GetIndex(target_row, target_col);
 
-    int num_o = TierNumO(tier_position.tier);
-    int num_x = TierNumX(tier_position.tier);
-    if (board[end] == kO) --num_o;  // Captured an 'o'.
-    if (board[end] == kX) --num_x;  // Captured an 'x'.
-
     // Overwriting the target cell is the capture; then clear the source.
     board[end] = board[src];
     board[src] = kEmpty;
 
-    TierPosition ret;
-    ret.tier = MakeTier(num_o, num_x);
-    ret.position = GenericHashHashLabel(ret.tier, board, 3 - turn);
-
-    return ret;
+    return HashBoard(board, 3 - turn);
 }
 
 /**
- * @brief Weak legality test used only to skip unreachable positions. If the
- * player to move already has a piece on the opponent's home row, the opponent
- * lost on the previous turn and could not have moved, so this is unreachable.
+ * @brief Every hash value now stands for a board that obeys the goal-row rule
+ * (the hash leaves out boards where the player to move already reached its
+ * goal row), so there is nothing left to filter here.
  */
 static bool BreakthroughIsLegalPosition(TierPosition tier_position) {
-    char board[kBoardSizeMax];
-    int turn = UnhashBoard(tier_position, board);
-    char player = kPlayerPiece[turn];
-    int far_row = (player == kO) ? rows - 1 : 0;
-    for (int col = 0; col < cols; ++col) {
-        if (board[GetIndex(far_row, col)] == player) return false;
-    }
-
+    (void)tier_position;
     return true;
 }
 
 /**
+ * @brief Fast child generation: unhashes once, applies every move on a copy
+ * of the board and hashes the result. Different moves always give different
+ * boards in Breakthrough, so no deduplication is needed.
+ */
+static int BreakthroughGetCanonicalChildPositions(
+    TierPosition tier_position,
+    TierPosition children[static kTierSolverNumChildPositionsMax]) {
+    //
+    char board[kBoardSizeMax], child[kBoardSizeMax];
+    int turn = UnhashBoard(tier_position, board);
+    char player = kPlayerPiece[turn];
+    int dr = (player == kO) ? 1 : -1;
+
+    int ret = 0;
+    for (int i = 0; i < board_size; ++i) {
+        if (board[i] != player) continue;
+        int target_row = i / cols + dr;
+        if (target_row < 0 || target_row >= rows) continue;
+        int col = i % cols;
+        for (int dc = -1; dc <= 1; ++dc) {
+            int target_col = col + dc;
+            if (target_col < 0 || target_col >= cols) continue;
+            int end = GetIndex(target_row, target_col);
+            char target = board[end];
+            if (target == player) continue;
+            if (dc == 0 && target != kEmpty) continue;  // No straight capture.
+
+            memcpy(child, board, board_size);
+            child[end] = player;
+            child[i] = kEmpty;
+            children[ret++] = HashBoard(child, 3 - turn);
+        }
+    }
+
+    return ret;
+}
+
+/** @brief Number of children = number of moves (all children are distinct). */
+static int BreakthroughGetNumberOfCanonicalChildPositions(
+    TierPosition tier_position) {
+    //
+    Move moves[kTierSolverNumMovesMax];
+    return BreakthroughGenerateMoves(tier_position, moves);
+}
+
+/**
  * @brief Stores in PARENTS all positions in PARENT_TIER that reach
- * TIER_POSITION in one move, by undoing each possible last move. Needed by the
- * tier solver's backward induction for loop-free tiers.
+ * TIER_POSITION in one move. Each possible last move is undone (both as a
+ * plain move and, for diagonal moves, as a capture); a parent is kept only if
+ * its board belongs to PARENT_TIER.
  */
 static int BreakthroughGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier,
@@ -443,24 +495,8 @@ static int BreakthroughGetCanonicalParentPositions(
     int prev_turn = 3 - turn;
     char prev_player = kPlayerPiece[prev_turn];  // Made the last move.
     char mover = kPlayerPiece[turn];             // Its piece may be captured.
-
-    // Same tier: the last move was not a capture. Otherwise the parent tier
-    // must have exactly one more of the mover's pieces (it got captured).
-    Tier tier = tier_position.tier;
-    bool capture;
-    if (parent_tier == tier) {
-        capture = false;
-    } else if (mover == kO &&
-               parent_tier == MakeTier(TierNumO(tier) + 1, TierNumX(tier))) {
-        capture = true;
-    } else if (mover == kX &&
-               parent_tier == MakeTier(TierNumO(tier), TierNumX(tier) + 1)) {
-        capture = true;
-    } else {
-        return 0;
-    }
-
     int dr = (prev_player == kO) ? 1 : -1;
+
     int ret = 0;
     for (int end = 0; end < board_size; ++end) {
         if (board[end] != prev_player) continue;
@@ -470,33 +506,58 @@ static int BreakthroughGetCanonicalParentPositions(
         int end_col = end % cols;
         for (int src_col = end_col - 1; src_col <= end_col + 1; ++src_col) {
             if (src_col < 0 || src_col >= cols) continue;
-            if (capture && src_col == end_col) continue;  // No straight capture.
             int src = GetIndex(src_row, src_col);
             if (board[src] != kEmpty) continue;
 
-            // Undo the move, hash the parent, then restore the board.
-            board[src] = prev_player;
-            board[end] = capture ? mover : kEmpty;
-            parents[ret++] = GenericHashHashLabel(parent_tier, board, prev_turn);
-            board[src] = kEmpty;
-            board[end] = prev_player;
+            // Option 0: plain move. Option 1: capture (diagonal only).
+            for (int capture = 0; capture <= 1; ++capture) {
+                if (capture && src_col == end_col) continue;
+                board[src] = prev_player;
+                board[end] = capture ? mover : kEmpty;
+                Tier tier;
+                if (TierFromBoard(board, prev_turn, &tier) &&
+                    tier == parent_tier) {
+                    parents[ret++] = HashBoard(board, prev_turn).position;
+                }
+                board[src] = kEmpty;
+                board[end] = prev_player;
+            }
         }
     }
 
     return ret;
 }
 
-/** @brief A capture removes one piece of either side, if both have pieces. */
+/**
+ * @brief Lists the tiers one move can lead to. Only tiers where the game is
+ * still going (g = 0) have moves. A move can capture an enemy piece and/or
+ * reach the goal row (ending the game); every other move stays in the same
+ * tier. Tiers with no valid boards are skipped.
+ */
 static int BreakthroughGetChildTiers(
     Tier tier, Tier children[static kTierSolverNumChildTiersMax]) {
     //
-    int num_o = TierNumO(tier), num_x = TierNumX(tier);
-    if (num_o == 0 || num_x == 0) return 0;  // Nobody can capture.
+    int o, x, g;
+    SplitTier(tier, &o, &x, &g);
+    if (g != 0) return 0;  // The game is over: no moves.
 
-    children[0] = MakeTier(num_o - 1, num_x);
-    children[1] = MakeTier(num_o, num_x - 1);
+    Tier candidates[] = {
+        MakeTier(o, x - 1, 0),  // 'o' captures in the middle rows.
+        MakeTier(o, x, 1),      // 'o' reaches the top row.
+        MakeTier(o, x - 1, 1),  // 'o' reaches the top row with a capture.
+        MakeTier(o - 1, x, 0),  // 'x' captures in the middle rows.
+        MakeTier(o, x, 2),      // 'x' reaches the bottom row.
+        MakeTier(o - 1, x, 2),  // 'x' reaches the bottom row with a capture.
+    };
 
-    return 2;
+    int ret = 0;
+    for (int i = 0; i < (int)(sizeof(candidates) / sizeof(candidates[0]));
+         ++i) {
+        if (candidates[i] < 0 || TierSize(candidates[i]) == 0) continue;
+        children[ret++] = candidates[i];
+    }
+
+    return ret;
 }
 
 /** @brief Pieces only move forward, so no position repeats within a tier. */
@@ -505,11 +566,15 @@ static TierType BreakthroughGetTierType(Tier tier) {
     return kTierTypeLoopFree;
 }
 
-/** @brief Writes the tier name, e.g. "3o_2x". */
+/**
+ * @brief Writes the tier name, e.g. "3o_2x_g0": 3 'o's, 2 'x's, game still
+ * going ("g1": an 'o' just won, "g2": an 'x' just won).
+ */
 static int BreakthroughGetTierName(Tier tier,
                                    char name[static kDbFileNameLengthMax + 1]) {
-    snprintf(name, kDbFileNameLengthMax + 1, "%do_%dx", TierNumO(tier),
-             TierNumX(tier));
+    int o, x, g;
+    SplitTier(tier, &o, &x, &g);
+    snprintf(name, kDbFileNameLengthMax + 1, "%do_%dx_g%d", o, x, g);
 
     return kSuccess;
 }
@@ -534,12 +599,7 @@ static MoveArray BreakthroughGenerateMovesGameplay(TierPosition tier_position) {
 static int BreakthroughTierPositionToString(TierPosition tier_position,
                                             char *buffer) {
     char board[kBoardSizeMax];
-    if (!GenericHashUnhashLabel(tier_position.tier, tier_position.position,
-                                board)) {
-        return kGenericHashError;
-    }
-    int turn = GenericHashGetTurnLabel(tier_position.tier,
-                                       tier_position.position);
+    int turn = UnhashBoard(tier_position, board);
 
     int size = kBreakthroughGameplayApiCommon.position_string_length_max + 1;
     int offset = 0;
@@ -665,25 +725,18 @@ static bool BreakthroughIsLegalFormalPosition(ReadOnlyString formal_position) {
     CountPieces(formal_position, &num_o, &num_x);
     if (num_o > num_pawns || num_x > num_pawns) return false;
 
-    TierPosition tier_position =
-        BreakthroughFormalPositionToTierPosition(formal_position);
-
-    return BreakthroughIsLegalPosition(tier_position);
+    // The board must obey the goal-row rule for the player to move.
+    Tier tier;
+    return TierFromBoard(formal_position, turn == kO ? 1 : 2, &tier);
 }
 
 /** @brief Formal position (board + turn char) to tier position. */
 static TierPosition BreakthroughFormalPositionToTierPosition(
     ReadOnlyString formal_position) {
     //
-    int num_o, num_x;
-    CountPieces(formal_position, &num_o, &num_x);
     int turn = (formal_position[board_size] == kO) ? 1 : 2;
 
-    TierPosition ret;
-    ret.tier = MakeTier(num_o, num_x);
-    ret.position = GenericHashHashLabel(ret.tier, formal_position, turn);
-
-    return ret;
+    return HashBoard(formal_position, turn);
 }
 
 /** @brief Board + turn char, e.g. "ooo------xxxo" (Python's readable string). */
@@ -743,56 +796,300 @@ static CString BreakthroughMoveToAutoGuiMove(TierPosition tier_position,
 
 // Helper functions implementation
 
+// ---------------------------------------------------------------------------
+// Goal-row-aware hashing.
+//
+// The board is split into three regions: the bottom row (row 0), the middle
+// rows (1 .. rows-2) and the top row (rows-1). Inside a tier (o, x, g), boards
+// are grouped by (a, b) = ('o's on the bottom row, 'x's on the top row), which
+// fixes how many 'o's and 'x's each region holds. Each region is ranked as a
+// multiset permutation of '-', 'o', 'x' (in that order), exactly like the
+// combinatorial hash in the GamesCrafters hashing slides, and
+//     hash = offset[a][b] + (rank_bottom * count_middle + rank_middle)
+//                            * count_top + rank_top
+// where offset[a][b] (the BIAS) counts the boards in all earlier groups. While
+// the game is still going (g = 0) the hash is doubled to store the turn.
+// ---------------------------------------------------------------------------
+
+enum { kRegionBottom = 0, kRegionMiddle = 1, kRegionTop = 2 };
+
+static int64_t binomial[kBoardSizeMax + 1][kBoardSizeMax + 1];
+
+// group_offset[o][x][g][a][b]: number of boards in groups before (a, b).
+// group_count[o][x][g][a][b]: number of boards in group (a, b).
+// tier_boards[o][x][g]: number of boards in the tier (without the turn).
+static int64_t group_offset[kPawnsMax + 1][kPawnsMax + 1][3][kColsMax + 1]
+                          [kColsMax + 1];
+static int64_t group_count[kPawnsMax + 1][kPawnsMax + 1][3][kColsMax + 1]
+                         [kColsMax + 1];
+static int64_t tier_boards[kPawnsMax + 1][kPawnsMax + 1][3];
+
+/** @brief Ways to arrange NUM_O 'o's and NUM_X 'x's in SIZE cells. */
+static int64_t RegionCount(int size, int num_o, int num_x) {
+    if (num_o < 0 || num_x < 0 || num_o + num_x > size) return 0;
+    return binomial[size][num_o] * binomial[size - num_o][num_x];
+}
+
 /**
- * @brief Creates one two-player hash context per tier (num_o, num_x), each
- * holding exactly num_o 'o's and num_x 'x's.
+ * @brief Writes how many 'o's (counts[r][0]) and 'x's (counts[r][1]) region r
+ * holds in group (a, b) of tier (o, x, g). Returns false if impossible.
  */
-static bool InitGenericHash(void) {
-    GenericHashReinitialize();
-    int player = 0;  // Both players: the hash stores whose turn it is.
-    for (int num_o = 0; num_o <= num_pawns; ++num_o) {
-        for (int num_x = 0; num_x <= num_pawns; ++num_x) {
-            int num_empty = board_size - num_o - num_x;
-            int pieces_init_array[10] = {kEmpty, num_empty, num_empty,
-                                         kO,     num_o,     num_o,
-                                         kX,     num_x,     num_x,
-                                         -1};
-            Tier tier = MakeTier(num_o, num_x);
-            bool success = GenericHashAddContext(player, board_size,
-                                                 pieces_init_array, NULL, tier);
-            if (!success) {
-                fprintf(stderr,
-                        "BreakthroughInit: failed to initialize generic hash "
-                        "context for tier %" PRITier ". Aborting...\n",
-                        tier);
-                GenericHashReinitialize();
-                return false;
-            }
+static bool RegionCounts(int o, int x, int g, int a, int b, int counts[3][2]) {
+    int goal_o = (g == 1), goal_x = (g == 2);  // Piece that just arrived.
+    counts[kRegionBottom][0] = a;
+    counts[kRegionBottom][1] = goal_x;
+    counts[kRegionTop][0] = goal_o;
+    counts[kRegionTop][1] = b;
+    counts[kRegionMiddle][0] = o - a - goal_o;
+    counts[kRegionMiddle][1] = x - b - goal_x;
+    int sizes[3] = {cols, board_size - 2 * cols, cols};
+    for (int r = 0; r < 3; ++r) {
+        if (RegionCount(sizes[r], counts[r][0], counts[r][1]) == 0) {
+            return false;
         }
     }
-
     return true;
 }
 
-/** @brief Encodes piece counts as one Tier value. */
-static Tier MakeTier(int num_o, int num_x) {
-    return (Tier)num_o * kTierBase + num_x;
+/** @brief Fills Pascal's triangle and the group offset tables. */
+static void InitHashTables(void) {
+    for (int n = 0; n <= kBoardSizeMax; ++n) {
+        binomial[n][0] = binomial[n][n] = 1;
+        for (int k = 1; k < n; ++k) {
+            binomial[n][k] = binomial[n - 1][k - 1] + binomial[n - 1][k];
+        }
+        for (int k = n + 1; k <= kBoardSizeMax; ++k) binomial[n][k] = 0;
+    }
+
+    int sizes[3] = {cols, board_size - 2 * cols, cols};
+    for (int o = 0; o <= num_pawns; ++o) {
+        for (int x = 0; x <= num_pawns; ++x) {
+            for (int g = 0; g < 3; ++g) {
+                int64_t total = 0;
+                for (int a = 0; a <= cols; ++a) {
+                    for (int b = 0; b <= cols; ++b) {
+                        int counts[3][2];
+                        int64_t count = 0;
+                        if (RegionCounts(o, x, g, a, b, counts)) {
+                            count = 1;
+                            for (int r = 0; r < 3; ++r) {
+                                count *= RegionCount(sizes[r], counts[r][0],
+                                                     counts[r][1]);
+                            }
+                        }
+                        group_offset[o][x][g][a][b] = total;
+                        group_count[o][x][g][a][b] = count;
+                        total += count;
+                    }
+                }
+                tier_boards[o][x][g] = total;
+            }
+        }
+    }
 }
 
-/** @brief Number of 'o' pieces in TIER. */
-static int TierNumO(Tier tier) { return (int)(tier / kTierBase); }
+/** @brief Packs (o, x, g) into one Tier value. Returns -1 if invalid. */
+static Tier MakeTier(int o, int x, int g) {
+    if (o < 0 || x < 0 || o > num_pawns || x > num_pawns || g < 0 || g > 2) {
+        return -1;
+    }
+    return ((Tier)o * 64 + x) * 4 + g;
+}
 
-/** @brief Number of 'x' pieces in TIER. */
-static int TierNumX(Tier tier) { return (int)(tier % kTierBase); }
+/** @brief Unpacks a Tier value into (o, x, g). */
+static void SplitTier(Tier tier, int *o, int *x, int *g) {
+    *g = (int)(tier % 4);
+    tier /= 4;
+    *x = (int)(tier % 64);
+    *o = (int)(tier / 64);
+}
+
+/** @brief Number of hash values in TIER (0 if the tier is impossible). */
+static int64_t TierSize(Tier tier) {
+    if (tier < 0) return 0;
+    int o, x, g;
+    SplitTier(tier, &o, &x, &g);
+    if (o > num_pawns || x > num_pawns) return 0;
+    int64_t boards = tier_boards[o][x][g];
+    return (g == 0) ? boards * 2 : boards;  // g = 0 stores the turn.
+}
+
+/**
+ * @brief Works out the tier and group (a, b) of BOARD with TURN to move.
+ * Returns false if the board breaks the goal-row rule (e.g. the player to move
+ * already reached its goal row, or both players did).
+ */
+static bool BoardGroup(const char *board, int turn, Tier *tier, int *a,
+                       int *b) {
+    int o = 0, x = 0, o_bottom = 0, x_bottom = 0, o_top = 0, x_top = 0;
+    int top_start = board_size - cols;
+    for (int i = 0; i < board_size; ++i) {
+        if (board[i] == kO) {
+            ++o;
+            if (i < cols) ++o_bottom;
+            if (i >= top_start) ++o_top;
+        } else if (board[i] == kX) {
+            ++x;
+            if (i < cols) ++x_bottom;
+            if (i >= top_start) ++x_top;
+        }
+    }
+    if (o > num_pawns || x > num_pawns) return false;
+
+    int g;
+    if (o_top == 0 && x_bottom == 0) {
+        g = 0;
+    } else if (o_top == 1 && x_bottom == 0 && turn == 2) {
+        g = 1;  // 'o' just arrived; 'x' to move.
+    } else if (x_bottom == 1 && o_top == 0 && turn == 1) {
+        g = 2;  // 'x' just arrived; 'o' to move.
+    } else {
+        return false;
+    }
+    *tier = MakeTier(o, x, g);
+    *a = o_bottom;
+    *b = x_top;
+    return true;
+}
+
+/** @brief Works out the tier of BOARD with TURN to move (see BoardGroup). */
+static bool TierFromBoard(const char *board, int turn, Tier *tier) {
+    int a, b;
+    return BoardGroup(board, turn, tier, &a, &b);
+}
+
+/** @brief Cells of region R, in increasing board index. Returns the size. */
+static int RegionCells(int r, int *first) {
+    if (r == kRegionBottom) {
+        *first = 0;
+        return cols;
+    }
+    if (r == kRegionMiddle) {
+        *first = cols;
+        return board_size - 2 * cols;
+    }
+    *first = board_size - cols;
+    return cols;
+}
+
+/** @brief Rank of the SIZE cells starting at CELLS among all arrangements. */
+static int64_t RankRegion(const char *cells, int size, int num_o, int num_x) {
+    int64_t rank = 0;
+    int num_empty = size - num_o - num_x;
+    for (int i = 0; i < size; ++i) {
+        int left = size - i - 1;  // Cells after this one.
+        if (cells[i] == kEmpty) {
+            --num_empty;
+        } else if (cells[i] == kO) {
+            // Skip all arrangements that put '-' here.
+            if (num_empty > 0) rank += RegionCount(left, num_o, num_x);
+            --num_o;
+        } else {
+            // Skip all arrangements that put '-' or 'o' here.
+            if (num_empty > 0) rank += RegionCount(left, num_o, num_x);
+            if (num_o > 0) rank += RegionCount(left, num_o - 1, num_x);
+            --num_x;
+        }
+    }
+    return rank;
+}
+
+/** @brief Inverse of RankRegion: writes the arrangement with rank RANK. */
+static void UnrankRegion(int64_t rank, char *cells, int size, int num_o,
+                         int num_x) {
+    int num_empty = size - num_o - num_x;
+    for (int i = 0; i < size; ++i) {
+        int left = size - i - 1;
+        int64_t with_empty =
+            num_empty > 0 ? RegionCount(left, num_o, num_x) : 0;
+        if (rank < with_empty) {
+            cells[i] = kEmpty;
+            --num_empty;
+            continue;
+        }
+        rank -= with_empty;
+        int64_t with_o = num_o > 0 ? RegionCount(left, num_o - 1, num_x) : 0;
+        if (rank < with_o) {
+            cells[i] = kO;
+            --num_o;
+            continue;
+        }
+        rank -= with_o;
+        cells[i] = kX;
+        --num_x;
+    }
+}
+
+/**
+ * @brief Hashes BOARD with TURN to move. Assumes the board obeys the goal-row
+ * rule (true for every board reached by legal play).
+ */
+static TierPosition HashBoard(const char *board, int turn) {
+    TierPosition ret;
+    int a, b;
+    bool ok = BoardGroup(board, turn, &ret.tier, &a, &b);
+    assert(ok);
+    (void)ok;
+    int o, x, g;
+    SplitTier(ret.tier, &o, &x, &g);
+
+    int counts[3][2];
+    RegionCounts(o, x, g, a, b, counts);
+    int64_t rank = 0;
+    for (int r = 0; r < 3; ++r) {
+        int first;
+        int size = RegionCells(r, &first);
+        rank = rank * RegionCount(size, counts[r][0], counts[r][1]) +
+               RankRegion(board + first, size, counts[r][0], counts[r][1]);
+    }
+    rank += group_offset[o][x][g][a][b];                // BIAS of the group.
+    if (g == 0) rank = rank * 2 + (turn - 1);  // Store the turn.
+    ret.position = rank;
+
+    return ret;
+}
 
 /** @brief Unhashes TIER_POSITION into BOARD and returns the turn (1 or 2). */
 static int UnhashBoard(TierPosition tier_position, char *board) {
-    bool success = GenericHashUnhashLabel(tier_position.tier,
-                                          tier_position.position, board);
-    assert(success);
-    (void)success;
+    int o, x, g;
+    SplitTier(tier_position.tier, &o, &x, &g);
+    int64_t rank = tier_position.position;
+    int turn;
+    if (g == 0) {
+        turn = (int)(rank % 2) + 1;
+        rank /= 2;
+    } else {
+        turn = (g == 1) ? 2 : 1;  // The player who did not just move.
+    }
 
-    return GenericHashGetTurnLabel(tier_position.tier, tier_position.position);
+    // Find the group (a, b) whose range contains RANK.
+    int a = 0, b = 0;
+    bool found = false;
+    for (a = 0; a <= cols && !found; ++a) {
+        for (b = 0; b <= cols; ++b) {
+            int64_t offset = group_offset[o][x][g][a][b];
+            if (rank >= offset && rank < offset + group_count[o][x][g][a][b]) {
+                found = true;
+                break;
+            }
+        }
+        if (found) break;
+    }
+    assert(found);
+    rank -= group_offset[o][x][g][a][b];
+
+    int counts[3][2];
+    RegionCounts(o, x, g, a, b, counts);
+    for (int r = 2; r >= 0; --r) {
+        int first;
+        int size = RegionCells(r, &first);
+        int64_t count = RegionCount(size, counts[r][0], counts[r][1]);
+        UnrankRegion(rank % count, board + first, size, counts[r][0],
+                     counts[r][1]);
+        rank /= count;
+    }
+
+    return turn;
 }
 
 /** @brief Mirrors Breakthrough._opponent. */
