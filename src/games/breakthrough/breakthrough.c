@@ -68,6 +68,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -758,6 +759,18 @@ static MoveArray BreakthroughGenerateMovesGameplay(TierPosition tier_position) {
     return ret;
 }
 
+static void AppendFormatted(char *buffer, int size, int *offset,
+                            const char *format, ...) {
+    if (*offset >= size) return;
+    va_list args;
+    va_start(args, format);
+    int n = vsnprintf(buffer + *offset, (size_t)(size - *offset), format, args);
+    va_end(args);
+    if (n < 0) return;
+    // If the text did not fit, mark the buffer as overflowed.
+    *offset = (n < size - *offset) ? *offset + n : size;
+}
+
 /**
  * @brief Text board for the terminal: index legend on the left, board on the
  * right, highest row first (like Python's TUI mode), then turn and tier.
@@ -770,22 +783,21 @@ static int BreakthroughTierPositionToString(TierPosition tier_position,
     int size = kBreakthroughGameplayApiCommon.position_string_length_max + 1;
     int offset = 0;
     for (int row = rows - 1; row >= 0; --row) {
-        offset += snprintf(buffer + offset, size - offset, "        (");
+        AppendFormatted(buffer, size, &offset, "        (");
         for (int col = 0; col < cols; ++col) {
-            offset += snprintf(buffer + offset, size - offset, " %2d",
-                               GetIndex(row, col));
+            AppendFormatted(buffer, size, &offset, " %2d", GetIndex(row, col));
         }
-        offset += snprintf(buffer + offset, size - offset, " )    ");
+        AppendFormatted(buffer, size, &offset, " )    ");
         for (int col = 0; col < cols; ++col) {
-            offset += snprintf(buffer + offset, size - offset, " %c",
-                               board[GetIndex(row, col)]);
+            AppendFormatted(buffer, size, &offset, " %c",
+                            board[GetIndex(row, col)]);
         }
-        offset += snprintf(buffer + offset, size - offset, "\n");
+        AppendFormatted(buffer, size, &offset, "\n");
     }
     char tier_name[kDbFileNameLengthMax + 1];
     BreakthroughGetTierName(tier_position.tier, tier_name);
-    offset += snprintf(buffer + offset, size - offset, "Turn: %c    Tier: %s",
-                       kPlayerPiece[turn], tier_name);
+    AppendFormatted(buffer, size, &offset, "Turn: %c    Tier: %s",
+                    kPlayerPiece[turn], tier_name);
 
     if (offset >= size) {
         fprintf(stderr,
