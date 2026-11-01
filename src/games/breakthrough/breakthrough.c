@@ -20,6 +20,11 @@
  *   g    = 0 game still going (either player to move),
  *          1 an 'o' just reached the top row ('x' to move, and has lost),
  *          2 an 'x' just reached the bottom row ('o' to move, and has lost).
+ * On the biggest boards ("finer tiers"), each tier is further split by
+ *   a    = number of 'o' pieces on the bottom row,
+ *   b    = number of 'x' pieces on the top row,
+ * so the largest tier is much smaller and fits in memory. A piece that leaves
+ * its home row never returns, so finer tiers are still loop-free.
  * Inside a tier, the board is split into three regions (bottom row, middle
  * rows, top row). Boards are grouped by a = 'o's on the bottom row and b =
  * 'x's on the top row; the hash is the group's offset (BIAS) plus the board's
@@ -54,6 +59,39 @@
  */
 
 #include "games/breakthrough/breakthrough.h"
+
+// Optimizations, all ON by default. Each can be switched off at compile time
+// (used for benchmarks). Databases are only readable by a build with the same
+// mirror / color-swap settings as the build that solved them.
+//   BREAKTHROUGH_NO_FAST_CHILDREN  turn OFF fast child generation; the solver
+//                                  then falls back to GenerateMoves + DoMove +
+//                                  a hash set (also turns off the mirror).
+//   BREAKTHROUGH_NO_MIRROR         turn OFF left-right mirror symmetry.
+//   BREAKTHROUGH_NO_COLOR_SWAP     turn OFF color-swap tier symmetry: flipping
+//                                  the board upside down and swapping 'o' with
+//                                  'x' (and the turn) gives an equivalent
+//                                  position, so only one tier of each pair is
+//                                  solved and stored.
+// Finer tiers (splitting each tier by how many pieces are still on their home
+// row) are on only for the boards marked in kVariantFineTiers, so the
+// databases of the other boards stay readable. For benchmarks:
+//   BREAKTHROUGH_FINE_TIERS_ALL    turn ON finer tiers for every board.
+//   BREAKTHROUGH_NO_FINE_TIERS     turn OFF finer tiers for every board.
+#ifdef BREAKTHROUGH_NO_FAST_CHILDREN
+#define BT_FAST_CHILDREN 0
+#else
+#define BT_FAST_CHILDREN 1
+#endif
+#if !defined(BREAKTHROUGH_NO_MIRROR) && BT_FAST_CHILDREN
+#define BT_MIRROR 1
+#else
+#define BT_MIRROR 0
+#endif
+#ifndef BREAKTHROUGH_NO_COLOR_SWAP
+#define BT_COLOR_SWAP 1
+#else
+#define BT_COLOR_SWAP 0
+#endif
 
 #include <assert.h>
 #include <stdbool.h>
@@ -93,11 +131,22 @@ static int BreakthroughGenerateMoves(TierPosition tier_position,
 static Value BreakthroughPrimitive(TierPosition tier_position);
 static TierPosition BreakthroughDoMove(TierPosition tier_position, Move move);
 static bool BreakthroughIsLegalPosition(TierPosition tier_position);
+#if BT_FAST_CHILDREN
 static int BreakthroughGetNumberOfCanonicalChildPositions(
     TierPosition tier_position);
 static int BreakthroughGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kTierSolverNumChildPositionsMax]);
+#endif
+#if BT_COLOR_SWAP
+static Tier BreakthroughGetCanonicalTier(Tier tier);
+static Position BreakthroughGetPositionInSymmetricTier(TierPosition tier_position,
+                                                       Tier symmetric);
+#endif
+#if BT_MIRROR
+static Position BreakthroughGetCanonicalPosition(TierPosition tier_position);
+static int BreakthroughGetNumberOfSymmetries(TierPosition tier_position);
+#endif
 static int BreakthroughGetCanonicalParentPositions(
     TierPosition tier_position, Tier parent_tier,
     Position parents[static kTierSolverNumParentPositionsMax]);
@@ -138,15 +187,24 @@ static const TierSolverApi kSolverApi = {
     .Primitive = &BreakthroughPrimitive,
     .DoMove = &BreakthroughDoMove,
     .IsLegalPosition = &BreakthroughIsLegalPosition,
-    .GetCanonicalPosition = NULL,
+#if BT_MIRROR
+    .GetCanonicalPosition = &BreakthroughGetCanonicalPosition,
+    .GetNumberOfSymmetries = &BreakthroughGetNumberOfSymmetries,
+#endif
+#if BT_FAST_CHILDREN
     .GetNumberOfCanonicalChildPositions =
         &BreakthroughGetNumberOfCanonicalChildPositions,
     .GetCanonicalChildPositions = &BreakthroughGetCanonicalChildPositions,
+#endif
     .GetCanonicalParentPositions = &BreakthroughGetCanonicalParentPositions,
-    .GetPositionInSymmetricTier = NULL,
+#if BT_COLOR_SWAP
+    .GetPositionInSymmetricTier = &BreakthroughGetPositionInSymmetricTier,
+#endif
     .GetChildTiers = &BreakthroughGetChildTiers,
     .GetTierType = &BreakthroughGetTierType,
-    .GetCanonicalTier = NULL,
+#if BT_COLOR_SWAP
+    .GetCanonicalTier = &BreakthroughGetCanonicalTier,
+#endif
 
     .GetTierName = &BreakthroughGetTierName,
 };
@@ -232,15 +290,21 @@ static const char kX = 'x';
 static const char kPlayerPiece[3] = {'-', 'o', 'x'};
 
 /** Variant table. Choice names are cols x rows, as in GamesmanPy. */
-static ConstantReadOnlyString kBreakthroughSizeChoices[] = {"3x4", "3x5",
-                                                            "4x5", "4x6"};
-static const int kVariantCols[] = {3, 3, 4, 4};
-static const int kVariantRows[] = {4, 5, 5, 6};
-static const int kVariantPawnRows[] = {1, 2, 2, 2};
+static ConstantReadOnlyString kBreakthroughSizeChoices[] = {
+    "3x4", "3x5", "4x5", "4x6", "5x5", "5x6",
+};
+static const int kVariantCols[] = {3, 3, 4, 4, 5, 5};
+static const int kVariantRows[] = {4, 5, 5, 6, 5, 6};
+static const int kVariantPawnRows[] = {1, 2, 2, 2, 2, 2};
+// Finer tiers (see "Tiers" above) only for boards whose biggest tier would
+// not fit in memory otherwise. Changing this for a board makes its existing
+// databases unreadable, so smaller boards keep the coarser tiers.
+static const bool kVariantFineTiers[] = {false, false, false, false, false,
+                                         true};
 
 static const GameVariantOption kBreakthroughSize = {
     .name = "size",
-    .num_choices = 4,
+    .num_choices = 6,
     .choices = kBreakthroughSizeChoices,
 };
 
@@ -258,12 +322,18 @@ static int rows;
 static int cols;
 static int board_size;
 static int num_pawns;  // Starting pieces per side.
+static bool fine_tiers;  // Split tiers by goal-row groups (big boards).
 
 // Helper Functions
 
 static void InitHashTables(void);
 static Tier MakeTier(int o, int x, int g);
+static Tier MakeFineTier(int o, int x, int g, int a, int b);
 static void SplitTier(Tier tier, int *o, int *x, int *g);
+static bool SplitFineTier(Tier tier, int *a, int *b);
+#if BT_COLOR_SWAP
+static Tier ColorSwapTier(Tier tier);
+#endif
 static int64_t RegionCount(int size, int num_o, int num_x);
 static bool RegionCounts(int o, int x, int g, int a, int b, int counts[3][2]);
 static int64_t TierSize(Tier tier);
@@ -271,6 +341,10 @@ static bool TierFromBoard(const char *board, int turn, Tier *tier);
 static bool BoardGroup(const char *board, int turn, Tier *tier, int *a,
                        int *b);
 static TierPosition HashBoard(const char *board, int turn);
+static const char *CanonicalBoard(const char *board, char *buffer);
+#if BT_COLOR_SWAP
+static void ColorSwapBoard(const char *board, char *swapped);
+#endif
 static int UnhashBoard(TierPosition tier_position, char *board);
 static char Opponent(char player);
 static int GetIndex(int row, int col);
@@ -298,7 +372,7 @@ static const GameVariant *BreakthroughGetCurrentVariant(void) {
 
 /**
  * @brief Switches to board size SELECTION (0 = 3x4, 1 = 3x5, 2 = 4x5,
- * 3 = 4x6) and sets the board dimensions used by the hash.
+ * 3 = 4x6, 4 = 5x5, 5 = 5x6) and sets the board dimensions used by the hash.
  */
 static int BreakthroughSetVariantOption(int option, int selection) {
     // There is only one option, and the selection must be in range.
@@ -312,6 +386,15 @@ static int BreakthroughSetVariantOption(int option, int selection) {
     rows = kVariantRows[selection];
     board_size = rows * cols;
     num_pawns = kVariantPawnRows[selection] * cols;
+#if defined(BREAKTHROUGH_NO_FINE_TIERS)
+    fine_tiers = false;
+    (void)kVariantFineTiers;
+#elif defined(BREAKTHROUGH_FINE_TIERS_ALL)
+    fine_tiers = true;
+    (void)kVariantFineTiers;
+#else
+    fine_tiers = kVariantFineTiers[selection];
+#endif
 
     InitHashTables();
 
@@ -320,6 +403,7 @@ static int BreakthroughSetVariantOption(int option, int selection) {
 
 /** @brief Returns the starting tier: all pieces on the board, game going. */
 static Tier BreakthroughGetInitialTier(void) {
+    if (fine_tiers) return MakeFineTier(num_pawns, num_pawns, 0, cols, cols);
     return MakeTier(num_pawns, num_pawns, 0);
 }
 
@@ -434,16 +518,20 @@ static bool BreakthroughIsLegalPosition(TierPosition tier_position) {
     return true;
 }
 
+#if BT_FAST_CHILDREN
 /**
  * @brief Fast child generation: unhashes once, applies every move on a copy
- * of the board and hashes the result. Different moves always give different
- * boards in Breakthrough, so no deduplication is needed.
+ * of the board and hashes the result. With color swap on, a child in a
+ * non-canonical tier is stored as its color-swapped twin in the canonical tier
+ * (matching the solver's default child generation). Different moves always
+ * give different boards, so duplicates can only appear when a symmetry is on
+ * (two children that are mirror images or color swaps of each other).
  */
 static int BreakthroughGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kTierSolverNumChildPositionsMax]) {
     //
-    char board[kBoardSizeMax], child[kBoardSizeMax];
+    char board[kBoardSizeMax], child[kBoardSizeMax], buffer[kBoardSizeMax];
     int turn = UnhashBoard(tier_position, board);
     char player = kPlayerPiece[turn];
     int dr = (player == kO) ? 1 : -1;
@@ -465,39 +553,92 @@ static int BreakthroughGetCanonicalChildPositions(
             memcpy(child, board, board_size);
             child[end] = player;
             child[i] = kEmpty;
-            children[ret++] = HashBoard(child, 3 - turn);
+            int child_turn = 3 - turn;
+            const char *stored = child;
+#if BT_COLOR_SWAP
+            // Store the child in its canonical tier, like the solver's own
+            // default child generation does.
+            char swapped[kBoardSizeMax];
+            Tier child_tier;
+            TierFromBoard(child, child_turn, &child_tier);
+            if (BreakthroughGetCanonicalTier(child_tier) != child_tier) {
+                ColorSwapBoard(child, swapped);
+                stored = swapped;
+                child_turn = 3 - child_turn;
+            }
+#endif
+            TierPosition c =
+                HashBoard(CanonicalBoard(stored, buffer), child_turn);
+#if BT_MIRROR || BT_COLOR_SWAP
+            bool duplicate = false;
+            for (int k = 0; k < ret; ++k) {
+                if (children[k].tier == c.tier &&
+                    children[k].position == c.position) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+#endif
+            children[ret++] = c;
         }
     }
 
     return ret;
 }
 
-/** @brief Number of children = number of moves (all children are distinct). */
+/** @brief Number of unique (canonical) children. */
 static int BreakthroughGetNumberOfCanonicalChildPositions(
     TierPosition tier_position) {
     //
+#if BT_MIRROR || BT_COLOR_SWAP
+    TierPosition children[kTierSolverNumChildPositionsMax];
+    return BreakthroughGetCanonicalChildPositions(tier_position, children);
+#else
+    // Without symmetry every move gives a distinct child.
     Move moves[kTierSolverNumMovesMax];
     return BreakthroughGenerateMoves(tier_position, moves);
+#endif
+}
+#endif  // BT_FAST_CHILDREN
+
+#if BT_MIRROR
+/**
+ * @brief Returns the hash of whichever of TIER_POSITION and its left-right
+ * mirror image is smaller as a board string. Mirroring keeps the piece counts
+ * and the goal-row groups, so both are in the same tier.
+ */
+static Position BreakthroughGetCanonicalPosition(TierPosition tier_position) {
+    char board[kBoardSizeMax], buffer[kBoardSizeMax];
+    int turn = UnhashBoard(tier_position, board);
+    const char *canonical = CanonicalBoard(board, buffer);
+    if (canonical == board) return tier_position.position;
+
+    return HashBoard(canonical, turn).position;
 }
 
+/** @brief 1 if the board is its own mirror image, 2 otherwise. */
+static int BreakthroughGetNumberOfSymmetries(TierPosition tier_position) {
+    char board[kBoardSizeMax], buffer[kBoardSizeMax];
+    UnhashBoard(tier_position, board);
+    CanonicalBoard(board, buffer);  // Fills BUFFER with the mirror image.
+
+    return memcmp(board, buffer, board_size) == 0 ? 1 : 2;
+}
+#endif  // BT_MIRROR
+
 /**
- * @brief Stores in PARENTS all positions in PARENT_TIER that reach
- * TIER_POSITION in one move. Each possible last move is undone (both as a
- * plain move and, for diagonal moves, as a capture); a parent is kept only if
- * its board belongs to PARENT_TIER.
+ * @brief Undoes every possible last move on BOARD (TURN to move now) and adds
+ * each parent whose board belongs to PARENT_TIER to PARENTS, skipping
+ * duplicates. Returns the new number of parents.
  */
-static int BreakthroughGetCanonicalParentPositions(
-    TierPosition tier_position, Tier parent_tier,
-    Position parents[static kTierSolverNumParentPositionsMax]) {
-    //
-    char board[kBoardSizeMax];
-    int turn = UnhashBoard(tier_position, board);
+static int CollectParents(char *board, int turn, Tier parent_tier,
+                          Position *parents, int ret) {
     int prev_turn = 3 - turn;
     char prev_player = kPlayerPiece[prev_turn];  // Made the last move.
     char mover = kPlayerPiece[turn];             // Its piece may be captured.
     int dr = (prev_player == kO) ? 1 : -1;
 
-    int ret = 0;
     for (int end = 0; end < board_size; ++end) {
         if (board[end] != prev_player) continue;
         int src_row = end / cols - dr;
@@ -517,7 +658,18 @@ static int BreakthroughGetCanonicalParentPositions(
                 Tier tier;
                 if (TierFromBoard(board, prev_turn, &tier) &&
                     tier == parent_tier) {
-                    parents[ret++] = HashBoard(board, prev_turn).position;
+                    char buffer[kBoardSizeMax];
+                    Position parent =
+                        HashBoard(CanonicalBoard(board, buffer), prev_turn)
+                            .position;
+                    bool duplicate = false;
+                    for (int k = 0; k < ret; ++k) {
+                        if (parents[k] == parent) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (!duplicate) parents[ret++] = parent;
                 }
                 board[src] = kEmpty;
                 board[end] = prev_player;
@@ -527,6 +679,64 @@ static int BreakthroughGetCanonicalParentPositions(
 
     return ret;
 }
+
+/**
+ * @brief Stores in PARENTS all positions in PARENT_TIER that reach
+ * TIER_POSITION in one move. Each possible last move is undone (both as a
+ * plain move and, for diagonal moves, as a capture); a parent is kept only if
+ * its board belongs to PARENT_TIER. With mirror symmetry on, each parent is
+ * stored in its canonical form. With color swap on, the solver passes the
+ * child in its stored (canonical) tier, but the real child of PARENT_TIER may
+ * be its color-swapped twin, so moves are undone from both versions.
+ */
+static int BreakthroughGetCanonicalParentPositions(
+    TierPosition tier_position, Tier parent_tier,
+    Position parents[static kTierSolverNumParentPositionsMax]) {
+    //
+    char board[kBoardSizeMax];
+    int turn = UnhashBoard(tier_position, board);
+    int ret = CollectParents(board, turn, parent_tier, parents, 0);
+
+#if BT_COLOR_SWAP
+    if (ColorSwapTier(tier_position.tier) != tier_position.tier) {
+        char swapped[kBoardSizeMax];
+        ColorSwapBoard(board, swapped);
+        ret = CollectParents(swapped, 3 - turn, parent_tier, parents, ret);
+    }
+#endif
+
+    return ret;
+}
+
+#if BT_COLOR_SWAP
+/**
+ * @brief Color swap: tier (o, x, g) is equivalent to tier (x, o, g'), where
+ * g' swaps "an 'o' just won" (1) with "an 'x' just won" (2). Returns the
+ * smaller of the two as the canonical tier.
+ */
+static Tier BreakthroughGetCanonicalTier(Tier tier) {
+    Tier swapped = ColorSwapTier(tier);
+    return swapped < tier ? swapped : tier;
+}
+
+/**
+ * @brief Returns the position in tier SYMMETRIC that is the color swap of
+ * TIER_POSITION: the board flipped upside down, 'o' and 'x' swapped, and the
+ * other player to move.
+ */
+static Position BreakthroughGetPositionInSymmetricTier(TierPosition tier_position,
+                                                       Tier symmetric) {
+    if (symmetric == tier_position.tier) return tier_position.position;
+
+    char board[kBoardSizeMax], swapped[kBoardSizeMax];
+    int turn = UnhashBoard(tier_position, board);
+    ColorSwapBoard(board, swapped);
+    TierPosition ret = HashBoard(swapped, 3 - turn);
+    assert(ret.tier == symmetric);
+
+    return ret.position;
+}
+#endif  // BT_COLOR_SWAP
 
 /**
  * @brief Lists the tiers one move can lead to. Only tiers where the game is
@@ -541,19 +751,34 @@ static int BreakthroughGetChildTiers(
     SplitTier(tier, &o, &x, &g);
     if (g != 0) return 0;  // The game is over: no moves.
 
-    Tier candidates[] = {
-        MakeTier(o, x - 1, 0),  // 'o' captures in the middle rows.
-        MakeTier(o, x, 1),      // 'o' reaches the top row.
-        MakeTier(o, x - 1, 1),  // 'o' reaches the top row with a capture.
-        MakeTier(o - 1, x, 0),  // 'x' captures in the middle rows.
-        MakeTier(o, x, 2),      // 'x' reaches the bottom row.
-        MakeTier(o - 1, x, 2),  // 'x' reaches the bottom row with a capture.
-    };
+    Tier candidates[12];
+    int n = 0;
+    int a, b;
+    if (SplitFineTier(tier, &a, &b)) {
+        // Finer tiers also change when a piece leaves its home row.
+        candidates[n++] = MakeFineTier(o, x - 1, 0, a, b);      // o captures
+        candidates[n++] = MakeFineTier(o, x, 0, a - 1, b);      // o leaves home
+        candidates[n++] = MakeFineTier(o, x - 1, 0, a - 1, b);  // both
+        candidates[n++] = MakeFineTier(o, x, 1, a, b);          // o reaches top
+        candidates[n++] = MakeFineTier(o, x - 1, 1, a, b - 1);  // ...capturing
+        candidates[n++] = MakeFineTier(o - 1, x, 0, a, b);      // x captures
+        candidates[n++] = MakeFineTier(o, x, 0, a, b - 1);      // x leaves home
+        candidates[n++] = MakeFineTier(o - 1, x, 0, a, b - 1);  // both
+        candidates[n++] = MakeFineTier(o, x, 2, a, b);          // x reaches bottom
+        candidates[n++] = MakeFineTier(o - 1, x, 2, a - 1, b);  // ...capturing
+    } else {
+        candidates[n++] = MakeTier(o, x - 1, 0);  // 'o' captures in the middle.
+        candidates[n++] = MakeTier(o, x, 1);      // 'o' reaches the top row.
+        candidates[n++] = MakeTier(o, x - 1, 1);  // ...with a capture.
+        candidates[n++] = MakeTier(o - 1, x, 0);  // 'x' captures in the middle.
+        candidates[n++] = MakeTier(o, x, 2);      // 'x' reaches the bottom row.
+        candidates[n++] = MakeTier(o - 1, x, 2);  // ...with a capture.
+    }
 
     int ret = 0;
-    for (int i = 0; i < (int)(sizeof(candidates) / sizeof(candidates[0]));
-         ++i) {
-        if (candidates[i] < 0 || TierSize(candidates[i]) == 0) continue;
+    for (int i = 0; i < n; ++i) {
+        if (candidates[i] < 0 || candidates[i] == tier) continue;
+        if (TierSize(candidates[i]) == 0) continue;
         children[ret++] = candidates[i];
     }
 
@@ -572,9 +797,14 @@ static TierType BreakthroughGetTierType(Tier tier) {
  */
 static int BreakthroughGetTierName(Tier tier,
                                    char name[static kDbFileNameLengthMax + 1]) {
-    int o, x, g;
+    int o, x, g, a, b;
     SplitTier(tier, &o, &x, &g);
-    snprintf(name, kDbFileNameLengthMax + 1, "%do_%dx_g%d", o, x, g);
+    if (SplitFineTier(tier, &a, &b)) {
+        snprintf(name, kDbFileNameLengthMax + 1, "%do_%dx_a%d_b%d_g%d", o, x, a,
+                 b, g);
+    } else {
+        snprintf(name, kDbFileNameLengthMax + 1, "%do_%dx_g%d", o, x, g);
+    }
 
     return kSuccess;
 }
@@ -896,21 +1126,58 @@ static Tier MakeTier(int o, int x, int g) {
     return ((Tier)o * 64 + x) * 4 + g;
 }
 
-/** @brief Unpacks a Tier value into (o, x, g). */
+// Finer tiers use their own range of Tier values (from kFineTierBase up), so
+// coarse tier values, and the databases that use them, never change.
+static const Tier kFineTierBase = (Tier)1 << 32;
+
+/** @brief Packs (o, x, g, a, b) into one finer Tier value; -1 if invalid. */
+static Tier MakeFineTier(int o, int x, int g, int a, int b) {
+    Tier coarse = MakeTier(o, x, g);
+    if (coarse < 0 || a < 0 || b < 0 || a > cols || b > cols) return -1;
+    return kFineTierBase + (coarse * 8 + a) * 8 + b;
+}
+
+/** @brief Unpacks a Tier value into (o, x, g); works for both kinds. */
 static void SplitTier(Tier tier, int *o, int *x, int *g) {
+    if (tier >= kFineTierBase) tier = (tier - kFineTierBase) / 64;
     *g = (int)(tier % 4);
     tier /= 4;
     *x = (int)(tier % 64);
     *o = (int)(tier / 64);
 }
 
+/** @brief For a finer tier, writes (a, b) and returns true. */
+static bool SplitFineTier(Tier tier, int *a, int *b) {
+    if (tier < kFineTierBase) return false;
+    tier -= kFineTierBase;
+    *b = (int)(tier % 8);
+    *a = (int)((tier / 8) % 8);
+    return true;
+}
+
+#if BT_COLOR_SWAP
+/**
+ * @brief Color-swapped twin of TIER: (o, x, g) -> (x, o, g'), where g' swaps
+ * "an 'o' just won" with "an 'x' just won"; for finer tiers a and b swap too
+ * ('o's at home on the bottom become 'x's at home on the top).
+ */
+static Tier ColorSwapTier(Tier tier) {
+    int o, x, g, a, b;
+    SplitTier(tier, &o, &x, &g);
+    int swapped_g = g == 1 ? 2 : (g == 2 ? 1 : 0);
+    if (SplitFineTier(tier, &a, &b)) return MakeFineTier(x, o, swapped_g, b, a);
+    return MakeTier(x, o, swapped_g);
+}
+#endif  // BT_COLOR_SWAP
+
 /** @brief Number of hash values in TIER (0 if the tier is impossible). */
 static int64_t TierSize(Tier tier) {
     if (tier < 0) return 0;
-    int o, x, g;
+    int o, x, g, a, b;
     SplitTier(tier, &o, &x, &g);
     if (o > num_pawns || x > num_pawns) return 0;
-    int64_t boards = tier_boards[o][x][g];
+    int64_t boards = SplitFineTier(tier, &a, &b) ? group_count[o][x][g][a][b]
+                                                 : tier_boards[o][x][g];
     return (g == 0) ? boards * 2 : boards;  // g = 0 stores the turn.
 }
 
@@ -946,7 +1213,8 @@ static bool BoardGroup(const char *board, int turn, Tier *tier, int *a,
     } else {
         return false;
     }
-    *tier = MakeTier(o, x, g);
+    *tier = fine_tiers ? MakeFineTier(o, x, g, o_bottom, x_top)
+                       : MakeTier(o, x, g);
     *a = o_bottom;
     *b = x_top;
     return true;
@@ -1042,7 +1310,7 @@ static TierPosition HashBoard(const char *board, int turn) {
         rank = rank * RegionCount(size, counts[r][0], counts[r][1]) +
                RankRegion(board + first, size, counts[r][0], counts[r][1]);
     }
-    rank += group_offset[o][x][g][a][b];                // BIAS of the group.
+    if (!fine_tiers) rank += group_offset[o][x][g][a][b];  // Group BIAS.
     if (g == 0) rank = rank * 2 + (turn - 1);  // Store the turn.
     ret.position = rank;
 
@@ -1062,21 +1330,25 @@ static int UnhashBoard(TierPosition tier_position, char *board) {
         turn = (g == 1) ? 2 : 1;  // The player who did not just move.
     }
 
-    // Find the group (a, b) whose range contains RANK.
+    // Find the group (a, b): stored in a finer tier, otherwise the group
+    // whose range contains RANK.
     int a = 0, b = 0;
-    bool found = false;
-    for (a = 0; a <= cols && !found; ++a) {
-        for (b = 0; b <= cols; ++b) {
-            int64_t offset = group_offset[o][x][g][a][b];
-            if (rank >= offset && rank < offset + group_count[o][x][g][a][b]) {
-                found = true;
-                break;
+    if (!SplitFineTier(tier_position.tier, &a, &b)) {
+        bool found = false;
+        for (a = 0; a <= cols && !found; ++a) {
+            for (b = 0; b <= cols; ++b) {
+                int64_t offset = group_offset[o][x][g][a][b];
+                if (rank >= offset &&
+                    rank < offset + group_count[o][x][g][a][b]) {
+                    found = true;
+                    break;
+                }
             }
+            if (found) break;
         }
-        if (found) break;
+        assert(found);
+        rank -= group_offset[o][x][g][a][b];
     }
-    assert(found);
-    rank -= group_offset[o][x][g][a][b];
 
     int counts[3][2];
     RegionCounts(o, x, g, a, b, counts);
@@ -1137,3 +1409,35 @@ static void CountPieces(const char *board, int *num_o, int *num_x) {
         *num_x += (board[i] == kX);
     }
 }
+
+/**
+ * @brief With mirror symmetry on, returns BOARD or its left-right mirror image
+ * (written into BUFFER), whichever is smaller as a string. Otherwise returns
+ * BOARD unchanged.
+ */
+static const char *CanonicalBoard(const char *board, char *buffer) {
+#if BT_MIRROR
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            buffer[GetIndex(row, col)] = board[GetIndex(row, cols - 1 - col)];
+        }
+    }
+    return memcmp(board, buffer, board_size) <= 0 ? board : buffer;
+#else
+    (void)buffer;
+    return board;
+#endif
+}
+
+#if BT_COLOR_SWAP
+/** @brief Board flipped upside down with 'o' and 'x' swapped. */
+static void ColorSwapBoard(const char *board, char *swapped) {
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            char piece = board[GetIndex(rows - 1 - row, col)];
+            swapped[GetIndex(row, col)] =
+                piece == kO ? kX : (piece == kX ? kO : kEmpty);
+        }
+    }
+}
+#endif  // BT_COLOR_SWAP
