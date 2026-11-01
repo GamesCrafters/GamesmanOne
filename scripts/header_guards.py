@@ -191,6 +191,7 @@ def main():
 
     args = parser.parse_args()
 
+    mode = "dry-run"  # safe default when no flag is given
     if args.fix:
         mode = "fix"
     elif args.dry_run:
