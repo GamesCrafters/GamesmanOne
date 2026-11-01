@@ -34,7 +34,6 @@
 // 1. To add a new game, include the game header here.
 
 #include "core/types/game/game.h"
-#include "games/breakthrough/breakthrough.h"
 #include "games/dshogi/dshogi.h"
 #include "games/fsvp/fsvp.h"
 #include "games/gates/gates.h"
@@ -55,8 +54,7 @@
 const Game *kAllGames[] = {
     &kWinkers,         &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko,
     &kDobutsuShogi,    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,
-    &kMallqueenschess, &kMkaooa,          &kMills,   &kBreakthrough,
-    NULL,
+    &kMallqueenschess, &kMkaooa,          &kMills,   NULL,
 };
 
 // ============================================================================
