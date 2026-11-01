@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The generic solver type.
- * @version 1.1.1
- * @date 2024-12-10
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -78,15 +78,15 @@ typedef struct Solver {
     int (*Finalize)(void);
 
     /**
-     * @brief Tests the current game variant's solver API implementation using
-     * the given SEED for random number generation if needed.
+     * @brief Tests the current game variant's solver API implementation.
      *
+     * @param aux  Auxiliary parameter.
      * @return 0 on success, or
      * @return non-zero error code on failure. The error codes can then be
      * passed into the Solver::ExplainTestError function to get an explanation
      * string for the error that happened.
      */
-    int (*Test)(long seed);
+    int (*Test)(void *aux);
 
     /**
      * @brief Returns a read only string that contains the explanation of the

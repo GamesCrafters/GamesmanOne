@@ -24,7 +24,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>  // printf
 #ifdef _OPENMP
 #include <omp.h>
 #endif  // _OPENMP
@@ -35,7 +34,6 @@
 int main(int argc, char **argv) {
 #ifdef _OPENMP
     omp_set_dynamic(0);
-    omp_set_max_active_levels(2);
 #endif  // _OPENMP
     if (argc == 1) return GamesmanInteractiveMain();
 

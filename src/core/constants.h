@@ -26,7 +26,7 @@
 #ifndef GAMESMANONE_CORE_CONSTANTS_H_
 #define GAMESMANONE_CORE_CONSTANTS_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /** @brief String representations for all possible Values. */
 extern ConstantReadOnlyString kValueStrings[];

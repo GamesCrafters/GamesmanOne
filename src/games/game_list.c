@@ -26,20 +26,21 @@
 
 #include "games/game_list.h"
 
-#include <stddef.h>  // NULL
-#include <stdlib.h>  // qsort
-#include <string.h>  // strcmp
-
-#include "core/types/gamesman_types.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 // 1. To add a new game, include the game header here.
 
+#include "core/types/game/game.h"
 #include "games/dshogi/dshogi.h"
 #include "games/fsvp/fsvp.h"
 #include "games/gates/gates.h"
 #include "games/gobblet/gobblet_gobblers.h"
 #include "games/kaooa/kaooa.h"
 #include "games/mallqueenschess/mallqueenschess.h"
+#include "games/mills/mills.h"
 #include "games/mttt/mttt.h"
 #include "games/mtttier/mtttier.h"
 #include "games/neutron/neutron.h"
@@ -53,7 +54,7 @@
 const Game *kAllGames[] = {
     &kWinkers,         &kGobbletGobblers, &kNeutron, &kGates,   &kTeeko,
     &kDobutsuShogi,    &kQuixo,           &kFsvp,    &kMtttier, &kMttt,
-    &kMallqueenschess, &kMkaooa,          NULL,
+    &kMallqueenschess, &kMkaooa,          &kMills,   NULL,
 };
 
 // ============================================================================

@@ -26,18 +26,18 @@
 
 #include "core/headless/hutils.h"
 
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdio.h>    // printf, fprintf, stdout, stderr
-#include <stdlib.h>   // free
-#include <string.h>   // strcmp, strcpy
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "core/data_structures/int64_array.h"
 #include "core/game_manager.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_status.h"
+#include "libs/io/xfile.h"
 
 static int MakeDirectory(ReadOnlyString output);
 
@@ -49,7 +49,7 @@ int HeadlessGetVerbosity(bool verbose, bool quiet) {
 }
 
 int HeadlessRedirectOutput(ReadOnlyString output) {
-    if (output == NULL) return kNoError;
+    if (output == NULL) return kSuccess;
 
     int error = MakeDirectory(output);
     if (error != 0) {
@@ -63,8 +63,9 @@ int HeadlessRedirectOutput(ReadOnlyString output) {
         fprintf(stderr, "HeadlessRedirectOutput: failed to redirect output\n");
         return kFileSystemError;
     }
+    setvbuf(stdout, NULL, _IOLBF, 0);
 
-    return kNoError;
+    return kSuccess;
 }
 
 int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
@@ -86,20 +87,34 @@ int HeadlessInitSolver(ReadOnlyString game_name, int variant_id,
 
 // -----------------------------------------------------------------------------
 
+static int MkdirRecursiveStatusToGamesmanError(MkdirRecursiveStatus status) {
+    switch (status) {
+        case kMkdirRecursiveSuccess:
+            return kSuccess;
+        case kMkdirRecursiveErrInvalidParam:
+            return kIllegalArgumentError;
+        case kMkdirRecursiveErrFileSystem:
+            return kFileSystemError;
+        case kMkdirRecursiveErrOom:
+            return kMallocFailureError;
+    }
+    return kNotReachedError;
+}
+
 static int MakeDirectory(ReadOnlyString output) {
     int length = (int)strlen(output);
 
     // Path is not valid for a file if it's empty or its last character is '/'.
     if (length == 0 || output[length - 1] == '/') return -1;
 
-    int ret = kNoError;
+    int ret = kSuccess;
     char *path = (char *)SafeCalloc(length + 1, sizeof(char));
     strcpy(path, output);
     for (int i = length; i >= 0; --i) {
         // Find the last '/' in path and try to make directory.
         if (path[i] == '/') {
             path[i] = '\0';
-            ret = MkdirRecursive(path);
+            ret = MkdirRecursiveStatusToGamesmanError(MkdirRecursive(path));
             break;
         }
     }

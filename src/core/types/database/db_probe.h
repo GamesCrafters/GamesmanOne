@@ -32,7 +32,7 @@
 #ifndef GAMESMANONE_CORE_TYPES_DATABASE_DB_PROBE_H_
 #define GAMESMANONE_CORE_TYPES_DATABASE_DB_PROBE_H_
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>
 
 #include "core/types/base.h"
 

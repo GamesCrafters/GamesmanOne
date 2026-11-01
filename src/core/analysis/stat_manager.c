@@ -26,20 +26,21 @@
 
 #include "core/analysis/stat_manager.h"
 
-#include <assert.h>    // assert
-#include <fcntl.h>     // open, O_RDONLY, O_WRONLY, O_CREAT
-#include <stddef.h>    // NULL, size_t
-#include <stdio.h>     // fprintf, stderr, SEEK_SET, fopen
-#include <string.h>    // strlen, memset
-#include <sys/stat.h>  // S_IRWXU, S_IRWXG, S_IRWXO
-#include <zlib.h>      // gzread, gzFile, Z_NULL
+#include <fcntl.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #include "core/analysis/analysis.h"
+#include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/data_structures/concurrent_bitset.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_status.h"
+#include "libs/io/xfile.h"
 #include "libs/lz4_utils/lz4_utils.h"
 
 static char *sandbox_path;
@@ -51,6 +52,8 @@ static char *GetPathToTierAnalysis(Tier tier);
 static char *GetPathToTierDiscoveryMap(Tier tier);
 static char *GetPathTo(Tier tier, ReadOnlyString extension);
 
+static int ReportLz4UtilsError(Lz4UtilsStatus status);
+
 // -----------------------------------------------------------------------------
 
 int StatManagerInit(ReadOnlyString game_name, int variant,
@@ -60,7 +63,7 @@ int StatManagerInit(ReadOnlyString game_name, int variant,
     sandbox_path = SetupStatPath(game_name, variant, data_path);
     if (sandbox_path == NULL) return kMallocFailureError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 void StatManagerFinalize(void) {
@@ -130,57 +133,98 @@ int StatManagerLoadAnalysis(Analysis *dest, Tier tier) {
 int StatManagerLoadDiscoveryMap(Tier tier, int64_t size,
                                 GamesmanAllocator *allocator,
                                 ConcurrentBitset **dest) {
-    int error = kNoError;
-    void *buf = NULL;  // Deserialization buffer
+    int error = kSuccess;
+    char buf[2][BUFSIZ];  // Double-buffer
     char *filename = GetPathToTierDiscoveryMap(tier);
-    ConcurrentBitset *s = ConcurrentBitsetCreateAllocator(size, allocator);
+    ConcurrentBitset *s = ConcurrentBitsetCreateAllocatorMt(size, allocator);
+    Lz4UtilsInStream *lz4_istream = NULL;
     if (filename == NULL || s == NULL) {
         error = kMallocFailureError;
         goto _bailout;
     }
-
-    // Allocate deserialization buffer
-    size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    buf = GamesmanAllocatorAllocate(allocator, buf_size);
-    if (buf == NULL) {
-        error = kMallocFailureError;
+    if (!FileExists(filename)) {
+        error = kFileSystemError;
         goto _bailout;
     }
 
-    // Decompress into buffer.
-    int64_t res = Lz4UtilsDecompressFile(filename, buf, buf_size);
-    switch (res) {
-        case -1:
-            error = kFileSystemError;
-            goto _bailout;
-        case -2:
-            error = kMallocFailureError;
-            goto _bailout;
-        case -3:
-            fprintf(stderr,
-                    "StatManagerLoadDiscoveryMap: discovery map appears to be "
-                    "corrupt for tier %" PRITier "\n",
-                    tier);
-            error = kRuntimeError;
-            goto _bailout;
-        case -4:
-            NotReached(
-                "StatManagerLoadDiscoveryMap: not enough space for "
-                "destination bit stream allocated, likely a bug\n");
-            error = kRuntimeError;
-            goto _bailout;
-        default:
-            break;  // Success.
+    lz4_istream = Lz4UtilsInStreamCreate(filename);
+    if (!lz4_istream) {
+        error = kRuntimeError;
+        goto _bailout;
     }
 
-    // Deserialize
-    ConcurrentBitsetDeserialize(s, buf);
+    size_t total_bytes = ConcurrentBitsetGetSerializedSize(s);
+    size_t deserialized = 0;
+    int current_buf = 0;
+
+    // Prime the pipeline by reading the first chunk
+    size_t bytes_read = 0;
+    Lz4UtilsInStreamRun(lz4_istream, buf[current_buf], BUFSIZ, &bytes_read);
+    // TODO: add LZ4 status checks
+
+    PRAGMA_OMP(parallel) {
+        PRAGMA_OMP(single) {
+            // Loop until deserialized all expected bytes or hit an EOF/error
+            while (deserialized < total_bytes && bytes_read > 0) {
+                size_t deserialize_step = 0;
+                size_t next_bytes_read = 0;
+
+                // Task A: Deserialize the buffer we just read
+                PRAGMA_OMP(task shared(deserialize_step) firstprivate(
+                    current_buf, bytes_read, deserialized)) {
+                    deserialize_step = ConcurrentBitsetDeserializeStreaming(
+                        s, deserialized, buf[current_buf], bytes_read);
+                }
+
+                // Task B: Eagerly decompress the next chunk into the alternate
+                // buffer
+                PRAGMA_OMP(task shared(next_bytes_read)
+                               firstprivate(current_buf)) {
+                    Lz4UtilsInStreamRun(lz4_istream, buf[1 - current_buf],
+                                        BUFSIZ, &next_bytes_read);
+                }
+
+                // Both tasks must complete before moving forward
+                PRAGMA_OMP(taskwait)
+
+                if (deserialize_step == 0) {
+                    error = kRuntimeError;
+                    break;
+                }
+
+                deserialized += deserialize_step;
+                bytes_read = next_bytes_read;
+                current_buf = 1 - current_buf;
+            }
+        }
+    }
+
+    // Handle a sudden failure in the deserialize step
+    if (error == kRuntimeError) {
+        fprintf(stderr,
+                "StatManagerLoadDiscoveryMap: "
+                "ConcurrentBitsetDeserializeStreaming unexpectedly "
+                "returned 0\n");
+        goto _bailout;
+    }
+
+    // Check for premature End-Of-File
+    if (deserialized < total_bytes) {
+        fprintf(stderr,
+                "StatManagerLoadDiscoveryMap: premature end of file "
+                "for tier %" PRITier "\n",
+                tier);
+        error = kRuntimeError;
+        goto _bailout;
+    }
+
+    // Success.
     *dest = s;
 
 _bailout:
     GamesmanFree(filename);
-    GamesmanAllocatorDeallocate(allocator, buf);
-    if (error != kNoError) ConcurrentBitsetDestroy(s);
+    if (error != kSuccess) ConcurrentBitsetDestroy(s);
+    Lz4UtilsInStreamClose(lz4_istream);
 
     return error;
 }
@@ -189,27 +233,51 @@ int StatManagerSaveDiscoveryMap(const ConcurrentBitset *s, Tier tier) {
     char *filename = GetPathToTierDiscoveryMap(tier);
     if (filename == NULL) return kMallocFailureError;
 
-    // Serialize the bitset
-    size_t buf_size = ConcurrentBitsetGetSerializedSize(s);
-    void *buf = GamesmanMalloc(buf_size);
-    if (buf == NULL) return kMallocFailureError;
-    ConcurrentBitsetSerialize(s, buf);
-
-    int64_t res = Lz4UtilsCompressStream(buf, buf_size, 0, filename);
-    GamesmanFree(buf);
+    Lz4UtilsOutStream *const lz4_ostream = Lz4UtilsOutStreamCreate(filename, 0);
     GamesmanFree(filename);
-    switch (res) {
-        case -1:
-            return kIllegalArgumentError;
-        case -2:
-            return kMallocFailureError;
-        case -3:
-            return kFileSystemError;
-        default:
-            break;
+    if (lz4_ostream == NULL) return kRuntimeError;
+
+    char buf[2][BUFSIZ];
+    int current_buf = 0;
+    size_t bytes_serialized = 0;
+    Lz4UtilsStatus status = LZ4_UTILS_SUCCESS;
+    size_t compressed_bytes = 0;
+    size_t step = ConcurrentBitsetSerializeStreaming(s, bytes_serialized,
+                                                     buf[current_buf], BUFSIZ);
+    PRAGMA_OMP(parallel) {
+        PRAGMA_OMP(single) {
+            while (step > 0) {
+                bytes_serialized += step;
+                // Task A: Compress the buffer we just filled
+                PRAGMA_OMP(task shared(status, compressed_bytes)
+                               firstprivate(current_buf, step))
+                status = Lz4UtilsOutStreamRun(lz4_ostream, buf[current_buf],
+                                              step, &compressed_bytes);
+
+                // Task B: Eagerly serialize the next chunk into the alternate
+                // buffer
+                size_t next_step = 0;
+                PRAGMA_OMP(task shared(next_step)
+                               firstprivate(current_buf, bytes_serialized)) {
+                    next_step = ConcurrentBitsetSerializeStreaming(
+                        s, bytes_serialized, buf[1 - current_buf], BUFSIZ);
+                }
+
+                // Both tasks must complete before moving forward
+                PRAGMA_OMP(taskwait)
+                if (status != LZ4_UTILS_SUCCESS)
+                    break;  // Break if compression failed
+                step = next_step;
+                current_buf = 1 - current_buf;
+            }
+        }
     }
 
-    return kNoError;
+    Lz4UtilsStatus close_status = Lz4UtilsOutStreamClose(lz4_ostream, NULL);
+    int error = ReportLz4UtilsError(close_status);
+    if (error != kSuccess) return error;
+
+    return ReportLz4UtilsError(status);
 }
 
 int StatManagerRemoveDiscoveryMap(Tier tier) {
@@ -220,7 +288,7 @@ int StatManagerRemoveDiscoveryMap(Tier tier) {
     GamesmanFree(filename);
     if (error != 0) return kFileSystemError;
 
-    return kNoError;
+    return kSuccess;
 }
 
 // -----------------------------------------------------------------------------
@@ -285,9 +353,25 @@ static char *GetPathTo(Tier tier, ReadOnlyString extension) {
     }
 
     char file_name[file_name_length + 1];  // +1 for '\0'.
-    sprintf(file_name, "%" PRITier "%s", tier, extension);
+    snprintf(file_name, sizeof(file_name), "%" PRITier "%s", tier, extension);
 
     strcat(path, sandbox_path);
     strcat(path, file_name);
     return path;
+}
+
+static int ReportLz4UtilsError(Lz4UtilsStatus status) {
+    switch (status) {
+        case LZ4_UTILS_SUCCESS:
+            return kSuccess;
+        case LZ4_UTILS_ERR_INVALID_PARAM:
+        case LZ4_UTILS_ERR_INSUFFICIENT_BUF:
+            return kIllegalArgumentError;
+        case LZ4_UTILS_ERR_OOM:
+            return kMallocFailureError;
+        case LZ4_UTILS_ERR_IO:
+            return kFileSystemError;
+        default:
+            return kRuntimeError;
+    }
 }

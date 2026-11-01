@@ -27,19 +27,32 @@
 
 #include "games/winkers/winkers.h"
 
-#include <assert.h>   // assert
-#include <ctype.h>    // toupper
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, int8_t
-#include <stdio.h>    // sprintf
-#include <stdlib.h>   // atoi
-#include <string.h>   // strlen
+#include <assert.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/game/game.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_tier.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/tier_position_hash_set.h"
+#include "core/types/uwapi/autogui.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_tier.h"
+#include "libs/string/xstring.h"
 
 // =================================== Types ===================================
 
@@ -353,10 +366,11 @@ TierType WinkersGetTierType(Tier tier) {
 static int WinkersGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
     WinkersTier t = {.hash = tier};
-    sprintf(name, "%dX_%dO_%dCX_%dCO", t.placed.winks[0], t.placed.winks[1],
-            t.placed.neutrals[0], t.placed.neutrals[1]);
+    snprintf(name, kDbFileNameLengthMax + 1, "%dX_%dO_%dCX_%dCO",
+             t.placed.winks[0], t.placed.winks[1], t.placed.neutrals[0],
+             t.placed.neutrals[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static const TierSolverApi kWinkersSolverApi = {
@@ -406,6 +420,12 @@ static const char kWinkersPositionStringFormat[] =
     "Player 1 (X): %d neutral, %d wink(s) remaining\n"
     "Player 2 (O): %d neutral, %d wink(s) remaining";
 
+enum {
+    kPositionStringLengthMax =
+        sizeof(kWinkersPositionStringFormat) + 4 * kInt32Base10StringLengthMax,
+    kMoveStringLengthMax = kInt32Base10StringLengthMax,
+};
+
 // Simple automatic board string formatting from Winkers.
 static int WinkersTierPositionToString(TierPosition tier_position,
                                        char *buffer) {
@@ -417,20 +437,20 @@ static int WinkersTierPositionToString(TierPosition tier_position,
     assert(success);
     (void)success;
 
-    sprintf(buffer, kWinkersPositionStringFormat, board[0], board[1], board[2],
-            board[3], board[4], board[5], board[6], board[7], board[8],
-            board[9], board[10], board[11], board[12], board[13], board[14],
-            board[15], board[16], board[17], board[18],
-            10 - t.placed.neutrals[0], 10 - t.placed.winks[0],
-            10 - t.placed.neutrals[1], 10 - t.placed.winks[1]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kWinkersPositionStringFormat,
+             board[0], board[1], board[2], board[3], board[4], board[5],
+             board[6], board[7], board[8], board[9], board[10], board[11],
+             board[12], board[13], board[14], board[15], board[16], board[17],
+             board[18], 10 - t.placed.neutrals[0], 10 - t.placed.winks[0],
+             10 - t.placed.neutrals[1], 10 - t.placed.winks[1]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int WinkersMoveToString(Move move, char *buffer) {
-    sprintf(buffer, "%d", (int)move + 1);
+    snprintf(buffer, kMoveStringLengthMax + 1, "%d", (int)move + 1);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool WinkersIsValidMoveString(ReadOnlyString move_string) {
@@ -444,10 +464,9 @@ static Move WinkersStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon WinkersGameplayApiCommon = {
     .GetInitialPosition = WinkersGetInitialPosition,
-    .position_string_length_max =
-        sizeof(kWinkersPositionStringFormat) + 4 * kInt32Base10StringLengthMax,
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 3,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = WinkersMoveToString,
 
     .IsValidMoveString = WinkersIsValidMoveString,
@@ -570,17 +589,22 @@ static TierPosition WinkersFormalPositionToTierPosition(
 }
 
 static CString WinkersTierPositionToFormalPosition(TierPosition tier_position) {
+    static const size_t length_max =
+        kBoardSize + 2 + 2 * kInt32Base10StringLengthMax;
     CString ret;
-    CStringInitCopyCharArray(&ret, "-------------------_10_10");  // placeholder
+    CStringInitEmpty(&ret);
+    CStringResize(&ret, length_max + 1, '\0');
 
     // Unhash
+    char board[kBoardSize + 1] = {0};
     WinkersTier t = {.hash = tier_position.tier};
     bool success =
-        GenericHashUnhashLabel(t.hash, tier_position.position, ret.str);
+        GenericHashUnhashLabel(t.hash, tier_position.position, board);
     assert(success);
     (void)success;
-    sprintf(ret.str + kBoardSize, "_%d_%d", 10 - t.placed.neutrals[0],
-            10 - t.placed.neutrals[1]);
+
+    snprintf(ret.str, length_max + 1, "%s_%d_%d", board,
+             10 - t.placed.neutrals[0], 10 - t.placed.neutrals[1]);
 
     return ret;
 }
@@ -622,7 +646,7 @@ static CString WinkersTierPositionToAutoGuiPosition(
 static CString WinkersMoveToFormalMove(TierPosition tier_position, Move move) {
     (void)tier_position;  // Unused.
     char buf[kInt64Base10StringLengthMax + 1];
-    sprintf(buf, "%" PRIMove, move);
+    snprintf(buf, sizeof(buf), "%" PRIMove, move);
     CString ret;
     CStringInitCopyCharArray(&ret, buf);
 
@@ -687,12 +711,12 @@ static int WinkersInit(void *aux) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ============================== WinkersFinalize ==============================
 
-static int WinkersFinalize(void) { return kNoError; }
+static int WinkersFinalize(void) { return kSuccess; }
 
 // =============================== kWinkersUwapi ===============================
 

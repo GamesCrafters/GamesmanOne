@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Value iteration tier worker algorithm.
- * @version 1.1.0
- * @date 2024-11-14
+ * @version 1.1.1
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,18 +26,20 @@
 
 #include "core/solvers/tier_solver/tier_worker/vi.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int32_t, int64_t
-#include <stdio.h>    // puts, printf, fprintf, stderr
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "core/concurrency.h"
 #include "core/constants.h"
 #include "core/db/db_manager.h"
-#include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
-#include "libs/lz4_utils/lz4_utils.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/tier_hash_set.h"
+#include "libs/io/xterminal.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
 #ifdef _OPENMP
@@ -104,12 +106,9 @@ static bool Step0_0SetupChildTiers(void) {
     num_child_tiers = 0;
     for (int i = 0; i < num_raw; ++i) {
         Tier canonical = api_internal->GetCanonicalTier(raw[i]);
-
-        // Another child tier is symmetric to this one and was already added.
-        if (TierHashSetContains(&dedup, canonical)) continue;
-
-        TierHashSetAdd(&dedup, canonical);
-        child_tiers[num_child_tiers++] = canonical;
+        if (TierHashSetAdd(&dedup, canonical)) {
+            child_tiers[num_child_tiers++] = canonical;
+        }
     }
     TierHashSetDestroy(&dedup);
 
@@ -119,7 +118,7 @@ static bool Step0_0SetupChildTiers(void) {
 // Typically returns an overestimated result.
 static double GetCheckpointSaveCostEstimate(void) {
     static const double kOverhead = 1;
-    static const double kTypicalHDDSpeed = 200 << 20;  // 200 MiB/s
+    static const double kTypicalHDDSpeed = (double)(200 << 20);  // 200 MiB/s
 
     return kOverhead +
            (double)DbManagerTierMemUsage(this_tier, this_tier_size) /
@@ -148,10 +147,10 @@ static bool Step1LoadChildren(void) {
         Tier child_tier = child_tiers[i];
         int64_t size = api_internal->GetTierSize(child_tier);
         int error = DbManagerLoadTier(child_tier, size);
-        if (error != kNoError) return false;
+        if (error != kSuccess) return false;
 
         // Scan for largest remotenesses
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(16)
+        PRAGMA_OMP(parallel for schedule(dynamic, 16))
         for (Position pos = 0; pos < size; ++pos) {
             Value val = DbManagerGetValueFromLoaded(child_tier, pos);
             switch (val) {
@@ -192,12 +191,12 @@ static bool Step2SetupSolvingTier(CheckpointStatus *ct) {
         if (verbose > 1) PrintfAndFlush("Loading checkpoint...");
         int error =
             DbManagerCheckpointLoad(this_tier, this_tier_size, ct, sizeof(*ct));
-        if (verbose > 1) puts(error == kNoError ? "done" : "failed");
-        return (error == kNoError);
+        if (verbose > 1) puts(error == kSuccess ? "done" : "failed");
+        return (error == kSuccess);
     }
 
     int error = DbManagerCreateSolvingTier(this_tier, this_tier_size);
-    if (error != kNoError) return false;
+    if (error != kSuccess) return false;
 
     return true;
 }
@@ -211,7 +210,7 @@ static bool IsCanonicalPosition(Position position) {
 
 static void Step3ScanTier(void) {
     if (verbose > 1) PrintfAndFlush("Value iteration: scanning tier... ");
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    PRAGMA_OMP(parallel for schedule(dynamic, 256))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         TierPosition tier_position = {.tier = this_tier, .position = pos};
         if (!api_internal->IsLegalPosition(tier_position) ||
@@ -225,8 +224,7 @@ static void Step3ScanTier(void) {
         Value value = api_internal->Primitive(tier_position);
         if (value != kUndecided) {  // If tier_position is primitive...
             // Set its value immediately.
-            DbManagerSetValue(pos, value);
-            DbManagerSetRemoteness(pos, 0);
+            DbManagerSetValueRemoteness(pos, value, 0);
         }  // Otherwise, do nothing.
     }
     if (verbose > 1) puts("done");
@@ -266,8 +264,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
             case kLose:
                 all_children_winning = false;
                 if (child_remoteness == iteration - 1) {
-                    DbManagerSetValue(pos, kWin);
-                    DbManagerSetRemoteness(pos, iteration);
+                    DbManagerSetValueRemoteness(pos, kWin, iteration);
                     *updated = true;
                     return true;
                 }
@@ -286,8 +283,7 @@ static bool IterateWinLoseProcessPosition(int iteration, Position pos,
     }
 
     if (all_children_winning && largest_win + 1 == iteration) {
-        DbManagerSetValue(pos, kLose);
-        DbManagerSetRemoteness(pos, iteration);
+        DbManagerSetValueRemoteness(pos, kLose, iteration);
         *updated = true;
     }
 
@@ -330,12 +326,12 @@ static bool Step4_0IterateWinLose(int initial_remoteness) {
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
         if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
-            if (CheckpointSave(kIteratingWinLose, i) != kNoError) return false;
+            if (CheckpointSave(kIteratingWinLose, i) != kSuccess) return false;
             prev_checkpoint = time(NULL);
         }
 
         ConcurrentBoolStore(&updated, false);
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(128)
+        PRAGMA_OMP(parallel for schedule(dynamic, 128))
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
@@ -374,8 +370,7 @@ static bool IterateTieProcessPosition(int iteration, Position pos,
                 child_tier_position.tier, child_tier_position.position);
         }
         if (child_value == kTie && child_remoteness == iteration - 1) {
-            DbManagerSetValue(pos, kTie);
-            DbManagerSetRemoteness(pos, iteration);
+            DbManagerSetValueRemoteness(pos, kTie, iteration);
             *updated = true;
             break;
         }
@@ -403,12 +398,12 @@ static bool Step4_1IterateTie(int initial_remoteness) {
         bool checkpoint = CheckpointNeeded(prev_checkpoint, time(NULL));
         if (verbose > 1) PrintfAndFlush(checkpoint ? "," : ".");
         if (checkpoint) {
-            if (CheckpointSave(kIteratingTie, i) != kNoError) return false;
+            if (CheckpointSave(kIteratingTie, i) != kSuccess) return false;
             prev_checkpoint = time(NULL);
         }
 
         ConcurrentBoolStore(&updated, false);
-        PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+        PRAGMA_OMP(parallel for schedule(dynamic, 256))
         for (Position pos = 0; pos < this_tier_size; ++pos) {
             bool pos_updated;
             if (DbManagerGetValue(pos) != kUndecided) continue;
@@ -451,7 +446,7 @@ static bool Step4Iterate(int step, int remoteness) {
 static bool Step5MarkDrawPositions(void) {
     // Save a checkpoint if needed.
     if (CheckpointNeeded(prev_checkpoint, time(NULL))) {
-        if (CheckpointSave(kMarkingDraw, 0) != kNoError) return false;
+        if (CheckpointSave(kMarkingDraw, 0) != kSuccess) return false;
         prev_checkpoint = time(NULL);
     }
 
@@ -459,7 +454,7 @@ static bool Step5MarkDrawPositions(void) {
         PrintfAndFlush("Value iteration: begin marking D positions... ");
     }
 
-    PRAGMA_OMP_PARALLEL_FOR_SCHEDULE_DYNAMIC(256)
+    PRAGMA_OMP(parallel for schedule(dynamic, 256))
     for (Position pos = 0; pos < this_tier_size; ++pos) {
         Value val = DbManagerGetValue(pos);
         if (val == kUndecided) {
@@ -493,56 +488,10 @@ static void Step6FlushDb(void) {
     if (verbose > 1) puts("done");
 }
 
-// --------------------------------- CompareDb ---------------------------------
-
-static bool CompareDb(void) {
-    DbProbe probe, ref_probe;
-    if (DbManagerProbeInit(&probe)) return false;
-    if (DbManagerRefProbeInit(&ref_probe)) {
-        DbManagerProbeDestroy(&probe);
-        return false;
-    }
-
-    bool success = true;
-    for (Position p = 0; p < this_tier_size; ++p) {
-        TierPosition tp = {.tier = this_tier, .position = p};
-        Value ref_value = DbManagerRefProbeValue(&ref_probe, tp);
-        if (ref_value == kUndecided) continue;
-
-        Value actual_value = DbManagerProbeValue(&probe, tp);
-        if (actual_value != ref_value) {
-            printf("CompareDb: inconsistent value at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-
-        int actual_remoteness = DbManagerProbeRemoteness(&probe, tp);
-        int ref_remoteness = DbManagerRefProbeRemoteness(&ref_probe, tp);
-        if (actual_remoteness != ref_remoteness) {
-            printf("CompareDb: inconsistent remoteness at tier %" PRITier
-                   " position %" PRIPos "\n",
-                   this_tier, p);
-            success = false;
-            goto _bailout;
-        }
-    }
-
-_bailout:
-    DbManagerProbeDestroy(&probe);
-    DbManagerRefProbeDestroy(&ref_probe);
-    if (success) {
-        printf("CompareDb: tier %" PRITier " check passed\n", this_tier);
-    }
-
-    return success;
-}
-
 // ------------------------------- Step7Cleanup -------------------------------
 
 static bool Step7Cleanup(void) {
-    int error = kNoError;
+    int error = kSuccess;
     if (DbManagerCheckpointExists(this_tier)) {
         error = DbManagerCheckpointRemove(this_tier);
     }
@@ -555,7 +504,7 @@ static bool Step7Cleanup(void) {
     num_child_tiers = 0;
     DbManagerFreeSolvingTier();
 
-    return error == kNoError;
+    return error == kSuccess;
 }
 
 // -----------------------------------------------------------------------------
@@ -563,12 +512,12 @@ static bool Step7Cleanup(void) {
 // -----------------------------------------------------------------------------
 
 int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
-                              const TierWorkerSolveOptions *options,
+                              const TierSolverSolveOptions *options,
                               bool *solved) {
     if (solved != NULL) *solved = false;
     int ret = kRuntimeError;
     if (!options->force && DbManagerTierStatus(tier) == kDbTierStatusSolved) {
-        ret = kNoError;  // Success.
+        ret = kSuccess;  // Success.
         goto _bailout;
     }
 
@@ -585,9 +534,8 @@ int TierWorkerSolveVIInternal(const TierSolverApi *api, Tier tier,
     }
     if (!Step5MarkDrawPositions()) goto _bailout;
     Step6FlushDb();
-    if (options->compare && !CompareDb()) goto _bailout;
     if (solved != NULL) *solved = true;
-    ret = kNoError;  // Success.
+    ret = kSuccess;  // Success.
 
 _bailout:
     if (!Step7Cleanup()) {

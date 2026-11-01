@@ -32,15 +32,17 @@
 
 #include "core/hash/generic_context.h"
 
-#include <assert.h>   // assert
-#include <limits.h>   // CHAR_MAX
-#include <stdbool.h>  // bool
-#include <stdint.h>   // INT8_MAX, int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // calloc, free
-#include <string.h>   // memset, memcpy
+#include <assert.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "core/misc.h"
+#include "core/concurrency.h"
+#include "core/types/base.h"
+#include "libs/math/combinatorics.h"
 
 // At most 128 pieces, 128 additional slots for pieces in the unordered section.
 #define STACK_CONFIG_SIZE 256
@@ -118,21 +120,27 @@ static int64_t ConfigToRearrangement(GenericHashContext *context, int *config) {
  */
 static int64_t Rearrange(GenericHashContext *context, const int *config,
                          int64_t rearrangement) {
-    if (context->rearranger_cache[rearrangement] < 0) {
-        int pieces_rearranged = 0;
-        int64_t result = 1;
-        for (int piece_index = 0; piece_index < context->num_pieces - 1;
-             ++piece_index) {
-            pieces_rearranged += config[piece_index];
-            int more_pieces = config[piece_index + 1];
-            int64_t combinations =
-                NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
-            result *= combinations;
-        }
-        context->rearranger_cache[rearrangement] = result;
+    int64_t ret =
+        ConcurrentInt64LoadExplicit(&context->rearranger_cache[rearrangement],
+                                    kConcurrencyMemoryOrderRelaxed);
+    if (ret >= 0) {
+        return ret;
     }
 
-    return context->rearranger_cache[rearrangement];
+    int pieces_rearranged = 0;
+    ret = 1;
+    for (int piece_index = 0; piece_index < context->num_pieces - 1;
+         ++piece_index) {
+        pieces_rearranged += config[piece_index];
+        int more_pieces = config[piece_index + 1];
+        int64_t combinations =
+            NChooseR(pieces_rearranged + more_pieces, pieces_rearranged);
+        ret *= combinations;
+    }
+    ConcurrentInt64StoreExplicit(&context->rearranger_cache[rearrangement], ret,
+                                 kConcurrencyMemoryOrderRelaxed);
+
+    return ret;
 }
 
 // ========================== GenericHashContextInit ==========================
@@ -273,6 +281,11 @@ static bool InitStep1SetupPiecesAndIndexMapping(GenericHashContext *context,
     return InitStep1_3SetupUnorderedPieces(context, pieces_init_array);
 }
 
+static int64_t SafeMultiplyNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX / b) return -1;
+    return a * b;
+}
+
 static int64_t InitStep2_0CountNumConfigs(GenericHashContext *context) {
     int64_t ret = 1;
     int num_total_pieces = context->num_pieces + context->num_unordered_pieces;
@@ -342,10 +355,10 @@ static bool InitStep2_3InitSpaces(GenericHashContext *context,
     }
 
     context->rearranger_cache =
-        (int64_t *)calloc(num_rearrangements, sizeof(int64_t));
+        (ConcurrentInt64 *)malloc(num_rearrangements * sizeof(ConcurrentInt64));
     if (context->rearranger_cache == NULL) return false;
     for (int64_t i = 0; i < num_rearrangements; ++i) {
-        context->rearranger_cache[i] = -1;
+        ConcurrentInt64Init(&context->rearranger_cache[i], -1);
     }
 
     return true;
@@ -364,6 +377,11 @@ static int64_t SafeRearrange(GenericHashContext *context, const int *config) {
         result = SafeMultiplyNonNegativeInt64(result, combinations);
     }
     return result;
+}
+
+static int64_t SafeAddNonNegativeInt64(int64_t a, int64_t b) {
+    if (a < 0 || b < 0 || a > INT64_MAX - b) return -1;
+    return a + b;
 }
 
 // Calculates the size of each valid configuration and add them up to get

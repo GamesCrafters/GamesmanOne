@@ -30,9 +30,11 @@
 #ifndef GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_TIER_GRAPH_H_
 #define GAMESMANONE_CORE_SOLVERS_TIER_SOLVER_REVERSE_TIER_GRAPH_H_
 
-#include <stdint.h>  // int64_t
+#include <stdint.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/tier_array.h"
+#include "core/types/tier_hash_map.h"
 
 /**
  * @brief A reverse graph of the tier graph which is built during the tier

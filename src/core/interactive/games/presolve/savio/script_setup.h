@@ -1,7 +1,7 @@
 #ifndef GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_SAVIO_SCRIPT_SETUP_H_
 #define GAMESMANONE_CORE_INTERACTIVE_GAMES_PRESOLVE_SAVIO_SCRIPT_SETUP_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 int InteractiveSavioScriptSetup(ReadOnlyString key);
 

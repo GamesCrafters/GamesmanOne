@@ -5,6 +5,7 @@ add_subdirectory(gates)
 add_subdirectory(gobblet)
 add_subdirectory(kaooa)
 add_subdirectory(mallqueenschess)
+add_subdirectory(mills)
 add_subdirectory(mttt)
 add_subdirectory(mtttier)
 add_subdirectory(neutron)
@@ -18,4 +19,4 @@ set(HEADERS
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/game_list.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

@@ -1,0 +1,6 @@
+add_subdirectory(io)
+add_subdirectory(lz4_utils)
+add_subdirectory(math)
+add_subdirectory(mt19937)
+add_subdirectory("string") # Quoted to distinguish from the built-in keyword
+add_subdirectory(xzra)

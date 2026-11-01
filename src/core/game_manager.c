@@ -5,8 +5,8 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief The Game Manager Module which handles game initialization and
  * finalization.
- * @version 1.1.2
- * @date 2024-12-22
+ * @version 1.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -27,13 +27,16 @@
 
 #include "core/game_manager.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // fprintf, stderr
-#include <string.h>  // strcmp
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/data_structures/int64_array.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gamesman_status.h"
 #include "games/game_list.h"
 
 static const Game *current_game;
@@ -61,7 +64,7 @@ const Game *GameManagerInitGameIndex(int index, void *aux) {
     assert(index >= 0 && index < GameManagerNumGames());
     const Game *const *all_games = GameListGetAllGames();
     int error = all_games[index]->Init(aux);
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr,
                 "GameManagerInitGameIndex: failed to initialize game [%s], "
                 "code %d.\n",
@@ -73,6 +76,15 @@ const Game *GameManagerInitGameIndex(int index, void *aux) {
 }
 
 const Game *GameManagerGetCurrentGame(void) { return current_game; }
+
+int GameManagerGetNumVariants(void) {
+    const GameVariant *variant = NULL;
+    if (current_game->GetCurrentVariant != NULL) {
+        variant = current_game->GetCurrentVariant();
+    }
+
+    return GameVariantGetNumVariants(variant);
+}
 
 int GameManagerCurrentGameSupportsMpi(void) {
     return current_game->solver->supports_mpi;
@@ -87,7 +99,7 @@ int GameManagerSetVariant(int variant_id) {
     if (variant == NULL) {
         // If variants are not implemented, 0 is the only valid default variant
         // id.
-        if (variant_id == 0) return kNoError;
+        if (variant_id == 0) return kSuccess;
         fprintf(stderr,
                 "GameManagerSetVariant: game [%s] has no variant [%d] (only "
                 "variant 0 is available)\n",
@@ -123,7 +135,7 @@ int GameManagerSetVariant(int variant_id) {
     }
     Int64ArrayDestroy(&selections);
 
-    return kNoError;
+    return kSuccess;
 }
 
 void GameManagerFinalize(void) {

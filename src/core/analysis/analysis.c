@@ -4,8 +4,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of game analysis helper structure.
- * @version 2.0.0
- * @date 2025-03-17
+ * @version 2.1.0
+ * @date 2025-06-03
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,16 +26,19 @@
 
 #include "core/analysis/analysis.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // FILE, sprintf, fprintf, stderr
-#include <string.h>    // memset
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <zlib.h>
 
 #include "core/constants.h"
-#include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_status.h"
+#include "libs/io/xfile.h"
 
 static const int kFirstLineReservedRemotness = -1;
 static const int kLastLineReservedRemotness = -2;
@@ -48,6 +51,15 @@ static void CountTie(Analysis *analysis, TierPosition tier_position,
                      int remoteness, bool is_canonical);
 static void CountDraw(Analysis *analysis, TierPosition tier_position,
                       bool is_canonical);
+
+static void CountWinGroup(Analysis *analysis, TierPosition canonical,
+                          int num_symmetries, int remoteness);
+static void CountLoseGroup(Analysis *analysis, TierPosition canonical,
+                           int num_symmetries, int remoteness);
+static void CountTieGroup(Analysis *analysis, TierPosition canonical,
+                          int num_symmetries, int remoteness);
+static void CountDrawGroup(Analysis *analysis, TierPosition canonical,
+                           int num_symmetries);
 
 static void AggregatePositions(Analysis *dest, const Analysis *src,
                                int remoteness);
@@ -131,6 +143,17 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
     }
 }
 
+void AnalysisDiscoverMovesGroup(Analysis *analysis, TierPosition canonical,
+                                int group_size, int num_moves,
+                                int num_canonical_moves) {
+    analysis->move_count += num_moves * group_size;
+    analysis->canonical_move_count += num_canonical_moves;
+    if (num_moves > analysis->max_num_moves) {
+        analysis->max_num_moves = num_moves;
+        analysis->position_with_most_moves = canonical;
+    }
+}
+
 void AnalysisMergeMoves(Analysis *dest, const CacheAlignedAnalysis *part) {
     dest->move_count += part->data.move_count;
     dest->canonical_move_count += part->data.canonical_move_count;
@@ -170,7 +193,38 @@ int AnalysisCount(Analysis *analysis, TierPosition tier_position, Value value,
                     is_canonical ? "canonical" : "non-canonical");
             return kIllegalGamePositionValueError;
     }
-    return kNoError;
+    return kSuccess;
+}
+
+int AnalysisCountGroup(Analysis *analysis, TierPosition canonical,
+                       int num_symmetries, Value value, int remoteness) {
+    switch (value) {
+        case kWin:
+            CountWinGroup(analysis, canonical, num_symmetries, remoteness);
+            break;
+
+        case kLose:
+            CountLoseGroup(analysis, canonical, num_symmetries, remoteness);
+            break;
+
+        case kTie:
+            CountTieGroup(analysis, canonical, num_symmetries, remoteness);
+            break;
+
+        case kDraw:
+            CountDrawGroup(analysis, canonical, num_symmetries);
+            break;
+
+        default:
+            fprintf(
+                stderr,
+                "AnalysisCountGroup: unknown value %d encountered at position "
+                "%" PRIPos " in tier %" PRITier
+                "; the position is believed to be canonical\n",
+                value, canonical.position, canonical.tier);
+            return kIllegalGamePositionValueError;
+    }
+    return kSuccess;
 }
 
 static void MergeWinCounts(Analysis *dest, const Analysis *part) {
@@ -660,6 +714,63 @@ static void CountDraw(Analysis *analysis, TierPosition tier_position,
     }
 }
 
+static void CountWinGroup(Analysis *analysis, TierPosition canonical,
+                          int num_symmetries, int remoteness) {
+    analysis->win_count += num_symmetries;
+    ++analysis->canonical_win_count;
+    analysis->win_summary[remoteness] += num_symmetries;
+    ++analysis->canonical_win_summary[remoteness];
+    if (analysis->win_examples[remoteness].tier == kIllegalTier) {
+        analysis->canonical_win_examples[remoteness] =
+            analysis->win_examples[remoteness] = canonical;
+    }
+    if (remoteness > analysis->largest_win_remoteness) {
+        analysis->largest_win_remoteness = remoteness;
+        analysis->longest_win_position = canonical;
+    }
+}
+
+static void CountLoseGroup(Analysis *analysis, TierPosition canonical,
+                           int num_symmetries, int remoteness) {
+    analysis->lose_count += num_symmetries;
+    ++analysis->canonical_lose_count;
+    analysis->lose_summary[remoteness] += num_symmetries;
+    ++analysis->canonical_lose_summary[remoteness];
+    if (analysis->lose_examples[remoteness].tier == kIllegalTier) {
+        analysis->canonical_lose_examples[remoteness] =
+            analysis->lose_examples[remoteness] = canonical;
+    }
+    if (remoteness > analysis->largest_lose_remoteness) {
+        analysis->largest_lose_remoteness = remoteness;
+        analysis->longest_lose_position = canonical;
+    }
+}
+
+static void CountTieGroup(Analysis *analysis, TierPosition canonical,
+                          int num_symmetries, int remoteness) {
+    analysis->tie_count += num_symmetries;
+    ++analysis->canonical_tie_count;
+    analysis->tie_summary[remoteness] += num_symmetries;
+    ++analysis->canonical_tie_summary[remoteness];
+    if (analysis->tie_examples[remoteness].tier == kIllegalTier) {
+        analysis->canonical_tie_examples[remoteness] =
+            analysis->tie_examples[remoteness] = canonical;
+    }
+    if (remoteness > analysis->largest_tie_remoteness) {
+        analysis->largest_tie_remoteness = remoteness;
+        analysis->longest_tie_position = canonical;
+    }
+}
+
+static void CountDrawGroup(Analysis *analysis, TierPosition canonical,
+                           int num_symmetries) {
+    analysis->draw_count += num_symmetries;
+    ++analysis->canonical_draw_count;
+    if (analysis->draw_example.tier == kIllegalTier) {
+        analysis->canonical_draw_example = analysis->draw_example = canonical;
+    }
+}
+
 static void AggregatePositions(Analysis *dest, const Analysis *src,
                                int remoteness) {
     dest->win_summary[remoteness] += src->win_summary[remoteness];
@@ -772,11 +883,11 @@ static void PrintSummaryLine(FILE *stream, const Analysis *analysis,
     bool first_line = (remoteness == kFirstLineReservedRemotness);
     bool last_line = (remoteness == kLastLineReservedRemotness);
     char format[128];
-    sprintf(format,
-            "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
-            "%%%d" PRId64 "\n",
-            (last_line ? "-" : ""), column_width, column_width, column_width,
-            column_width, column_width, column_width);
+    snprintf(format, sizeof(format),
+             "\t%%%s%ds%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64 "%%%d" PRId64
+             "%%%d" PRId64 "\n",
+             (last_line ? "-" : ""), column_width, column_width, column_width,
+             column_width, column_width, column_width);
 
     if (first_line) {
         PrintFirstSummaryLine(stream, format, analysis, canonical);
@@ -828,7 +939,7 @@ static void PrintSummaryLineHelper(FILE *stream, ReadOnlyString format,
 
     int64_t total = win_count + lose_count + tie_count;
     char remoteness_string[kInt32Base10StringLengthMax + 1];
-    sprintf(remoteness_string, "%d", remoteness);
+    snprintf(remoteness_string, sizeof(remoteness_string), "%d", remoteness);
     fprintf(stream, format, remoteness_string, win_count, lose_count, tie_count,
             0, total);
 }

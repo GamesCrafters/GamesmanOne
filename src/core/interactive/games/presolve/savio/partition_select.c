@@ -1,14 +1,14 @@
 #include "core/interactive/games/presolve/savio/partition_select.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // sprintf
-#include <string.h>   // strcpy
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/savio/script_setup.h"
 #include "core/savio/savio.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 static char items[kNumSavioPartitions][kSavioPartitionDescLengthMax + 1];
 static ReadOnlyString items_p[kNumSavioPartitions];
@@ -46,7 +46,7 @@ static void InitKeys(void) {
     if (initialized) return;
 
     for (int i = 0; i < kNumSavioPartitions; ++i) {
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], sizeof(keys[i]), "%d", i);
         keys_p[i] = (ReadOnlyString)&keys[i];
     }
     initialized = true;

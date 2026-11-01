@@ -30,18 +30,30 @@
 
 #include "games/mtttier/mtttier.h"
 
-#include <assert.h>    // assert
-#include <ctype.h>     // toupper
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stddef.h>    // NULL
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr, sprintf
-#include <stdlib.h>    // atoi
+#include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/solvers/tier_solver/tier_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_tier.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_tier.h"
 
 // Game, Solver, Gameplay, and UWAPI Functions
 
@@ -197,7 +209,7 @@ static int MtttierInit(void *aux) {
     return !InitGenericHash();
 }
 
-static int MtttierFinalize(void) { return kNoError; }
+static int MtttierFinalize(void) { return kSuccess; }
 
 static const GameVariant *MtttierGetCurrentVariant(void) {
     return NULL;  // No other variants implemented.
@@ -331,11 +343,9 @@ static int MtttierGetCanonicalParentPositions(
                 continue;  // Illegal.
             }
             parent.position = MtttierGetCanonicalPosition(parent);
-            if (PositionHashSetContains(&deduplication_set, parent.position)) {
-                continue;  // Already included.
+            if (PositionHashSetAdd(&deduplication_set, parent.position)) {
+                parents[ret++] = parent.position;
             }
-            PositionHashSetAdd(&deduplication_set, parent.position);
-            parents[ret++] = parent.position;
         }
     }
     PositionHashSetDestroy(&deduplication_set);
@@ -360,7 +370,8 @@ static TierType MtttierGetTierType(Tier tier) {
 
 static int MtttierGetTierName(Tier tier,
                               char name[static kDbFileNameLengthMax + 1]) {
-    return sprintf(name, "%" PRITier "p", tier);
+    snprintf(name, kDbFileNameLengthMax + 1, "%" PRITier "p", tier);
+    return kSuccess;
 }
 
 static MoveArray MtttierGenerateMovesGameplay(TierPosition tier_position) {
@@ -399,10 +410,10 @@ static int MtttTierPositionToString(TierPosition tier_position, char *buffer) {
             stderr,
             "MtttierTierPositionToString: (BUG) not enough space was allocated "
             "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttierMoveToString(Move move, char *buffer) {
@@ -413,10 +424,10 @@ static int MtttierMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttierMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MtttierIsValidMoveString(ReadOnlyString move_string) {
@@ -463,7 +474,7 @@ static TierPosition MtttierFormalPositionToTierPosition(
 }
 
 static CString MtttierTierPositionToFormalPosition(TierPosition tier_position) {
-    char board[9];
+    char board[10] = {0};
     CString ret = {0};
     bool success = GenericHashUnhashLabel(tier_position.tier,
                                           tier_position.position, board);

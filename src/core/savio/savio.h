@@ -1,7 +1,10 @@
 #ifndef GAMESMANONE_CORE_SAVIO_SAVIO_H_
 #define GAMESMANONE_CORE_SAVIO_SAVIO_H_
 
-#include "core/types/gamesman_types.h"
+#include <stdbool.h>
+
+#include "core/types/base.h"
+#include "core/types/game/game.h"
 
 enum SavioSettingsConstants {
     kSavioPartitionNameLengthMax = 31,

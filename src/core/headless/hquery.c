@@ -27,19 +27,25 @@
 
 #include "core/headless/hquery.h"
 
-#include <assert.h>              // assert
-#include <json-c/json_object.h>  // json_object and related functions
-#include <stdbool.h>             // bool, true, false
-#include <stdbool.h>             // bool
-#include <stdint.h>              // int64_t
-#include <stdio.h>               // printf
+#include <assert.h>
+#include <json_object.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/game_manager.h"
 #include "core/headless/hjson.h"
 #include "core/headless/hutils.h"
 #include "core/solvers/solver_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/uwapi/partmove.h"
+#include "core/types/uwapi/partmove_array.h"
+#include "json_types.h"
 
 static int InitAndCheckGame(ReadOnlyString game_name, int variant_id,
                             ReadOnlyString data_path, bool *is_tier_game);
@@ -61,8 +67,8 @@ static json_object *JsonCreateBasicPositionObject(const Game *game,
 static json_object *JsonCreateChildPositionObject(const Game *game,
                                                   Position parent, Move move);
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj);
+    const Game *game, Position position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj);
 
 static int JsonPrintTierPositionResponse(const Game *game,
                                          TierPosition tier_position);
@@ -76,8 +82,8 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
                                                       TierPosition parent,
                                                       Move move);
 static json_object *JsonCreateParentTierPositionObject(
-    const Game *game, TierPosition tier_position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj);
+    const Game *game, TierPosition tier_position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj);
 static json_object *JsonCreatePartmoveEdgeObject(const Partmove *pm);
 
 static void JsonPrintStartResponse(ReadOnlyString start,
@@ -143,7 +149,7 @@ static int InitAndCheckGame(ReadOnlyString game_name, int variant_id,
     }
 
     *is_tier_game = implements_tier;
-    return kNoError;
+    return kSuccess;
 }
 
 static bool ImplementsRegularUwapi(const Game *game) {
@@ -223,7 +229,7 @@ static int GetStartRegular(const Game *game) {
         game->uwapi->regular->PositionToFormalPosition(start);
     CString autogui_start =
         game->uwapi->regular->PositionToAutoGuiPosition(start);
-    if (CStringError(&formal_start) || CStringError(&autogui_start)) {
+    if (CStringIsNull(&formal_start) || CStringIsNull(&autogui_start)) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
     } else {
@@ -252,7 +258,7 @@ static int GetStartTier(const Game *game) {
         game->uwapi->tier->TierPositionToFormalPosition(start);
     CString autogui_start =
         game->uwapi->tier->TierPositionToAutoGuiPosition(start);
-    if (CStringError(&formal_start) || CStringError(&autogui_start)) {
+    if (CStringIsNull(&formal_start) || CStringIsNull(&autogui_start)) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
     } else {
@@ -282,7 +288,7 @@ static int GetRandomRegular(const Game *game) {
         game->uwapi->regular->PositionToFormalPosition(random);
     CString autogui_random =
         game->uwapi->regular->PositionToAutoGuiPosition(random);
-    if (CStringError(&formal_random) || CStringError(&autogui_random)) {
+    if (CStringIsNull(&formal_random) || CStringIsNull(&autogui_random)) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
     } else {
@@ -312,7 +318,7 @@ static int GetRandomTier(const Game *game) {
         game->uwapi->tier->TierPositionToFormalPosition(random);
     CString autogui_random =
         game->uwapi->tier->TierPositionToAutoGuiPosition(random);
-    if (CStringError(&formal_random) || CStringError(&autogui_random)) {
+    if (CStringIsNull(&formal_random) || CStringIsNull(&autogui_random)) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
     } else {
@@ -401,8 +407,8 @@ static int JsonPrintPositionResponse(const Game *game, Position position) {
         partmove_edge_obj = NULL;
     }
 
-    parent_obj = JsonCreateParentPositionObject(game, position, moves_array_obj,
-                                                partmoves_array_obj);
+    parent_obj = JsonCreateParentPositionObject(
+        game, position, &moves_array_obj, &partmoves_array_obj);
     if (parent_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -431,7 +437,7 @@ static json_object *JsonCreateBasicPositionObject(const Game *game,
         game->uwapi->regular->PositionToFormalPosition(position);
     CString autogui_position =
         game->uwapi->regular->PositionToAutoGuiPosition(position);
-    if (CStringError(&formal_position) || CStringError(&autogui_position)) {
+    if (CStringIsNull(&formal_position) || CStringIsNull(&autogui_position)) {
         json_object_put(ret);
         ret = NULL;
         goto _bailout;
@@ -464,13 +470,13 @@ static json_object *JsonCreateChildPositionObject(const Game *game,
     CString formal_move = game->uwapi->regular->MoveToFormalMove(parent, move);
     CString autogui_move =
         game->uwapi->regular->MoveToAutoGuiMove(parent, move);
-    if (CStringError(&formal_move) || CStringError(&autogui_move)) {
+    if (CStringIsNull(&formal_move) || CStringIsNull(&autogui_move)) {
         json_object_put(ret);
         return NULL;
     }
 
     int error = HeadlessJsonAddMove(ret, formal_move.str);
-    if (!CStringIsNull(&autogui_move)) {  // Only add full-moves.
+    if (autogui_move.length) {  // Only add full-moves.
         error |= HeadlessJsonAddAutoGuiMove(ret, autogui_move.str);
     }
     CStringDestroy(&formal_move);
@@ -484,18 +490,27 @@ static json_object *JsonCreateChildPositionObject(const Game *game,
 }
 
 static json_object *JsonCreateParentPositionObject(
-    const Game *game, Position position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj) {
+    const Game *game, Position position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj) {
     //
     json_object *ret = JsonCreateBasicPositionObject(game, position);
-    if (ret == NULL) return NULL;
+    if (!ret) {
+        return NULL;
+    }
 
-    int error = HeadlessJsonAddMovesArray(ret, moves_array_obj);
-    error |= HeadlessJsonAddPartmovesArray(ret, partmoves_array_obj);
+    int error = HeadlessJsonAddMovesArray(ret, *moves_array_obj);
     if (error) {
         json_object_put(ret);
         return NULL;
     }
+    *moves_array_obj = NULL;
+
+    error = HeadlessJsonAddPartmovesArray(ret, *partmoves_array_obj);
+    if (error) {
+        json_object_put(ret);
+        return NULL;
+    }
+    *partmoves_array_obj = NULL;
 
     return ret;
 }
@@ -548,7 +563,7 @@ static int JsonPrintTierPositionResponse(const Game *game,
     }
 
     parent_obj = JsonCreateParentTierPositionObject(
-        game, tier_position, moves_array_obj, partmoves_array_obj);
+        game, tier_position, &moves_array_obj, &partmoves_array_obj);
     if (parent_obj == NULL) {
         fprintf(stderr, "out of memory");
         ret = kMallocFailureError;
@@ -611,7 +626,7 @@ static json_object *JsonCreateBasicTierPositionObject(
         game->uwapi->tier->TierPositionToFormalPosition(tier_position);
     CString autogui_position =
         game->uwapi->tier->TierPositionToAutoGuiPosition(tier_position);
-    if (CStringError(&formal_position) || CStringError(&autogui_position)) {
+    if (CStringIsNull(&formal_position) || CStringIsNull(&autogui_position)) {
         json_object_put(ret);
         ret = NULL;
         goto _bailout;
@@ -643,13 +658,13 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
 
     CString formal_move = game->uwapi->tier->MoveToFormalMove(parent, move);
     CString autogui_move = game->uwapi->tier->MoveToAutoGuiMove(parent, move);
-    if (CStringError(&formal_move) || CStringError(&autogui_move)) {
+    if (CStringIsNull(&formal_move) || CStringIsNull(&autogui_move)) {
         json_object_put(ret);
         return NULL;
     }
 
     int error = HeadlessJsonAddMove(ret, formal_move.str);
-    if (!CStringIsNull(&autogui_move)) {  // Only add full-moves.
+    if (autogui_move.length) {  // Only add full-moves.
         error |= HeadlessJsonAddAutoGuiMove(ret, autogui_move.str);
     }
     CStringDestroy(&formal_move);
@@ -663,18 +678,27 @@ static json_object *JsonCreateChildTierPositionObject(const Game *game,
 }
 
 static json_object *JsonCreateParentTierPositionObject(
-    const Game *game, TierPosition tier_position, json_object *moves_array_obj,
-    json_object *partmoves_array_obj) {
+    const Game *game, TierPosition tier_position, json_object **moves_array_obj,
+    json_object **partmoves_array_obj) {
     //
     json_object *ret = JsonCreateBasicTierPositionObject(game, tier_position);
-    if (ret == NULL) return NULL;
+    if (!ret) {
+        return NULL;
+    }
 
-    int error = HeadlessJsonAddMovesArray(ret, moves_array_obj);
-    error |= HeadlessJsonAddPartmovesArray(ret, partmoves_array_obj);
+    int error = HeadlessJsonAddMovesArray(ret, *moves_array_obj);
     if (error) {
         json_object_put(ret);
         return NULL;
     }
+    *moves_array_obj = NULL;
+
+    error = HeadlessJsonAddPartmovesArray(ret, *partmoves_array_obj);
+    if (error) {
+        json_object_put(ret);
+        return NULL;
+    }
+    *partmoves_array_obj = NULL;
 
     return ret;
 }

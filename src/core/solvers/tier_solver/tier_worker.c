@@ -9,8 +9,8 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of the worker module for the Loopy Tier Solver.
- * @version 1.5.0
- * @date 2024-11-14
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -31,9 +31,10 @@
 
 #include "core/solvers/tier_solver/tier_worker.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stdint.h>   // int64_t, intptr_t
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_solver.h"
@@ -41,31 +42,30 @@
 #include "core/solvers/tier_solver/tier_worker/it.h"
 #include "core/solvers/tier_solver/tier_worker/test.h"
 #include "core/solvers/tier_solver/tier_worker/vi.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/tier_array.h"
 
 static const TierSolverApi *api_internal;
 static int64_t current_db_chunk_size;
-static intptr_t mem;
 
 #ifdef USE_MPI
-#include <unistd.h>  // sleep
+#include <unistd.h>
 
 #include "core/solvers/tier_solver/tier_mpi.h"
 #endif  // USE_MPI
 
 // ============================== TierWorkerInit ==============================
 
-void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size,
-                    intptr_t memlimit) {
+void TierWorkerInit(const TierSolverApi *api, int64_t db_chunk_size) {
     assert(db_chunk_size > 0);
     api_internal = api;
     current_db_chunk_size = db_chunk_size;
-    mem = memlimit;
 }
 
-// =========================== GetMethodForTierType ===========================
+// =================== TierWorkerRecommendMethodForTierType ===================
 
-int GetMethodForTierType(TierType type) {
+int TierWorkerRecommendMethodForTierType(TierType type) {
     switch (type) {
         case kTierTypeImmediateTransition:
             return kTierWorkerSolveMethodImmediateTransition;
@@ -77,27 +77,21 @@ int GetMethodForTierType(TierType type) {
             return kTierWorkerSolveMethodBackwardInduction;
     }
 
-    NotReached("GetMethodForTierType: unknown tier type");
+    NotReached("TierWorkerRecommendMethodForTierType: unknown tier type");
     return -1;  // Never reached.
 }
 
 // ============================== TierWorkerSolve ==============================
 
-const TierWorkerSolveOptions kDefaultTierWorkerSolveOptions = {
-    .compare = false,
-    .force = false,
-    .verbose = 1,
-};
-
 int TierWorkerSolve(int method, Tier tier,
-                    const TierWorkerSolveOptions *options, bool *solved) {
-    if (options == NULL) options = &kDefaultTierWorkerSolveOptions;
+                    const TierSolverSolveOptions *options, bool *solved) {
+    if (options == NULL) return kIllegalArgumentError;
     switch (method) {
         case kTierWorkerSolveMethodImmediateTransition:
-            return TierWorkerSolveITInternal(api_internal, tier, mem, options,
+            return TierWorkerSolveITInternal(api_internal, tier, options,
                                              solved);
         case kTierWorkerSolveMethodBackwardInduction:
-            return TierWorkerSolveBIInternal(
+            return TierWorkerBackwardInduction(
                 api_internal, current_db_chunk_size, tier, options, solved);
         case kTierWorkerSolveMethodValueIteration:
             return TierWorkerSolveVIInternal(api_internal, tier, options,
@@ -111,9 +105,9 @@ int TierWorkerSolve(int method, Tier tier,
 }
 
 #ifdef USE_MPI
-int TierWorkerMpiServe(void) {
+int TierWorkerMpiServe(const TierSolverSolveOptions *options) {
     TierMpiWorkerSendCheck();
-    while (true) {
+    for (;;) {
         TierMpiManagerMessage msg;
         TierMpiWorkerRecv(&msg);
 
@@ -124,15 +118,10 @@ int TierWorkerMpiServe(void) {
         } else if (msg.command == kTierMpiCommandTerminate) {
             break;
         } else {
-            TierWorkerSolveOptions options = {
-                .compare = false,
-                .force = (msg.command == kTierMpiCommandForceSolve),
-                .verbose = false,
-            };
             bool solved;
             TierType type = api_internal->GetTierType(msg.tier);
-            int error = TierWorkerSolve(type, msg.tier, &options, &solved);
-            if (error != kNoError) {
+            int error = TierWorkerSolve(type, msg.tier, options, &solved);
+            if (error != kSuccess) {
                 TierMpiWorkerSendReportError(error);
             } else if (solved) {
                 TierMpiWorkerSendReportSolved();
@@ -142,12 +131,12 @@ int TierWorkerMpiServe(void) {
         }
     }
 
-    return kNoError;
+    return kSuccess;
 }
 #endif  // USE_MPI
 
 int TierWorkerTest(Tier tier, const TierArray *parent_tiers, long seed,
-                   int64_t test_size) {
+                   int64_t test_size, TierWorkerTestStackBufferStat *stat) {
     return TierWorkerTestInternal(api_internal, tier, parent_tiers, seed,
-                                  test_size);
+                                  test_size, stat);
 }

@@ -28,7 +28,7 @@
 #ifndef GAMESMANONE_GAMES_GOBBLET_GOBBLET_GOBBLERS_H_
 #define GAMESMANONE_GAMES_GOBBLET_GOBBLET_GOBBLERS_H_
 
-#include "core/types/gamesman_types.h"
+#include "core/types/game/game.h"
 
 /** @brief Gobblet Gobblers */
 extern const Game kGobbletGobblers;

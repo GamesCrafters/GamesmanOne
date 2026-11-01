@@ -29,17 +29,26 @@
 
 #include "games/kaooa/kaooa.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // atoi
-#include <string.h>   // strcpy, strlen
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_regular.h"
 
 // Game, Solver, and Gameplay API Functions
 
@@ -167,10 +176,10 @@ static int MkaooaInit(void *aux) {
         GenericHashReinitialize();
         return kRuntimeError;
     }
-    return kNoError;
+    return kSuccess;
 }
 
-static int MkaooaFinalize(void) { return kNoError; }
+static int MkaooaFinalize(void) { return kSuccess; }
 
 // static const GameVariant *MkaooaGetCurrentVariant(void)
 // {
@@ -398,7 +407,7 @@ static Value MkaooaPrimitive(Position position) {
                         possible_trap[count++] = j;
                     }
                 }
-                for (int j = 0; j < 6; j++) {
+                for (int j = 0; j < count; j++) {
                     if (board[possible_trap[j]] == BLANK) {
                         return kUndecided;
                     }
@@ -576,8 +585,8 @@ static int MkaooaPositionToString(Position position, char *buffer) {
     if (actual_length >= kGamePlayApiCommon.position_string_length_max + 1) {
         fprintf(stderr,
                 "MkaooaTierPositionToString: (BUG) not enough space "
-                "was allocated "
-                "to buffer. Please increase position_string_length_max.\n");
+                "was allocated to buffer. Please increase "
+                "position_string_length_max.\n");
         return 1;
     }
     return 0;
@@ -778,7 +787,6 @@ static CString KaooaMoveToAutoGuiMove(Position position, Move move) {
     if (from == to) {
         autogui_move[4] = (char)('0' + from);
     } else {
-        // sprintf(autogui_move, "M_%d_%d", from, to);
         autogui_move[0] = 'M';
         autogui_move[2] = (char)('0' + from);
         autogui_move[4] = (char)('0' + to);

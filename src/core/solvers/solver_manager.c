@@ -12,8 +12,8 @@
  * simultaneously. As a result, no more than one solver or database can be
  * loaded at the same time. This module handles the loading and deallocation
  * of THE solver used by the current GAMESMAN instance.
- * @version 1.2.0
- * @date 2024-03-21
+ * @version 2.0.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -34,12 +34,16 @@
 
 #include "core/solvers/solver_manager.h"
 
-#include <assert.h>  // assert
-#include <stddef.h>  // NULL
-#include <stdio.h>   // printf
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include "core/game_manager.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/solver/solver.h"
 
 static const Solver *current_solver;
 
@@ -59,14 +63,14 @@ int SolverManagerInit(ReadOnlyString data_path) {
                                 data_path);
 }
 
-int SolverManagerTest(long seed) {
+int SolverManagerTest(void *aux) {
     if (current_solver->Test == NULL) {
         printf("%s does not have any tests implemented.\n",
                current_solver->name);
         return kNotImplementedError;
     }
 
-    return current_solver->Test(seed);
+    return current_solver->Test(aux);
 }
 
 ReadOnlyString SolverManagerExplainTestError(int error) {

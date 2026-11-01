@@ -7,8 +7,8 @@
  * @details The Regular Solver is implemented as a single-tier special case of
  * the Tier Solver, which is why the Tier Solver Worker Module is used in this
  * file.
- * @version 2.1.0
- * @date 2025-04-07
+ * @version 2.2.0
+ * @date 2025-05-11
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -29,25 +29,34 @@
 
 #include "core/solvers/regular_solver/regular_solver.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdio.h>    // fprintf, stderr
-#include <stdlib.h>   // strtoll
-#include <string.h>   // memset
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
+#include "core/analysis/analysis.h"
 #include "core/analysis/stat_manager.h"
 #include "core/constants.h"
 #include "core/db/arraydb/arraydb.h"
 #include "core/db/db_manager.h"
-#include "core/db/naivedb/naivedb.h"
 #include "core/gamesman_memory.h"
 #include "core/misc.h"
 #include "core/solvers/tier_solver/tier_analyzer.h"
 #include "core/solvers/tier_solver/tier_solver.h"
 #include "core/solvers/tier_solver/tier_worker.h"
-#include "core/types/gamesman_types.h"
+#include "core/solvers/tier_solver/tier_worker/test.h"
+#include "core/types/base.h"
+#include "core/types/database/database.h"
+#include "core/types/database/db_probe.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/solver/solver.h"
+#include "core/types/solver/solver_config.h"
+#include "core/types/solver/solver_option.h"
+#include "core/types/tier_array.h"
+#include "core/types/tier_position_hash_set.h"
 
 // Solver API functions.
 
@@ -55,7 +64,7 @@ static int RegularSolverInit(ReadOnlyString game_name, int variant,
                              const void *solver_api, ReadOnlyString data_path);
 static int RegularSolverFinalize(void);
 
-static int RegularSolverTest(long seed);
+static int RegularSolverTest(void *aux);
 static ReadOnlyString RegularSolverExplainTestError(int error);
 
 static int RegularSolverSolve(void *aux);
@@ -104,7 +113,7 @@ static const SolverOption kUseRetrograde = {
 // Size of each uncompressed XZ block for ArrayDb compression. Smaller block
 // sizes allows faster read of random tier positions at the cost of lower
 // compression ratio.
-static const int64_t kArrayDbBlockSize = 1 << 20;  // 1 MiB.
+static const int64_t kArrayDbBlockSize = 1LL << 20;  // 1 MiB.
 
 // Number of ArrayDb records in each uncompressed XZ block. This should be
 // treated as a constant, although its value is calculated at runtime.
@@ -224,29 +233,24 @@ static int RegularSolverFinalize(void) {
     current_variant_id = kIllegalVariantIndex;
     num_options = 0;
 
-    return kNoError;
+    return kSuccess;
 }
 
-static int RegularSolverTest(long seed) {
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, 0);
+static int RegularSolverTest(void *aux) {
+    RegularSolverTestOptions default_options = {
+        .seed = (long)time(NULL), .test_size = 1000000, .verbose = 1};
+    RegularSolverTestOptions *options = (RegularSolverTestOptions *)aux;
+    if (!options) options = &default_options;
+
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
     TierArray empty;
     TierArrayInit(&empty);
-    printf(
-        "Enter the maximum number of positions to test [Default: 1000000]: ");
-    char input[kInt64Base10StringLengthMax + 1];
-    int64_t test_size = 1000000;
-    if (fgets(input, sizeof(input), stdin) != NULL) {
-        // Check if the user pressed Enter without entering a number
-        if (input[0] != '\n') {
-            test_size = strtoll(input, NULL, 10);
-            if (test_size < 0) {
-                printf("Invalid input. Using default test size [1000000]\n");
-                test_size = 1000000;
-            }
-        }
-    }
-    int ret = TierWorkerTest(kDefaultTier, &empty, seed, test_size);
+    TierWorkerTestStackBufferStat *stat = TierWorkerTestStackBufferStatCreate();
+    int ret = TierWorkerTest(kDefaultTier, &empty, options->seed,
+                             options->test_size, stat);
     TierArrayDestroy(&empty);
+    TierWorkerTestStackBufferStatPrint(stat);
+    TierWorkerTestStackBufferStatDestroy(stat);
 
     return ret;
 }
@@ -292,32 +296,49 @@ static ReadOnlyString RegularSolverExplainTestError(int error) {
            "solver's test code";
 }
 
-static int RegularSolverSolve(void *aux) {
-    RegularSolverSolveOptions default_options = {
-        .force = false,
+static size_t DefaultMemLimit(void) { return GetPhysicalMemory() / 10 * 9; }
+
+static RegularSolverSolveOptions SanitizeSolveOptions(
+    const RegularSolverSolveOptions *options) {
+    RegularSolverSolveOptions sanitized = {
         .verbose = 1,
-        .memlimit = 0,  // Use default memory limit.
+        .force = false,
+        .memlimit = DefaultMemLimit(),
     };
+    if (!options) {
+        return sanitized;
+    }
+
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+
+    return sanitized;
+}
+
+static int RegularSolverSolve(void *aux) {
     const RegularSolverSolveOptions *options =
         (const RegularSolverSolveOptions *)aux;
-    if (options == NULL) options = &default_options;
-    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock, options->memlimit);
+    RegularSolverSolveOptions sanitized = SanitizeSolveOptions(options);
+    TierWorkerInit(&current_api, kArrayDbRecordsPerBlock);
 
-    TierWorkerSolveOptions tier_worker_options = {
-        .compare = false,
-        .force = options->force,
-        .verbose = options->verbose,
+    TierSolverSolveOptions tier_solver_options = {
+        .memlimit = sanitized.memlimit,
+        .force = sanitized.force,
+        .verbose = sanitized.verbose,
     };
-    int error = TierWorkerSolve(kTierWorkerSolveMethodValueIteration,
-                                kDefaultTier, &tier_worker_options, NULL);
-    if (error != kNoError) {
+    int error = TierWorkerSolve(kTierWorkerSolveMethodBackwardInduction,
+                                kDefaultTier, &tier_solver_options, NULL);
+    if (error != kSuccess) {
         fprintf(stderr, "RegularSolverSolve: solve failed with code %d\n",
                 error);
         return error;
     }
 
     error = DbManagerSetGameSolved();
-    if (error != kNoError) {
+    if (error != kSuccess) {
         fprintf(stderr,
                 "RegularSolverSolve: DB manager failed to set current game as "
                 "solved (code %d)\n",
@@ -327,24 +348,41 @@ static int RegularSolverSolve(void *aux) {
     return error;
 }
 
-static int RegularSolverAnalyze(void *aux) {
-    static const RegularSolverAnalyzeOptions kDefaultAnalyzeOptions = {
-        .force = false,
+static RegularSolverAnalyzeOptions SanitizeAnalyzeOptions(
+    const RegularSolverAnalyzeOptions *options) {
+    RegularSolverAnalyzeOptions sanitized = {
         .verbose = 1,
-        .memlimit = 0,
+        .force = false,
+        .memlimit = GetPhysicalMemory() / 10 * 9,
     };
+    if (!options) {
+        return sanitized;
+    }
 
+    sanitized.verbose = options->verbose;
+    sanitized.force = options->force;
+    if (options->memlimit) {
+        sanitized.memlimit = options->memlimit;
+    }
+
+    return sanitized;
+}
+
+static int RegularSolverAnalyze(void *aux) {
     Analysis *analysis = (Analysis *)GamesmanMalloc(sizeof(Analysis));
     if (analysis == NULL) return kMallocFailureError;
     AnalysisInit(analysis);
 
     const RegularSolverAnalyzeOptions *options =
         (const RegularSolverAnalyzeOptions *)aux;
-    if (options == NULL) options = &kDefaultAnalyzeOptions;
-    TierAnalyzerInit(&current_api, options->memlimit);
-    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, options->force);
+    RegularSolverAnalyzeOptions sanitized = SanitizeAnalyzeOptions(options);
+    if (!TierAnalyzerInit(&current_api, sanitized.memlimit)) {
+        return kMallocFailureError;
+    }
+
+    int error = TierAnalyzerAnalyze(analysis, kDefaultTier, sanitized.force);
     TierAnalyzerFinalize();
-    if (error == 0 && options->verbose > 0) {
+    if (error == 0 && sanitized.verbose > 0) {
         printf("\n--- Game analyzed ---\n");
         AnalysisPrintEverything(stdout, analysis);
     } else {
@@ -384,7 +422,7 @@ static int RegularSolverSetOption(int option, int selection) {
     } else {
         ToggleRetrogradeAnalysis(!selection);
     }
-    return kNoError;
+    return kSuccess;
 }
 
 static Value RegularSolverGetValue(TierPosition tier_position) {
@@ -606,20 +644,18 @@ static Position DefaultGetCanonicalPosition(TierPosition tier_position) {
 static int DefaultGetNumberOfCanonicalChildPositions(
     TierPosition tier_position) {
     //
-    TierPositionHashSet children;
-    TierPositionHashSetInit(&children, 0.5);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
 
     Move moves[kRegularSolverNumMovesMax];
     int num_moves = current_api.GenerateMoves(tier_position, moves);
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&children, child)) {
-            TierPositionHashSetAdd(&children, child);
-        }
+        TierPositionHashSetAdd(&dedup, child);
     }
-    int num_children = (int)children.size;
-    TierPositionHashSetDestroy(&children);
+    int num_children = (int)TierPositionHashSetGetSize(&dedup);
+    TierPositionHashSetDestroy(&dedup);
 
     return num_children;
 }
@@ -628,20 +664,19 @@ static int DefaultGetCanonicalChildPositions(
     TierPosition tier_position,
     TierPosition children[static kRegularSolverNumChildPositionsMax]) {
     //
-    TierPositionHashSet deduplication_set;
-    TierPositionHashSetInit(&deduplication_set, 0.5);
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
     Move moves[kRegularSolverNumMovesMax];
     int num_moves = current_api.GenerateMoves(tier_position, moves);
     int ret = 0;
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = current_api.DoMove(tier_position, moves[i]);
         child.position = current_api.GetCanonicalPosition(child);
-        if (!TierPositionHashSetContains(&deduplication_set, child)) {
-            TierPositionHashSetAdd(&deduplication_set, child);
+        if (TierPositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
-    TierPositionHashSetDestroy(&deduplication_set);
+    TierPositionHashSetDestroy(&dedup);
 
     return ret;
 }
@@ -662,7 +697,8 @@ static int DefaultGetTierName(Tier tier,
     // Since we only have one tier, we format it's name as
     // "<game_name>_<variant_id>".
     (void)tier;  // Unused.
-    sprintf(name, "%s_%d", current_game_name, current_variant_id);
+    snprintf(name, kDbFileNameLengthMax + 1, "%s_%d", current_game_name,
+             current_variant_id);
 
-    return kNoError;
+    return kSuccess;
 }

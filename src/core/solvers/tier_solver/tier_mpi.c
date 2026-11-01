@@ -26,18 +26,17 @@
 
 #include "core/solvers/tier_solver/tier_mpi.h"
 
-#include <mpi.h>      // MPI_*
-#include <stdbool.h>  // bool
+#include <mpi.h>
+#include <stdbool.h>
 
-#include "core/misc.h"
-#include "core/types/gamesman_types.h"
+#include "libs/mpi/xmpi.h"
 
 static const int kMpiDefaultTag = 0;
 static const int kMpiManagerRank = 0;
 
-void TierMpiManagerSendSolve(int dest, Tier tier, bool force) {
+void TierMpiManagerSendSolve(int dest, Tier tier) {
     TierMpiManagerMessage msg = {
-        .command = force ? kTierMpiCommandForceSolve : kTierMpiCommandSolve,
+        .command = kTierMpiCommandSolve,
         .tier = tier,
     };
     SafeMpiSend(&msg, sizeof(msg), MPI_UINT8_T, dest, kMpiDefaultTag,

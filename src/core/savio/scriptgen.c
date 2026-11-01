@@ -1,12 +1,13 @@
 #include "core/savio/scriptgen.h"
 
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdio.h>    // FILE, printf, sprintf
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 
-#include "core/misc.h"
 #include "core/savio/savio.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/gamesman_status.h"
+#include "libs/io/xfile.h"
 
 static int GetOmpNumThreads(int cpus_per_node, int ntasks_per_node,
                             bool bind_to_cores);
@@ -37,7 +38,8 @@ static int PrintSolveCommand(FILE *file, int num_processes,
 int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     static const char extension[] = ".sh";
     char file_name[kSavioJobNameLengthMax + sizeof(extension) + 1];
-    sprintf(file_name, "%s%s", settings->job_name, extension);
+    snprintf(file_name, sizeof(file_name), "%s%s", settings->job_name,
+             extension);
     FILE *file = GuardedFopen(file_name, "w");
     if (file == NULL) return kFileSystemError;
 
@@ -74,7 +76,7 @@ int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
         "to submit the job.\n\n",
         file_name, file_name);
 
-    return kNoError;
+    return kSuccess;
 }
 
 // -----------------------------------------------------------------------------

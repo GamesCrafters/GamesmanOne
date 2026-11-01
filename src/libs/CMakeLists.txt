@@ -1,8 +1,18 @@
-# Add subdirectories for each component
+add_subdirectory(io)
 add_subdirectory(lz4_utils)
+add_subdirectory(math)
+if(GAMESMAN_ENABLE_MPI)
+    add_subdirectory(mpi)
+endif()
 add_subdirectory(mt19937)
+add_subdirectory("string") # Quoted to distinguish from the built-in keyword
 add_subdirectory(xzra)
 
-set(LIBS lz4_utils mt19937 xzra)
-
-target_link_libraries(gamesman PRIVATE ${LIBS})
+target_link_libraries(gamesman_core PRIVATE gamesman_io)
+target_link_libraries(gamesman_core PRIVATE lz4_utils)
+if(GAMESMAN_ENABLE_MPI)
+    target_link_libraries(gamesman_core PRIVATE gamesman_mpi)
+endif()
+target_link_libraries(gamesman_core PRIVATE mt19937)
+target_link_libraries(gamesman_core PRIVATE "gamesman_string")
+target_link_libraries(gamesman_core PRIVATE xzra)

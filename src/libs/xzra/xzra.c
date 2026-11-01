@@ -4,9 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief XZ utilities with random access.
- * @version 1.0.2
- * @date 2024-12-22
- *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
  *
@@ -27,9 +24,9 @@
 #include "libs/xzra/xzra.h"
 
 #include <errno.h>
-#include <inttypes.h>
 #include <lzma.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,12 +104,14 @@ static const char *LzmaCompressRetDesc(lzma_ret ret) {
 
 // ========================= XzraCompressionMemUsage ==========================
 
-uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
-                                 bool extreme, int num_threads) {
+XzraStatus XzraCompressionMemUsage(const XzraCodecOptions *options,
+                                   uint64_t *out_mem_usage) {
     // Set up filters.
     lzma_options_lzma opt_lzma2;
-    lzma_lzma_preset(&opt_lzma2, extreme ? level | LZMA_PRESET_EXTREME : level);
-    opt_lzma2.dict_size = block_size;
+    lzma_lzma_preset(&opt_lzma2, options->extreme
+                                     ? options->level | LZMA_PRESET_EXTREME
+                                     : options->level);
+    opt_lzma2.dict_size = options->block_size;
     lzma_filter filters[] = {
         {.id = LZMA_FILTER_LZMA2, .options = &opt_lzma2},
         {.id = LZMA_VLI_UNKNOWN, .options = NULL},
@@ -121,13 +120,14 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
     // Set up LZMA multithreading options.
     lzma_mt mt = {
         .flags = 0,  // No flags are currently supported.
-        .block_size = block_size,
+        .block_size = options->block_size,
         .timeout = 0,
         .check = LZMA_CHECK_CRC64,
         .filters = filters,
     };
 
-    mt.threads = num_threads == 0 ? lzma_cputhreads() : (uint32_t)num_threads;
+    mt.threads = options->num_threads == 0 ? lzma_cputhreads()
+                                           : (uint32_t)options->num_threads;
     if (mt.threads == 0) {
         fprintf(stderr,
                 "Warining: failed to get number of CPU threads, using a single "
@@ -135,7 +135,13 @@ uint64_t XzraCompressionMemUsage(uint64_t block_size, uint32_t level,
         mt.threads = 1;
     }
 
-    return lzma_stream_encoder_mt_memusage(&mt);
+    uint64_t lzma_ret = lzma_stream_encoder_mt_memusage(&mt);
+    if (lzma_ret == UINT64_MAX) {
+        return XZRA_ERR_INVALID_PARAM;
+    }
+
+    *out_mem_usage = lzma_ret;
+    return XZRA_SUCCESS;
 }
 
 // ============================= XzraCompressFile ==============================
@@ -148,7 +154,7 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
     strm->avail_in = 0;
     strm->next_out = outbuf;
     strm->avail_out = sizeof(outbuf);
-    while (true) {
+    for (;;) {
         if (strm->avail_in == 0 && !feof(infile)) {
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
@@ -185,57 +191,61 @@ static bool CompressFileHelper(lzma_stream *strm, FILE *infile, FILE *outfile) {
     }
 }
 
-int64_t XzraCompressFile(const char *ofname, bool append, uint64_t block_size,
-                         uint32_t level, bool extreme, int num_threads,
-                         const char *ifname) {
-    const char *outfile_mode = append ? "ab" : "wb";
+XzraStatus XzraCompressFile(const char *ofname, const char *ifname,
+                            const XzraCodecOptions *options,
+                            uint64_t *out_size) {
     FILE *infile = fopen(ifname, "rb");
     if (infile == NULL) {
         fprintf(stderr, "XzraCompressFile: failed to open input file\n");
-        return -1;
+        return XZRA_ERR_IN_FILE;
     }
-    FILE *outfile = fopen(ofname, outfile_mode);
+    FILE *outfile = fopen(ofname, "wb");
     if (outfile == NULL) {
         fprintf(stderr, "XzraCompressFile: failed to open output file\n");
         fclose(infile);
-        return -2;
+        return XZRA_ERR_OUT_FILE;
     }
 
     lzma_stream strm = LZMA_STREAM_INIT;
-    bool success =
-        InitEncoder(&strm, block_size, level, extreme, num_threads) &&
-        CompressFileHelper(&strm, infile, outfile);
-    int64_t ret = success ? (int64_t)strm.total_out : -3;
+    bool success = InitEncoder(&strm, options->block_size, options->level,
+                               options->extreme, options->num_threads) &&
+                   CompressFileHelper(&strm, infile, outfile);
+    XzraStatus status = success ? XZRA_SUCCESS : XZRA_ERR_CODEC;
+    uint64_t total_out = strm.total_out;
+
     lzma_end(&strm);
     if (fclose(outfile)) {
         char buf[BUFSIZ];
         strerror_r(errno, buf, sizeof(buf));
         fprintf(stderr, "XzraCompressFile: write error: %s\n", buf);
-        ret = -3;
+        status = XZRA_ERR_OUT_FILE;
     }
     fclose(infile);
 
-    return ret;
+    if (status == XZRA_SUCCESS && out_size != NULL) {
+        *out_size = total_out;
+    }
+
+    return status;
 }
 
-// ============================ XzraCompressStream =============================
+// ============================= XzraCompressMem ==============================
 
-static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
-                                 FILE *outfile) {
+static bool CompressMemHelper(lzma_stream *strm, const uint8_t *in,
+                              size_t in_size, FILE *outfile) {
     uint8_t outbuf[BUFSIZ];
     strm->next_in = in;
     strm->avail_in = in_size;
     strm->next_out = outbuf;
     strm->avail_out = sizeof(outbuf);
-    while (true) {
+    for (;;) {
         lzma_ret ret = lzma_code(strm, LZMA_FINISH);
         if (strm->avail_out == 0 || ret == LZMA_STREAM_END) {
             size_t write_size = sizeof(outbuf) - strm->avail_out;
             if (fwrite(outbuf, 1, write_size, outfile) != write_size) {
                 strm->next_out = NULL;
                 strerror_r(errno, (char *)outbuf, sizeof(outbuf));
-                fprintf(stderr, "XzraCompressStream: Write error: %s\n",
-                        outbuf);
+                fprintf(stderr, "XzraCompressMem: Write error: %s\n", outbuf);
                 return false;
             }
             strm->next_out = outbuf;
@@ -246,54 +256,217 @@ static bool CompressStreamHelper(lzma_stream *strm, uint8_t *in, size_t in_size,
             if (ret == LZMA_STREAM_END) return true;
             const char *msg = LzmaCompressRetDesc(ret);
             fprintf(stderr,
-                    "XzraCompressStream: Encoder error: %s (error code %u)\n",
-                    msg, ret);
+                    "XzraCompressMem: Encoder error: %s (error code %u)\n", msg,
+                    ret);
             return false;
         }
     }
 }
 
-int64_t XzraCompressStream(const char *ofname, bool append, uint64_t block_size,
-                           uint32_t level, bool extreme, int num_threads,
-                           uint8_t *in, size_t in_size) {
-    const char *outfile_mode = append ? "ab" : "wb";
-    FILE *outfile = fopen(ofname, outfile_mode);
+XzraStatus XzraCompressMem(const char *ofname, const uint8_t *in,
+                           size_t in_size, const XzraCodecOptions *options,
+                           uint64_t *out_size) {
+    FILE *outfile = fopen(ofname, "wb");
     if (outfile == NULL) {
-        fprintf(stderr, "XzraCompressStream: failed to open output file %s\n",
+        fprintf(stderr, "XzraCompressMem: failed to open output file %s\n",
                 ofname);
-        return -2;
+        return XZRA_ERR_OUT_FILE;
     }
 
     lzma_stream strm = LZMA_STREAM_INIT;
-    bool success =
-        InitEncoder(&strm, block_size, level, extreme, num_threads) &&
-        CompressStreamHelper(&strm, in, in_size, outfile);
-    int64_t ret = success ? (int64_t)strm.total_out : -3;
+    bool success = InitEncoder(&strm, options->block_size, options->level,
+                               options->extreme, options->num_threads) &&
+                   CompressMemHelper(&strm, in, in_size, outfile);
+    XzraStatus status = success ? XZRA_SUCCESS : XZRA_ERR_CODEC;
+    uint64_t total_out = strm.total_out;
+
     lzma_end(&strm);
     if (fclose(outfile)) {
         char buf[BUFSIZ];
         strerror_r(errno, buf, sizeof(buf));
-        fprintf(stderr, "XzraCompressStream: write error: %s\n", buf);
-        ret = -3;
+        fprintf(stderr, "XzraCompressMem: write error: %s\n", buf);
+        status = XZRA_ERR_OUT_FILE;
     }
+
+    if (status == XZRA_SUCCESS && out_size != NULL) {
+        *out_size = total_out;
+    }
+    return status;
+}
+
+// ============================== XzraOutStream ===============================
+
+struct XzraOutStream {
+    uint8_t outbuf[BUFSIZ]; /**< Buffer for output. */
+    FILE *outfile;          /**< Output file. */
+    lzma_stream strm;       /**< LZMA internal stream. */
+};
+
+// =========================== XzraOutStreamCreate ============================
+
+XzraOutStream *XzraOutStreamCreate(const char *ofname,
+                                   const XzraCodecOptions *options) {
+    XzraOutStream *ret = (XzraOutStream *)malloc(sizeof(XzraOutStream));
+    if (ret == NULL) return NULL;
+
+    ret->outfile = fopen(ofname, "wb");
+    if (ret->outfile == NULL) {
+        fprintf(stderr, "XzraOutStreamCreate: failed to open output file %s\n",
+                ofname);
+        free(ret);
+        return NULL;
+    }
+
+    ret->strm = (lzma_stream)LZMA_STREAM_INIT;
+    if (!InitEncoder(&ret->strm, options->block_size, options->level,
+                     options->extreme, options->num_threads)) {
+        fclose(ret->outfile);
+        free(ret);
+        return NULL;
+    }
+
+    ret->strm.next_out = ret->outbuf;
+    ret->strm.avail_out = sizeof(ret->outbuf);
 
     return ret;
 }
 
+// ============================= XzraOutStreamRun ==============================
+
+XzraStatus XzraOutStreamRun(XzraOutStream *stream, const uint8_t *in,
+                            size_t in_size, uint64_t *out_bytes_written) {
+    uint64_t total_out_begin = stream->strm.total_out;
+    stream->strm.next_in = in;
+    stream->strm.avail_in = in_size;
+    while (stream->strm.avail_in) {
+        lzma_ret ret = lzma_code(&stream->strm, LZMA_RUN);
+        if (stream->strm.avail_out == 0) {
+            size_t write_size = sizeof(stream->outbuf);
+            if (fwrite(stream->outbuf, 1, write_size, stream->outfile) !=
+                write_size) {
+                strerror_r(errno, (char *)stream->outbuf,
+                           sizeof(stream->outbuf));
+                fprintf(stderr, "XzraOutStreamRun: write error: %s\n",
+                        stream->outbuf);
+                return XZRA_ERR_OUT_FILE;
+            }
+            stream->strm.next_out = stream->outbuf;
+            stream->strm.avail_out = sizeof(stream->outbuf);
+        }
+        if (ret != LZMA_OK) {
+            const char *msg = LzmaCompressRetDesc(ret);
+            fprintf(stderr,
+                    "XzraOutStreamClose: encoder error: %s (error code %u)\n",
+                    msg, ret);
+            return XZRA_ERR_CODEC;
+        }
+    }
+
+    if (out_bytes_written != NULL) {
+        *out_bytes_written = stream->strm.total_out - total_out_begin;
+    }
+    return XZRA_SUCCESS;
+}
+
+// ============================ XzraOutStreamClose =============================
+
+XzraStatus XzraOutStreamClose(XzraOutStream *stream,
+                              uint64_t *out_total_bytes) {
+    if (stream == NULL) return XZRA_SUCCESS;
+
+    stream->strm.next_in = NULL;
+    stream->strm.avail_in = 0;
+    for (;;) {
+        lzma_ret l_ret = lzma_code(&stream->strm, LZMA_FINISH);
+        if (stream->strm.avail_out == 0 || l_ret == LZMA_STREAM_END) {
+            size_t write_size = sizeof(stream->outbuf) - stream->strm.avail_out;
+            if (fwrite(stream->outbuf, 1, write_size, stream->outfile) !=
+                write_size) {
+                strerror_r(errno, (char *)stream->outbuf,
+                           sizeof(stream->outbuf));
+                fprintf(stderr, "XzraOutStreamClose: write error: %s\n",
+                        stream->outbuf);
+                free(stream);
+                return XZRA_ERR_OUT_FILE;
+            }
+            stream->strm.next_out = stream->outbuf;
+            stream->strm.avail_out = sizeof(stream->outbuf);
+        }
+        if (l_ret != LZMA_OK) {
+            if (l_ret == LZMA_STREAM_END) break;
+
+            const char *msg = LzmaCompressRetDesc(l_ret);
+            fprintf(stderr,
+                    "XzraOutStreamClose: encoder error: %s (error code %u)\n",
+                    msg, l_ret);
+            free(stream);
+            return XZRA_ERR_CODEC;
+        }
+    }
+
+    XzraStatus status = XZRA_SUCCESS;
+    uint64_t total_out = stream->strm.total_out;
+    lzma_end(&stream->strm);
+    if (fclose(stream->outfile)) {
+        strerror_r(errno, (char *)stream->outbuf, sizeof(stream->outbuf));
+        fprintf(stderr, "XzraOutStreamClose: write error: %s\n",
+                stream->outbuf);
+        status = XZRA_ERR_OUT_FILE;
+    }
+    free(stream);
+
+    if (status == XZRA_SUCCESS && out_total_bytes != NULL) {
+        *out_total_bytes = total_out;
+    }
+    return status;
+}
+
+// ============================ XzraOutStreamAbort =============================
+
+void XzraOutStreamAbort(XzraOutStream *stream) {
+    if (stream == NULL) return;
+
+    // Free all LZMA internal memory allocations associated with this stream.
+    lzma_end(&stream->strm);
+
+    // Close the file handle. We ignore the return value here since we are
+    // already in an abort/error path and don't care about flush failures.
+    if (stream->outfile != NULL) {
+        fclose(stream->outfile);
+    }
+
+    // Free the stream container itself.
+    free(stream);
+}
+
 // ======================== XzraDecompressionMemUsage =========================
 
-uint64_t XzraDecompressionMemUsage(uint64_t block_size, uint32_t level,
-                                   bool extreme, int num_threads) {
+XzraStatus XzraDecompressionMemUsage(const XzraCodecOptions *options,
+                                     uint64_t *out_mem_usage) {
+    // lzma_raw_decoder_memusage may not care about the minimum decoder
+    // dictionary size so we need to enforce the minimum requirement ourselves.
+    if (options->block_size < 4096) {
+        return XZRA_ERR_INVALID_PARAM;
+    }
+
     // Set up filters.
     lzma_options_lzma opt_lzma2;
-    lzma_lzma_preset(&opt_lzma2, extreme ? level | LZMA_PRESET_EXTREME : level);
-    opt_lzma2.dict_size = block_size;
+    lzma_lzma_preset(&opt_lzma2, options->extreme
+                                     ? options->level | LZMA_PRESET_EXTREME
+                                     : options->level);
+    opt_lzma2.dict_size = options->block_size;
     lzma_filter filters[] = {
         {.id = LZMA_FILTER_LZMA2, .options = &opt_lzma2},
         {.id = LZMA_VLI_UNKNOWN, .options = NULL},
     };
 
-    return lzma_raw_decoder_memusage(filters) * num_threads;
+    uint64_t raw_mem = lzma_raw_decoder_memusage(filters);
+    if (raw_mem == UINT64_MAX) {
+        return XZRA_ERR_INVALID_PARAM;
+    }
+
+    *out_mem_usage = raw_mem * options->num_threads;
+    return XZRA_SUCCESS;
 }
 
 // ============================ XzraDecompressFile =============================
@@ -356,7 +529,7 @@ static bool DecompressFileHelper(lzma_stream *strm, FILE *infile, uint8_t *dest,
     strm->avail_in = 0;
     strm->next_out = dest;
     strm->avail_out = size;
-    while (true) {
+    for (;;) {
         if (strm->avail_in == 0 && !feof(infile)) {
             strm->next_in = inbuf;
             strm->avail_in = fread(inbuf, 1, sizeof(inbuf), infile);
@@ -382,26 +555,34 @@ static bool DecompressFileHelper(lzma_stream *strm, FILE *infile, uint8_t *dest,
     }
 }
 
-int64_t XzraDecompressFile(uint8_t *dest, size_t size, int num_threads,
-                           uint64_t memlimit, const char *filename) {
+XzraStatus XzraDecompressFile(uint8_t *dest, const char *filename, size_t size,
+                              int num_threads, uint64_t memlimit,
+                              uint64_t *out_decompressed_size) {
     lzma_stream strm = LZMA_STREAM_INIT;
-    if (!InitDecoder(&strm, num_threads, memlimit)) return -1;
+    if (!InitDecoder(&strm, num_threads, memlimit)) {
+        return XZRA_ERR_INVALID_PARAM;
+    }
+
     FILE *infile = fopen(filename, "rb");
     if (infile == NULL) {
+        lzma_end(&strm);
         char buf[BUFSIZ];
         strerror_r(errno, buf, sizeof(buf));
         fprintf(stderr, "XzraDecompressFile: error opening %s: %s\n", filename,
                 buf);
-        return -2;
+        return XZRA_ERR_IN_FILE;
     }
     bool success = DecompressFileHelper(&strm, infile, dest, size);
     bool fclose_success = fclose(infile) == 0;
-    int64_t total_out = (int64_t)strm.total_out;
+    uint64_t total_out = strm.total_out;
     lzma_end(&strm);
-    if (!success) return -3;
-    if (!fclose_success) return -4;
+    if (!success) return XZRA_ERR_CODEC;
+    if (!fclose_success) return XZRA_ERR_CLOSE;
 
-    return total_out;
+    if (out_decompressed_size != NULL) {
+        *out_decompressed_size = total_out;
+    }
+    return XZRA_SUCCESS;
 }
 
 // ================================= XzraFile ==================================
@@ -700,6 +881,7 @@ static int XzraDecodeBlock(uint8_t *out, const lzma_index_iter *iter, FILE *f) {
     bool success =
         DecodeBlock(out, &b, (int64_t)iter->block.total_size, block_buf);
     free(block_buf);
+    lzma_filters_free(filters, NULL);
 
     return success ? 0 : 5;
 }

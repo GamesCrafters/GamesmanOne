@@ -1,10 +1,10 @@
 #include "core/interactive/help/help.h"
 
 #include <stdio.h>
-#include <stdlib.h>  // atoi
+#include <stdlib.h>
 
 #include "core/interactive/automenu.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 static ConstantReadOnlyString kHelpWhatIsGameValue =
     "A game VALUE is one of either WIN, LOSE, or TIE.  That is, if a game \n"

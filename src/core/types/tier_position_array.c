@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Dynamic TierPosition array implementation.
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,13 +24,13 @@
 
 #include "core/types/tier_position_array.h"
 
-#include <assert.h>   // assert
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, realloc
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
-#include "core/constants.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
 void TierPositionArrayInit(TierPositionArray *array) {
@@ -42,7 +40,7 @@ void TierPositionArrayInit(TierPositionArray *array) {
 }
 
 void TierPositionArrayDestroy(TierPositionArray *array) {
-    free(array->array);
+    GamesmanFree(array->array);
     array->array = NULL;
     array->size = 0;
     array->capacity = 0;
@@ -50,36 +48,34 @@ void TierPositionArrayDestroy(TierPositionArray *array) {
 
 static bool TierPositionArrayExpand(TierPositionArray *array) {
     int64_t new_capacity = array->capacity == 0 ? 1 : array->capacity * 2;
-    TierPosition *new_array = (TierPosition *)realloc(
-        array->array, new_capacity * sizeof(TierPosition));
-    if (!new_array) return false;
+    TierPosition *new_array =
+        (TierPosition *)GamesmanMalloc(new_capacity * sizeof(TierPosition));
+    if (!new_array) {
+        return false;
+    }
+
+    if (array->capacity > 0) {
+        memcpy(new_array, array->array, array->capacity * sizeof(TierPosition));
+    }
+    GamesmanFree(array->array);
     array->array = new_array;
     array->capacity = new_capacity;
+
     return true;
 }
 
 bool TierPositionArrayAppend(TierPositionArray *array,
                              TierPosition tier_position) {
     if (array->size == array->capacity) {
-        if (!TierPositionArrayExpand(array)) return false;
+        if (!TierPositionArrayExpand(array)) {
+            return false;
+        }
     }
-    assert(array->size < array->capacity);
     array->array[array->size++] = tier_position;
+
     return true;
 }
 
 TierPosition TierPositionArrayBack(const TierPositionArray *array) {
     return array->array[array->size - 1];
-}
-
-bool TierPositionArrayContains(const TierPositionArray *array,
-                               TierPosition target) {
-    for (int64_t i = 0; i < array->size; ++i) {
-        if (array->array[i].position == target.position &&
-            array->array[i].tier == target.tier) {
-            return true;
-        }
-    }
-
-    return false;
 }

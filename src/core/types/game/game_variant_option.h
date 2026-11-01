@@ -3,11 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief The GameVariantOption type and related constants.
- * @details A GameVariantOption defines an option of a game. A set of options
- * choices make up the rule of a variant of a game.
- * @version 1.0.1
- * @date 2024-12-10
+ * @brief The `GameVariantOption` type and related constants.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -32,23 +28,31 @@
 #include "core/types/base.h"
 
 /**
- * @brief Constants used by the GameVariantOption type and related functions
+ * @brief Constants used by the `GameVariantOption` type and related functions
  * implementations.
  */
 enum GameVariantOptionConstants {
-    kGameVariantOptionNameMax = 63, /**< Max length GameVariantOption::name. */
+    kGameVariantOptionNameMax =
+        63, /**< Max length `GameVariantOption::name`. */
 };
 
-/** @brief Game variant option for display in GAMESMAN interactive mode. */
+/**
+ * @brief Game variant option for display in GAMESMAN interactive mode.
+ *
+ * A `GameVariantOption` defines an option of a game. A set of options
+ * choices make up the rule of a variant of a game.
+ */
 typedef struct GameVariantOption {
     /** Human-readable name of the option. */
     char name[kGameVariantOptionNameMax + 1];
 
-    /** Number of choices associate with the option. */
+    /** Number of choices associated with the option. */
     int num_choices;
 
-    /** An array of strings, where each string is a name of a choice. Length =
-     * num_choices.  */
+    /**
+     * An array of strings, where each string is a name of a choice. Length =
+     * `num_choices`.
+     */
     const ConstantReadOnlyString *choices;
 } GameVariantOption;
 

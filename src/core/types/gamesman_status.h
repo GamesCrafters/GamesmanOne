@@ -1,0 +1,54 @@
+/**
+ * @file gamesman_status.h
+ * @author Robert Shi (robertyishi@berkeley.edu)
+ * @author GamesCrafters Research Group, UC Berkeley
+ *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
+ * @brief Canonical status.
+ *
+ * @copyright This file is part of GAMESMAN, The Finite, Two-person
+ * Perfect-Information Game Generator released under the GPL:
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_
+#define GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_
+
+typedef enum GamesmanStatus {
+    kSuccess = 0,              /**< No error should always be 0. */
+    kMallocFailureError,       /**< Malloc-like function returned NULL. */
+    kNotImplementedError,      /**< Feature not implemented. */
+    kNotReachedError,          /**< Reaching a branch marked as unreached. */
+    kIntegerOverflowError,     /**< Integer overflow. */
+    kBufferOverflowError,      /**< Buffer overflow. */
+    kFileSystemError,          /**< A file system call returned error. */
+    kIllegalArgumentError,     /**< Illegal argument passed into function. */
+    kIllegalGameNameError,     /**< Illegal game name encountered. */
+    kIllegalGameVariantError,  /**< Illegal game variant encountered. */
+    kIllegalGameTierError,     /**< Illegal game tier encountered. */
+    kIllegalGamePositionError, /**< Illegal game position encountered. */
+    kIllegalGamePositionValueError, /**< Illegal position value encountered. */
+    kIllegalGameTierGraphError,     /**< Tier graph contains a loop. */
+    kIllegalSolverOptionError,      /**< Illegal solver option encountered. */
+    kIncompleteGameplayApiError,    /**< Gameplay API not fully implemented. */
+    kGameInitFailureError,          /**< Game initialization failed. */
+    kGameTestFailureError,          /**< Game failed to pass solver tests. */
+    kUseBeforeInitializationError,  /**< Module used before initialization. */
+    kMpiError,                      /**< Error in MPI function. */
+    kHeadlessError,                 /**< Headless command parsing error. */
+    kGenericHashError,              /**< Generic Hash system error. */
+    kRuntimeError,                  /**< Generic runtime error. */
+} Status;
+
+#endif  // GAMESMANONE_CORE_TYPES_GAMESMAN_STATUS_H_

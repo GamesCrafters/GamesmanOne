@@ -3,9 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Linear-probing int64_t hash set implementation.
- * @version 1.1.1
- * @date 2025-04-26
+ * @brief Int64HashSet implementation.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,102 +24,56 @@
 
 #include "core/data_structures/int64_hash_set.h"
 
-#include <assert.h>   // assert
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool, true, false
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t, uint64_t
+#include <stdbool.h>
+#include <stdint.h>
 
+#include "core/data_structures/hash.h"
 #include "core/gamesman_memory.h"
-#include "core/misc.h"  // NextPrime
 
-static int64_t Hash(int64_t key, int64_t capacity) {
-    return (int64_t)(((uint64_t)key) % capacity);
+bool Int64HashSetInternalExpand(Int64HashSet *set) {
+    // If old_keys is non-NULL, this is a normal expansion step;
+    // if old_keys in NULL, this is the lazy initialization step.
+    // Initial capacity is 128, so the mask 127 (0x7F).
+    uint64_t new_mask = set->keys ? ((set->mask << 1) | 1ULL) : 0x7F;
+
+    return Int64HashSetInternalExpandExplicit(set, new_mask);
 }
 
-static int64_t NextIndex(int64_t index, int64_t capacity) {
-    return (index + 1) % capacity;
-}
+bool Int64HashSetInternalExpandExplicit(Int64HashSet *set, uint64_t new_mask) {
+    // Allocate new array and initialize it
+    int64_t *__restrict new_keys =
+        (int64_t *)GamesmanMalloc((new_mask + 1) * sizeof(int64_t));
+    if (new_keys == NULL) {
+        return false;
+    }
+    for (uint64_t i = 0; i <= new_mask; ++i) {
+        new_keys[i] = INT64_HASH_SET_EMPTY_KEY;
+    }
 
-void Int64HashSetInit(Int64HashSet *set, double max_load_factor) {
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    set->max_load_factor = max_load_factor;
-}
+    // Hoist pointer to local so the compiler doesn't worry about memory
+    // aliasing during the loop.
+    int64_t *__restrict old_keys = set->keys;
 
-static bool Expand(Int64HashSet *set, int64_t new_capacity) {
-    Int64HashSetEntry *new_entries = (Int64HashSetEntry *)GamesmanCallocWhole(
-        new_capacity, sizeof(Int64HashSetEntry));
-    if (new_entries == NULL) return false;
-
-    for (int64_t i = 0; i < set->capacity; ++i) {
-        if (set->entries[i].used) {
-            int64_t new_index = Hash(set->entries[i].key, new_capacity);
-            while (new_entries[new_index].used) {
-                new_index = NextIndex(new_index, new_capacity);
+    // Only attempt to rehash if we had existing keys
+    if (old_keys != NULL) {
+        uint64_t old_mask = set->mask;
+        for (uint64_t i = 0; i <= old_mask; ++i) {
+            int64_t key = old_keys[i];
+            if (key != INT64_HASH_SET_EMPTY_KEY) {
+                uint64_t new_index = Splitmix64(key) & new_mask;
+                while (new_keys[new_index] != INT64_HASH_SET_EMPTY_KEY) {
+                    new_index = (new_index + 1) & new_mask;
+                }
+                new_keys[new_index] = key;
             }
-            new_entries[new_index] = set->entries[i];
         }
     }
-    GamesmanFree(set->entries);
-    set->entries = new_entries;
-    set->capacity = new_capacity;
+
+    // Update internal data
+    GamesmanFree(old_keys);
+    set->keys = new_keys;
+    set->mask = new_mask;
+    set->max_size = (int64_t)((new_mask + 1) / set->inv_max_load_factor);
 
     return true;
-}
-
-bool Int64HashSetReserve(Int64HashSet *set, int64_t size) {
-    int64_t target_capacity =
-        NextPrime((int64_t)((double)size / set->max_load_factor));
-    if (target_capacity <= set->capacity) return true;
-
-    return Expand(set, target_capacity);
-}
-
-void Int64HashSetDestroy(Int64HashSet *set) {
-    GamesmanFree(set->entries);
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-}
-
-bool Int64HashSetAdd(Int64HashSet *set, int64_t key) {
-    // Check if resizing is needed.
-    double load_factor = (set->capacity == 0)
-                             ? INFINITY
-                             : (double)(set->size + 1) / (double)set->capacity;
-    if (set->capacity == 0 || load_factor > set->max_load_factor) {
-        int64_t new_capacity = NextPrime(set->capacity * 2);
-        if (!Expand(set, new_capacity)) return false;
-    }
-
-    // Set value at key.
-    int64_t capacity = set->capacity;
-    int64_t index = Hash(key, capacity);
-    while (set->entries[index].used) {
-        if (set->entries[index].key == key) return true;
-        index = NextIndex(index, capacity);
-    }
-    set->entries[index].key = key;
-    set->entries[index].used = true;
-    ++set->size;
-
-    return true;
-}
-
-bool Int64HashSetContains(const Int64HashSet *set, int64_t key) {
-    int64_t capacity = set->capacity;
-    // Edge case: return false if set is empty.
-    if (capacity == 0) return false;
-
-    int64_t index = Hash(key, capacity);
-    while (set->entries[index].used) {
-        if (set->entries[index].key == key) return true;
-        index = NextIndex(index, capacity);
-    }
-
-    return false;
 }

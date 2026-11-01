@@ -53,8 +53,8 @@
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
 */
 
-#ifndef GAMESMANONE_LIB_MT19937_MT19937_64_H_
-#define GAMESMANONE_LIB_MT19937_MT19937_64_H_
+#ifndef GAMESMANONE_LIBS_MT19937_MT19937_64_H_
+#define GAMESMANONE_LIBS_MT19937_MT19937_64_H_
 
 /* initializes mt[NN] with a seed */
 void init_genrand64(unsigned long long seed);
@@ -79,4 +79,4 @@ double genrand64_real2(void);
 
 /* generates a random number on (0,1)-real-interval */
 double genrand64_real3(void);
-#endif  // GAMESMANONE_LIB_MT19937_MT19937_64_H_
+#endif  // GAMESMANONE_LIBS_MT19937_MT19937_64_H_

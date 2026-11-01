@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Linear-probing TierPosition hash set implementation.
- * @version 1.1.0
- * @date 2025-03-13
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -26,104 +24,63 @@
 
 #include "core/types/tier_position_hash_set.h"
 
-#include <math.h>     // INFINITY
-#include <stdbool.h>  // bool
-#include <stddef.h>   // NULL
-#include <stdint.h>   // int64_t
-#include <stdlib.h>   // free, calloc
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "core/misc.h"
+#include "core/data_structures/hash.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 
-void TierPositionHashSetInit(TierPositionHashSet *set, double max_load_factor) {
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-    if (max_load_factor > 0.75) max_load_factor = 0.75;
-    if (max_load_factor < 0.25) max_load_factor = 0.25;
-    set->max_load_factor = max_load_factor;
+bool TierPositionHashSetInternalExpand(TierPositionHashSet *set) {
+    // If keys is non-NULL, this is a normal expansion step;
+    // if keys is NULL, this is the lazy initialization step.
+    // Initial capacity is 128, so the mask 127 (0x7F).
+    uint64_t new_mask = set->keys ? ((set->mask << 1) | 1ULL) : 0x7F;
+
+    return TierPositionHashSetInternalExpandExplicit(set, new_mask);
 }
 
-static int64_t TierPositionHashSetHash(TierPosition key, int64_t capacity) {
-    int64_t a = (int64_t)key.tier;
-    int64_t b = (int64_t)key.position;
-    uint64_t cantor_pairing = (a + b) * (a + b + 1) / 2 + a;
-    return (int64_t)(cantor_pairing % capacity);
-}
+bool TierPositionHashSetInternalExpandExplicit(TierPositionHashSet *set,
+                                               uint64_t new_mask) {
+    // Allocate new array and initialize it
+    TierPosition *__restrict new_keys =
+        (TierPosition *)GamesmanMalloc((new_mask + 1) * sizeof(TierPosition));
+    if (new_keys == NULL) {
+        return false;
+    }
+    for (uint64_t i = 0; i <= new_mask; ++i) {
+        new_keys[i].tier = TIER_POSITION_HASH_SET_EMPTY_TIER;
+    }
 
-static bool TierPositionHashSetExpand(TierPositionHashSet *set,
-                                      int64_t new_capacity) {
-    TierPositionHashSetEntry *new_entries = (TierPositionHashSetEntry *)calloc(
-        new_capacity, sizeof(TierPositionHashSetEntry));
-    if (new_entries == NULL) return false;
-    for (int64_t i = 0; i < set->capacity; ++i) {
-        if (set->entries[i].used) {
-            int64_t new_index =
-                TierPositionHashSetHash(set->entries[i].key, new_capacity);
-            while (new_entries[new_index].used) {
-                new_index = (new_index + 1) % new_capacity;
+    // Hoist pointer to local so the compiler doesn't worry about memory
+    // aliasing during the loop.
+    TierPosition *__restrict old_keys = set->keys;
+
+    // Only attempt to rehash if we had existing keys
+    if (old_keys != NULL) {
+        uint64_t old_mask = set->mask;
+        for (uint64_t i = 0; i <= old_mask; ++i) {
+            TierPosition key = old_keys[i];
+            // We only need to check the tier to see if the slot is empty
+            if (key.tier != TIER_POSITION_HASH_SET_EMPTY_TIER) {
+                uint64_t new_index =
+                    Hash128to64((int64_t)key.tier, (int64_t)key.position) &
+                    new_mask;
+                while (new_keys[new_index].tier !=
+                       TIER_POSITION_HASH_SET_EMPTY_TIER) {
+                    new_index = (new_index + 1) & new_mask;
+                }
+                new_keys[new_index] = key;
             }
-            new_entries[new_index] = set->entries[i];
         }
     }
-    free(set->entries);
-    set->entries = new_entries;
-    set->capacity = new_capacity;
-    return true;
-}
 
-bool TierPositionHashSetReserve(TierPositionHashSet *set, int64_t size) {
-    int64_t target_capacity =
-        NextPrime((int64_t)((double)size / set->max_load_factor));
-    if (target_capacity <= set->capacity) return true;
+    // Update internal data
+    GamesmanFree(old_keys);
+    set->keys = new_keys;
+    set->mask = new_mask;
+    set->max_size = (int64_t)((new_mask + 1) / set->inv_max_load_factor);
 
-    return TierPositionHashSetExpand(set, target_capacity);
-}
-
-void TierPositionHashSetDestroy(TierPositionHashSet *set) {
-    free(set->entries);
-    set->entries = NULL;
-    set->capacity = 0;
-    set->size = 0;
-}
-
-bool TierPositionHashSetContains(TierPositionHashSet *set, TierPosition key) {
-    int64_t capacity = set->capacity;
-    // Edge case: return false if set is empty.
-    if (set->capacity == 0) return false;
-    int64_t index = TierPositionHashSetHash(key, capacity);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
-        }
-        index = (index + 1) % capacity;
-    }
-    return false;
-}
-
-bool TierPositionHashSetAdd(TierPositionHashSet *set, TierPosition key) {
-    // Check if resizing is needed.
-    double load_factor = (set->capacity == 0)
-                             ? INFINITY
-                             : (double)(set->size + 1) / (double)set->capacity;
-    if (set->capacity == 0 || load_factor > set->max_load_factor) {
-        int64_t new_capacity = NextPrime(set->capacity * 2);
-        if (!TierPositionHashSetExpand(set, new_capacity)) return false;
-    }
-
-    // Set value at key.
-    int64_t capacity = set->capacity;
-    int64_t index = TierPositionHashSetHash(key, capacity);
-    while (set->entries[index].used) {
-        TierPosition this_key = set->entries[index].key;
-        if (this_key.tier == key.tier && this_key.position == key.position) {
-            return true;
-        }
-        index = (index + 1) % capacity;
-    }
-    set->entries[index].key = key;
-    set->entries[index].used = true;
-    ++set->size;
     return true;
 }

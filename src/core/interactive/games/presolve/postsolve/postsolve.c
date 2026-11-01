@@ -9,7 +9,8 @@
 #include "core/interactive/games/presolve/postsolve/configure/configure.h"
 #include "core/interactive/games/presolve/postsolve/help/game_help.h"
 #include "core/interactive/games/presolve/postsolve/play/play.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
 
 static const char title_format[] =
     "Play (Post-Solved) Menu for %s (variant %d)";
@@ -19,7 +20,8 @@ static char title[sizeof(title_format) + kGameFormalNameLengthMax +
 static void UpdateVariantId(void) {
     const Game *current_game = InteractiveMatchGetCurrentGame();
     int variant_index = InteractiveMatchGetVariantIndex();
-    sprintf(title, title_format, current_game->formal_name, variant_index);
+    snprintf(title, sizeof(title), title_format, current_game->formal_name,
+             variant_index);
 }
 
 int InteractivePostSolve(ReadOnlyString key) {

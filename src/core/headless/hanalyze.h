@@ -27,10 +27,10 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 #define GAMESMANONE_CORE_HEADLESS_HANALYZE_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // intptr_t
+#include <stdbool.h>
+#include <stddef.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Analyzes the variant VARIANT_ID of game GAME_NAME.
@@ -50,6 +50,6 @@
  */
 int HeadlessAnalyze(ReadOnlyString game_name, int variant_id,
                     ReadOnlyString data_path, bool force, int verbose,
-                    intptr_t memlimit);
+                    size_t memlimit);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HANALYZE_H_

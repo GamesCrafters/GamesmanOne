@@ -27,17 +27,32 @@
 
 #include "games/neutron/neutron.h"
 
-#include <assert.h>  // assert
-#include <ctype.h>   // toupper
-#include <stddef.h>  // NULL
-#include <stdint.h>  // int64_t
-#include <stdlib.h>  // atoi
-#include <string.h>  // strlen, strtok_r
+#include <assert.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "core/constants.h"
+#include "core/data_structures/cstring.h"
 #include "core/hash/generic.h"
 #include "core/misc.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/autogui.h"
+#include "core/types/uwapi/partmove_array.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_regular.h"
 
 // ============================= Type Definitions =============================
 
@@ -432,8 +447,7 @@ static int NeutronGetCanonicalChildPositions(
     for (int i = 0; i < num_moves; ++i) {
         Position child = NeutronDoMoveInternal(board, turn, moves[i]);
         child = NeutronGetCanonicalPosition(child);
-        if (!PositionHashSetContains(&dedup, child)) {
-            PositionHashSetAdd(&dedup, child);
+        if (PositionHashSetAdd(&dedup, child)) {
             children[ret++] = child;
         }
     }
@@ -493,8 +507,7 @@ static void GenerateParentsByReversingNeutron(
         while (dest != prev_dest) {
             Position parent = GenericHashHash(board, prev_turn);
             parent = GetCanonicalPositionInternal(parent, board, prev_turn);
-            if (!PositionHashSetContains(dedup, parent)) {
-                PositionHashSetAdd(dedup, parent);
+            if (PositionHashSetAdd(dedup, parent)) {
                 parents[(*num_parents)++] = parent;
             }
             prev_dest = dest;
@@ -591,36 +604,42 @@ static const char kPositionStringFormat[] =
     "         ( 16 17 18 19 20 )           : %c %c %c %c %c\n"
     "         ( 21 22 23 24 25 )           : %c %c %c %c %c\n";
 
+enum {
+    kPositionStringLengthMax = sizeof(kPositionStringFormat),
+    kMoveStringLengthMax = 7 + 2 * kInt32Base10StringLengthMax,
+};
+
 static int NeutronPositionToString(Position position, char *buffer) {
     // Unhash
     char board[kBoardSize];
     bool success = Unhash(position, board);
     if (!success) return kGenericHashError;
 
-    sprintf(buffer, kPositionStringFormat, board[0], board[1], board[2],
-            board[3], board[4], board[5], board[6], board[7], board[8],
-            board[9], board[10], board[11], board[12], board[13], board[14],
-            board[15], board[16], board[17], board[18], board[19], board[20],
-            board[21], board[22], board[23], board[24]);
+    snprintf(buffer, kPositionStringLengthMax + 1, kPositionStringFormat,
+             board[0], board[1], board[2], board[3], board[4], board[5],
+             board[6], board[7], board[8], board[9], board[10], board[11],
+             board[12], board[13], board[14], board[15], board[16], board[17],
+             board[18], board[19], board[20], board[21], board[22], board[23],
+             board[24]);
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int NeutronMoveToString(Move move, char *buffer) {
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
-        sprintf(buffer, "%d %s", m.unpacked.p_src + 1,
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s",
+                 m.unpacked.p_src + 1, kDirectionStr[m.unpacked.p_dir]);
     } else if (m.unpacked.p_src < 0) {  // No piece move
-        sprintf(buffer, "%d %s END", m.unpacked.n_src + 1,
-                kDirectionStr[m.unpacked.n_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s END",
+                 m.unpacked.n_src + 1, kDirectionStr[m.unpacked.n_dir]);
     } else {
-        sprintf(buffer, "%d %s %d %s", m.unpacked.n_src + 1,
-                kDirectionStr[m.unpacked.n_dir], m.unpacked.p_src + 1,
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, kMoveStringLengthMax + 1, "%d %s %d %s",
+                 m.unpacked.n_src + 1, kDirectionStr[m.unpacked.n_dir],
+                 m.unpacked.p_src + 1, kDirectionStr[m.unpacked.p_dir]);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int8_t DirectionStrToDir(const char *dir_str) {
@@ -712,9 +731,9 @@ static Move NeutronStringToMove(ReadOnlyString move_string) {
 
 static const GameplayApiCommon kNeutronGameplayApiCommon = {
     .GetInitialPosition = NeutronGetInitialPosition,
-    .position_string_length_max = sizeof(kPositionStringFormat),
+    .position_string_length_max = kPositionStringLengthMax,
 
-    .move_string_length_max = 11,
+    .move_string_length_max = kMoveStringLengthMax,
     .MoveToString = NeutronMoveToString,
 
     .IsValidMoveString = NeutronIsValidMoveString,
@@ -827,18 +846,22 @@ static CString NeutronMoveToFormalMove(Position position, Move move) {
     (void)position;  // Unused.
 
     // The following logic works for both part-moves and full-moves.
-    char buffer[12];
+    static const size_t max_length = 10;
+    char buffer[max_length + 1];
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move
         assert(m.unpacked.p_src >= 0);
-        sprintf(buffer, "%s %s", kBoardIndexToLegend[m.unpacked.p_src],
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, sizeof(buffer), "%s %s",
+                 kBoardIndexToLegend[m.unpacked.p_src],
+                 kDirectionStr[m.unpacked.p_dir]);
     } else if (m.unpacked.p_src < 0) {  // No piece move
-        sprintf(buffer, "N %s", kDirectionStr[m.unpacked.n_dir]);
+        snprintf(buffer, sizeof(buffer), "N %s",
+                 kDirectionStr[m.unpacked.n_dir]);
     } else {
-        sprintf(buffer, "N %s %s %s", kDirectionStr[m.unpacked.n_dir],
-                kBoardIndexToLegend[m.unpacked.p_src],
-                kDirectionStr[m.unpacked.p_dir]);
+        snprintf(buffer, sizeof(buffer), "N %s %s %s",
+                 kDirectionStr[m.unpacked.n_dir],
+                 kBoardIndexToLegend[m.unpacked.p_src],
+                 kDirectionStr[m.unpacked.p_dir]);
     }
     CString ret;
     CStringInitCopyCharArray(&ret, buffer);
@@ -861,28 +884,41 @@ static int GetMoveDestination(const char board[kBoardSize], int8_t src,
     return ToIndex(row, col);
 }
 
+static CString GetEmptyCString(void) {
+    CString empty;
+    if (!CStringInitEmpty(&empty)) {
+        return CStringGetNull();
+    }
+
+    return empty;
+}
+
 static CString NeutronMoveToAutoGuiMove(Position position, Move move) {
     static const char kSoundChar = 'x';
 
     // Unhash
     char board[kBoardSize];
-    if (!Unhash(position, board)) return kNullCString;
+    if (!Unhash(position, board)) {
+        return CStringGetNull();
+    }
+
     NeutronMove m = {.hashed = move};
     if (m.unpacked.n_src < 0) {  // No neutron move.
         return AutoGuiMakeMoveM(
             m.unpacked.p_src,
             GetMoveDestination(board, m.unpacked.p_src, m.unpacked.p_dir),
             kSoundChar);
-    } else if (m.unpacked.p_src < 0) {  // No piece move.
+    }
+
+    if (m.unpacked.p_src < 0) {  // No piece move.
         return AutoGuiMakeMoveM(
             m.unpacked.n_src,
             GetMoveDestination(board, m.unpacked.n_src, m.unpacked.n_dir),
             kSoundChar);
-    } else {  // A full multipart move does not have an AutoGUI string.
-        return kNullCString;
     }
 
-    return kNullCString;
+    // Else, a full multipart move does not have an AutoGUI string.
+    return GetEmptyCString();
 }
 
 static CString AddNeutronPartmove(Position pos,
@@ -947,6 +983,7 @@ static PartmoveArray NeutronGeneratePartmovesInternal(
     if (pos == kInitialPosition) return ret;
 
     int8_t n_src = FindNeutron(board);
+    assert(n_src >= 0);
     // For each possible neutron move
     for (int8_t n_dir = 0; n_dir < 8; ++n_dir) {
         // Make the current neutron move and generate piece moves.
@@ -1021,14 +1058,14 @@ static int NeutronInit(void *aux) {
         PositionHashSetAdd(&kChildrenOfInitialPosition, child);
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 // ============================== NeutronFinalize ==============================
 
 static int NeutronFinalize(void) {
     PositionHashSetDestroy(&kChildrenOfInitialPosition);
-    return kNoError;
+    return kSuccess;
 }
 
 // ================================= kNeutron =================================

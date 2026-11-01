@@ -11,4 +11,4 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/partmove_array.c
     ${CMAKE_CURRENT_SOURCE_DIR}/partmove.c)
 
-target_sources(gamesman PRIVATE ${HEADERS} ${SOURCES})
+target_sources(gamesman_core PRIVATE ${HEADERS} ${SOURCES})

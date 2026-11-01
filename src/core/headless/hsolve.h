@@ -27,10 +27,10 @@
 #ifndef GAMESMANONE_CORE_HEADLESS_HSOLVE_H_
 #define GAMESMANONE_CORE_HEADLESS_HSOLVE_H_
 
-#include <stdbool.h>  // bool
-#include <stdint.h>   // intptr_t
+#include <stdbool.h>
+#include <stddef.h>
 
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
 
 /**
  * @brief Solves the game of name GAME_NAME and variant index VARIANT_ID and
@@ -52,6 +52,6 @@
  */
 int HeadlessSolve(ReadOnlyString game_name, int variant_id,
                   ReadOnlyString data_path, bool force, int verbose,
-                  intptr_t memlimit);
+                  size_t memlimit);
 
 #endif  // GAMESMANONE_CORE_HEADLESS_HSOLVE_H_

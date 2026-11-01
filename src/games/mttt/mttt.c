@@ -29,17 +29,27 @@
 
 #include "games/mttt/mttt.h"
 
-#include <assert.h>    // assert
-#include <inttypes.h>  // PRId64
-#include <stdbool.h>   // bool, true, false
-#include <stdint.h>    // int64_t
-#include <stdio.h>     // fprintf, stderr
-#include <stdlib.h>    // atoi
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "core/constants.h"
 #include "core/data_structures/cstring.h"
 #include "core/solvers/regular_solver/regular_solver.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "core/types/game/game_variant.h"
+#include "core/types/gameplay_api/gameplay_api.h"
+#include "core/types/gameplay_api/gameplay_api_common.h"
+#include "core/types/gameplay_api/gameplay_api_regular.h"
+#include "core/types/gamesman_status.h"
+#include "core/types/move_array.h"
+#include "core/types/position_hash_set.h"
+#include "core/types/uwapi/uwapi.h"
+#include "core/types/uwapi/uwapi_regular.h"
 
 // Game, Solver, Gameplay, and UWAPI Functions
 
@@ -202,12 +212,12 @@ static BlankOX WhoseTurn(BlankOX *board);
 static int MtttInit(void *aux) {
     (void)aux;  // Unused.
     InitSymmetryMatrix();
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttFinalize(void) {
     // Nothing to deallocate.
-    return kNoError;
+    return kSuccess;
 }
 
 static const GameVariant *MtttGetCurrentVariant(void) {
@@ -313,11 +323,9 @@ static int MtttGetCanonicalParentPositions(
             Position parent = position - (int)prev_turn * three_to_the[i];
             parent = MtttGetCanonicalPosition(parent);
             if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
-            if (PositionHashSetContains(&dedup, parent)) {
-                continue;  // Already included.
+            if (PositionHashSetAdd(&dedup, parent)) {
+                parents[ret++] = parent;
             }
-            PositionHashSetAdd(&dedup, parent);
-            parents[ret++] = parent;
         }
     }
     PositionHashSetDestroy(&dedup);
@@ -357,10 +365,10 @@ static int MtttPositionToString(Position position, char *buffer) {
         fprintf(stderr,
                 "MtttPositionToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase position_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static int MtttMoveToString(Move move, char *buffer) {
@@ -371,10 +379,10 @@ static int MtttMoveToString(Move move, char *buffer) {
         fprintf(stderr,
                 "MtttMoveToString: (BUG) not enough space was allocated "
                 "to buffer. Please increase move_string_length_max.\n");
-        return kMemoryOverflowError;
+        return kBufferOverflowError;
     }
 
-    return kNoError;
+    return kSuccess;
 }
 
 static bool MtttIsValidMoveString(ReadOnlyString move_string) {

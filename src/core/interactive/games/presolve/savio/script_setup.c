@@ -1,19 +1,20 @@
 #include "core/interactive/games/presolve/savio/script_setup.h"
 
-#include <ctype.h>    // isalnum, isdigit
-#include <stdbool.h>  // bool, true, false
-#include <stdio.h>    // sprintf, printf
-#include <stdlib.h>   // atoi
-#include <string.h>   // strlen
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core/constants.h"
 #include "core/game_manager.h"
 #include "core/interactive/automenu.h"
 #include "core/interactive/games/presolve/match.h"
-#include "core/misc.h"
 #include "core/savio/savio.h"
 #include "core/savio/scriptgen.h"
-#include "core/types/gamesman_types.h"
+#include "core/types/base.h"
+#include "core/types/game/game.h"
+#include "libs/io/xterminal.h"
 
 static SavioJobSettings settings;
 static int partition_id;
@@ -70,10 +71,11 @@ static void InitGlobalVariables(ReadOnlyString key) {
 }
 
 static void RestoreDefaultSettings(void) {
-    sprintf(settings.game_name, "%s", game->name);
+    snprintf(settings.game_name, sizeof(settings.game_name), "%s", game->name);
     settings.game_variant_id = variant_id;
-    sprintf(settings.job_name, "%s", game->name);
-    sprintf(settings.account, "%s", kSavioDefaultAccount);
+    snprintf(settings.job_name, sizeof(settings.job_name), "%s", game->name);
+    snprintf(settings.account, sizeof(settings.account), "%s",
+             kSavioDefaultAccount);
     settings.partition_id = partition_id;
     if (!GameManagerCurrentGameSupportsMpi()) {
         settings.num_nodes = 1;
@@ -81,22 +83,26 @@ static void RestoreDefaultSettings(void) {
         settings.num_nodes = IntMin2(kSavioNumNodesMax, partition->num_nodes);
     }
     settings.ntasks_per_node = kSavioDefaultNumTasksPerNode;
-    sprintf(settings.time_limit, "%s", kSavioDefaultTimeLimit);
+    snprintf(settings.time_limit, sizeof(settings.time_limit), "%s",
+             kSavioDefaultTimeLimit);
 }
 
 static void UpdateItems(void) {
-    sprintf(items[0], "Confirm");
-    sprintf(items[1], "Job name: [%s]", settings.job_name);
-    sprintf(items[2], "Savio account: [%s]", settings.account);
-    sprintf(items[3], "Number of nodes to use: [%d]", settings.num_nodes);
-    sprintf(items[4], "Number of tasks per node: [%d]",
-            settings.ntasks_per_node);
-    sprintf(
-        items[5], "Number of CPUs per task: [%d]",
+    snprintf(items[0], sizeof(items[0]), "Confirm");
+    snprintf(items[1], sizeof(items[1]), "Job name: [%s]", settings.job_name);
+    snprintf(items[2], sizeof(items[2]), "Savio account: [%s]",
+             settings.account);
+    snprintf(items[3], sizeof(items[3]), "Number of nodes to use: [%d]",
+             settings.num_nodes);
+    snprintf(items[4], sizeof(items[4]), "Number of tasks per node: [%d]",
+             settings.ntasks_per_node);
+    snprintf(
+        items[5], sizeof(items[5]), "Number of CPUs per task: [%d]",
         SavioGetNumCpuPerTask(partition->num_cpu, settings.ntasks_per_node));
-    sprintf(items[6], "Bind OpenMP threads to: [%s]",
-            OmpThreadBindingDesc(settings.bind_omp_threads_to_cores));
-    sprintf(items[7], "Time limit: [%s]", settings.time_limit);
+    snprintf(items[6], sizeof(items[6]), "Bind OpenMP threads to: [%s]",
+             OmpThreadBindingDesc(settings.bind_omp_threads_to_cores));
+    snprintf(items[7], sizeof(items[7]), "Time limit: [%s]",
+             settings.time_limit);
 
     for (int i = 0; i < NUM_ITEMS; ++i) {
         items_p[i] = (ReadOnlyString)&items[i];
@@ -108,10 +114,10 @@ static ReadOnlyString OmpThreadBindingDesc(bool bind_to_cores) {
 }
 
 static void InitKeys(void) {
-    sprintf(keys[0], "c");
+    snprintf(keys[0], sizeof(keys[0]), "c");
     keys_p[0] = (ReadOnlyString)&keys[0];
     for (int i = 1; i < NUM_ITEMS; ++i) {
-        sprintf(keys[i], "%d", i);
+        snprintf(keys[i], sizeof(keys[i]), "%d", i);
         keys_p[i] = (ReadOnlyString)&keys[i];
     }
 }

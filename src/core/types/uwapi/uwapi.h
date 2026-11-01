@@ -5,16 +5,6 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief High-level container of helper methods that are used by games to
  * generate responses for GamesCraftersUWAPI (Universal Web API.)
- * @details A Uwapi object contains a set of helper functions that facilitates
- * the generation of JSON responses for GamesCraftersUWAPI (Universal Web API).
- * UWAPI is an internal request-routing server framework that allows the
- * backend solving and serving systems such as GamesmanOne and GamesmanClassic
- * to provide game rules and database querying service for the GamesmanUni
- * online game generator.
- * @link https://github.com/GamesCrafters/GamesCraftersUWAPI
- * @link https://github.com/GamesCrafters/GamesmanUni
- * @version 1.0.1
- * @date 2024-12-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -43,9 +33,21 @@
  * @brief High-level container of helper methods that are used by games to
  * generate responses for GamesCraftersUWAPI (Universal Web API.)
  *
+ * A `Uwapi` object contains a set of helper functions that facilitates
+ * the generation of JSON responses for GamesCraftersUWAPI (Universal Web API).
+ * UWAPI is an internal request-routing server framework that allows the
+ * backend solving and serving systems such as GamesmanOne and GamesmanClassic
+ * to provide game rules and database querying service for the GamesmanUni
+ * online game generator.
+ *
  * @note Depending on the type of the game, the game developer should implement
- * one appropriate API collection and set all other member APIs to NULL.
+ * one appropriate API collection and set all other member APIs to `NULL`.
  * Implementing more than one set of API results in undefined behavior.
+ *
+ * @see
+ * [GamesCraftersUWAPI](https://github.com/GamesCrafters/GamesCraftersUWAPI)
+ *
+ * @see [GamesmanUni](https://github.com/GamesCrafters/GamesmanUni)
  */
 typedef struct Uwapi {
     const UwapiRegular *regular; /**< API for regular (non-tier) games. */

@@ -54,11 +54,11 @@
  */
 #include "core/data_structures/concurrent_bitset.h"
 
-#include <assert.h>     // assert
-#include <stdatomic.h>  // ATOMIC_*_LOCK_FREE, _Atomic, atomic_*
-#include <stdbool.h>    // bool, true, false
-#include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // int64_t
+#include <assert.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "core/concurrency.h"
 #include "core/gamesman_memory.h"
@@ -86,27 +86,35 @@ static int64_t NumBitsToNumBlocks(int64_t num_bits) {
 }
 
 size_t ConcurrentBitsetMemRequired(int64_t num_bits) {
-    if (num_bits < 0) num_bits = 0;
+    if (num_bits < 0) {
+        return SIZE_MAX;
+    }
+
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
     return sizeof(ConcurrentBitset) + num_blocks * sizeof(AtomicBlockType);
 }
 
-ConcurrentBitset *ConcurrentBitsetCreate(int64_t num_bits) {
-    return ConcurrentBitsetCreateAllocator(num_bits, NULL);
+ConcurrentBitset *ConcurrentBitsetCreateMt(int64_t num_bits) {
+    return ConcurrentBitsetCreateAllocatorMt(num_bits, NULL);
 }
 
-ConcurrentBitset *ConcurrentBitsetCreateAllocator(
+ConcurrentBitset *ConcurrentBitsetCreateAllocatorMt(
     int64_t num_bits, GamesmanAllocator *allocator) {
     // Allocate space.
-    if (num_bits < 0) num_bits = 0;
+    if (num_bits < 0) {
+        return NULL;
+    }
+
     size_t alloc_size = ConcurrentBitsetMemRequired(num_bits);
     ConcurrentBitset *ret =
         (ConcurrentBitset *)GamesmanAllocatorAllocate(allocator, alloc_size);
-    if (ret == NULL) return ret;
+    if (!ret) {
+        return ret;
+    }
 
     // Initialize all blocks to 0.
     int64_t num_blocks = NumBitsToNumBlocks(num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         atomic_init(&ret->data[i], 0);
     }
@@ -119,16 +127,22 @@ ConcurrentBitset *ConcurrentBitsetCreateAllocator(
     return ret;
 }
 
-ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
+ConcurrentBitset *ConcurrentBitsetCreateCopyMt(const ConcurrentBitset *other) {
+    if (!other) {
+        return NULL;
+    }
+
     // Allocate space.
     size_t alloc_size = ConcurrentBitsetMemRequired(other->num_bits);
     ConcurrentBitset *ret = (ConcurrentBitset *)GamesmanAllocatorAllocate(
         other->allocator, alloc_size);
-    if (ret == NULL) return ret;
+    if (!ret) {
+        return ret;
+    }
 
     // Copy all blocks from other.
     int64_t num_blocks = NumBitsToNumBlocks(other->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         BlockType block =
             atomic_load_explicit(&other->data[i], memory_order_relaxed);
@@ -144,7 +158,10 @@ ConcurrentBitset *ConcurrentBitsetCreateCopy(const ConcurrentBitset *other) {
 }
 
 void ConcurrentBitsetDestroy(ConcurrentBitset *s) {
-    if (s == NULL) return;
+    if (!s) {
+        return;
+    }
+
     GamesmanAllocator *allocator = s->allocator;
     GamesmanAllocatorDeallocate(allocator, s);
     GamesmanAllocatorRelease(allocator);
@@ -163,8 +180,8 @@ static int64_t BitOffset(int64_t bit_index) {
 }
 
 bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
-                         memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                         memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -175,8 +192,8 @@ bool ConcurrentBitsetSet(ConcurrentBitset *s, int64_t bit_index,
 }
 
 bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
-                           memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                           memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -186,19 +203,17 @@ bool ConcurrentBitsetReset(ConcurrentBitset *s, int64_t bit_index,
     return previous & mask;
 }
 
-void ConcurrentBitsetResetAll(ConcurrentBitset *s) {
-    if (s == NULL) return;
-
+void ConcurrentBitsetResetAllMt(ConcurrentBitset *s) {
     int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
+    PRAGMA_OMP(parallel for)
     for (int64_t i = 0; i < num_blocks; ++i) {
         atomic_store_explicit(&s->data[i], 0, memory_order_relaxed);
     }
 }
 
 bool ConcurrentBitsetTest(ConcurrentBitset *s, int64_t bit_index,
-                          memory_order order) {
-    assert(bit_index >= 0 && bit_index < s->num_bits);
+                          memory_order_compat order) {
+    assert(bit_index >= 0 && bit_index < s->num_bits);  // LCOV_EXCL_BR_LINE
     int64_t bit_offset = BitOffset(bit_index);
     int64_t block_index = BlockIndex(bit_index);
     BlockType mask = kOne << bit_offset;
@@ -213,20 +228,65 @@ size_t ConcurrentBitsetGetSerializedSize(const ConcurrentBitset *s) {
     return num_blocks * sizeof(BlockType);
 }
 
-void ConcurrentBitsetSerialize(const ConcurrentBitset *s, void *buf) {
-    BlockType *out = (BlockType *)buf;
-    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
-    for (int64_t i = 0; i < num_blocks; ++i) {
-        out[i] = atomic_load_explicit(&s->data[i], memory_order_relaxed);
+static int64_t Int64Min(int64_t a, int64_t b) { return a < b ? a : b; }
+
+static bool ValidateParametersSerializeDeserialize(const ConcurrentBitset *s,
+                                                   size_t offset,
+                                                   const void *buf,
+                                                   size_t bufsize) {
+    // Offset must be in bounds and a multiple of block size
+    if (offset * 8 >= (size_t)s->num_bits || offset % sizeof(BlockType) != 0) {
+        return false;
     }
+
+    if (!buf) {
+        return false;
+    }
+
+    if (bufsize < sizeof(BlockType) || bufsize % sizeof(BlockType) != 0) {
+        return false;
+    }
+
+    return true;
 }
 
-void ConcurrentBitsetDeserialize(ConcurrentBitset *s, const void *buf) {
-    const BlockType *in = (const BlockType *)buf;
-    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
-    PRAGMA_OMP_PARALLEL_FOR
-    for (int64_t i = 0; i < num_blocks; ++i) {
-        atomic_store_explicit(&s->data[i], in[i], memory_order_relaxed);
+size_t ConcurrentBitsetSerializeStreaming(const ConcurrentBitset *s,
+                                          size_t offset, void *buf,
+                                          size_t bufsize) {
+    if (!ValidateParametersSerializeDeserialize(s, offset, buf, bufsize)) {
+        return 0;
     }
+
+    int64_t block_begin = offset / sizeof(BlockType);
+    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
+    int64_t block_end =
+        Int64Min(num_blocks, block_begin + bufsize / sizeof(BlockType));
+
+    BlockType *out = (BlockType *)buf;
+    for (int64_t i = block_begin; i < block_end; ++i) {
+        out[i - block_begin] =
+            atomic_load_explicit(&s->data[i], memory_order_relaxed);
+    }
+
+    return (block_end - block_begin) * sizeof(BlockType);
+}
+
+size_t ConcurrentBitsetDeserializeStreaming(ConcurrentBitset *s, size_t offset,
+                                            const void *buf, size_t bufsize) {
+    if (!ValidateParametersSerializeDeserialize(s, offset, buf, bufsize)) {
+        return 0;
+    }
+
+    int64_t block_begin = offset / sizeof(BlockType);
+    int64_t num_blocks = NumBitsToNumBlocks(s->num_bits);
+    int64_t block_end =
+        Int64Min(num_blocks, block_begin + bufsize / sizeof(BlockType));
+
+    BlockType *in = (BlockType *)buf;
+    for (int64_t i = block_begin; i < block_end; ++i) {
+        atomic_store_explicit(&s->data[i], in[i - block_begin],
+                              memory_order_relaxed);
+    }
+
+    return (block_end - block_begin) * sizeof(BlockType);
 }
