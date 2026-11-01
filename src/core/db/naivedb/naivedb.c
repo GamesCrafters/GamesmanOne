@@ -240,6 +240,7 @@ static void NaiveDbFinalize(void) {
         TierToPtrChainedHashMapBegin(&loaded_tiers);
     while (TierToPtrChainedHashMapIteratorIsValid(&it)) {
         GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
+        TierToPtrChainedHashMapIteratorNext(&it);
     }
     TierToPtrChainedHashMapDestroy(&loaded_tiers);
     records = NULL;
@@ -253,11 +254,13 @@ static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
         return kMallocFailureError;
     }
+
     if (!TierToPtrChainedHashMapSet(&loaded_tiers, tier, records)) {
         GamesmanFree(records);
         records = NULL;
         return kMallocFailureError;
     }
+
     current_tier = tier;
     current_tier_size = size;
 
