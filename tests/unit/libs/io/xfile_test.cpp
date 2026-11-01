@@ -81,7 +81,8 @@ TEST(GuardedFreopenTest, ReturnsNullOnFailure) {
 
     EXPECT_EQ(reopened, nullptr);
 
-    GuardedFclose(stream);
+    // freopen closes the original stream even when it fails, so it must not
+    // be closed again here (that was a double-free under ASan).
     GuardedRemove(filename);
 }
 
