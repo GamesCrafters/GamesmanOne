@@ -74,6 +74,10 @@ enum GamesmanConstants {
 /**
  * Largest supported remoteness.
  *
+ * Valid game remotenesses are nonnegative. Negative values are invalid as
+ * remoteness data and are reserved for documented errors, such as
+ * `kErrorRemoteness`.
+ *
  * Increase the values here and recompile if the old limit is not large
  * enough for a new game in the future.
  */

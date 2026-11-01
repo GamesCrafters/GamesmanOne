@@ -36,12 +36,21 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-/** @brief Tier as a 64-bit integer. */
+/**
+ * @brief Tier identifier as a 64-bit integer.
+ * @note Valid game tier identifiers are nonnegative. Negative values are
+ * invalid identifiers and may be used for documented error or sentinel results.
+ */
 typedef int64_t Tier;
 
 #define PRITier PRId64  // Print format macro for the Tier type.
 
-/** @brief Game position as a 64-bit integer hash. */
+/**
+ * @brief Game position as a 64-bit integer hash.
+ * @note Valid position hashes are nonnegative and must belong to the relevant
+ * game's or tier's position range. Negative values are invalid positions and
+ * may be used for documented error or sentinel results.
+ */
 typedef int64_t Position;
 
 #define PRIPos PRId64  // Print format macro for the Position type.
