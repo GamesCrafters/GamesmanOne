@@ -247,9 +247,13 @@ static void NaiveDbFinalize(void) {
 }
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
+    if (size < 0) {
+        return kIllegalArgumentError;
+    }
+
     GamesmanFree(records);
     records = (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
-    if (!records) {
+    if (size && !records) {
         fprintf(stderr,
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
         return kMallocFailureError;

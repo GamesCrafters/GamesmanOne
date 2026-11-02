@@ -307,6 +307,10 @@ static int CheckExistingSolvingTier(const char *caller) {
 }
 
 static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
+    if (size < 0) {
+        return kIllegalArgumentError;
+    }
+
     int error = CheckExistingSolvingTier("ArrayDbCreateSolvingTier");
     if (error) {
         return error;
@@ -331,6 +335,10 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
 }
 
 static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
+    if (size < 0) {
+        return kIllegalArgumentError;
+    }
+
 #ifdef _OPENMP
     int error = CheckExistingSolvingTier("ArrayDbCreateConcurrentSolvingTier");
     if (error) {
