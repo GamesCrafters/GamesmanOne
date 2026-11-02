@@ -103,6 +103,10 @@ typedef int (*GetTierNameFunc)(
  * unchanged. Callers must provide valid data unless a method explicitly
  * documents a checked error for an invalid argument. Size and count arguments
  * retain their method-specific validation rules.
+ * @note A stored tier has a fixed position count. Its creation, checkpoint
+ * restoration, and archive loading must use that same tier size. An
+ * inconsistent size results in undefined behavior unless a method explicitly
+ * documents a checked error.
  * @note The nine top-level Solving API record methods require an active
  * solving tier, a valid position, and legal supplied values and remotenesses.
  * Violating these record-access preconditions results in undefined behavior.
@@ -118,6 +122,10 @@ typedef int (*GetTierNameFunc)(
  * operations require writes to be paused. Probes access permanent storage
  * independently of in-memory solving and loaded tiers; this does not guarantee
  * concurrent archive replacement or concurrent access through a shared probe.
+ * @note The checkpoint API supports only regular, externally synchronized
+ * solving tiers. Using checkpoint operations with a concurrent solving tier
+ * results in undefined behavior. `CheckpointLoad` always creates a regular
+ * solving tier.
  * @note After an operation reports failure, the solver is expected to stop.
  * Unless explicitly stated, rollback, retry, and continued use of partially
  * modified state are not guaranteed. `Finalize` remains available for cleanup
@@ -714,17 +722,22 @@ typedef struct Database {
      * @note All writes to the solving tier must be paused during this
      * operation; overlapping writes result in undefined behavior.
      * @note This function may be called when no solving tier exists, but
-     * success is not guaranteed in that case.
+     * success is not guaranteed in that case. Either `kSuccess` or a non-zero
+     * error code may be returned normally.
      *
      * @param[in] status Pointer to the current solving status, which is not
-     * modified. May be `NULL` when `status_size` is zero; this combination is
-     * permitted, but success is not guaranteed.
+     * modified. When `status_size` is zero, either a `NULL` or non-`NULL`
+     * pointer is permitted, but success is not guaranteed.
      * @param[in] status_size Size of `status` in bytes.
+     *
+     * @pre If a solving tier exists, it is a regular tier created through
+     * `Database::CreateSolvingTier` or restored through
+     * `Database::CheckpointLoad`. Saving a concurrent solving tier results in
+     * undefined behavior.
      *
      * @return `kSuccess` on success,
      *         `kIllegalArgumentError` if `status` is `NULL` and `status_size`
-     *         is positive, or if `status` is non-`NULL` and `status_size` is
-     *         zero, or
+     *         is positive, or
      *         non-zero error code otherwise.
      */
     int (*CheckpointSave)(const void *status, size_t status_size);
@@ -735,15 +748,16 @@ typedef struct Database {
      * nothing and returns an error if a checkpoint cannot be found for `tier`.
      *
      * @note The restored solving tier uses the externally synchronized mode
-     * of `Database::CreateSolvingTier`, even if the checkpoint was saved from a
-     * concurrent solving tier.
+     * of `Database::CreateSolvingTier`. Concurrent solving tiers are not
+     * supported by the checkpoint API.
      * @note Calling this function while a solving tier or segment-buffer
      * context exists results in undefined behavior.
      * @note All writes to the solving tier must be paused during checkpoint
      * operations; overlapping writes result in undefined behavior.
      *
      * @param[in] tier Tier to be initialized and loaded.
-     * @param[in] size Size of `tier` in number of positions.
+     * @param[in] size Size of `tier` in number of positions. Must match the
+     * size used to create the checkpointed solving tier.
      * @param[out] status (Output parameter) Pointer to a buffer of size at
      * least \p status_size bytes which will be used to load the solving status
      * from the checkpoint. For a supplied nonempty status buffer, the format
@@ -752,11 +766,13 @@ typedef struct Database {
      * success is not guaranteed.
      * @param[in] status_size Size of `status` in bytes.
      *
+     * @pre The tier size matches the size originally supplied to
+     * `Database::CreateSolvingTier`. A mismatch results in undefined behavior.
+     *
      * @return `kSuccess` on success,
      *         `kIllegalArgumentError` if `status` is `NULL` and `status_size`
      *         is positive, or if `status` is non-`NULL` and `status_size` is
-     *         zero,
-     *         `kRuntimeError` if `size` does not match the saved tier size, or
+     *         zero, or
      *         non-zero error code otherwise.
      */
     int (*CheckpointLoad)(Tier tier, int64_t size, void *status,
@@ -919,11 +935,12 @@ typedef struct Database {
      *
      * @note Reinitializing an initialized probe is equivalent to first calling
      * `Database::ProbeDestroy` and then initializing the same probe again.
-     * @note A `NULL` probe is accepted as a no-op and returns `kSuccess`.
+     * @note A `NULL` probe is rejected with `kIllegalArgumentError`.
      *
      * @param[in,out] probe Target probe.
      *
      * @return `kSuccess` on success,
+     *         `kIllegalArgumentError` if `probe` is `NULL`, or
      *         non-zero error code otherwise.
      */
     int (*ProbeInit)(DbProbe *probe);

@@ -349,6 +349,10 @@ static int NaiveDbGetRemoteness(Position position) {
 }
 
 static int NaiveDbLoadTier(Tier tier, int64_t size) {
+    if (tier == current_tier) {
+        return kIllegalArgumentError;
+    }
+
     char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
     NaiveDbEntry *load =
         (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
@@ -363,7 +367,7 @@ static int NaiveDbLoadTier(Tier tier, int64_t size) {
     GamesmanFree(full_path);
     if (!db_file) {
         GamesmanFree(load);
-        return kFileSystemError;
+        return kRuntimeError;
     }
 
     // Read db file into "load"
@@ -381,14 +385,19 @@ static int NaiveDbLoadTier(Tier tier, int64_t size) {
 }
 
 static int NaiveDbUnloadTier(Tier tier) {
+    if (tier == current_tier) {
+        return kIllegalArgumentError;
+    }
+
     TierToPtrChainedHashMapIterator it =
         TierToPtrChainedHashMapGet(&loaded_tiers, tier);
     if (TierToPtrChainedHashMapIteratorIsValid(&it)) {
         GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
         TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
+        return kSuccess;
     }
 
-    return kSuccess;
+    return kIllegalArgumentError;
 }
 
 static bool NaiveDbIsTierLoaded(Tier tier) {
@@ -420,6 +429,10 @@ static int NaiveDbGetRemotenessFromLoaded(Tier tier, Position position) {
 }
 
 static int NaiveDbProbeInit(DbProbe *probe) {
+    if (!probe) {
+        return kIllegalArgumentError;
+    }
+
     probe->buffer = GamesmanMalloc(kBufferSize);
     if (!probe->buffer) {
         return kMallocFailureError;
@@ -433,6 +446,10 @@ static int NaiveDbProbeInit(DbProbe *probe) {
 }
 
 static int NaiveDbProbeDestroy(DbProbe *probe) {
+    if (!probe) {
+        return kSuccess;
+    }
+
     GamesmanFree(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 

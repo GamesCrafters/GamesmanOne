@@ -713,6 +713,10 @@ int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
         return kIllegalArgumentError;
     }
 
+    if (size < 0) {
+        return kIllegalArgumentError;
+    }
+
     for (int i = 0; i < num_segments; ++i) {
         segments.array[i] = RecordArrayCreate(size);
         if (!segments.array[i]) {
@@ -748,6 +752,10 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
         return kIllegalArgumentError;
     }
 
+    if (seg_idx < 0) {
+        return kIllegalArgumentError;
+    }
+
     char *filename = GetFullPathToSegment(current_game.tier,
                                           current_game.GetTierName, seg_idx);
     if (!filename) {
@@ -764,6 +772,10 @@ static int ArrayDbSegmentationLoad(int buf_idx, int seg_idx) {
 
 static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
     if (buf_idx < 0 || buf_idx >= segments.num_active) {
+        return kIllegalArgumentError;
+    }
+
+    if (seg_idx < 0) {
         return kIllegalArgumentError;
     }
 
@@ -850,6 +862,19 @@ static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
 }
 
 int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
+    if (tier_size < 0) {
+        return kIllegalArgumentError;
+    }
+
+    if (num_segments < 0) {
+        return kIllegalArgumentError;
+    }
+
+    // Empty tiers need no segment files, regardless of the supplied count.
+    if (tier_size == 0) {
+        num_segments = 0;
+    }
+
     int error = kSuccess;
     char *tmp_full_path =
         GetFullPathToTempFile(current_game.tier, current_game.GetTierName);
@@ -918,6 +943,10 @@ bool ArrayDbCheckpointExists(Tier tier) {
 }
 
 int ArrayDbCheckpointSave(const void *status, size_t status_size) {
+    if (!status && status_size) {
+        return kIllegalArgumentError;
+    }
+
     int error = kSuccess;
     char *full_path =
         GetFullPathToCheckpoint(current_game.tier, current_game.GetTierName);
@@ -928,10 +957,14 @@ int ArrayDbCheckpointSave(const void *status, size_t status_size) {
         goto _bailout;
     }
 
-    const void *inputs[] = {RecordArrayGetReadOnlyData(solving.records),
-                            status};
-    const size_t input_sizes[] = {RecordArrayGetRawSize(solving.records),
-                                  status_size};
+    const void *inputs[] = {
+        solving.records ? RecordArrayGetReadOnlyData(solving.records) : NULL,
+        status,
+    };
+    const size_t input_sizes[] = {
+        solving.records ? RecordArrayGetRawSize(solving.records) : 0,
+        status_size,
+    };
     Lz4UtilsStatus lz4_utils_status = Lz4UtilsCompressBuffersToFile(
         inputs, input_sizes, 2, kDefaultLz4Level, tmp_full_path, NULL);
     switch (lz4_utils_status) {
@@ -1020,16 +1053,26 @@ static int ArrayDbCheckpointRemove(Tier tier) {
 }
 
 static size_t ArrayDbTierMemUsage(Tier tier, int64_t size) {
-    (void)tier;
+    if (tier < 0 || size < 0) {
+        return SIZE_MAX;
+    }
+
     return sizeof(Record) * size;
 }
 
 static size_t ArrayDbConcurrentTierMemUsage(Tier tier, int64_t size) {
-    (void)tier;
+    if (tier < 0 || size < 0) {
+        return SIZE_MAX;
+    }
+
     return sizeof(AtomicRecord) * size;
 }
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {
+    if (tier == current_game.tier) {
+        return kIllegalArgumentError;
+    }
+
     RecordArray *load = RecordArrayCreate(size);
     if (!load) {
         return kMallocFailureError;
@@ -1073,15 +1116,20 @@ static int ArrayDbLoadTier(Tier tier, int64_t size) {
 }
 
 static int ArrayDbUnloadTier(Tier tier) {
+    if (tier == current_game.tier) {
+        return kIllegalArgumentError;
+    }
+
     TierToPtrChainedHashMapIterator it =
         TierToPtrChainedHashMapGet(&loaded_tiers, tier);
     if (TierToPtrChainedHashMapIteratorIsValid(&it)) {
         RecordArrayDestroy(
             (RecordArray *)TierToPtrChainedHashMapIteratorValue(&it));
         TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
+        return kSuccess;
     }
 
-    return kSuccess;
+    return kIllegalArgumentError;
 }
 
 static bool ArrayDbIsTierLoaded(Tier tier) {
@@ -1128,6 +1176,10 @@ static int ArrayDbGetRemotenessFromLoaded(Tier tier, Position position) {
 }
 
 static int ArrayDbProbeInit(DbProbe *probe) {
+    if (!probe) {
+        return kIllegalArgumentError;
+    }
+
     probe->buffer = GamesmanCallocWhole(1, sizeof(AdbProbeInternal));
     if (!probe->buffer) {
         return kMallocFailureError;
@@ -1140,9 +1192,16 @@ static int ArrayDbProbeInit(DbProbe *probe) {
 }
 
 static int ArrayDbProbeDestroy(DbProbe *probe) {
+    if (!probe) {
+        return kSuccess;
+    }
+
     AdbProbeInternal *probe_internal = (AdbProbeInternal *)probe->buffer;
-    XzraFileClose(probe_internal->file);
-    GamesmanFree(probe->buffer);
+    if (probe_internal) {
+        XzraFileClose(probe_internal->file);
+        GamesmanFree(probe->buffer);
+    }
+
     memset(probe, 0, sizeof(*probe));
 
     return kSuccess;
