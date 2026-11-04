@@ -907,9 +907,10 @@ int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
         PRAGMA_OMP(task depend(inout : segments.array[slot]))
         ArrayDbSegmentationLoad(slot, i);
 
-        // Recompress
+        // Feed the shared stream in segment order while retaining per-slot
+        // dependencies so a buffer cannot be reused before it is consumed.
         PRAGMA_OMP(task in_reduction(&& : success)
-                       depend(inout : segments.array[slot]))
+                       depend(inout : segments.array[slot], xzra_out))
         success &= RecompressDbChunk(tier_size, slot, i, xzra_out);
     }
     if (XzraOutStreamClose(xzra_out, NULL) != XZRA_SUCCESS) {
