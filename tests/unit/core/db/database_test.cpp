@@ -94,6 +94,23 @@ std::vector<ExpectedRecord> AllRecords() {
     return records;
 }
 
+// A global-position oracle does not depend on segment or buffer assignment.
+std::vector<ExpectedRecord> SegmentationWorkflowRecords(size_t size,
+                                                        unsigned variant = 0) {
+    std::vector<ExpectedRecord> records;
+    records.reserve(size);
+    for (size_t i = 0; i < size; ++i) {
+        const int remoteness = i == 0 ? 0
+                               : i + 1 == size
+                                   ? kRemotenessMax
+                                   : static_cast<int>((i * 37 + variant * 101) %
+                                                      (kRemotenessMax + 1));
+        records.push_back(
+            {kLegalValues[(i + variant) % kNumValues], remoteness});
+    }
+    return records;
+}
+
 std::vector<ExpectedRecord> UndecidedRecords(int first_count) {
     std::vector<ExpectedRecord> records;
     for (int count = first_count; count <= kRemotenessMax; ++count) {
@@ -873,6 +890,25 @@ class DatabaseTest : public ::testing::TestWithParam<DatabaseImplementation> {
         ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
     }
 
+    // A zero capacity is valid; skip before any buffer context is created.
+    void RunWithSegmentationCapacity(int minimum,
+                                     const std::function<void(int)> &body) {
+        ASSERT_NE(Db().segmentation.MaxNumBuffers, nullptr);
+        ASSERT_GT(minimum, 0);
+        ASSERT_NO_FATAL_FAILURE(RunIsolated(
+            [&] {
+                ASSERT_NO_FATAL_FAILURE(Initialize());
+                const int maximum = Db().segmentation.MaxNumBuffers();
+                ASSERT_GE(maximum, 0);
+                if (maximum < minimum) {
+                    GTEST_SKIP() << "Requires at least " << minimum
+                                 << " segment buffers; maximum is " << maximum;
+                }
+                body(maximum);
+            },
+            "Fewer segment buffers than this workflow requires."));
+    }
+
     void CreateSegmentBuffers(int count, int64_t size) {
         ASSERT_NE(Db().segmentation.CreateBuffers, nullptr);
         ASSERT_EQ(Db().segmentation.CreateBuffers(kStoredTier, count, size),
@@ -968,6 +1004,40 @@ class DatabaseTest : public ::testing::TestWithParam<DatabaseImplementation> {
                       records[i].value);
             ASSERT_EQ(Db().GetRemotenessFromLoaded(tier, position),
                       records[i].remoteness);
+        }
+    }
+
+    // Observe each supported loaded field; Finalize can release a tier when
+    // UnloadTier is absent. Callers use this at the end of their session.
+    void VerifySupportedLoadedArchive(
+        Tier tier, const std::vector<ExpectedRecord> &records) {
+        if (Db().LoadTier == nullptr ||
+            (Db().GetValueFromLoaded == nullptr &&
+             Db().GetRemotenessFromLoaded == nullptr)) {
+            return;
+        }
+        ASSERT_NO_FATAL_FAILURE(
+            LoadResidentTier(tier, static_cast<int64_t>(records.size())));
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_TRUE(Db().IsTierLoaded(tier));
+        }
+        for (size_t i = 0; i < records.size(); ++i) {
+            const Position position = static_cast<Position>(i);
+            SCOPED_TRACE(position);
+            if (Db().GetValueFromLoaded != nullptr) {
+                ASSERT_EQ(Db().GetValueFromLoaded(tier, position),
+                          records[i].value);
+            }
+            if (Db().GetRemotenessFromLoaded != nullptr) {
+                ASSERT_EQ(Db().GetRemotenessFromLoaded(tier, position),
+                          records[i].remoteness);
+            }
+        }
+        if (Db().UnloadTier != nullptr) {
+            ASSERT_NO_FATAL_FAILURE(UnloadResidentTier(tier));
+            if (Db().IsTierLoaded != nullptr) {
+                ASSERT_FALSE(Db().IsTierLoaded(tier));
+            }
         }
     }
 
@@ -3903,6 +3973,33 @@ TEST_P(DatabaseTest, UnitSegmentationFreeBuffersRepeated) {
         ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(count, kSegmentSize));
         ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
         ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+    }));
+}
+
+// Even a zero-buffer context releases its tier identity before normal solving.
+TEST_P(DatabaseTest, UnitSegmentationFreeBuffersClearsZeroBufferContext) {
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(CreateSolvingTier);
+    REQUIRE_DATABASE_RECORDS();
+    REQUIRE_DATABASE_RECORD_READERS();
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
+        ASSERT_NO_FATAL_FAILURE(Initialize());
+        // Zero buffers are supported regardless of the reported capacity.
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(0, kSegmentSize));
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        const std::vector<ExpectedRecord> records = {
+            {kUndecided, kRemotenessMax},
+            {kLose, 0},
+            {kDraw, 1},
+            {kTie, kRemotenessMax / 2},
+            {kWin, kRemotenessMax}};
+        ASSERT_NO_FATAL_FAILURE(
+            CreateAndPopulate(kStoredTier, records, Db().CreateSolvingTier));
+        ASSERT_NO_FATAL_FAILURE(AssertRecords(records));
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_TRUE(Db().IsTierLoaded(kStoredTier));
+        }
     }));
 }
 
@@ -7814,6 +7911,707 @@ TEST_P(DatabaseTest, ComponentProbeAfterMemoryRelease) {
             }
         }
     }));
+}
+
+// One buffer produces a normal archive before the segment context is released.
+TEST_P(DatabaseTest, ComponentSegmentationMinimalLifecycle) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(TierStatus);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        const auto records = SegmentStorageRecords(0);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, records));
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(records.size()), 1),
+                  kSuccess);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+    }));
+}
+
+// Reusing one buffer preserves each separately saved segment in index order.
+TEST_P(DatabaseTest, ComponentSegmentationReusesOneBufferForManySegments) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        constexpr int kNumSegments = 7;
+        std::vector<ExpectedRecord> expected;
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        for (int segment = 0; segment < kNumSegments; ++segment) {
+            SCOPED_TRACE(segment);
+            const auto records = SegmentStorageRecords(segment + 1);
+            expected.insert(expected.end(), records.begin(), records.end());
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, records));
+            if (Db().segmentation.GetValue != nullptr &&
+                Db().segmentation.GetRemoteness != nullptr) {
+                ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, records));
+            }
+            ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+        }
+        // Unflushed reuse must not replace any of the seven saved segments.
+        ASSERT_NO_FATAL_FAILURE(
+            WriteSegmentBuffer(0, SegmentStorageRecords(99)));
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(expected.size()), kNumSegments),
+                  kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, expected));
+    }));
+}
+
+// The normal solved status changes only after successful consolidation.
+TEST_P(DatabaseTest, ComponentSegmentationTracksTierStatus) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(TierStatus);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        const auto records = SegmentStorageRecords(1);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, records));
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(records.size()), 1),
+                  kSuccess);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+    }));
+}
+
+// Incomplete and complete saved segment sets remain unsolved until
+// consolidation.
+TEST_P(DatabaseTest, ComponentSegmentationIntermediateStatus) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(TierStatus);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        constexpr int kNumSegments = 3;
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        // Save the interior segment first, then complete the consecutive set.
+        for (int segment : {1, 0, 2}) {
+            SCOPED_TRACE(segment);
+            ASSERT_NO_FATAL_FAILURE(
+                WriteSegmentBuffer(0, SegmentStorageRecords(segment + 1)));
+            ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusMissing);
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(kNumSegments) * kSegmentSize,
+                      kNumSegments),
+                  kSuccess);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+    }));
+}
+
+// Alternating buffer updates preserve every other buffer and each saved
+// segment.
+TEST_P(DatabaseTest, ComponentSegmentationKeepsMultipleBuffersIndependent) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetValue);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(2, [&](int maximum) {
+        const int count = std::min(maximum, 3);
+        const int num_segments = 2 * count;
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(count, kSegmentSize));
+        std::vector<std::vector<ExpectedRecord>> buffers;
+        for (int buffer = 0; buffer < count; ++buffer) {
+            buffers.push_back(SegmentStorageRecords(buffer + 1));
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(buffer, buffers.back()));
+        }
+        const auto check = [&] {
+            for (int buffer = 0; buffer < count; ++buffer) {
+                SCOPED_TRACE(buffer);
+                ASSERT_NO_FATAL_FAILURE(
+                    AssertSegmentBuffer(buffer, buffers[buffer]));
+            }
+        };
+        ASSERT_NO_FATAL_FAILURE(check());
+        std::vector<ExpectedRecord> archive;
+        for (int segment = 0; segment < num_segments; ++segment) {
+            SCOPED_TRACE(segment);
+            const int source = (segment + 1) % count;
+            const auto next = SegmentStorageRecords(segment + 10);
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(source, next));
+            buffers[source] = next;
+            ASSERT_NO_FATAL_FAILURE(check());
+            ASSERT_EQ(Db().segmentation.Flush(source, segment), kSuccess);
+            archive.insert(archive.end(), next.begin(), next.end());
+            ASSERT_NO_FATAL_FAILURE(check());
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(archive.size()), num_segments),
+                  kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, archive));
+    }));
+}
+
+// A saved segment can be restored, changed, and saved under another index.
+TEST_P(DatabaseTest, ComponentSegmentationLoadModifyAndResave) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetValue);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Load);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        const auto original = SegmentStorageRecords(1);
+        const auto overwritten = SegmentStorageRecords(2);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, original));
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, overwritten));
+        ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, overwritten));
+        ASSERT_EQ(Db().segmentation.Load(0, 0), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, original));
+        auto modified = original;
+        const struct {
+            int64_t offset;
+            ExpectedRecord record;
+        } changes[] = {{0, {kWin, 0}},
+                       {kSegmentSize / 2, {kUndecided, kRemotenessMax}},
+                       {kSegmentSize - 1, {kLose, 17}}};
+        for (const auto &change : changes) {
+            SCOPED_TRACE(change.offset);
+            Db().segmentation.SetValueRemoteness(0, change.offset,
+                                                 change.record.value,
+                                                 change.record.remoteness);
+            modified[change.offset] = change.record;
+            ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, modified));
+        }
+        ASSERT_EQ(Db().segmentation.Flush(0, 1), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(
+            WriteSegmentBuffer(0, SegmentStorageRecords(3)));
+        ASSERT_EQ(Db().segmentation.Load(0, 0), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, original));
+        ASSERT_EQ(Db().segmentation.Load(0, 1), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, modified));
+        std::vector<ExpectedRecord> archive = original;
+        archive.insert(archive.end(), modified.begin(), modified.end());
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(archive.size()), 2),
+                  kSuccess);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, archive));
+    }));
+}
+
+// Replacing segment zero preserves segment one without increasing the count.
+TEST_P(DatabaseTest, ComponentSegmentationOverwriteThenConsolidate) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+        const auto first = SegmentStorageRecords(1);
+        const auto second = SegmentStorageRecords(2);
+        const auto replacement = SegmentStorageRecords(3);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, first));
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, second));
+        ASSERT_EQ(Db().segmentation.Flush(0, 1), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, replacement));
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        std::vector<ExpectedRecord> archive = replacement;
+        archive.insert(archive.end(), second.begin(), second.end());
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(archive.size()), 2),
+                  kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, archive));
+    }));
+}
+
+// Saved segment identity is independent of its source and destination buffer.
+TEST_P(DatabaseTest, ComponentSegmentationLoadsIntoDifferentBuffers) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetValue);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Load);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(2, [&](int) {
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(2, kSegmentSize));
+        const auto zero = SegmentStorageRecords(1);
+        const auto one = SegmentStorageRecords(2);
+        const auto two = SegmentStorageRecords(3);
+        // All three indices belong to the intended three-segment tier.
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, two));
+        ASSERT_EQ(Db().segmentation.Flush(0, 2), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, zero));
+        ASSERT_EQ(Db().segmentation.Flush(0, 0), kSuccess);
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, one));
+        ASSERT_EQ(Db().segmentation.Flush(0, 1), kSuccess);
+        std::vector<std::vector<ExpectedRecord>> buffers = {
+            SegmentStorageRecords(4), SegmentStorageRecords(5)};
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, buffers[0]));
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(1, buffers[1]));
+        const auto check = [&] {
+            for (int buffer = 0; buffer < 2; ++buffer) {
+                SCOPED_TRACE(buffer);
+                ASSERT_NO_FATAL_FAILURE(
+                    AssertSegmentBuffer(buffer, buffers[buffer]));
+            }
+        };
+        ASSERT_NO_FATAL_FAILURE(check());
+        const std::vector<std::vector<ExpectedRecord>> segments = {zero, one,
+                                                                   two};
+        const struct {
+            int buffer;
+            int segment;
+        } loads[] = {{1, 2}, {0, 0}, {1, 1}, {0, 2}, {1, 0}, {0, 1}};
+        for (const auto &load : loads) {
+            SCOPED_TRACE(::testing::Message() << "Buffer " << load.buffer
+                                              << ", segment " << load.segment);
+            ASSERT_EQ(Db().segmentation.Load(load.buffer, load.segment),
+                      kSuccess);
+            buffers[load.buffer] = segments[load.segment];
+            ASSERT_NO_FATAL_FAILURE(check());
+        }
+        std::vector<ExpectedRecord> archive;
+        for (const auto &segment : segments) {
+            archive.insert(archive.end(), segment.begin(), segment.end());
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(archive.size()), 3),
+                  kSuccess);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, archive));
+    }));
+}
+
+// The complete segment index set is independent of its fixed-seed flush order.
+TEST_P(DatabaseTest, ComponentSegmentationConsolidatesOutOfOrderFlushes) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        constexpr int kSize = 7;
+        constexpr int kNumSegments = 8;
+        constexpr unsigned kSeed = 0x5E670D3u;
+        SCOPED_TRACE(::testing::Message() << "Flush shuffle seed " << kSeed);
+        const auto records =
+            SegmentationWorkflowRecords(kSize * kNumSegments, 3);
+        std::vector<int> order;
+        for (int segment = 0; segment < kNumSegments; ++segment) {
+            order.push_back(segment);
+        }
+        std::mt19937 generator(kSeed);
+        std::shuffle(order.begin(), order.end(), generator);
+        if (std::is_sorted(order.begin(), order.end())) {
+            std::reverse(order.begin(), order.end());
+        }
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSize));
+        for (int segment : order) {
+            SCOPED_TRACE(segment);
+            const auto first = records.begin() + segment * kSize;
+            const std::vector<ExpectedRecord> contents(first, first + kSize);
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, contents));
+            if (Db().segmentation.GetValue != nullptr &&
+                Db().segmentation.GetRemoteness != nullptr) {
+                ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, contents));
+            }
+            ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(records.size()), kNumSegments),
+                  kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+    }));
+}
+
+// Only the logical prefix of the final segment is written or observed.
+TEST_P(DatabaseTest, ComponentSegmentationHandlesPartialFinalSegment) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        constexpr int kSize = 4;
+        const auto records = SegmentationWorkflowRecords(10);
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSize));
+        // Save the partial segment first, while its tail has never been
+        // written.
+        const std::vector<ExpectedRecord> last(records.begin() + 8,
+                                               records.end());
+        ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, last));
+        if (Db().segmentation.GetValue != nullptr &&
+            Db().segmentation.GetRemoteness != nullptr) {
+            ASSERT_NO_FATAL_FAILURE(AssertSegmentBuffer(0, last));
+        }
+        ASSERT_EQ(Db().segmentation.Flush(0, 2), kSuccess);
+        for (int segment = 0; segment < 2; ++segment) {
+            SCOPED_TRACE(segment);
+            const auto first = records.begin() + segment * kSize;
+            const std::vector<ExpectedRecord> contents(first, first + kSize);
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, contents));
+            ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(10, 3), kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+    }));
+}
+
+// Separate sandboxes produce the same logical records through both write APIs.
+TEST_P(DatabaseTest, ComponentSegmentationMatchesNormalTierArchive) {
+    REQUIRE_DATABASE_ARCHIVE();
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(TierStatus);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunIsolated(
+        [&] {
+            std::filesystem::path normal_path;
+            std::filesystem::path segmented_path;
+            ASSERT_NO_FATAL_FAILURE(CreatePrivateSandbox(normal_path));
+            ASSERT_NO_FATAL_FAILURE(CreatePrivateSandbox(segmented_path));
+            constexpr int kNumSegments = 3;
+            const auto records =
+                SegmentationWorkflowRecords(kSegmentSize * kNumSegments);
+            ASSERT_NO_FATAL_FAILURE(InitializeAt(normal_path, GetTestTierName));
+            ASSERT_NO_FATAL_FAILURE(SaveTier(kStoredTier, records));
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+            ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+            ASSERT_NO_FATAL_FAILURE(
+                VerifySupportedLoadedArchive(kStoredTier, records));
+            Finalize();
+
+            ASSERT_NO_FATAL_FAILURE(
+                InitializeAt(segmented_path, GetTestTierName));
+            const int maximum = Db().segmentation.MaxNumBuffers();
+            ASSERT_GE(maximum, 0);
+            if (maximum == 0) {
+                GTEST_SKIP() << "No positive segment-buffer capacity.";
+            }
+            ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSegmentSize));
+            for (int segment = 0; segment < kNumSegments; ++segment) {
+                SCOPED_TRACE(segment);
+                const auto first = records.begin() + segment * kSegmentSize;
+                const std::vector<ExpectedRecord> contents(
+                    first, first + kSegmentSize);
+                ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, contents));
+                ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+            }
+            ASSERT_EQ(Db().segmentation.Consolidate(
+                          static_cast<int64_t>(records.size()), kNumSegments),
+                      kSuccess);
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+            ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+            ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+            ASSERT_NO_FATAL_FAILURE(
+                VerifySupportedLoadedArchive(kStoredTier, records));
+        },
+        "No positive segment-buffer capacity."));
+}
+
+// A finished normal archive survives restarting after segment context release.
+TEST_P(DatabaseTest, ComponentSegmentationPersistsAcrossDatabaseSessions) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(TierStatus);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int) {
+        constexpr int kSize = 11;
+        constexpr int kNumSegments = 3;
+        const auto records =
+            SegmentationWorkflowRecords(kSize * kNumSegments, 2);
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(1, kSize));
+        for (int segment = 0; segment < kNumSegments; ++segment) {
+            SCOPED_TRACE(segment);
+            const auto first = records.begin() + segment * kSize;
+            const std::vector<ExpectedRecord> contents(first, first + kSize);
+            ASSERT_NO_FATAL_FAILURE(WriteSegmentBuffer(0, contents));
+            ASSERT_EQ(Db().segmentation.Flush(0, segment), kSuccess);
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(records.size()), kNumSegments),
+                  kSuccess);
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        Finalize();
+        ASSERT_NO_FATAL_FAILURE(Initialize());
+        ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kStoredTier));
+        }
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+        ASSERT_NO_FATAL_FAILURE(
+            VerifySupportedLoadedArchive(kStoredTier, records));
+    }));
+}
+
+// Many saved segments stream through a bounded number of reused buffers.
+TEST_P(DatabaseTest, ComponentSegmentationStreamingStress) {
+    REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
+    REQUIRE_DATABASE_MEMBER(segmentation.SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetValue);
+    REQUIRE_DATABASE_MEMBER(segmentation.GetRemoteness);
+    REQUIRE_DATABASE_MEMBER(segmentation.Load);
+    REQUIRE_DATABASE_MEMBER(segmentation.Flush);
+    REQUIRE_DATABASE_MEMBER(segmentation.Consolidate);
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSegmentationCapacity(1, [&](int maximum) {
+        constexpr int kNumSegments = 64;
+        constexpr unsigned kSeed = 0x51E6E17u;
+        SCOPED_TRACE(::testing::Message()
+                     << "Streaming shuffle seed " << kSeed);
+        const int count = std::min(maximum, 3);
+        const auto records =
+            SegmentationWorkflowRecords(kNumSegments * kSegmentSize, 4);
+        std::vector<std::vector<ExpectedRecord>> segments;
+        std::vector<int> order;
+        for (int segment = 0; segment < kNumSegments; ++segment) {
+            const auto first = records.begin() + segment * kSegmentSize;
+            segments.emplace_back(first, first + kSegmentSize);
+            order.push_back(segment);
+        }
+        std::mt19937 generator(kSeed);
+        std::shuffle(order.begin(), order.end(), generator);
+        if (std::is_sorted(order.begin(), order.end())) {
+            std::reverse(order.begin(), order.end());
+        }
+        ASSERT_NO_FATAL_FAILURE(CreateSegmentBuffers(count, kSegmentSize));
+        std::vector<int> buffer_segments(count, -1);
+        const auto check = [&] {
+            for (int buffer = 0; buffer < count; ++buffer) {
+                const int segment = buffer_segments[buffer];
+                if (segment >= 0) {
+                    ASSERT_NO_FATAL_FAILURE(
+                        AssertSegmentBuffer(buffer, segments[segment]));
+                }
+            }
+        };
+        for (int step = 0; step < kNumSegments; ++step) {
+            const int segment = order[step];
+            const int buffer = (step + 1) % count;
+            SCOPED_TRACE(::testing::Message()
+                         << "Flush step " << step << ", buffer " << buffer
+                         << ", segment " << segment);
+            ASSERT_NO_FATAL_FAILURE(
+                WriteSegmentBuffer(buffer, segments[segment]));
+            buffer_segments[buffer] = segment;
+            ASSERT_NO_FATAL_FAILURE(check());
+            ASSERT_EQ(Db().segmentation.Flush(buffer, segment), kSuccess);
+            ASSERT_NO_FATAL_FAILURE(check());
+            if (step % 7 == 6) {
+                // This index was saved earlier in the same permutation.
+                const int earlier = order[step / 2];
+                const int destination = (buffer + 1) % count;
+                ASSERT_EQ(Db().segmentation.Load(destination, earlier),
+                          kSuccess);
+                buffer_segments[destination] = earlier;
+                ASSERT_NO_FATAL_FAILURE(check());
+            }
+        }
+        // Every saved segment can be restored after all buffer reuse.
+        for (int step = kNumSegments - 1; step >= 0; --step) {
+            const int segment = order[step];
+            const int buffer = step % count;
+            SCOPED_TRACE(::testing::Message() << "Reload buffer " << buffer
+                                              << ", segment " << segment);
+            ASSERT_EQ(Db().segmentation.Load(buffer, segment), kSuccess);
+            buffer_segments[buffer] = segment;
+            ASSERT_NO_FATAL_FAILURE(check());
+        }
+        ASSERT_EQ(Db().segmentation.Consolidate(
+                      static_cast<int64_t>(records.size()), kNumSegments),
+                  kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSegmentBuffers());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+    }));
+}
+
+// Releasing absent segment buffers leaves the ordinary solving context intact.
+TEST_P(DatabaseTest,
+       ComponentSegmentationFreeBuffersPreservesOrdinarySolvingTier) {
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(CreateSolvingTier);
+    REQUIRE_DATABASE_RECORDS();
+    REQUIRE_DATABASE_RECORD_READERS();
+    REQUIRE_DATABASE_MEMBER(FlushSolvingTier);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(RunWithSolvingMode(Db().CreateSolvingTier, [&] {
+        const std::vector<ExpectedRecord> records = {
+            {kUndecided, kRemotenessMax},
+            {kLose, 0},
+            {kDraw, 1},
+            {kTie, kRemotenessMax / 2},
+            {kWin, kRemotenessMax}};
+        ASSERT_NO_FATAL_FAILURE(CreateAndPopulate(kStoredTier, records));
+        for (int repetition = 0; repetition < 2; ++repetition) {
+            SCOPED_TRACE(repetition);
+            ASSERT_EQ(Db().segmentation.FreeBuffers(), kSuccess);
+            ASSERT_NO_FATAL_FAILURE(AssertRecords(records));
+            if (Db().IsTierLoaded != nullptr) {
+                ASSERT_TRUE(Db().IsTierLoaded(kStoredTier));
+            }
+        }
+        ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+        ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+    }));
+}
+
+// The same no-op must preserve a concurrent solving context and archive
+// identity.
+TEST_P(DatabaseTest,
+       ComponentSegmentationFreeBuffersPreservesConcurrentSolvingTier) {
+    REQUIRE_DATABASE_MEMBER(segmentation.FreeBuffers);
+    REQUIRE_DATABASE_MEMBER(CreateConcurrentSolvingTier);
+    REQUIRE_DATABASE_RECORDS();
+    REQUIRE_DATABASE_RECORD_READERS();
+    REQUIRE_DATABASE_MEMBER(FlushSolvingTier);
+    REQUIRE_DATABASE_MEMBER(ProbeInit);
+    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
+    REQUIRE_DATABASE_MEMBER(ProbeValue);
+    REQUIRE_DATABASE_MEMBER(ProbeRemoteness);
+    ASSERT_NO_FATAL_FAILURE(
+        RunWithSolvingMode(Db().CreateConcurrentSolvingTier, [&] {
+            const std::vector<ExpectedRecord> records = {
+                {kUndecided, kRemotenessMax},
+                {kLose, 0},
+                {kDraw, 1},
+                {kTie, kRemotenessMax / 2},
+                {kWin, kRemotenessMax}};
+            ASSERT_NO_FATAL_FAILURE(CreateAndPopulate(kStoredTier, records));
+            for (int repetition = 0; repetition < 2; ++repetition) {
+                SCOPED_TRACE(repetition);
+                ASSERT_EQ(Db().segmentation.FreeBuffers(), kSuccess);
+                ASSERT_NO_FATAL_FAILURE(AssertRecords(records));
+                if (Db().IsTierLoaded != nullptr) {
+                    ASSERT_TRUE(Db().IsTierLoaded(kStoredTier));
+                }
+            }
+            ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
+            if (Db().TierStatus != nullptr) {
+                ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
+            }
+            ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+            ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
+        }));
 }
 
 #undef REQUIRE_DATABASE_PROBE_READER

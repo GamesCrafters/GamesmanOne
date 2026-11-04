@@ -243,7 +243,8 @@ static TierToPtrChainedHashMap loaded_tiers;
 /** Solving segments for algorithms that support streaming. */
 static struct {
     RecordArray *array[kNumSolvingSegmentsMax];  // Records in the segment.
-    int num_active;  // Number of segments initialized and usable.
+    int num_active;    // Number of segments initialized and usable.
+    bool has_context;  // A context may exist with zero buffers.
 } segments;
 
 static int ArrayDbInit(ReadOnlyString game_name, int variant,
@@ -717,16 +718,17 @@ int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
         return kIllegalArgumentError;
     }
 
+    current_game.tier = tier;
+    segments.num_active = 0;
+    segments.has_context = true;
     for (int i = 0; i < num_segments; ++i) {
         segments.array[i] = RecordArrayCreate(size);
         if (!segments.array[i]) {
             ArrayDbSegmentationFreeBuffers();
             return kMallocFailureError;
         }
+        ++segments.num_active;
     }
-
-    current_game.tier = tier;
-    segments.num_active = num_segments;
 
     return kSuccess;
 }
@@ -824,10 +826,17 @@ _bailout:
 }
 
 static int ArrayDbSegmentationFreeBuffers(void) {
+    if (!segments.has_context) {
+        return kSuccess;
+    }
+
     for (int i = 0; i < segments.num_active; ++i) {
         RecordArrayDestroy(segments.array[i]);
+        segments.array[i] = NULL;
     }
     segments.num_active = 0;
+    segments.has_context = false;
+    current_game.tier = kIllegalTier;
 
     return kSuccess;
 }
