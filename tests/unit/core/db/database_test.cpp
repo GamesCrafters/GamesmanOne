@@ -1046,8 +1046,9 @@ class DatabaseTest : public ::testing::TestWithParam<DatabaseImplementation> {
     void InitializeProbe(size_t index = 0) {
         ASSERT_LT(index, probes_.size());
         ASSERT_NE(Db().ProbeInit, nullptr);
+        ASSERT_FALSE(probe_initialized_[index]);
         const int error = Db().ProbeInit(Probe(index));
-        // A failed (re)initialization leaves probe ownership unspecified.
+        // A failed initialization leaves probe ownership unspecified.
         // End the isolated process rather than retrying cleanup or finalizing
         // with a potentially live probe.
         cleanup_failed_ = error != kSuccess;
@@ -3592,39 +3593,6 @@ TEST_P(DatabaseTest, UnitProbeRemotenessNotFound) {
         StopAfterError();
         ASSERT_EQ(Db().ProbeRemoteness(Probe(), {kMissingTier, 0}),
                   kErrorRemoteness);
-        ASSERT_NO_FATAL_FAILURE(DestroyProbe());
-    }));
-}
-
-// Reinitializing an unused probe needs no archive writer or record reader.
-TEST_P(DatabaseTest, UnitProbeInitRepeated) {
-    REQUIRE_DATABASE_MEMBER(ProbeInit);
-    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
-    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
-        ASSERT_NO_FATAL_FAILURE(Initialize());
-        ASSERT_NO_FATAL_FAILURE(InitializeProbe());
-        ASSERT_NO_FATAL_FAILURE(InitializeProbe());
-        ASSERT_NO_FATAL_FAILURE(DestroyProbe());
-    }));
-}
-
-// Reinitializing the same object after reads leaves a usable probe.
-TEST_P(DatabaseTest, UnitProbeInitRepeatedAfterReads) {
-    REQUIRE_DATABASE_ARCHIVE();
-    REQUIRE_DATABASE_MEMBER(ProbeInit);
-    REQUIRE_DATABASE_MEMBER(ProbeDestroy);
-    REQUIRE_DATABASE_PROBE_READER();
-    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
-        ASSERT_NO_FATAL_FAILURE(Initialize());
-        const std::vector<ExpectedRecord> records = {
-            {kWin, 7}, {kUndecided, 0}, {kLose, kRemotenessMax}};
-        ASSERT_NO_FATAL_FAILURE(SaveTier(kStoredTier, records));
-        ASSERT_NO_FATAL_FAILURE(InitializeProbe());
-        ASSERT_NO_FATAL_FAILURE(
-            AssertProbeRecord({kStoredTier, 0}, records[0]));
-        ASSERT_NO_FATAL_FAILURE(InitializeProbe());
-        ASSERT_NO_FATAL_FAILURE(
-            AssertProbeRecord({kStoredTier, 2}, records[2]));
         ASSERT_NO_FATAL_FAILURE(DestroyProbe());
     }));
 }
@@ -8612,6 +8580,546 @@ TEST_P(DatabaseTest,
             ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
             ASSERT_NO_FATAL_FAILURE(VerifyArchive(kStoredTier, records));
         }));
+}
+
+// A recovered regular parent preserves resident children and feeds every
+// reader.
+TEST_P(DatabaseTest, ComponentRecoveredSolveFeedsAllReaders) {
+    REQUIRE_DATABASE_CHECKPOINT();
+    REQUIRE_DATABASE_MEMBER(CheckpointExists);
+    REQUIRE_DATABASE_MEMBER(CheckpointLoad);
+    REQUIRE_DATABASE_MEMBER(FreeSolvingTier);
+    REQUIRE_DATABASE_MEMBER(FlushSolvingTier);
+    REQUIRE_DATABASE_MEMBER(LoadTier);
+    REQUIRE_DATABASE_MEMBER(UnloadTier);
+    REQUIRE_DATABASE_MEMBER(GetValueFromLoaded);
+    REQUIRE_DATABASE_MEMBER(GetRemotenessFromLoaded);
+    REQUIRE_DATABASE_RECORD_READERS();
+    REQUIRE_DATABASE_MEMBER(SetValue);
+    REQUIRE_DATABASE_MEMBER(SetRemoteness);
+    REQUIRE_DATABASE_MEMBER(SetValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(MaximizeValueRemoteness);
+    REQUIRE_DATABASE_MEMBER(DecrementNumUndecidedChildren);
+    REQUIRE_DATABASE_MEMBER(ClearNumUndecidedChildren);
+    REQUIRE_DATABASE_MEMBER(GetNumUndecidedChildren);
+    ASSERT_NO_FATAL_FAILURE(RunWithSolvingMode(Db().CreateSolvingTier, [&] {
+        constexpr Tier kParent = 47;
+        const std::vector<ExpectedRecord> first_child = {{kUndecided, 0},
+                                                         {kLose, 0},
+                                                         {kDraw, 1},
+                                                         {kTie, kRemotenessMax},
+                                                         {kWin, 7}};
+        const std::vector<ExpectedRecord> second_child = {
+            {kWin, kRemotenessMax}, {kUndecided, 7}, {kLose, 0}};
+        std::vector<ExpectedRecord> expected = {
+            {kUndecided, 7}, {kUndecided, kRemotenessMax}, {kLose, 0},
+            {kDraw, 1},      {kTie, kRemotenessMax},       {kWin, 7},
+            {kUndecided, 0}};
+        ASSERT_NO_FATAL_FAILURE(SaveTier(kStoredTier, first_child));
+        ASSERT_NO_FATAL_FAILURE(SaveTier(kMissingTier, second_child));
+        ASSERT_NO_FATAL_FAILURE(LoadResidentTier(
+            kMissingTier, static_cast<int64_t>(second_child.size())));
+        ASSERT_NO_FATAL_FAILURE(LoadResidentTier(
+            kStoredTier, static_cast<int64_t>(first_child.size())));
+        const auto check_children = [&] {
+            ASSERT_NO_FATAL_FAILURE(
+                AssertLoadedRecords(kStoredTier, first_child));
+            ASSERT_NO_FATAL_FAILURE(
+                AssertLoadedRecords(kMissingTier, second_child));
+            if (Db().IsTierLoaded != nullptr) {
+                ASSERT_TRUE(Db().IsTierLoaded(kStoredTier));
+                ASSERT_TRUE(Db().IsTierLoaded(kMissingTier));
+            }
+        };
+        ASSERT_NO_FATAL_FAILURE(check_children());
+        ASSERT_NO_FATAL_FAILURE(CreateAndPopulate(kParent, expected));
+        const auto check = [&] {
+            ASSERT_NO_FATAL_FAILURE(AssertRecords(expected));
+            ASSERT_NO_FATAL_FAILURE(AssertLoadedRecords(kParent, expected));
+            ASSERT_NO_FATAL_FAILURE(check_children());
+            if (Db().IsTierLoaded != nullptr) {
+                ASSERT_TRUE(Db().IsTierLoaded(kParent));
+            }
+            for (size_t i = 0; i < expected.size(); ++i) {
+                SCOPED_TRACE(i);
+                ASSERT_EQ(
+                    Db().GetNumUndecidedChildren(static_cast<Position>(i)),
+                    expected[i].value == kUndecided ? expected[i].remoteness
+                                                    : 0);
+            }
+        };
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().DecrementNumUndecidedChildren(0), 7);
+        expected[0].remoteness = 6;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().ClearNumUndecidedChildren(1), kRemotenessMax);
+        expected[1].remoteness = 0;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetRemoteness(1, 3), kSuccess);
+        expected[1].remoteness = 3;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValue(2, kWin), kSuccess);
+        expected[2].value = kWin;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetRemoteness(3, 31), kSuccess);
+        expected[3].remoteness = 31;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValueRemoteness(4, kTie, 5), kSuccess);
+        expected[4] = {kTie, 5};
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_TRUE(Db().MaximizeValueRemoteness(5, kWin, 9, ComparePairs));
+        expected[5] = {kWin, 9};
+        ASSERT_NO_FATAL_FAILURE(check());
+
+        const std::vector<unsigned char> saved_status = {
+            0x00, 0xff, 0x13, 0x7f, 0x00, 0x80, 0xa5, 0x91, 0x02};
+        auto status = saved_status;
+        ASSERT_EQ(Db().CheckpointSave(status.data(), status.size()), kSuccess);
+        ASSERT_EQ(status, saved_status);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kParent), kDbTierStatusMissing);
+        }
+        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+        ASSERT_NO_FATAL_FAILURE(check_children());
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kParent));
+        }
+        ASSERT_TRUE(Db().CheckpointExists(kParent));
+        std::vector<unsigned char> restored(saved_status.size(), 0x5a);
+        ASSERT_NO_FATAL_FAILURE(LoadCheckpoint(
+            kParent, static_cast<int64_t>(expected.size()), restored));
+        ASSERT_EQ(restored, saved_status);
+        ASSERT_NO_FATAL_FAILURE(check());
+
+        ASSERT_EQ(Db().DecrementNumUndecidedChildren(0), 6);
+        expected[0].remoteness = 5;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().DecrementNumUndecidedChildren(1), 3);
+        expected[1].remoteness = 2;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().ClearNumUndecidedChildren(1), 2);
+        expected[1].remoteness = 0;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValue(0, kLose), kSuccess);
+        expected[0].value = kLose;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetRemoteness(0, 0), kSuccess);
+        expected[0].remoteness = 0;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_TRUE(Db().MaximizeValueRemoteness(3, kWin, 1, ComparePairs));
+        expected[3] = {kWin, 1};
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_FALSE(Db().MaximizeValueRemoteness(3, kTie, kRemotenessMax,
+                                                  ComparePairs));
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValueRemoteness(1, kTie, 0), kSuccess);
+        expected[1] = {kTie, 0};
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValue(4, kLose), kSuccess);
+        expected[4].value = kLose;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetRemoteness(4, kRemotenessMax), kSuccess);
+        expected[4].remoteness = kRemotenessMax;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetRemoteness(2, kRemotenessMax), kSuccess);
+        expected[2].remoteness = kRemotenessMax;
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().ClearNumUndecidedChildren(5), 0);
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().DecrementNumUndecidedChildren(5), 0);
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_EQ(Db().SetValueRemoteness(5, kDraw, 0), kSuccess);
+        expected[5] = {kDraw, 0};
+        ASSERT_NO_FATAL_FAILURE(check());
+        // Position 6 remains an explicitly seeded, unreachable undecided
+        // record.
+        ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
+        if (Db().TierStatus != nullptr) {
+            ASSERT_EQ(Db().TierStatus(kParent), kDbTierStatusSolved);
+        }
+        ASSERT_NO_FATAL_FAILURE(check());
+        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+        ASSERT_NO_FATAL_FAILURE(check_children());
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kParent));
+        }
+        ASSERT_NO_FATAL_FAILURE(
+            LoadResidentTier(kParent, static_cast<int64_t>(expected.size())));
+        ASSERT_NO_FATAL_FAILURE(AssertLoadedRecords(kParent, expected));
+        ASSERT_NO_FATAL_FAILURE(check_children());
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_TRUE(Db().IsTierLoaded(kParent));
+        }
+
+        if (Db().ProbeInit != nullptr && Db().ProbeDestroy != nullptr &&
+            (Db().ProbeValue != nullptr || Db().ProbeRemoteness != nullptr)) {
+            ASSERT_NO_FATAL_FAILURE(InitializeProbe());
+            const auto probe_record = [&](Tier tier, size_t index,
+                                          const ExpectedRecord &record) {
+                SCOPED_TRACE(::testing::Message()
+                             << "Tier " << tier << ", position " << index);
+                const TierPosition position = {tier,
+                                               static_cast<Position>(index)};
+                if (Db().ProbeValue != nullptr) {
+                    ASSERT_EQ(Db().ProbeValue(Probe(), position), record.value);
+                }
+                if (Db().ProbeRemoteness != nullptr) {
+                    ASSERT_EQ(Db().ProbeRemoteness(Probe(), position),
+                              record.remoteness);
+                }
+            };
+            for (size_t i = 0; i < expected.size(); ++i) {
+                ASSERT_NO_FATAL_FAILURE(probe_record(kParent, i, expected[i]));
+                const size_t first = i % first_child.size();
+                ASSERT_NO_FATAL_FAILURE(
+                    probe_record(kStoredTier, first, first_child[first]));
+                const size_t second = i % second_child.size();
+                ASSERT_NO_FATAL_FAILURE(
+                    probe_record(kMissingTier, second, second_child[second]));
+            }
+            ASSERT_NO_FATAL_FAILURE(DestroyProbe());
+        }
+        ASSERT_NO_FATAL_FAILURE(UnloadResidentTier(kParent));
+        ASSERT_NO_FATAL_FAILURE(check_children());
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kParent));
+        }
+        ASSERT_NO_FATAL_FAILURE(UnloadResidentTier(kMissingTier));
+        ASSERT_NO_FATAL_FAILURE(AssertLoadedRecords(kStoredTier, first_child));
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kMissingTier));
+            ASSERT_TRUE(Db().IsTierLoaded(kStoredTier));
+        }
+        ASSERT_NO_FATAL_FAILURE(UnloadResidentTier(kStoredTier));
+        if (Db().IsTierLoaded != nullptr) {
+            ASSERT_FALSE(Db().IsTierLoaded(kParent));
+            ASSERT_FALSE(Db().IsTierLoaded(kStoredTier));
+            ASSERT_FALSE(Db().IsTierLoaded(kMissingTier));
+        }
+    }));
+}
+
+// Supported record families, recovery, concurrency, and disk readers share a
+// bounded script; identical tier IDs stay isolated in two private sandboxes.
+TEST_P(DatabaseTest, ComponentBoundedMixedStress) {
+    REQUIRE_DATABASE_ARCHIVE();
+    REQUIRE_DATABASE_MEMBER(FreeSolvingTier);
+    REQUIRE_DATABASE_RECORD_READERS();
+    const bool probe_readers =
+        Db().ProbeInit != nullptr && Db().ProbeDestroy != nullptr &&
+        (Db().ProbeValue != nullptr || Db().ProbeRemoteness != nullptr);
+    const bool loaded_readers =
+        Db().LoadTier != nullptr && (Db().GetValueFromLoaded != nullptr ||
+                                     Db().GetRemotenessFromLoaded != nullptr);
+    if (!probe_readers && !loaded_readers) {
+        GTEST_SKIP() << "No permanent record reader is supported.";
+    }
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
+        struct ExpectedArchive {
+            Tier tier;
+            std::vector<ExpectedRecord> records;
+        };
+        std::filesystem::path paths[2];
+        std::vector<ExpectedArchive> archives[2];
+        bool game_declared[2] = {false, false};
+        ASSERT_NO_FATAL_FAILURE(CreatePrivateSandbox(paths[0]));
+        ASSERT_NO_FATAL_FAILURE(CreatePrivateSandbox(paths[1]));
+        constexpr size_t kSize = 17;
+        constexpr unsigned kSeeds[] = {0x5EEDu, 0xC0FFEEu, 0x12345678u};
+        const auto make_records = [](size_t size, unsigned salt) {
+            std::vector<ExpectedRecord> records;
+            for (size_t i = 0; i < size; ++i) {
+                const int remoteness =
+                    i == 0          ? 0
+                    : i + 1 == size ? kRemotenessMax
+                                    : static_cast<int>((i * 73 + salt * 29u) %
+                                                       (kRemotenessMax + 1));
+                records.push_back(
+                    {kLegalValues[(i + salt) % kNumValues], remoteness});
+            }
+            return records;
+        };
+        const auto check_loaded =
+            [&](Tier tier, const std::vector<ExpectedRecord> &records) {
+                SCOPED_TRACE(tier);
+                if (Db().IsTierLoaded != nullptr) {
+                    ASSERT_TRUE(Db().IsTierLoaded(tier));
+                }
+                for (size_t i = 0; i < records.size(); ++i) {
+                    const Position position = static_cast<Position>(i);
+                    SCOPED_TRACE(position);
+                    if (Db().GetValueFromLoaded != nullptr) {
+                        ASSERT_EQ(Db().GetValueFromLoaded(tier, position),
+                                  records[i].value);
+                    }
+                    if (Db().GetRemotenessFromLoaded != nullptr) {
+                        ASSERT_EQ(Db().GetRemotenessFromLoaded(tier, position),
+                                  records[i].remoteness);
+                    }
+                }
+            };
+        const auto read_archive = [&](const ExpectedArchive &archive) {
+            SCOPED_TRACE(archive.tier);
+            if (Db().TierStatus != nullptr) {
+                ASSERT_EQ(Db().TierStatus(archive.tier), kDbTierStatusSolved);
+            }
+            if (probe_readers) {
+                ASSERT_NO_FATAL_FAILURE(InitializeProbe());
+                for (size_t i = 0; i < archive.records.size(); ++i) {
+                    SCOPED_TRACE(i);
+                    const TierPosition position = {archive.tier,
+                                                   static_cast<Position>(i)};
+                    if (Db().ProbeValue != nullptr) {
+                        ASSERT_EQ(Db().ProbeValue(Probe(), position),
+                                  archive.records[i].value);
+                    }
+                    if (Db().ProbeRemoteness != nullptr) {
+                        ASSERT_EQ(Db().ProbeRemoteness(Probe(), position),
+                                  archive.records[i].remoteness);
+                    }
+                }
+                ASSERT_NO_FATAL_FAILURE(DestroyProbe());
+            }
+            ASSERT_NO_FATAL_FAILURE(
+                VerifySupportedLoadedArchive(archive.tier, archive.records));
+        };
+        std::vector<ConcurrentRecordOperation> operations;
+        if (Db().SetValue != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kSetValue);
+        }
+        if (Db().SetRemoteness != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kSetRemoteness);
+        }
+        if (Db().SetValueRemoteness != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kSetPair);
+        }
+        if (Db().MaximizeValueRemoteness != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kMaximize);
+        }
+        if (Db().DecrementNumUndecidedChildren != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kDecrement);
+        }
+        if (Db().ClearNumUndecidedChildren != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kClear);
+        }
+        if (Db().GetNumUndecidedChildren != nullptr) {
+            operations.push_back(ConcurrentRecordOperation::kGetCount);
+        }
+        operations.push_back(ConcurrentRecordOperation::kGetValue);
+        operations.push_back(ConcurrentRecordOperation::kGetRemoteness);
+        const bool checkpoints = Db().CreateSolvingTier != nullptr &&
+                                 Db().CheckpointSave != nullptr &&
+                                 Db().CheckpointExists != nullptr &&
+                                 Db().CheckpointLoad != nullptr;
+        const CreateTierFunc serial_create =
+            Db().CreateSolvingTier != nullptr
+                ? Db().CreateSolvingTier
+                : Db().CreateConcurrentSolvingTier;
+
+        for (int session = 0; session < 2; ++session) {
+            SCOPED_TRACE(::testing::Message() << "Sandbox " << session);
+            ASSERT_NO_FATAL_FAILURE(
+                InitializeAt(paths[session], GetTestTierName));
+            ASSERT_NO_FATAL_FAILURE(ExpectSandboxPath());
+            if (Db().GameStatus != nullptr) {
+                ASSERT_EQ(Db().GameStatus(), kDbGameStatusIncomplete);
+            }
+            const Tier children[] = {kStoredTier, kMissingTier};
+            const std::vector<ExpectedRecord> child_records[] = {
+                make_records(5, session + 1), make_records(9, session + 3)};
+            for (size_t child = 0; child < 2; ++child) {
+                ASSERT_NO_FATAL_FAILURE(
+                    SaveTier(children[child], child_records[child]));
+                archives[session].push_back(
+                    {children[child], child_records[child]});
+                if (loaded_readers) {
+                    ASSERT_NO_FATAL_FAILURE(LoadResidentTier(
+                        children[child],
+                        static_cast<int64_t>(child_records[child].size())));
+                }
+            }
+            const auto check_children = [&] {
+                if (loaded_readers) {
+                    for (size_t child = 0; child < 2; ++child) {
+                        ASSERT_NO_FATAL_FAILURE(check_loaded(
+                            children[child], child_records[child]));
+                    }
+                }
+            };
+            const auto check_solving =
+                [&](Tier tier, const std::vector<ExpectedRecord> &expected) {
+                    ASSERT_NO_FATAL_FAILURE(AssertRecords(expected));
+                    ASSERT_NO_FATAL_FAILURE(check_loaded(tier, expected));
+                    if (Db().GetNumUndecidedChildren != nullptr) {
+                        for (size_t i = 0; i < expected.size(); ++i) {
+                            SCOPED_TRACE(i);
+                            ASSERT_EQ(Db().GetNumUndecidedChildren(
+                                          static_cast<Position>(i)),
+                                      expected[i].value == kUndecided
+                                          ? expected[i].remoteness
+                                          : 0);
+                        }
+                    }
+                    ASSERT_NO_FATAL_FAILURE(check_children());
+                };
+            for (size_t seed_index = 0; seed_index < 3; ++seed_index) {
+                const unsigned seed =
+                    kSeeds[seed_index] ^ (session == 0 ? 0u : 0x9E3779B9u);
+                SCOPED_TRACE(::testing::Message() << "Seed " << seed);
+                std::mt19937 generator(seed);
+                const Tier parent = 47 + static_cast<Tier>(seed_index);
+                auto expected = make_records(kSize, seed);
+                expected[0] = {kUndecided, kRemotenessMax};
+                expected[kSize / 2] = {kUndecided, 1};
+                ASSERT_NO_FATAL_FAILURE(
+                    CreateAndPopulate(parent, expected, serial_create));
+                ASSERT_NO_FATAL_FAILURE(check_solving(parent, expected));
+                for (int phase = 0; phase < 2; ++phase) {
+                    SCOPED_TRACE(::testing::Message()
+                                 << "Serial phase " << phase);
+                    std::vector<ConcurrentRecordCall> script;
+                    for (size_t step = 0; step < 32; ++step) {
+                        // The first prefix exercises every supported family.
+                        const auto operation =
+                            phase == 0 && step < operations.size()
+                                ? operations[step]
+                                : operations[generator() % operations.size()];
+                        script.push_back(
+                            {operation,
+                             static_cast<Position>(generator() % kSize),
+                             {kLegalValues[generator() % kNumValues],
+                              static_cast<int>(generator() %
+                                               (kRemotenessMax + 1))}});
+                    }
+                    // One worker executes a known serial order, then joins.
+                    ASSERT_NO_FATAL_FAILURE(
+                        RunConcurrentRecordHistory(script, 1, 32));
+                    for (size_t step = 0; step < script.size(); ++step) {
+                        SCOPED_TRACE(step);
+                        ASSERT_TRUE(ApplyConcurrentRecordCall(
+                            script[step], expected[script[step].position]))
+                            << ::testing::PrintToString(script[step]);
+                    }
+                    ASSERT_NO_FATAL_FAILURE(check_solving(parent, expected));
+                    if (phase == 0 && checkpoints) {
+                        std::vector<unsigned char> status = {
+                            0x00,
+                            0xff,
+                            static_cast<unsigned char>(seed),
+                            static_cast<unsigned char>(seed >> 8),
+                            0x00,
+                            static_cast<unsigned char>(session),
+                            0x80,
+                            0x19};
+                        const auto saved_status = status;
+                        ASSERT_EQ(
+                            Db().CheckpointSave(status.data(), status.size()),
+                            kSuccess);
+                        ASSERT_EQ(status, saved_status);
+                        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+                        ASSERT_NO_FATAL_FAILURE(check_children());
+                        if (Db().IsTierLoaded != nullptr) {
+                            ASSERT_FALSE(Db().IsTierLoaded(parent));
+                        }
+                        ASSERT_TRUE(Db().CheckpointExists(parent));
+                        std::vector<unsigned char> restored(status.size(),
+                                                            0x5a);
+                        ASSERT_NO_FATAL_FAILURE(LoadCheckpoint(
+                            parent, static_cast<int64_t>(expected.size()),
+                            restored));
+                        ASSERT_EQ(restored, saved_status);
+                        ASSERT_NO_FATAL_FAILURE(
+                            check_solving(parent, expected));
+                    }
+                }
+                ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
+                ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+                ASSERT_NO_FATAL_FAILURE(check_children());
+                if (checkpoints && Db().CheckpointRemove != nullptr &&
+                    Db().CheckpointExists(parent)) {
+                    ASSERT_EQ(Db().CheckpointRemove(parent), kSuccess);
+                    ASSERT_FALSE(Db().CheckpointExists(parent));
+                }
+                archives[session].push_back({parent, expected});
+                ASSERT_NO_FATAL_FAILURE(read_archive(archives[session].back()));
+
+                if (Db().CreateConcurrentSolvingTier != nullptr) {
+                    SCOPED_TRACE("Concurrent phase");
+                    const Tier concurrent = 83 + static_cast<Tier>(seed_index);
+                    expected = make_records(kSize, seed ^ 0xA5A5u);
+                    ASSERT_NO_FATAL_FAILURE(
+                        CreateAndPopulate(concurrent, expected,
+                                          Db().CreateConcurrentSolvingTier));
+                    for (int round = 0; round < 9; ++round) {
+                        SCOPED_TRACE(round);
+                        const auto initial = expected;
+                        std::vector<ConcurrentRecordCall> calls;
+                        for (int worker = 0; worker < 4; ++worker) {
+                            for (int step = 0; step < 2; ++step) {
+                                const Position position =
+                                    round % 2 == 0
+                                        ? (worker % 2 == 0 ? 0 : kSize - 1)
+                                        : worker + step * 4;
+                                calls.push_back(
+                                    {operations[(round * 8 + worker * 2 +
+                                                 step) %
+                                                operations.size()],
+                                     position,
+                                     {kLegalValues[generator() % kNumValues],
+                                      static_cast<int>(generator() %
+                                                       (kRemotenessMax + 1))}});
+                            }
+                        }
+                        ASSERT_NO_FATAL_FAILURE(
+                            RunConcurrentRecordHistory(calls, 4, 2));
+                        std::vector<ExpectedRecord> actual(kSize);
+                        ASSERT_NO_FATAL_FAILURE(ReadSolvingRecords(actual));
+                        ASSERT_NO_FATAL_FAILURE(AssertConcurrentRecordHistory(
+                            initial, calls, actual));
+                        expected = actual;  // Already validated against the
+                                            // history model.
+                        ASSERT_NO_FATAL_FAILURE(
+                            check_solving(concurrent, expected));
+                    }
+                    ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
+                    ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+                    ASSERT_NO_FATAL_FAILURE(check_children());
+                    archives[session].push_back({concurrent, expected});
+                    ASSERT_NO_FATAL_FAILURE(
+                        read_archive(archives[session].back()));
+                }
+            }
+            if (loaded_readers && Db().UnloadTier != nullptr) {
+                for (Tier tier : children) {
+                    ASSERT_NO_FATAL_FAILURE(UnloadResidentTier(tier));
+                }
+            }
+            if (Db().SetGameSolved != nullptr && Db().GameStatus != nullptr) {
+                ASSERT_EQ(Db().SetGameSolved(), kSuccess);
+                ASSERT_EQ(Db().GameStatus(), kDbGameStatusSolved);
+                game_declared[session] = true;
+            }
+            Finalize();
+            ASSERT_NO_FATAL_FAILURE(ExpectFinalizedPath());
+        }
+        // Reopen in reverse order using the same tier IDs but contrasting data.
+        for (int session : {1, 0}) {
+            SCOPED_TRACE(::testing::Message() << "Reopen sandbox " << session);
+            ASSERT_NO_FATAL_FAILURE(
+                InitializeAt(paths[session], GetTestTierName));
+            ASSERT_NO_FATAL_FAILURE(ExpectSandboxPath());
+            if (game_declared[session]) {
+                ASSERT_EQ(Db().GameStatus(), kDbGameStatusSolved);
+            }
+            for (const auto &archive : archives[session]) {
+                if (Db().IsTierLoaded != nullptr) {
+                    ASSERT_FALSE(Db().IsTierLoaded(archive.tier));
+                }
+                ASSERT_NO_FATAL_FAILURE(read_archive(archive));
+            }
+            Finalize();
+        }
+    }));
 }
 
 #undef REQUIRE_DATABASE_PROBE_READER

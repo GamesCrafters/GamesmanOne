@@ -933,8 +933,8 @@ typedef struct Database {
     /**
      * @brief Initializes the given `Database` `probe`.
      *
-     * @note Reinitializing an initialized probe is equivalent to first calling
-     * `Database::ProbeDestroy` and then initializing the same probe again.
+     * @note Reinitializing an initialized probe results in undefined behavior.
+     * Call `Database::ProbeDestroy` before initializing the same probe again.
      * @note A `NULL` probe is rejected with `kIllegalArgumentError`.
      *
      * @param[in,out] probe Target probe.
