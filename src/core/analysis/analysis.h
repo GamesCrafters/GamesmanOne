@@ -291,11 +291,22 @@ void AnalysisMergeCounts(Analysis *dest, const CacheAlignedAnalysis *part);
  * non-canonical tier. Since the tier being analyzed is non-canonical, all
  * positions and moves are non-canonical. Therefore, all related statistics must
  * be reset.
+ * @note Reusing a symmetric tier's analysis requires the symmetry to preserve
+ * reachability from the initial position. Tier symmetry alone does not
+ * guarantee this.
  */
 void AnalysisConvertToNoncanonical(
     Analysis *analysis, Tier noncanonical,
     Position (*GetPositionInSymmetricTier)(TierPosition tier_position,
                                            Tier symmetric));
+
+/**
+ * @brief Clears all canonical position and move counters, remoteness
+ * summaries, and examples in \p analysis.
+ * @details Use for a non-canonical tier that was analyzed independently. Total
+ * counters and examples remain unchanged.
+ */
+void AnalysisClearCanonicalCounts(Analysis *analysis);
 
 /**
  * @brief Aggregates the SRC Analysis into the DEST Analysis.
