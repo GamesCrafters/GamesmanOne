@@ -86,6 +86,11 @@ GAME_TEST_SEED = 42
 # NOTE: Keep in sync with the e2e-game-test matrix in
 #       .github/workflows/presubmit.yml
 GAME_TESTS_PRESUBMIT: list[tuple[str, int]] = [
+    (Game.BREAKTHROUGH, 0),  # 3x4
+    (Game.BREAKTHROUGH, 1),  # 3x5
+    (Game.BREAKTHROUGH, 2),  # 4x5
+    (Game.BREAKTHROUGH, 3),  # 4x6
+    (Game.BREAKTHROUGH, 4),  # 5x5
     (Game.DSHOGI, 0),
     (Game.FSVP, 0),  # size 4
     (Game.FSVP, 1),  # size 5
