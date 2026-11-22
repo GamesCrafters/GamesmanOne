@@ -114,7 +114,7 @@ static int ArrayDbProbeRemoteness(DbProbe *probe, TierPosition tier_position);
 static int ArrayDbTierStatus(Tier tier);
 static int ArrayDbGameStatus(void);
 
-const char *ArrayDbGetPath(void);
+static const char *ArrayDbGetPath(void);
 
 const Database kArrayDb = {
     .name = "arraydb",
@@ -251,7 +251,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
                        void *aux) {
     const ArrayDbOptions *options = (ArrayDbOptions *)aux;
-    if (!options) {
+    if (!options) {  // TODO: cover this in test
         options = &kArrayDbOptionsInit;
     }
     lzma_options.block_size = options->block_size;
@@ -297,7 +297,7 @@ static void ArrayDbFinalize(void) {
 
 static int CheckExistingSolvingTier(const char *caller) {
     if (current_game.tier != kIllegalTier) {
-        fprintf(stderr,
+        fprintf(stderr,  // TODO: cover this in test
                 "%s: failed to create solving tier due "
                 "to an existing solving tier\n",
                 caller);
@@ -314,7 +314,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
 
     int error = CheckExistingSolvingTier("ArrayDbCreateSolvingTier");
     if (error) {
-        return error;
+        return error;  // TODO: cover this in test
     }
 
     // Initialize the solving tier's record array.
@@ -343,7 +343,7 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
 #ifdef _OPENMP
     int error = CheckExistingSolvingTier("ArrayDbCreateConcurrentSolvingTier");
     if (error) {
-        return error;
+        return error;  // TODO: cover this in test
     }
 
     solving.atomic_records = AtomicRecordArrayCreate(size);
@@ -708,8 +708,8 @@ static int ArrayDbSegmentationMaxNumBuffers(void) {
     return kNumSolvingSegmentsMax;
 }
 
-int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
-                                     int64_t size) {
+static int ArrayDbSegmentationCreateBuffers(Tier tier, int num_segments,
+                                            int64_t size) {
     if (num_segments < 0 || num_segments > kNumSolvingSegmentsMax) {
         return kIllegalArgumentError;
     }
@@ -870,7 +870,7 @@ static bool RecompressDbChunk(int64_t tier_size, int slot, int chunk,
     return status == XZRA_SUCCESS;
 }
 
-int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
+static int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
     if (tier_size < 0) {
         return kIllegalArgumentError;
     }
@@ -944,7 +944,7 @@ _bailout:
     return error;
 }
 
-bool ArrayDbCheckpointExists(Tier tier) {
+static bool ArrayDbCheckpointExists(Tier tier) {
     char *full_path = GetFullPathToCheckpoint(tier, current_game.GetTierName);
     bool ret = full_path && FileExists(full_path);
     GamesmanFree(full_path);
@@ -952,7 +952,7 @@ bool ArrayDbCheckpointExists(Tier tier) {
     return ret;
 }
 
-int ArrayDbCheckpointSave(const void *status, size_t status_size) {
+static int ArrayDbCheckpointSave(const void *status, size_t status_size) {
     if (!status && status_size) {
         return kIllegalArgumentError;
     }
@@ -1008,8 +1008,8 @@ _bailout:
     return error;
 }
 
-int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
-                          size_t status_size) {
+static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
+                                 size_t status_size) {
     if (current_game.tier != kIllegalTier) {
         fprintf(stderr,
                 "ArrayDbCheckpointLoad: failed to load solving tier checkpoint "
@@ -1322,4 +1322,4 @@ static int ArrayDbGameStatus(void) {
     return exists ? kDbGameStatusSolved : kDbGameStatusIncomplete;
 }
 
-const char *ArrayDbGetPath(void) { return sandbox_path; }
+static const char *ArrayDbGetPath(void) { return sandbox_path; }
