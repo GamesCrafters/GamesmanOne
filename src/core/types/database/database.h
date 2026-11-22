@@ -772,7 +772,8 @@ typedef struct Database {
      * @return `kSuccess` on success,
      *         `kIllegalArgumentError` if `status` is `NULL` and `status_size`
      *         is positive, or if `status` is non-`NULL` and `status_size` is
-     *         zero, or
+     *         zero,
+     *         `kMallocFailureError` if a memory allocation fails, or
      *         non-zero error code otherwise.
      */
     int (*CheckpointLoad)(Tier tier, int64_t size, void *status,
@@ -844,7 +845,8 @@ typedef struct Database {
      * @return `kSuccess` on success,
      *         `kRuntimeError` if the tier's database file is missing or
      *         corrupted,
-     *         `kIllegalArgumentError` if `tier` is the current solving tier, or
+     *         `kIllegalArgumentError` if `tier` is the current solving tier,
+     *         `kMallocFailureError` if a memory allocation fails, or
      *         non-zero error code otherwise.
      */
     int (*LoadTier)(Tier tier, int64_t size);

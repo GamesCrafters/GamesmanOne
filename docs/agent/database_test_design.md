@@ -1,17 +1,17 @@
 # Database interface test design
 
 This document records the final design of the implemented GoogleTest suite for
-[`Database`](../src/core/types/database/database.h). The suite is implemented in
-[`database_test.cpp`](../tests/unit/core/db/database_test.cpp) and follows the
-project's [unit testing conventions](unit_testing_conventions.md) and
-[`xstring_test.cpp`](../tests/unit/libs/string/xstring_test.cpp) assertion style.
+[`Database`](../../src/core/types/database/database.h). The suite is implemented in
+[`database_test.cpp`](../../tests/unit/core/db/database_test.cpp) and follows the
+project's [unit testing conventions](../unit_testing_conventions.md) and
+[`xstring_test.cpp`](../../tests/unit/libs/string/xstring_test.cpp) assertion style.
 The interface header and its shared types define the contract; this document
 explains the coverage, fixture architecture, and assertion strategy.
 
 The suite applies the same public-interface expectations to every registered
-implementation. The archived implementation contains 263 parameterized test
-definitions: 184 unit tests and 79 component tests in 15 categories. ArrayDb
-and NaiveDb are registered, producing 526 CTest cases. Unsupported optional
+implementation. The suite contains 268 parameterized test definitions across
+15 categories, with 189 unit tests and 79 component tests. ArrayDb
+and NaiveDb are registered, producing 536 CTest cases. Unsupported optional
 capabilities result in explicit skips.
 
 ## Scope and test layers
@@ -28,7 +28,7 @@ behavior before mixed stress tests exercise their interactions.
 
 The scenario tables describe coverage families. A family can expand into
 separate ordinary/concurrent modes, method-specific cases, or input partitions
-in the implementation. The tables contain 200 scenario families, including six
+in the implementation. The tables contain 205 scenario families, including six
 segmentation regressions. Finite domains are exercised within those cases.
 
 ## Final interface decisions
@@ -44,10 +44,10 @@ segmentation regressions. Finite domains are exercised within those cases.
 | Undecided-child counters | For undecided records, remoteness is the counter: decrement and clear return the preceding count, with decrement saturating at zero. For decided records, counter methods return zero and preserve both fields. The generic suite uses only the shared supported range. |
 | Concurrent records | Each of the nine documented solving-record operations is individually atomic on a concurrent tier. Loaded getters on that solving tier inherit the corresponding solving getter's guarantee. Overlapping calls have no fixed thread order; separate getters do not provide one atomic pair snapshot. |
 | Checkpoint mode | Checkpoints support regular, externally synchronized solving tiers only. All solving writes are paused during checkpoint operations. CheckpointLoad creates a regular solving tier and requires no active solving tier or segment-buffer context. |
-| Checkpoint data | Saving overwrites the checkpoint without modifying input status bytes or changing tier solved status. Restoring uses the original tier size and, for a nonempty status buffer, the same status format and size. Mismatched tier sizes are undefined behavior. |
+| Checkpoint data | Saving overwrites the checkpoint without modifying input status bytes or changing tier solved status. Restoring uses the original tier size and, for a nonempty status buffer, the same status format and size. Mismatched tier sizes are undefined behavior. CheckpointLoad returns kMallocFailureError if a memory allocation fails. |
 | Checkpoint zero-size status | Save permits either null or non-null status with size zero, without guaranteeing success. Load permits null status with size zero without guaranteeing success, but rejects non-null status with size zero with kIllegalArgumentError. Either method rejects null status with positive size with kIllegalArgumentError. |
 | Checkpoint absence | Saving without a solving tier accepts any normal API return. Loading a missing checkpoint returns an error without changing status bytes or residency. Removing an absent checkpoint returns kFileSystemError. |
-| Resident tiers | IsTierLoaded includes the active solving tier, including a checkpoint-restored tier. LoadTier uses the tier's original size. Resident archive tiers use UnloadTier; solving tiers use FreeSolvingTier. Repeated active loading and size mismatches are undefined. |
+| Resident tiers | IsTierLoaded includes the active solving tier, including a checkpoint-restored tier. LoadTier uses the tier's original size and returns kMallocFailureError if a memory allocation fails. Release resident archive tiers with UnloadTier and solving tiers with FreeSolvingTier. Repeated active loading and size mismatches are undefined. |
 | Probe lifecycle | ProbeInit(nullptr) returns kIllegalArgumentError. Calling ProbeInit on an already initialized probe is undefined; destroy it before initializing the same storage again. ProbeDestroy(nullptr) and repeated destruction after a successful destroy are successful no-ops. |
 | Probe read failures | Valid failed reads return kErrorValue or kErrorRemoteness. Destroy the probe even after a failed read and before Finalize; do not retry or continue probing. No shared-probe concurrency guarantee is assumed. |
 | Memory estimates | TierMemUsage bounds peak memory for LoadTier and CreateSolvingTier; ConcurrentTierMemUsage bounds concurrent creation. Bounds include temporary memory. Zero-sized tiers are valid; negative tier/size, overflow, and other errors return SIZE_MAX. Generic tests check portable inputs and error sentinels without measuring private allocation formulas. |
@@ -65,8 +65,8 @@ Valid Tier identifiers, Position indices, and stored remotenesses are
 nonnegative. Positions must also be within the relevant logical tier. Existing
 negative constants retain their meanings as invalid identifiers or error
 results; their values are unchanged. Shared declarations are in
-[base.h](../src/core/types/base.h), [constants.h](../src/core/constants.h), and
-[constants.c](../src/core/constants.c).
+[base.h](../../src/core/types/base.h), [constants.h](../../src/core/constants.h), and
+[constants.c](../../src/core/constants.c).
 
 | Domain | Coverage |
 | --- | --- |
@@ -101,6 +101,20 @@ them even when a fatal read assertion exits a helper. Helpers reject attempts
 to initialize an active probe. Cleanup respects the stop-after-error contract
 and the requirement to destroy probes before finalization.
 
+The three creation failure cases request 2^28 positions in isolated children.
+The normal and TSan builds use a temporary 128 MiB soft address-space limit
+(`RLIMIT_AS`). Each child initializes the database before lowering its limit
+and restores the limit before checking the result and finalizing. The ASan
+build sets a 128 MiB per-allocation maximum in the child so ASan can still
+map memory for its own bookkeeping. The children configure the sanitizer
+allocator to return null on failure. The large request fails on the registered
+implementations independently of host memory pressure or overcommit settings.
+
+The checkpoint and archive load allocation failure cases save a tier of
+2^21 explicitly written records in one child. A second child opens the same
+sandbox and loads the tier under a 1 MiB allocation limit. The load uses the
+original tier size and, for checkpoints, the original status size.
+
 | Concern | Design |
 | --- | --- |
 | Implementation selection | Run the same fixture against each real Database descriptor. Init and Finalize must exist; every other target, setup, readback, and cleanup pointer is checked before calling it. Report `GTEST_SKIP` with the missing dependency; do not silently pass or require optional methods to exist. |
@@ -131,13 +145,13 @@ and the requirement to destroy probes before finalization.
 | Group | Category | Test definitions |
 | --- | --- | ---: |
 | Unit | Descriptor, lifecycle, path, and status | 23 |
-| Unit | Solving tier allocation and release | 15 |
+| Unit | Solving tier allocation and release | 17 |
 | Unit | Record methods | 28 |
 | Unit | Memory estimates | 7 |
-| Unit | Checkpoints | 20 |
-| Unit | Loaded tiers | 35 |
+| Unit | Checkpoints | 21 |
+| Unit | Loaded tiers | 36 |
 | Unit | Probes | 12 |
-| Unit | Segmentation API | 44 |
+| Unit | Segmentation API | 45 |
 | Component | Lifecycle, naming, and persistent status | 8 |
 | Component | Serial and externally synchronized record operations | 15 |
 | Component | Concurrent record operations | 21 |
@@ -145,7 +159,7 @@ and the requirement to destroy probes before finalization.
 | Component | Loaded-tier and probe workflows | 9 |
 | Component | Segmentation and consolidation | 15 |
 | Component | Combined workflows | 2 |
-| Total | 8 unit categories and 7 component categories | 263 |
+| Total | 8 unit categories and 7 component categories | 268 |
 
 All categories and scenario families are represented in the implementation.
 Optional capabilities can skip a scenario for a particular backend without
@@ -194,6 +208,8 @@ No instance-specific aux value is assumed.
 | `UnitCreateTierProvidesRequestedExtent` | For both modes, seed first/interior/last records with `SetValueRemoteness`; read with getters. | Every requested record is accessible and distinct; exact values survive. |
 | `UnitCreateTierZeroSize` | In separate lifetimes, call each supported creation mode with size zero; never access a position. | Normal `kSuccess`; release the zero-sized solving tier with the proper free method. |
 | `UnitCreateTierNegativeSize` | Separate cases for each creation mode and sizes -1 and INT64_MIN; no active solving context. | Exactly `kIllegalArgumentError`; finalize afterward. |
+| `UnitCreateSolvingTierAllocationFailure` | Request an impractically large ordinary tier under the child's allocation limit. | Exactly `kMallocFailureError`. Finalize after the call. |
+| `UnitCreateConcurrentSolvingTierAllocationFailure` | Request the same large tier under the child limit using concurrent creation. | Exactly `kMallocFailureError`. Finalize after the call. |
 | `UnitFreeSolvingTierWithoutTier` | Initialized DB with no solving tier; call free. | `kSuccess`; no-op. |
 | `UnitFreeSolvingTierEachCreationMode` | Create ordinary or concurrent tier, then free; guard optional IsTierLoaded observation. | `kSuccess`; if the residency observer exists, the tier is no longer loaded. |
 | `UnitFreeSolvingTierRepeated` | Create a supported solving tier; free successfully; call free again. | Both calls return `kSuccess`; optional residency observer is false. |
@@ -252,6 +268,7 @@ always creates a regular tier.
 | `UnitCheckpointSaveOverwritesExisting` | Prepare old checkpoint; save changed records/status, including short-to-long and long-to-short status payloads. Free the solving tier, then reload with the new matching size/format. | `kSuccess`; restored logical records/status match the newest save. No assertion about old physical trailing file bytes. |
 | `UnitCheckpointSaveBinaryStatus` | Save blobs containing embedded NUL, all-zero, all-`0xff`, bytes `0..255`, and lengths not divisible by machine word size; minimally reload. | Exact bytes and length round trip; no string truncation. |
 | `UnitCheckpointLoadRestoresFixture` | Valid checkpoint fixture; no current solving tier; matching tier size and status format/size. Use solving getters as observers. | `kSuccess`; exact records/status; solving tier made available. |
+| `UnitCheckpointLoadAllocationFailure` | Save a valid checkpoint in an unrestricted child, then load it with matching tier and status sizes from a child with a 1 MiB allocation limit. | Exactly `kMallocFailureError`. Finalize after the call. |
 | `UnitCheckpointLoadMissingDoesNothing` | No checkpoint; sentinel-fill output status; capture baseline residency. Call load. | Nonzero; status and residency unchanged. |
 | `UnitCheckpointLoadOutputBounds` | Valid fixture; output status buffer has prefix/suffix guards beyond required payload. | Exact payload restored; guard bytes unchanged. |
 | `UnitCheckpointRemoveExisting` | Valid checkpoint fixture; remove; minimally observe `CheckpointExists`. | `kSuccess`; checkpoint absent. |
@@ -269,6 +286,7 @@ always creates a regular tier.
 | Scenario | Setup and action; minimal extra members for units | Required assertions |
 | --- | --- | --- |
 | `UnitLoadTierValidArchive` | Valid on-disk fixture and correct tier size; load; minimally observe `IsTierLoaded` and one getter. | `kSuccess`; resident; known record readable. |
+| `UnitLoadTierAllocationFailure` | Flush a valid archive in an unrestricted child, then load it with the original tier size from a child with a 1 MiB allocation limit. | Exactly `kMallocFailureError`. Finalize after the call. |
 | `UnitUnloadTierPreviouslyLoaded` | Load valid fixture as setup; unload; observe residency. | `kSuccess`; tier no longer resident. |
 | `UnitUnloadTierRejectsSolvingTier` | In separate cases establish ordinary/concurrent/checkpoint-restored solving tier; attempt UnloadTier; finalize. | Exactly `kIllegalArgumentError`; no subsequent continued-solving/retry assertion. |
 | `UnitIsTierLoadedAbsent` | Fresh database, and a separate case with an archive existing only on disk. | `false`; disk existence alone is insufficient. |
@@ -321,6 +339,7 @@ skip them with a capacity reason when the maximum is below two.
 | `UnitSegmentationCreateBuffersAtMaximum` | If reported capacity is small enough for the fixture budget, request that count with a small segment size; otherwise report resource-bound omission. At maximum zero, only create/free the context. | Supported count usable under adequate resources; no record access when count is zero, no induced OOM or allocation instrumentation. |
 | `UnitSegmentationCreateBuffersZeroCountOrSize` | Separate no-context lifetimes for zero buffers and zero-sized buffers; count never above reported capacity; do not access nonexistent offsets. | Normal `kSuccess`; context can be freed. |
 | `UnitSegmentationCreateBuffersNegativeCountOrSize` | Separate cases: negative buffer count with valid size; negative size with valid count, including signed minima. | Exactly `kIllegalArgumentError`. |
+| `UnitSegmentationCreateBuffersAllocationFailure` | Require support for at least one buffer, then request one impractically large buffer under the child's allocation limit. | Exactly `kMallocFailureError`. Finalize after the call. |
 | `UnitSegmentationCreateBuffersAboveCapacity` | Query reported maximum M; request M+1 buffers with otherwise valid small sizes, including zero. Only form M+1 when representable as int and within the fixture's resource budget; cover M=0 with a request for one buffer. | Exactly `kIllegalArgumentError`. Report an explicit omission if the maximum cannot be exceeded safely; do not overflow INT_MAX or force OOM. |
 | `UnitSegmentationGetValueAllLegalValues` | Seed active records with all `V × R` pairs; read each. Extra: create, setter, free. | Exact seeded values for every legal `Value` regardless of remoteness. |
 | `UnitSegmentationGetValueSelectsBufferAndOffset` | Seed distinguishable values across feasible buffers and first/interior/last valid offsets. Extra: create, setter, free. | Returns the requested buffer's requested record. |
@@ -494,8 +513,8 @@ lifecycle, checkpoint, flush, consolidation, or permanent-reader operations.
 
 | Coverage | Disposition |
 | --- | --- |
-| Private allocation/I/O fault hooks, recognized corrupt-file construction, exact byte accounting and implementation-specific aux configurations. | Concrete implementation tests; no adapters or new runtime testing hooks added here. Generic error tests use only deterministic public checked-input/missing-file conditions. |
-| OOM codes, TierStatusCorrupted/CheckError, GameStatusCheckError, and unexpected getter failures. | Return contracts remain in the header, but there is no portable way to force these conditions for every implementation. No claim of complete branch coverage. |
+| Private allocation/I/O fault hooks, recognized corrupt-file construction, exact byte accounting and implementation-specific aux configurations. | Concrete implementation tests. The generic creation failure cases use large public requests under an allocation limit. |
+| Other allocation failures, TierStatusCorrupted/CheckError, GameStatusCheckError, and unexpected getter failures. | Return contracts remain in the header. The creation, checkpoint load, and archive load cases exercise failure to allocate the requested storage. Further coverage, such as failure after allocating some segment buffers, requires controlling which allocation fails. |
 | Cleanup after a failed Init. | Finalize is defined in this state, but the suite has no portable input that forces every implementation's Init to fail. Deterministic failure injection belongs in implementation-specific tests. |
 | Unknown initial fields, invalid/oversized counters, invalid record inputs, reinitialization of active probes, corrupted probe reads, tail access, and lifecycle overlap. | No default-content assertions or intentional undefined-behavior/death tests. Unwritten contents remain unspecified; invalid accesses explicitly declared UB stay excluded. |
 | Retry, rollback, continued solving after failure, power-loss durability, consolidation after FreeBuffers/reinit. | Unsupported workflows excluded. Defined successful repeat operations remain tested. |
