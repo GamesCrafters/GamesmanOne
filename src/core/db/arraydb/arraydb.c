@@ -251,7 +251,7 @@ static int ArrayDbInit(ReadOnlyString game_name, int variant,
                        ReadOnlyString path, GetTierNameFunc GetTierName,
                        void *aux) {
     const ArrayDbOptions *options = (ArrayDbOptions *)aux;
-    if (!options) {  // TODO: cover this in test
+    if (!options) {
         options = &kArrayDbOptionsInit;
     }
     lzma_options.block_size = options->block_size;
@@ -297,7 +297,7 @@ static void ArrayDbFinalize(void) {
 
 static int CheckExistingSolvingTier(const char *caller) {
     if (current_game.tier != kIllegalTier) {
-        fprintf(stderr,  // TODO: cover this in test
+        fprintf(stderr,
                 "%s: failed to create solving tier due "
                 "to an existing solving tier\n",
                 caller);
@@ -314,7 +314,7 @@ static int ArrayDbCreateSolvingTier(Tier tier, int64_t size) {
 
     int error = CheckExistingSolvingTier("ArrayDbCreateSolvingTier");
     if (error) {
-        return error;  // TODO: cover this in test
+        return error;
     }
 
     // Initialize the solving tier's record array.
@@ -343,7 +343,7 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
 #ifdef _OPENMP
     int error = CheckExistingSolvingTier("ArrayDbCreateConcurrentSolvingTier");
     if (error) {
-        return error;  // TODO: cover this in test
+        return error;
     }
 
     solving.atomic_records = AtomicRecordArrayCreate(size);
@@ -798,10 +798,12 @@ static int ArrayDbSegmentationFlush(int buf_idx, int seg_idx) {
     switch (lz4_utils_status) {
         case LZ4_UTILS_SUCCESS:
             break;
+        // LCOV_EXCL_START
         case LZ4_UTILS_ERR_INVALID_PARAM:
             NotReached(
                 "ArrayDbSegmentationFlush: (BUG) malformed input array(s)");
             break;
+        // LCOV_EXCL_STOP
         case LZ4_UTILS_ERR_OOM:
             error = kMallocFailureError;
             goto _bailout;
@@ -907,7 +909,9 @@ static int ArrayDbSegmentationConsolidate(int64_t tier_size, int num_segments) {
     }
 
     bool success = true;
+    // LCOV_EXCL_START
     PRAGMA_OMP(parallel reduction(task, && : success))
+    // LCOV_EXCL_STOP
     PRAGMA_OMP(single)
     for (int64_t i = 0; i < num_segments; ++i) {
         int slot = i % segments.num_active;
@@ -980,9 +984,11 @@ static int ArrayDbCheckpointSave(const void *status, size_t status_size) {
     switch (lz4_utils_status) {
         case LZ4_UTILS_SUCCESS:
             break;
+            // LCOV_EXCL_START
         case LZ4_UTILS_ERR_INVALID_PARAM:
             NotReached("ArrayDbCheckpointSave: (BUG) malformed input array(s)");
             break;
+            // LCOV_EXCL_STOP
         case LZ4_UTILS_ERR_OOM:
             error = kMallocFailureError;
             goto _bailout;

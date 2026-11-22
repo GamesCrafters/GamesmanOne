@@ -36,6 +36,12 @@
  * with a length equal to the size of the given tier. The array is
  * block-compressed using LZMA provided by the XZ Utils library, which is
  * wrapped in the XZRA (XZ with random access) library.
+ *
+ * For a nonnegative size, `CreateSolvingTier` and
+ * `CreateConcurrentSolvingTier` return `kRuntimeError` when an initialized
+ * ArrayDb already has a solving tier or a segment-buffer context. This
+ * includes a checkpoint-restored solving tier and a context with zero
+ * buffers. The rejected call leaves the existing context unchanged.
  */
 extern const Database kArrayDb;
 
@@ -43,6 +49,10 @@ extern const Database kArrayDb;
  * @brief `ArrayDb` options. Pass a pointer to an instance of this type to the
  * initialization function (`kArrayDb::Init`) to use custom settings, or pass
  * `NULL` for default options.
+ *
+ * @details Init copies these settings for the initialized lifetime. Passing
+ * `NULL` selects `kArrayDbOptionsInit` on every initialization, including
+ * after a previous lifetime with custom options.
  */
 typedef struct ArrayDbOptions {
     /**
@@ -61,7 +71,7 @@ typedef struct ArrayDbOptions {
     /**
      * Set this to 1 to enable extreme LZMA compression, which slightly improves
      * the compression ratio at the cost of significantly increasing (typically
-     * doubling) the compression time.
+     * doubling) the compression time. Default: 0 (disabled).
      */
     int lzma_extreme;
 
