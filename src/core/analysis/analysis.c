@@ -146,7 +146,7 @@ void AnalysisDiscoverMoves(Analysis *analysis, TierPosition tier_position,
 void AnalysisDiscoverMovesGroup(Analysis *analysis, TierPosition canonical,
                                 int group_size, int num_moves,
                                 int num_canonical_moves) {
-    analysis->move_count += num_moves * group_size;
+    analysis->move_count += (int64_t)num_moves * group_size;
     analysis->canonical_move_count += num_canonical_moves;
     if (num_moves > analysis->max_num_moves) {
         analysis->max_num_moves = num_moves;
