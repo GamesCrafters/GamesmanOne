@@ -349,7 +349,7 @@ static int NaiveDbGetRemoteness(Position position) {
 }
 
 static int NaiveDbLoadTier(Tier tier, int64_t size) {
-    if (tier == current_tier) {
+    if (tier == current_tier || size < 0) {
         return kIllegalArgumentError;
     }
 

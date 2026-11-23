@@ -3519,6 +3519,26 @@ TEST_P(DatabaseTest, UnitLoadTierMissingArchive) {
     }));
 }
 
+// A negative size is rejected even when the requested archive is absent.
+TEST_P(DatabaseTest, UnitLoadTierRejectsNegativeSize) {
+    REQUIRE_DATABASE_MEMBER(LoadTier);
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
+        ASSERT_NO_FATAL_FAILURE(Initialize());
+        StopAfterError();
+        ASSERT_EQ(Db().LoadTier(kStoredTier, -1), kIllegalArgumentError);
+    }));
+}
+
+// The signed minimum is rejected before allocation or archive access.
+TEST_P(DatabaseTest, UnitLoadTierRejectsMinimumSize) {
+    REQUIRE_DATABASE_MEMBER(LoadTier);
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
+        ASSERT_NO_FATAL_FAILURE(Initialize());
+        StopAfterError();
+        ASSERT_EQ(Db().LoadTier(kStoredTier, INT64_MIN), kIllegalArgumentError);
+    }));
+}
+
 // LoadTier rejects the current ordinary solving tier.
 TEST_P(DatabaseTest, UnitLoadTierRejectsOrdinarySolvingTier) {
     REQUIRE_DATABASE_MEMBER(CreateSolvingTier);

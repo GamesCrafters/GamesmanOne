@@ -1085,7 +1085,7 @@ static size_t ArrayDbConcurrentTierMemUsage(Tier tier, int64_t size) {
 }
 
 static int ArrayDbLoadTier(Tier tier, int64_t size) {
-    if (tier == current_game.tier) {
+    if (tier == current_game.tier || size < 0) {
         return kIllegalArgumentError;
     }
 

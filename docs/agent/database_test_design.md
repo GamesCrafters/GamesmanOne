@@ -9,9 +9,9 @@ The interface header and its shared types define the contract; this document
 explains the coverage, fixture architecture, and assertion strategy.
 
 The suite applies the same public-interface expectations to every registered
-implementation. The suite contains 268 parameterized test definitions across
-15 categories, with 189 unit tests and 79 component tests. ArrayDb
-and NaiveDb are registered, producing 536 CTest cases. Unsupported optional
+implementation. The suite contains 270 parameterized test definitions across
+15 categories, with 191 unit tests and 79 component tests. ArrayDb
+and NaiveDb are registered, producing 540 CTest cases. Unsupported optional
 capabilities result in explicit skips.
 
 ## Scope and test layers
@@ -28,7 +28,7 @@ behavior before mixed stress tests exercise their interactions.
 
 The scenario tables describe coverage families. A family can expand into
 separate ordinary/concurrent modes, method-specific cases, or input partitions
-in the implementation. The tables contain 205 scenario families, including six
+in the implementation. The tables contain 206 scenario families, including six
 segmentation regressions. Finite domains are exercised within those cases.
 
 ## Final interface decisions
@@ -47,7 +47,7 @@ segmentation regressions. Finite domains are exercised within those cases.
 | Checkpoint data | Saving overwrites the checkpoint without modifying input status bytes or changing tier solved status. Restoring uses the original tier size and, for a nonempty status buffer, the same status format and size. Mismatched tier sizes are undefined behavior. CheckpointLoad returns kMallocFailureError if a memory allocation fails. |
 | Checkpoint zero-size status | Save permits either null or non-null status with size zero, without guaranteeing success. Load permits null status with size zero without guaranteeing success, but rejects non-null status with size zero with kIllegalArgumentError. Either method rejects null status with positive size with kIllegalArgumentError. |
 | Checkpoint absence | Saving without a solving tier accepts any normal API return. Loading a missing checkpoint returns an error without changing status bytes or residency. Removing an absent checkpoint returns kFileSystemError. |
-| Resident tiers | IsTierLoaded includes the active solving tier, including a checkpoint-restored tier. LoadTier uses the tier's original size and returns kMallocFailureError if a memory allocation fails. Release resident archive tiers with UnloadTier and solving tiers with FreeSolvingTier. Repeated active loading and size mismatches are undefined. |
+| Resident tiers | IsTierLoaded includes the active solving tier, including a checkpoint-restored tier. LoadTier rejects negative sizes with kIllegalArgumentError before loading the archive and returns kMallocFailureError if allocation fails. Nonnegative sizes must match the stored tier size. A mismatch or repeated active loading is undefined behavior. Release resident archive tiers with UnloadTier and solving tiers with FreeSolvingTier. |
 | Probe lifecycle | ProbeInit(nullptr) returns kIllegalArgumentError. Calling ProbeInit on an already initialized probe is undefined; destroy it before initializing the same storage again. ProbeDestroy(nullptr) and repeated destruction after a successful destroy are successful no-ops. |
 | Probe read failures | Valid failed reads return kErrorValue or kErrorRemoteness. Destroy the probe even after a failed read and before Finalize; do not retry or continue probing. No shared-probe concurrency guarantee is assumed. |
 | Memory estimates | TierMemUsage bounds peak memory for LoadTier and CreateSolvingTier; ConcurrentTierMemUsage bounds concurrent creation. Bounds include temporary memory. Zero-sized tiers are valid; negative tier/size, overflow, and other errors return SIZE_MAX. Generic tests check portable inputs and error sentinels without measuring private allocation formulas. |
@@ -149,7 +149,7 @@ original tier size and, for checkpoints, the original status size.
 | Unit | Record methods | 28 |
 | Unit | Memory estimates | 7 |
 | Unit | Checkpoints | 21 |
-| Unit | Loaded tiers | 36 |
+| Unit | Loaded tiers | 38 |
 | Unit | Probes | 12 |
 | Unit | Segmentation API | 45 |
 | Component | Lifecycle, naming, and persistent status | 8 |
@@ -159,7 +159,7 @@ original tier size and, for checkpoints, the original status size.
 | Component | Loaded-tier and probe workflows | 9 |
 | Component | Segmentation and consolidation | 15 |
 | Component | Combined workflows | 2 |
-| Total | 8 unit categories and 7 component categories | 268 |
+| Total | 8 unit categories and 7 component categories | 270 |
 
 All categories and scenario families are represented in the implementation.
 Optional capabilities can skip a scenario for a particular backend without
@@ -298,6 +298,7 @@ always creates a regular tier.
 | `UnitLoadedGettersNonresidentTier` | Tier absent from memory, with and without an archive existing on disk. | `kErrorValue` and `kErrorRemoteness`. |
 | `UnitLoadedGettersDistinguishTiers` | Two resident tiers contain different records at the same position. | Each getter addresses the specified tier. |
 | `UnitLoadTierMissingArchive` | Fresh sandbox and valid tier/size; no archive exists. | Exactly `kRuntimeError`. |
+| `UnitLoadTierRejectsNegativeSize` and `UnitLoadTierRejectsMinimumSize` | In separate lifetimes, load an otherwise valid tier ID with sizes -1 and INT64_MIN. Leave the sandbox empty to verify that size validation precedes archive loading. | Exactly `kIllegalArgumentError`. Finalize after each call. |
 | `UnitLoadTierRejectsSolvingTier` | Create a solving tier; request LoadTier for that same tier. | Exactly `kIllegalArgumentError`. |
 | `UnitUnloadTierRejectsNonresidentTier` | Tier has not been loaded or created; request unload. | Exactly `kIllegalArgumentError`. |
 

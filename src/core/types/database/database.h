@@ -836,8 +836,9 @@ typedef struct Database {
      *
      * @note Calling this function for a tier already loaded via
      * `Database::LoadTier` results in undefined behavior.
-     * @note `size` must match the size of the stored tier. A mismatch results
-     * in undefined behavior.
+     * @note Negative sizes are rejected before loading the archive. A
+     * nonnegative `size` must match the size of the stored tier. A mismatch
+     * results in undefined behavior.
      *
      * @param[in] tier Tier to be loaded.
      * @param[in] size Size of `tier` in number of positions.
@@ -845,7 +846,8 @@ typedef struct Database {
      * @return `kSuccess` on success,
      *         `kRuntimeError` if the tier's database file is missing or
      *         corrupted,
-     *         `kIllegalArgumentError` if `tier` is the current solving tier,
+     *         `kIllegalArgumentError` if `size` is negative or `tier` is the
+     *         current solving tier,
      *         `kMallocFailureError` if a memory allocation fails, or
      *         non-zero error code otherwise.
      */
