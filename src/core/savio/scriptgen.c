@@ -1,8 +1,10 @@
 #include "core/savio/scriptgen.h"
 
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "core/savio/savio.h"
 #include "core/types/base.h"
@@ -37,10 +39,24 @@ static int PrintSolveCommand(FILE *file, int num_processes,
 
 int SavioScriptGeneratorWrite(const SavioJobSettings *settings) {
     static const char extension[] = ".sh";
-    char file_name[kSavioJobNameLengthMax + sizeof(extension) + 1];
-    snprintf(file_name, sizeof(file_name), "%s%s", settings->job_name,
-             extension);
-    FILE *file = GuardedFopen(file_name, "w");
+    char file_name[kSavioJobNameLengthMax + sizeof(extension)];
+    size_t name_length =
+        strnlen(settings->job_name, sizeof(settings->job_name));
+    if (name_length == 0 || name_length > kSavioJobNameLengthMax) {
+        return kIllegalArgumentError;
+    }
+    for (size_t i = 0; i < name_length; ++i) {
+        char character = settings->job_name[i];
+        if (!(('A' <= character && character <= 'Z') ||
+              ('a' <= character && character <= 'z') ||
+              ('0' <= character && character <= '9') || character == '_')) {
+            return kIllegalArgumentError;
+        }
+        file_name[i] = character;
+    }
+    memcpy(file_name + name_length, extension, sizeof(extension));
+
+    FILE *file = GuardedFopenForWrite(file_name, O_NOFOLLOW);
     if (file == NULL) return kFileSystemError;
 
     const SavioPartition *partition = &kSavioPartitions[settings->partition_id];

@@ -14,6 +14,7 @@
 #include "core/savio/scriptgen.h"
 #include "core/types/base.h"
 #include "core/types/game/game.h"
+#include "core/types/gamesman_status.h"
 #include "libs/io/xterminal.h"
 
 static SavioJobSettings settings;
@@ -49,7 +50,7 @@ static int PromptForTogglingOmpThreadBinding(ReadOnlyString key);
 static int PromptForTimeLimit(ReadOnlyString key);
 
 static int IntMin2(int x, int y);
-static void ReplaceSpecialCharacters(char *str);
+static void ReplaceSpecialCharacters(char *str, size_t capacity);
 static bool IsValidTimeLimit(ReadOnlyString str);
 
 int InteractiveSavioScriptSetup(ReadOnlyString key) {
@@ -135,7 +136,10 @@ static void InitHooks(void) {
 
 static int ConfirmSettings(ReadOnlyString key) {
     (void)key;  // Unused
-    SavioScriptGeneratorWrite(&settings);
+    if (SavioScriptGeneratorWrite(&settings) != kSuccess) {
+        puts("Could not write the Savio job script.");
+        return 0;
+    }
 
     return 2;  // Go back 2 levels in menu.
 }
@@ -150,11 +154,13 @@ static int PromptForJobName(ReadOnlyString key) {
         "Please enter the job name (%d or fewer characters) or leave blank "
         "to discard changes and go back to the previous menu",
         kSavioJobNameLengthMax);
-    PromptForInput("", buf, kSavioJobNameLengthMax);
-    if (strlen(buf) == 0) return 0;
+    if (PromptForInput("", buf, kSavioJobNameLengthMax) == NULL ||
+        buf[0] == '\0') {
+        return 0;
+    }
 
-    ReplaceSpecialCharacters(buf);
-    strcpy(settings.job_name, buf);
+    ReplaceSpecialCharacters(buf, sizeof(buf));
+    snprintf(settings.job_name, sizeof(settings.job_name), "%s", buf);
 
     return 0;
 }
@@ -170,11 +176,13 @@ static int PromptForAccount(ReadOnlyString key) {
         "Please enter the account name (%d or fewer characters)\n"
         "or leave blank to discard changes and go back to the previous menu",
         kSavioAccountNameLengthMax);
-    PromptForInput("", buf, kSavioAccountNameLengthMax);
-    if (strlen(buf) == 0) return 0;
+    if (PromptForInput("", buf, kSavioAccountNameLengthMax) == NULL ||
+        buf[0] == '\0') {
+        return 0;
+    }
 
-    ReplaceSpecialCharacters(buf);
-    strcpy(settings.account, buf);
+    ReplaceSpecialCharacters(buf, sizeof(buf));
+    snprintf(settings.account, sizeof(settings.account), "%s", buf);
 
     return 0;
 }
@@ -328,7 +336,9 @@ static int PromptForTimeLimit(ReadOnlyString key) {
         "72 hours.\n\n"
         "Please enter a new time limit for the job,\n"
         "or enter 'b' to discard changes and return to the previous menu");
-    PromptForInput("", buf, kSavioTimeLimitLengthMax);
+    if (PromptForInput("", buf, kSavioTimeLimitLengthMax) == NULL) {
+        return 0;
+    }
     if (strcmp(buf, "b") == 0) return 0;
     while (!IsValidTimeLimit(buf)) {
         printf(
@@ -338,22 +348,21 @@ static int PromptForTimeLimit(ReadOnlyString key) {
             "Please try again or enter 'b' to discard changes and return to "
             "the previous menu",
             buf);
-        PromptForInput("", buf, kSavioTimeLimitLengthMax);
+        if (PromptForInput("", buf, kSavioTimeLimitLengthMax) == NULL) {
+            return 0;
+        }
         if (strcmp(buf, "b") == 0) return 0;
     }
-    strcpy(settings.time_limit, buf);
+    snprintf(settings.time_limit, sizeof(settings.time_limit), "%s", buf);
 
     return 0;
 }
 
 static int IntMin2(int x, int y) { return x < y ? x : y; }
 
-static void ReplaceSpecialCharacters(char *str) {
-    // Loop through each character in the string
-    for (int i = 0; str[i] != '\0' && i < 31; i++) {
-        // Check if the character is not a letter or digit
+static void ReplaceSpecialCharacters(char *str, size_t capacity) {
+    for (size_t i = 0; i < capacity && str[i] != '\0'; ++i) {
         if (!isalnum((unsigned char)str[i])) {
-            // Replace with underscore
             str[i] = '_';
         }
     }
