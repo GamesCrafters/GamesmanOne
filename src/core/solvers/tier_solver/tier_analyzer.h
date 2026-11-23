@@ -46,7 +46,10 @@
 bool TierAnalyzerInit(const TierSolverApi *api, size_t memlimit);
 
 /**
- * @brief Analyzes the given TIER.
+ * @brief Analyzes the given original tier, which need not be canonical.
+ *
+ * @details Reachability and statistics are tracked separately for each tier.
+ * Tier symmetry is applied only when looking up solved values in the database.
  *
  * @param dest Preallocated space for analysis output.
  * @param tier Tier to analyze.

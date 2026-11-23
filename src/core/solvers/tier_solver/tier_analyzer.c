@@ -47,7 +47,6 @@
 #include "core/types/gamesman_status.h"
 #include "core/types/position_array.h"
 #include "core/types/tier_hash_map.h"
-#include "core/types/tier_hash_set.h"
 #include "core/types/tier_position_hash_set.h"
 
 // Include and use OpenMP if the _OPENMP flag is set.
@@ -60,7 +59,7 @@
 // An internal reference to the API.
 static const TierSolverApi *api_internal;
 
-// Whether to explore the canonical graph only
+// Whether to explore only canonical positions within each original tier.
 static bool explore_canonical;
 
 // Size-tracking memory allocator
@@ -69,7 +68,7 @@ static GamesmanAllocator *allocator;
 static Tier this_tier;          // The tier being analyzed.
 static int64_t this_tier_size;  // Size of the tier being analyzed.
 
-// Array of canonical child tiers.
+// Original child tiers. Tier symmetry does not preserve rooted reachability.
 static Tier child_tiers[kTierSolverNumChildTiersMax];
 static int num_child_tiers;  // Size of child_tiers.
 
@@ -108,27 +107,6 @@ bool TierAnalyzerInit(const TierSolverApi *api, size_t memlimit) {
 // ============================ TierAnalyzerAnalyze ============================
 
 // Step0Initialize
-
-static int GetCanonicalChildTiers(
-    Tier tier, Tier canonical_children[kTierSolverNumChildTiersMax]) {
-    //
-    Tier children[kTierSolverNumChildTiersMax];
-    int num_children = api_internal->GetChildTiers(tier, children);
-
-    // Convert child tiers to canonical and deduplicate.
-    TierHashSet dedup;
-    TierHashSetInit(&dedup, 0.5);
-    int ret = 0;
-    for (int i = 0; i < num_children; ++i) {
-        Tier canonical = api_internal->GetCanonicalTier(children[i]);
-        if (TierHashSetAdd(&dedup, canonical)) {
-            canonical_children[ret++] = canonical;
-        }
-    }
-    TierHashSetDestroy(&dedup);
-
-    return ret;
-}
 
 /**
  * @brief Checks if we have enough memory to run the analysis.
@@ -213,7 +191,7 @@ static void Step0_3InitAnalysis(Analysis *dest) {
 static bool Step0Initialize(Analysis *dest) {
     num_threads = ConcurrencyGetOmpNumThreads();
     this_tier_size = api_internal->GetTierSize(this_tier);
-    num_child_tiers = GetCanonicalChildTiers(this_tier, child_tiers);
+    num_child_tiers = api_internal->GetChildTiers(this_tier, child_tiers);
     if (!Step0_0CheckMem()) return false;
     Step0_1InitFringes();
     Step0_2InitChildTiersReverseLookupMap();
@@ -246,8 +224,12 @@ static ConcurrentBitset *LoadDiscoveryMap(Tier tier) {
     }
 
     if (tier == api_internal->GetInitialTier()) {
-        ConcurrentBitsetSet(ret, api_internal->GetInitialPosition(),
-                            memory_order_relaxed);
+        TierPosition initial = {.tier = tier,
+                                .position = api_internal->GetInitialPosition()};
+        Position position = explore_canonical
+                                ? api_internal->GetCanonicalPosition(initial)
+                                : initial.position;
+        ConcurrentBitsetSet(ret, position, memory_order_relaxed);
     }
 
     return ret;
@@ -374,13 +356,24 @@ static int GetCanonicalChildPositions(
     TierPosition parent,
     TierPosition children[static kTierSolverNumChildPositionsMax],
     Analysis *dest) {
-    // Generate moves just to find out how many moves there are
     Move moves[kTierSolverNumMovesMax];
     int num_moves = api_internal->GenerateMoves(parent, moves);
 
-    // Generate canonical child positions
-    int num_canonical_children =
-        api_internal->GetCanonicalChildPositions(parent, children);
+    // Solver callbacks may fold child tiers, losing which original positions
+    // are reachable. Apply only within-tier position symmetry here.
+    TierPositionHashSet dedup;
+    TierPositionHashSetInit(&dedup, 0.5);
+    TierPositionHashSetReserve(&dedup, num_moves / 2);
+    int num_canonical_children = 0;
+    for (int i = 0; i < num_moves; ++i) {
+        TierPosition child = api_internal->DoMove(parent, moves[i]);
+        child.position = api_internal->GetCanonicalPosition(child);
+        if (TierPositionHashSetAdd(&dedup, child)) {
+            children[num_canonical_children++] = child;
+        }
+    }
+    TierPositionHashSetDestroy(&dedup);
+
     int num_symmetries = api_internal->GetNumberOfSymmetries(parent);
     AnalysisDiscoverMovesGroup(dest, parent, num_symmetries, num_moves,
                                num_canonical_children);
@@ -408,12 +401,6 @@ static void DiscoverProcessThisTierBitset(Position child) {
 }
 
 static void DiscoverProcessChildTier(TierPosition child) {
-    // Convert child to the symmetric position in canonical tier.
-    Tier canonical_tier = api_internal->GetCanonicalTier(child.tier);
-    child.position =
-        api_internal->GetPositionInSymmetricTier(child, canonical_tier);
-    child.tier = canonical_tier;
-
     TierHashMapIterator it = TierHashMapGet(&child_tier_to_index, child.tier);
     if (!TierHashMapIteratorIsValid(&it)) {
         fprintf(stderr,
@@ -698,7 +685,11 @@ static bool Step3SaveAndDeallocateChildMaps(void) {
 // Step4Analyze
 
 static bool Step4Analyze(Analysis *dest) {
-    if (DbManagerLoadTier(this_tier, this_tier_size) != kSuccess) return false;
+    Tier canonical_tier = api_internal->GetCanonicalTier(this_tier);
+    int64_t canonical_tier_size = api_internal->GetTierSize(canonical_tier);
+    if (DbManagerLoadTier(canonical_tier, canonical_tier_size) != kSuccess) {
+        return false;
+    }
 
     CacheAlignedAnalysis *parts = MakePartialAnalyses();
     if (parts == NULL) {
@@ -720,14 +711,20 @@ static bool Step4Analyze(Analysis *dest) {
             }
 
             TierPosition tp = {.tier = this_tier, .position = i};
-            // If we are only exploring the canonical graph, tp is canonical;
-            // otherwise we must convert and read the canonical position.
-            Position canonical = explore_canonical
-                                     ? tp.position
-                                     : api_internal->GetCanonicalPosition(tp);
-            Value value = DbManagerGetValueFromLoaded(this_tier, canonical);
-            int remoteness =
-                DbManagerGetRemotenessFromLoaded(this_tier, canonical);
+            // Reachability belongs to the original tier, but solved values
+            // are stored in the canonical tier. Tier conversion need not
+            // preserve within-tier position canonicality.
+            TierPosition canonical = tp;
+            if (canonical_tier != this_tier) {
+                canonical.position = api_internal->GetPositionInSymmetricTier(
+                    tp, canonical_tier);
+                canonical.tier = canonical_tier;
+            }
+            canonical.position = api_internal->GetCanonicalPosition(canonical);
+            Value value =
+                DbManagerGetValueFromLoaded(canonical.tier, canonical.position);
+            int remoteness = DbManagerGetRemotenessFromLoaded(
+                canonical.tier, canonical.position);
             int error;
             if (explore_canonical) {
                 int num_symmetries = api_internal->GetNumberOfSymmetries(tp);
@@ -735,15 +732,16 @@ static bool Step4Analyze(Analysis *dest) {
                                            value, remoteness);
             } else {
                 error = AnalysisCount(&parts[tid].data, tp, value, remoteness,
-                                      tp.position == canonical);
+                                      tp.position == canonical.position);
             }
             if (error != 0) ConcurrentBoolStore(&success, false);
         }
     }
     MergePartialAnalysisCounts(dest, parts);
     GamesmanAllocatorDeallocate(allocator, parts);
+    if (this_tier != canonical_tier) AnalysisClearCanonicalCounts(dest);
 
-    if (DbManagerUnloadTier(this_tier) != kSuccess) {
+    if (DbManagerUnloadTier(canonical_tier) != kSuccess) {
         ConcurrentBoolStore(&success, false);
     }
     ConcurrentBitsetDestroy(this_tier_map);
@@ -805,7 +803,8 @@ int TierAnalyzerAnalyze(Analysis *dest, Tier tier, bool force) {
             ret = kAnalysisTierCheckError;
             goto _bailout;
         } else if (status == kAnalysisTierAnalyzed) {
-            StatManagerLoadAnalysis(dest, tier);
+            ret = StatManagerLoadAnalysis(dest, tier);
+            if (ret != kSuccess) goto _bailout;
             goto _done;
         }
     }

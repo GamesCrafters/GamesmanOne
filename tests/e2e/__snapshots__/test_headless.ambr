@@ -830,7 +830,7 @@
   Average branching factor: 0.000000 (0.000000 canonical)
   
   --- Finished analyzing all tiers. ---
-  Number of canonical tiers analyzed: 86
+  Number of tiers analyzed: 86
   Number of tiers failed due to OOM: 0
   Total tiers scanned: 86
   
@@ -7735,7 +7735,7 @@
   Average branching factor: 0.000000 (0.000000 canonical)
   
   --- Finished analyzing all tiers. ---
-  Number of canonical tiers analyzed: 10
+  Number of tiers analyzed: 10
   Number of tiers failed due to OOM: 0
   Total tiers scanned: 10
   
@@ -9653,7 +9653,7 @@
   Average branching factor: N/A 
   
   --- Finished analyzing all tiers. ---
-  Number of canonical tiers analyzed: 153
+  Number of tiers analyzed: 153
   Number of tiers failed due to OOM: 0
   Total tiers scanned: 153
   
@@ -15208,7 +15208,7 @@
   Average branching factor: N/A 
   
   --- Finished analyzing all tiers. ---
-  Number of canonical tiers analyzed: 55
+  Number of tiers analyzed: 55
   Number of tiers failed due to OOM: 0
   Total tiers scanned: 55
   

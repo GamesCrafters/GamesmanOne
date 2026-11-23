@@ -204,8 +204,14 @@ static TierPositionHashSet ReferenceGetCanonicalChildPositions(
 
     for (int i = 0; i < num_moves; ++i) {
         TierPosition child = api_internal->DoMove(tier_position, moves[i]);
-        child.position = api_internal->GetCanonicalPosition(child);
-        TierPositionHashSetAdd(&ret, child);
+        TierPosition canonical = {
+            .tier = api_internal->GetCanonicalTier(child.tier),
+            .position = 0,
+        };
+        canonical.position =
+            api_internal->GetPositionInSymmetricTier(child, canonical.tier);
+        canonical.position = api_internal->GetCanonicalPosition(canonical);
+        TierPositionHashSetAdd(&ret, canonical);
     }
 
     return ret;

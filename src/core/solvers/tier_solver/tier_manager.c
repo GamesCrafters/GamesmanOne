@@ -309,7 +309,9 @@ static int BuildTierGraph(int type) {
     TierStack fringe;
     TierStackInit(&fringe);
     Tier initial_tier = api_internal->GetInitialTier();
-    initial_tier = api_internal->GetCanonicalTier(initial_tier);
+    if (type == kTierSolving) {
+        initial_tier = api_internal->GetCanonicalTier(initial_tier);
+    }
     if (!TierStackPush(&fringe, initial_tier)) goto _bailout;
     if (!TierGraphSetInitial(initial_tier)) goto _bailout;
 
@@ -857,12 +859,15 @@ static bool IsCanonicalTier(Tier tier) {
 }
 
 static int DiscoverTierGraph(bool force, int verbose, size_t memlimit) {
-    TierAnalyzerInit(api_internal, memlimit);
+    if (!TierAnalyzerInit(api_internal, memlimit)) {
+        TierAnalyzerFinalize();
+        return kMallocFailureError;
+    }
     while (!TierQueueEmpty(&pending_tiers)) {
         Tier tier = TierQueuePop(&pending_tiers);
-        Tier canonical = api_internal->GetCanonicalTier(tier);
 
-        // Analyze the canonical tier instead.
+        // Symmetric tiers can have different reachable sets from the initial
+        // position, so discover and analyze each original tier separately.
         Analysis *tier_analysis = (Analysis *)GamesmanMalloc(sizeof(Analysis));
         if (tier_analysis == NULL) {
             TierAnalyzerFinalize();
@@ -870,21 +875,13 @@ static int DiscoverTierGraph(bool force, int verbose, size_t memlimit) {
         }
         AnalysisInit(tier_analysis);
 
-        int error = TierAnalyzerAnalyze(tier_analysis, canonical, force);
+        int error = TierAnalyzerAnalyze(tier_analysis, tier, force);
         if (error == 0) {
             // Analyzer succeeded.
             PrintAnalyzed(tier, tier_analysis, verbose);
             AnalyzeUpdateTierGraph(tier);
             ++processed_tiers;
 
-            // If tier is non-canonical, we must convert the analysis to non-
-            // cannonical. Note that the analysis here is the analysis of the
-            // canonical tier on disk.
-            if (tier != canonical) {
-                AnalysisConvertToNoncanonical(
-                    tier_analysis, tier,
-                    api_internal->GetPositionInSymmetricTier);
-            }
             AnalysisAggregate(&game_analysis, tier_analysis);
         } else {
             printf("Failed to analyze tier %" PRITier ", code %d\n", tier,
@@ -936,7 +933,7 @@ static void AnalyzeUpdateTierGraph(Tier analyzed_tier) {
 static void PrintAnalyzerResult(void) {
     printf(
         "\n--- Finished analyzing all tiers. ---\n"
-        "Number of canonical tiers analyzed: %" PRId64
+        "Number of tiers analyzed: %" PRId64
         "\nNumber of tiers failed due to OOM: %" PRId64
         "\nTotal tiers scanned: %" PRId64 "\n\n",
         processed_tiers, failed_tiers, processed_tiers + failed_tiers);

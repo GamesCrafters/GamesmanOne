@@ -337,8 +337,10 @@ void AnalysisConvertToNoncanonical(
         analysis->draw_example.tier = noncanonical;
     }
 
-    // Zero out all canonical position counters because the entire tier is
-    // non-canonical.
+    AnalysisClearCanonicalCounts(analysis);
+}
+
+void AnalysisClearCanonicalCounts(Analysis *analysis) {
     analysis->canonical_win_count = 0;
     analysis->canonical_lose_count = 0;
     analysis->canonical_tie_count = 0;
