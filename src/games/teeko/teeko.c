@@ -437,31 +437,28 @@ static int TeekoMoveToString(Move move, char *buffer) {
     return kSuccess;
 }
 
-static bool TeekoIsValidMoveString(ReadOnlyString move_string) {
-    if (move_string == NULL) return false;
-
-    int length = (int)strlen(move_string);
-    if (length < 1 || length > 5) return false;
-    int src, dest;
-    int num_tokens = sscanf(move_string, "%d %d", &src, &dest);
-    if (num_tokens < 0) return false;
-    if (num_tokens == 1) {  // Dropping move.
-        return src > 0 && src <= kBoardSize;
+static Move TeekoStringToMove(ReadOnlyString move_string) {
+    if (move_string == NULL || strlen(move_string) > 5) {
+        return -1;
     }
 
-    // Moving move.
-    return src > 0 && src <= kBoardSize && dest > 0 && dest <= kBoardSize;
+    int src, dest;
+    int num_tokens = sscanf(move_string, "%d %d", &src, &dest);
+    if (num_tokens == 1) {  // Dropping move.
+        if (src > 0 && src <= kBoardSize) {
+            return (Move)src - 1;
+        }
+    } else if (num_tokens == 2) {  // Moving move.
+        if (src > 0 && src <= kBoardSize && dest > 0 && dest <= kBoardSize) {
+            return ConstructMove(src - 1, dest - 1);
+        }
+    }
+
+    return -1;
 }
 
-static Move TeekoStringToMove(ReadOnlyString move_string) {
-    int src, dest;
-    int num_tokens = sscanf(move_string, "%d %d", &src, &dest);
-    if (num_tokens < 0) return false;
-    if (num_tokens == 1) {  // Dropping move.
-        return (Move)src - 1;
-    }
-
-    return ConstructMove(src - 1, dest - 1);
+static bool TeekoIsValidMoveString(ReadOnlyString move_string) {
+    return TeekoStringToMove(move_string) >= 0;
 }
 
 static const GameplayApiCommon TeekoGameplayApiCommon = {
