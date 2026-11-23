@@ -98,7 +98,11 @@ static inline int RecordGetNumUndecidedChildren(const Record *rec) {
  * @param[in] val New `Value`.
  */
 static inline void RecordSetValue(Record *rec, Value val) {
-    assert(val >= 0 && val < (1 << kRecordNumValueBits));  // LCOV_EXCL_BR_LINE
+    // Also covers negative values, which convert to unsigned values above the
+    // field's range.
+    // LCOV_EXCL_BR_START
+    assert((unsigned int)val < (1U << kRecordNumValueBits));
+    // LCOV_EXCL_BR_STOP
 
     uint16_t remoteness = RecordGetRemoteness(rec);
     *rec = (val << kRecordNumRemotenessBits) | remoteness;
@@ -129,8 +133,10 @@ static inline void RecordSetRemoteness(Record *rec, int remoteness) {
  */
 static inline void RecordSetValueRemoteness(Record *rec, Value val,
                                             int remoteness) {
+    // Also covers negative values, which convert to unsigned values above the
+    // field's range.
     // LCOV_EXCL_BR_START
-    assert(val >= 0 && val < (1 << kRecordNumValueBits));
+    assert((unsigned int)val < (1U << kRecordNumValueBits));
     assert(remoteness >= 0 && remoteness < (1 << kRecordNumRemotenessBits));
     // LCOV_EXCL_BR_STOP
 
