@@ -340,7 +340,6 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
         return kIllegalArgumentError;
     }
 
-#ifdef _OPENMP
     int error = CheckExistingSolvingTier("ArrayDbCreateConcurrentSolvingTier");
     if (error) {
         return error;
@@ -361,9 +360,6 @@ static int ArrayDbCreateConcurrentSolvingTier(Tier tier, int64_t size) {
     solving.is_concurrent = true;
 
     return kSuccess;
-#else
-    return ArrayDbCreateSolvingTier(tier, size);
-#endif
 }
 
 /**
