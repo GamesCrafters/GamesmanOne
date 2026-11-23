@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include <cstdlib>
+
 extern "C" {
 #include "libs/io/xfile.h"
 }
@@ -67,19 +69,16 @@ TEST(GuardedFreopenTest, ReturnsValidPointerOnSuccess) {
 }
 
 TEST(GuardedFreopenTest, ReturnsNullOnFailure) {
-    // Providing an invalid mode to freopen forces a libc-level rejection,
-    // ensuring our wrapper correctly propagates the NULL return value.
-    const char* filename = "FreopenFail.tmp";
-    FILE* stream = GuardedFopen(filename, "w");
-    ASSERT_NE(stream, nullptr);
-
-    FILE* reopened = GuardedFreopen(filename, "invalid_mode", stream);
-
-    EXPECT_EQ(reopened, nullptr);
-
-    // freopen closes the original stream even when it fails, so it must not
-    // be closed again here (that was a double-free under ASan).
-    GuardedRemove(filename);
+    // Use stdout because affected glibc versions leak dynamically allocated
+    // streams on freopen failure (bug 32140). The child owns the redirection.
+    // Since this test uses stdout, calling it in the main test process would
+    // close GoogleTest’s own output stream.
+    EXPECT_EXIT(
+        {
+            FILE* reopened = GuardedFreopen("/dev/null/output", "w", stdout);
+            std::exit(reopened == nullptr ? EXIT_SUCCESS : EXIT_FAILURE);
+        },
+        ::testing::ExitedWithCode(EXIT_SUCCESS), "freopen:");
 }
 
 // =============================== GuardedFclose ===============================
