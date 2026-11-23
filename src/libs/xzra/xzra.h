@@ -157,7 +157,7 @@ typedef struct XzraOutStream XzraOutStream;
  * @param[in] ofname Output file name.
  * @param[in] options Pointer to the compression options.
  *
- * @returns A pointer to the new output stream.
+ * @return A pointer to the new output stream.
  * @retval NULL On failure.
  */
 XzraOutStream *XzraOutStreamCreate(const char *ofname,
@@ -265,7 +265,7 @@ enum XzraSeekOrigin {
  *
  * @param[in] filename Name of the target XZ file.
  *
- * @returns A pointer to the opened file.
+ * @return A pointer to the opened file.
  * @retval NULL If the given `filename` cannot be opened.
  */
 XzraFile *XzraFileOpen(const char *filename);
@@ -310,7 +310,7 @@ int XzraFileSeek(XzraFile *file, int64_t offset, int origin);
  * @param[in] size Number of bytes to read.
  * @param[in,out] file Source XZ file.
  *
- * @returns The number of bytes successfully read.
+ * @return The number of bytes successfully read.
  */
 size_t XzraFileRead(void *dest, size_t size, XzraFile *file);
 

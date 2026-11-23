@@ -5,8 +5,6 @@
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Implementation of a naive database which stores Values and
  * Remotenesses in uncompressed raw bytes.
- * @version 1.2.5
- * @date 2025-06-10
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -140,14 +138,14 @@ static char *GetFullPathToFile(Tier tier, GetTierNameFunc GetTierName) {
     // Full path: "<path>/<file_name>", +2 for '/' and '\0'.
     const size_t max_length = strlen(sandbox_path) + kDbFileNameLengthMax + 1;
     char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
-    if (full_path == NULL) {
+    if (!full_path) {
         fprintf(stderr, "GetFullPathToFile: failed to calloc full_path.\n");
         return NULL;
     }
 
     size_t offset = 0;
     AppendSnprintf(full_path, max_length + 1, &offset, "%s/", sandbox_path);
-    if (GetTierName != NULL) {
+    if (GetTierName) {
         GetTierName(tier, full_path + offset);
     } else {
         AppendSnprintf(full_path, max_length + 1, &offset, "%" PRITier, tier);
@@ -162,7 +160,7 @@ static char *GetFullPathToFinishFlag(void) {
     const size_t max_length =
         strlen(sandbox_path) + strlen(kFinishFlagFilename) + 1;
     char *full_path = (char *)GamesmanCallocWhole(max_length + 1, sizeof(char));
-    if (full_path == NULL) {
+    if (!full_path) {
         fprintf(stderr,
                 "GetFullPathToFinishFlag: failed to calloc full_path.\n");
         return NULL;
@@ -175,35 +173,31 @@ static char *GetFullPathToFinishFlag(void) {
 
 static int ReadFromFile(TierPosition tier_position, void *buffer) {
     char *full_path = GetFullPathToFile(tier_position.tier, CurrentGetTierName);
-    if (full_path == NULL) return kMallocFailureError;  // OOM.
+    if (!full_path) {
+        return kMallocFailureError;  // OOM.
+    }
 
-    FILE *file = fopen(full_path, "rb");
+    FILE *file = GuardedFopen(full_path, "rb");
     GamesmanFree(full_path);
 
-    if (file == NULL) {
-        perror("fopen");
+    if (!file) {
         return kFileSystemError;
     }
 
     int64_t offset = tier_position.position * (int64_t)sizeof(NaiveDbEntry);
-    if (fseek(file, offset, SEEK_SET) != 0) {
-        perror("fseek");
+    if (GuardedFseek(file, offset, SEEK_SET) != 0) {
         fclose(file);
         return kFileSystemError;
     }
 
     size_t num_entries = kBufferSize / sizeof(NaiveDbEntry);
-    if (fread(buffer, sizeof(NaiveDbEntry), num_entries, file) != num_entries &&
-        !feof(file)) {
-        perror("fread");
+    if (GuardedFread(buffer, sizeof(NaiveDbEntry), num_entries, file, true) !=
+        0) {
         fclose(file);
         return kFileSystemError;
     }
 
-    if (fclose(file) != 0) {
-        perror("fclose");
-    }
-
+    GuardedFclose(file);
     return kSuccess;
 }
 
@@ -215,7 +209,7 @@ static int NaiveDbInit(ReadOnlyString game_name, int variant,
     assert(sandbox_path == NULL);
 
     sandbox_path = (char *)GamesmanMalloc((strlen(path) + 1) * sizeof(char));
-    if (sandbox_path == NULL) {
+    if (!sandbox_path) {
         fprintf(stderr, "NaiveDbInit: failed to malloc path.\n");
         return kMallocFailureError;
     }
@@ -240,24 +234,31 @@ static void NaiveDbFinalize(void) {
         TierToPtrChainedHashMapBegin(&loaded_tiers);
     while (TierToPtrChainedHashMapIteratorIsValid(&it)) {
         GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
+        TierToPtrChainedHashMapIteratorNext(&it);
     }
     TierToPtrChainedHashMapDestroy(&loaded_tiers);
     records = NULL;
 }
 
 static int NaiveDbCreateSolvingTier(Tier tier, int64_t size) {
+    if (size < 0) {
+        return kIllegalArgumentError;
+    }
+
     GamesmanFree(records);
     records = (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
-    if (records == NULL) {
+    if (size && !records) {
         fprintf(stderr,
                 "NaiveDbCreateSolvingTier: failed to calloc records.\n");
         return kMallocFailureError;
     }
+
     if (!TierToPtrChainedHashMapSet(&loaded_tiers, tier, records)) {
         GamesmanFree(records);
         records = NULL;
         return kMallocFailureError;
     }
+
     current_tier = tier;
     current_tier_size = size;
 
@@ -269,21 +270,20 @@ static int NaiveDbFlushSolvingTier(void *aux) {
 
     // Create a file <tier> at the given path
     char *full_path = GetFullPathToFile(current_tier, CurrentGetTierName);
-    if (full_path == NULL) return kMallocFailureError;
+    if (!full_path) {
+        return kMallocFailureError;
+    }
 
-    FILE *file = fopen(full_path, "wb");
+    FILE *file = GuardedFopen(full_path, "wb");
     GamesmanFree(full_path);
 
-    if (file == NULL) {
-        perror("fopen");
+    if (!file) {
         return kFileSystemError;
     }
 
     // Write records
-    int64_t n =
-        (int64_t)fwrite(records, sizeof(records[0]), current_tier_size, file);
-    if (n != current_tier_size) {
-        perror("fwrite");
+    if (GuardedFwrite(records, sizeof(records[0]), current_tier_size, file) !=
+        0) {
         fclose(file);
         return kFileSystemError;
     }
@@ -304,13 +304,19 @@ static int NaiveDbFreeSolvingTier(void) {
 
 static int NaiveDbSetGameSolved(void) {
     char *full_path = GetFullPathToFinishFlag();
-    if (full_path == NULL) return kMallocFailureError;
+    if (!full_path) {
+        return kMallocFailureError;
+    }
 
     FILE *f = fopen(full_path, "w");
     GamesmanFree(full_path);
-    if (f == NULL) return kFileSystemError;
+    if (!f) {
+        return kFileSystemError;
+    }
 
-    if (fclose(f) != 0) return kFileSystemError;
+    if (fclose(f) != 0) {
+        return kFileSystemError;
+    }
 
     return kSuccess;
 }
@@ -334,10 +340,14 @@ static int NaiveDbGetRemoteness(Position position) {
 }
 
 static int NaiveDbLoadTier(Tier tier, int64_t size) {
+    if (tier == current_tier || size < 0) {
+        return kIllegalArgumentError;
+    }
+
     char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
     NaiveDbEntry *load =
         (NaiveDbEntry *)GamesmanCallocWhole(size, sizeof(NaiveDbEntry));
-    if (full_path == NULL || load == NULL) {
+    if (!full_path || !load) {
         GamesmanFree(full_path);
         GamesmanFree(load);
         return kMallocFailureError;
@@ -346,9 +356,9 @@ static int NaiveDbLoadTier(Tier tier, int64_t size) {
     // Open db file
     FILE *db_file = fopen(full_path, "rb");
     GamesmanFree(full_path);
-    if (db_file == NULL) {
+    if (!db_file) {
         GamesmanFree(load);
-        return kFileSystemError;
+        return kRuntimeError;
     }
 
     // Read db file into "load"
@@ -366,14 +376,19 @@ static int NaiveDbLoadTier(Tier tier, int64_t size) {
 }
 
 static int NaiveDbUnloadTier(Tier tier) {
+    if (tier == current_tier) {
+        return kIllegalArgumentError;
+    }
+
     TierToPtrChainedHashMapIterator it =
         TierToPtrChainedHashMapGet(&loaded_tiers, tier);
     if (TierToPtrChainedHashMapIteratorIsValid(&it)) {
         GamesmanFree(TierToPtrChainedHashMapIteratorValue(&it));
         TierToPtrChainedHashMapRemove(&loaded_tiers, tier);
+        return kSuccess;
     }
 
-    return kSuccess;
+    return kIllegalArgumentError;
 }
 
 static bool NaiveDbIsTierLoaded(Tier tier) {
@@ -405,8 +420,14 @@ static int NaiveDbGetRemotenessFromLoaded(Tier tier, Position position) {
 }
 
 static int NaiveDbProbeInit(DbProbe *probe) {
+    if (!probe) {
+        return kIllegalArgumentError;
+    }
+
     probe->buffer = GamesmanMalloc(kBufferSize);
-    if (probe->buffer == NULL) return kMallocFailureError;
+    if (!probe->buffer) {
+        return kMallocFailureError;
+    }
 
     probe->tier = kIllegalTier;
     probe->begin = 0;
@@ -416,6 +437,10 @@ static int NaiveDbProbeInit(DbProbe *probe) {
 }
 
 static int NaiveDbProbeDestroy(DbProbe *probe) {
+    if (!probe) {
+        return kSuccess;
+    }
+
     GamesmanFree(probe->buffer);
     memset(probe, 0, sizeof(*probe));
 
@@ -423,11 +448,20 @@ static int NaiveDbProbeDestroy(DbProbe *probe) {
 }
 
 static bool ProbeBufferHit(DbProbe *probe, TierPosition tier_position) {
-    if (probe->tier != tier_position.tier) return false;
+    if (probe->tier != tier_position.tier) {
+        return false;
+    }
+
     int64_t record_offset =
         tier_position.position * (int64_t)sizeof(NaiveDbEntry);
-    if (record_offset < probe->begin) return false;
-    if (record_offset >= probe->begin + probe->size) return false;
+    if (record_offset < probe->begin) {
+        return false;
+    }
+
+    if (record_offset >= probe->begin + probe->size) {
+        return false;
+    }
+
     return true;
 }
 
@@ -449,41 +483,55 @@ static void *PointerShift(const void *p, int64_t offset) {
 
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
     int64_t offset = position * (int64_t)sizeof(NaiveDbEntry) - probe->begin;
-    assert(offset >= 0);
+    assert(offset >= 0);  // LCOV_EXCL_BR_LINE
     NaiveDbEntry entry;
     memcpy(&entry, PointerShift(probe->buffer, offset), sizeof(NaiveDbEntry));
     return entry;
 }
 
 static Value NaiveDbProbeValue(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeFillBuffer(probe, tier_position)) return kErrorValue;
+    if (!ProbeFillBuffer(probe, tier_position)) {
+        return kErrorValue;
+    }
+
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.value;
 }
 
 static int NaiveDbProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    if (!ProbeFillBuffer(probe, tier_position)) return kErrorRemoteness;
+    if (!ProbeFillBuffer(probe, tier_position)) {
+        return kErrorRemoteness;
+    }
+
     NaiveDbEntry record = ProbeGetRecord(probe, tier_position.position);
     return record.remoteness;
 }
 
 static int NaiveDbTierStatus(Tier tier) {
     char *full_path = GetFullPathToFile(tier, CurrentGetTierName);
-    if (full_path == NULL) return kDbTierStatusCheckError;
+    if (!full_path) {
+        return kDbTierStatusCheckError;
+    }
 
     FILE *db_file = fopen(full_path, "rb");
     GamesmanFree(full_path);
-    if (db_file == NULL) return kDbTierStatusMissing;
+    if (!db_file) {
+        return kDbTierStatusMissing;
+    }
 
     int error = GuardedFclose(db_file);
-    if (error != 0) return kDbTierStatusCheckError;
+    if (error != 0) {
+        return kDbTierStatusCheckError;
+    }
 
     return kDbTierStatusSolved;
 }
 
 static int NaiveDbGameStatus(void) {
     char *full_path = GetFullPathToFinishFlag();
-    if (full_path == NULL) return kDbGameStatusCheckError;
+    if (!full_path) {
+        return kDbGameStatusCheckError;
+    }
 
     bool exists = FileExists(full_path);
     GamesmanFree(full_path);

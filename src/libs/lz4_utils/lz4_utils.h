@@ -136,7 +136,7 @@ typedef struct Lz4UtilsOutStream Lz4UtilsOutStream;
  * @param[in] ofname Output file name.
  * @param[in] level LZ4 compression level.
  *
- * @returns Pointer to the new Lz4Utils output stream on success. `NULL` on
+ * @return Pointer to the new Lz4Utils output stream on success. `NULL` on
  * failure (e.g., file creation or memory allocation failed).
  */
 Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level);
@@ -255,7 +255,7 @@ typedef struct Lz4UtilsInStream Lz4UtilsInStream;
  *
  * @param[in] ifname Input file name.
  *
- * @returns Pointer to the new Lz4Utils input stream on success. `NULL` on
+ * @return Pointer to the new Lz4Utils input stream on success. `NULL` on
  * failure (e.g., file open or memory allocation failed).
  */
 Lz4UtilsInStream *Lz4UtilsInStreamCreate(const char *ifname);

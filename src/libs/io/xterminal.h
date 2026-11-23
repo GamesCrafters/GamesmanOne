@@ -49,7 +49,7 @@ void PrintfAndFlush(const char *format, ...);
  * @param[in] max_length Maximum acceptable user input length in number of
  * characters.
  *
- * @returns The populated buffer `buf`.
+ * @return The populated buffer `buf`.
  * @retval NULL If `fgets` encounters an error or reaches EOF without reading
  * any characters.
  */

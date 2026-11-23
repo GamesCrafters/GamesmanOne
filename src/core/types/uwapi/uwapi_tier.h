@@ -55,7 +55,7 @@ typedef struct UwapiTier {
      * @note This is typically set to the same function used by the tier
      * solver API.
      *
-     * @returns The initial tier of the current game variant.
+     * @return The initial tier of the current game variant.
      */
     Tier (*GetInitialTier)(void);
 
@@ -66,7 +66,7 @@ typedef struct UwapiTier {
      * @note This is typically set to the same function used by the tier
      * solver API.
      *
-     * @returns The initial position.
+     * @return The initial position.
      */
     Position (*GetInitialPosition)(void);
 
@@ -75,7 +75,7 @@ typedef struct UwapiTier {
      *
      * @note This function is optional.
      *
-     * @returns A random tier position.
+     * @return A random tier position.
      *
      * @todo Decide if this function should only return legal tier positions as
      * defined by the game developer. Note that it's hard to determine whether
@@ -96,7 +96,7 @@ typedef struct UwapiTier {
      * @param[in] tier_position The tier position from which moves are
      * generated.
      *
-     * @returns An array of moves available at `tier_position`.
+     * @return An array of moves available at `tier_position`.
      */
     MoveArray (*GenerateMoves)(TierPosition tier_position);
 
@@ -114,7 +114,7 @@ typedef struct UwapiTier {
      * @param[in] tier_position The tier position at which the move is made.
      * @param[in] move The move to perform.
      *
-     * @returns The resulting tier position.
+     * @return The resulting tier position.
      */
     TierPosition (*DoMove)(TierPosition tier_position, Move move);
 
@@ -132,7 +132,7 @@ typedef struct UwapiTier {
      *
      * @param[in] tier_position The tier position to evaluate.
      *
-     * @returns The value of `tier_position` if it is primitive; otherwise,
+     * @return The value of `tier_position` if it is primitive; otherwise,
      * `kUndecided`.
      */
     Value (*Primitive)(TierPosition tier_position);
@@ -154,7 +154,7 @@ typedef struct UwapiTier {
      *
      * @param[in] formal_position The formal position string to check.
      *
-     * @returns `true` if the formal position is legal; otherwise, `false`.
+     * @return `true` if the formal position is legal; otherwise, `false`.
      */
     bool (*IsLegalFormalPosition)(ReadOnlyString formal_position);
 
@@ -170,7 +170,7 @@ typedef struct UwapiTier {
      *
      * @param[in] formal_position The formal position string.
      *
-     * @returns The hashed tier position.
+     * @return The hashed tier position.
      */
     TierPosition (*FormalPositionToTierPosition)(
         ReadOnlyString formal_position);
@@ -190,7 +190,7 @@ typedef struct UwapiTier {
      *
      * @param[in] tier_position The hashed tier position.
      *
-     * @returns The formal position as a `CString`. Returns a "null" `CString`,
+     * @return The formal position as a `CString`. Returns a "null" `CString`,
      * which can be tested using the `CStringIsNull()` function, on error.
      */
     CString (*TierPositionToFormalPosition)(TierPosition tier_position);
@@ -210,7 +210,7 @@ typedef struct UwapiTier {
      *
      * @param[in] tier_position The hashed tier position.
      *
-     * @returns The AutoGUI position as a `CString`. Returns a "null" `CString`,
+     * @return The AutoGUI position as a `CString`. Returns a "null" `CString`,
      * which can be tested using the `CStringIsNull()` function, on error.
      *
      * @see https://github.com/GamesCrafters/GamesmanUni
@@ -234,7 +234,7 @@ typedef struct UwapiTier {
      * @param[in] tier_position The tier position at which the move can be made.
      * @param[in] move The move.
      *
-     * @returns The formal move as a `CString` corresponding to the given `move`
+     * @return The formal move as a `CString` corresponding to the given `move`
      * at the given `tier_position`. Returns a "null" `CString`, which can be
      * tested using the `CStringIsNull()` function, on error.
      */
@@ -258,7 +258,7 @@ typedef struct UwapiTier {
      * @param[in] tier_position The tier position at which the move can be made.
      * @param[in] move The move.
      *
-     * @returns The AutoGUI move as a `CString` corresponding to the given
+     * @return The AutoGUI move as a `CString` corresponding to the given
      * `move` at the given `tier_position`. Returns an empty string if `move` is
      * a part-move. Returns a "null" `CString`, which can be tested using the
      * `CStringIsNull()` function, on error.
@@ -277,7 +277,7 @@ typedef struct UwapiTier {
      * @param[in] tier_position The parent tier position from which the moves
      * are generated.
      *
-     * @returns An array of all part-moves from `tier_position`, whose
+     * @return An array of all part-moves from `tier_position`, whose
      * ownership is then transferred to the caller of this function.
      */
     PartmoveArray (*GeneratePartmoves)(TierPosition tier_position);

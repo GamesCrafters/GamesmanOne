@@ -3,14 +3,7 @@
  * @author Robert Shi (robertyishi@berkeley.edu)
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
- * @brief Generic Database probe type.
- * @details A DbProbe is an abstract type for a database probe, which is used to
- * extract information such as value and remoteness from a database. It is
- * considered a helper type for the Database type, which uses this structure to
- * cache most recently used data from on-disk database. The behavior depends on
- * the implementation of the corresponding Databse.
- * @version 1.0.1
- * @date 2024-12-10
+ * @brief Generic `Database` probe type.
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -37,23 +30,35 @@
 #include "core/types/base.h"
 
 /**
- * @brief Database probe which can be used to probe the database on permanent
- * storage (disk). To access in-memory DB, use Database's "Solving API" instead.
+ * @brief A `Database` probe used to access a database on permanent storage
+ * (disk). To access an in-memory database, use the `Database` "Solving API"
+ * instead.
  *
- * @details A DbProbe can be implemented to read ahead and cache most recently
- * used database contents in its internal buffer. The behavior is implementation
- * dependent.
+ * @details A `DbProbe` is an abstract type for a database probe. It is used
+ * to extract information, such as the value and remoteness, from a database. It
+ * is a helper type for the `Database` type, which uses this structure to cache
+ * the most recently used data from an on-disk database. A `DbProbe` can be
+ * implemented to read ahead and cache the most recently used database contents
+ * in its internal buffer. Its exact behavior depends on the implementation of
+ * the corresponding `Database`.
  */
 typedef struct DbProbe {
-    Tier tier;    /**< Most recently used tier. */
-    void *buffer; /**< Read-ahead buffer. */
+    /** The most recently used tier. */
+    Tier tier;
 
-    /** Stores the index to the begin position of the buffer. However, the
-     * database implementation may override this definition. */
+    /** The read-ahead buffer. */
+    void *buffer;
+
+    /**
+     * Stores the starting index of the buffer. However, a database
+     * implementation may override this definition.
+     */
     int64_t begin;
 
-    /** Stores the size of the buffer. However, the database implementation may
-     * override this definition. */
+    /**
+     * Stores the size of the buffer. However, a database implementation may
+     * override this definition.
+     */
     int64_t size;
 } DbProbe;
 

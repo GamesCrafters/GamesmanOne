@@ -63,6 +63,42 @@ int GuardedFclose(FILE *stream) {
     return error;
 }
 
+int GuardedFseek(FILE *stream, long offset, int whence) {
+    int error = fseek(stream, offset, whence);
+    if (error != 0) {
+        perror("fseek");
+    }
+
+    return error;
+}
+
+int GuardedFread(void *ptr, size_t size, size_t count, FILE *stream,
+                 bool eof_ok) {
+    if (size == 0 || count == 0 || fread(ptr, size, count, stream) == count) {
+        return 0;
+    }
+
+    if (ferror(stream)) {
+        perror("fread");
+        return EOF;
+    }
+    if (eof_ok) {
+        return 0;
+    }
+
+    fputs("fread: unexpected end of file\n", stderr);
+    return EOF;
+}
+
+int GuardedFwrite(const void *ptr, size_t size, size_t count, FILE *stream) {
+    if (size == 0 || count == 0 || fwrite(ptr, size, count, stream) == count) {
+        return 0;
+    }
+
+    perror("fwrite");
+    return EOF;
+}
+
 int GuardedOpen(const char *filename, int flags, ...) {
     int fd;
 

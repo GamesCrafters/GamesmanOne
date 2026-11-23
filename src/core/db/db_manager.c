@@ -4,8 +4,6 @@
  * @author GamesCrafters Research Group, UC Berkeley
  *         Supervised by Dan Garcia <ddgarcia@cs.berkeley.edu>
  * @brief Database manager module implementation.
- * @version 2.1.0
- * @date 2025-06-23
  *
  * @copyright This file is part of GAMESMAN, The Finite, Two-person
  * Perfect-Information Game Generator released under the GPL:
@@ -30,31 +28,129 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "core/constants.h"
+#include "core/gamesman_memory.h"
 #include "core/types/base.h"
 #include "core/types/database/database.h"
 #include "core/types/database/db_probe.h"
 #include "core/types/gamesman_status.h"
 #include "libs/io/xfile.h"
 
-static const Database *current_db;
+const Database *db_manager_current_db = NULL;
 
-static bool BasicDbApiImplemented(const Database *db);
-static bool IsValidDbName(ReadOnlyString name);
+static bool IsValidDbName(ReadOnlyString name) {
+    bool terminates = false;
+    // LCOV_EXCL_BR_START: Covered by InitUnterminatedFormalNameDeath
+    for (int i = 0; i < kDbFormalNameLengthMax + 1; ++i) {
+        // LCOV_EXCL_STOP
+        if (name[i] == '\0') {
+            terminates = true;
+            break;
+        }
+    }
+
+    // LCOV_EXCL_START: Covered by InitEmptyFormalNameDeath and
+    // InitUnterminatedFormalNameDeath.
+    if (!terminates) {  // Uninitialized name.
+        return false;
+    }
+
+    if (name[0] == '\0') {  // Empty name is not allowed.
+        return false;
+    }
+    // LCOV_EXCL_STOP
+
+    return true;
+}
+
+static bool BasicDbApiImplemented(const Database *db) {
+    // LCOV_EXCL_START: Covered by InitInvalidFormalNameDeath
+    if (!IsValidDbName(db->formal_name)) {
+        fprintf(stderr,
+                "BasicDbApiImplemented: (BUG) A Database does not have its "
+                "name properly initialized. Aborting...\n");
+        _exit(kNotImplementedError);
+    }
+    // LCOV_EXCL_STOP
+
+    if (db->Init == NULL) {
+        return false;
+    }
+    if (db->FlushSolvingTier == NULL) {
+        return false;
+    }
+    if (db->Finalize == NULL) {
+        return false;
+    }
+    if (db->SetValue == NULL) {
+        return false;
+    }
+    if (db->SetRemoteness == NULL) {
+        return false;
+    }
+    if (db->GetValue == NULL) {
+        return false;
+    }
+    if (db->GetRemoteness == NULL) {
+        return false;
+    }
+
+    return true;
+}
+
 static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path, bool read_only);
+                         int variant, ReadOnlyString data_path,
+                         bool read_only) {
+    // path = "<data_path>/<game_name>/<variant>/<db_name>/"
+    if (data_path == NULL) {
+        data_path = "data";
+    }
 
-// -----------------------------------------------------------------------------
+    char *path = NULL;
+    int path_length = (int)strlen(data_path) + 1;  // +1 for '/'.
+    path_length += (int)strlen(game_name) + 1;
+    path_length += kInt32Base10StringLengthMax + 1;
+    path_length += (int)strlen(db->name) + 1;
+    path = (char *)GamesmanCallocWhole((path_length + 1), sizeof(char));
+    if (path == NULL) {
+        fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
+        return NULL;
+    }
+
+    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
+                                 game_name, variant, db->name);
+    // LCOV_EXCL_START: This block is equivalent to an assertion that shouldn't
+    // be triggered in normal run.
+    if (actual_length >= path_length) {
+        fprintf(stderr,
+                "SetupDbPath: (BUG) not enough space was allocated for path. "
+                "Please check the implementation of this function.\n");
+        GamesmanFree(path);
+        return NULL;
+    }
+    // LCOV_EXCL_STOP
+
+    if (!read_only && MkdirRecursive(path) != 0) {
+        fprintf(stderr,
+                "SetupDbPath: failed to create path in the file system.\n");
+        GamesmanFree(path);
+        return NULL;
+    }
+
+    return path;
+}
 
 int DbManagerInitDb(const Database *db, bool read_only,
                     ReadOnlyString game_name, int variant,
                     ReadOnlyString data_path, GetTierNameFunc GetTierName,
                     void *aux) {
-    if (current_db != NULL) current_db->Finalize();
-    current_db = NULL;
+    if (db_manager_current_db != NULL) {
+        db_manager_current_db->Finalize();
+    }
+    db_manager_current_db = NULL;
 
     if (!BasicDbApiImplemented(db)) {
         fprintf(stderr,
@@ -63,248 +159,17 @@ int DbManagerInitDb(const Database *db, bool read_only,
                 db->formal_name);
         return kNotImplementedError;
     }
-    current_db = db;
+    db_manager_current_db = db;
 
-    char *path =
-        SetupDbPath(current_db, game_name, variant, data_path, read_only);
+    char *path = SetupDbPath(db_manager_current_db, game_name, variant,
+                             data_path, read_only);
     if (path == NULL) {
         return kFileSystemError;
     }
 
-    int error = current_db->Init(game_name, variant, path, GetTierName, aux);
-    free(path);
+    int error =
+        db_manager_current_db->Init(game_name, variant, path, GetTierName, aux);
+    GamesmanFree(path);
 
     return error;
-}
-
-void DbManagerFinalizeDb(void) {
-    if (current_db) current_db->Finalize();
-    current_db = NULL;
-}
-
-int DbManagerCreateSolvingTier(Tier tier, int64_t size) {
-    return current_db->CreateSolvingTier(tier, size);
-}
-
-int DbManagerCreateConcurrentSolvingTier(Tier tier, int64_t size) {
-    return current_db->CreateConcurrentSolvingTier(tier, size);
-}
-
-int DbManagerFlushSolvingTier(void *aux) {
-    return current_db->FlushSolvingTier(aux);
-}
-
-int DbManagerFreeSolvingTier(void) { return current_db->FreeSolvingTier(); }
-
-int DbManagerSetGameSolved(void) { return current_db->SetGameSolved(); }
-
-int DbManagerSetValue(Position position, Value value) {
-    return current_db->SetValue(position, value);
-}
-
-int DbManagerSetRemoteness(Position position, int remoteness) {
-    return current_db->SetRemoteness(position, remoteness);
-}
-
-int DbManagerSetValueRemoteness(Position position, Value value,
-                                int remoteness) {
-    return current_db->SetValueRemoteness(position, value, remoteness);
-}
-
-bool DbManagerMaximizeValueRemoteness(Position position, Value value,
-                                      int remoteness,
-                                      int (*compare)(Value v1, int r1, Value v2,
-                                                     int r2)) {
-    return current_db->MaximizeValueRemoteness(position, value, remoteness,
-                                               compare);
-}
-
-int DbManagerDecrementNumUndecidedChildren(Position position) {
-    return current_db->DecrementNumUndecidedChildren(position);
-}
-
-int DbManagerClearNumUndecidedChildren(Position position) {
-    return current_db->ClearNumUndecidedChildren(position);
-}
-
-Value DbManagerGetValue(Position position) {
-    return current_db->GetValue(position);
-}
-
-int DbManagerGetRemoteness(Position position) {
-    return current_db->GetRemoteness(position);
-}
-
-int DbManagerGetNumUndecidedChildren(Position position) {
-    return current_db->GetNumUndecidedChildren(position);
-}
-
-int DbManagerSegmentationMaxNumBuffers(void) {
-    return current_db->segmentation.MaxNumBuffers();
-}
-
-int DbManagerSegmentationCreateBuffers(Tier tier, int num_segments,
-                                       int64_t size) {
-    return current_db->segmentation.CreateBuffers(tier, num_segments, size);
-}
-
-int DbManagerSegmentationLoad(int buf_idx, int seg_idx) {
-    return current_db->segmentation.Load(buf_idx, seg_idx);
-}
-
-int DbManagerSegmentationFlush(int buf_idx, int seg_idx) {
-    return current_db->segmentation.Flush(buf_idx, seg_idx);
-}
-
-int DbManagerSegmentationFreeBuffers(void) {
-    return current_db->segmentation.FreeBuffers();
-}
-
-Value DbManagerSegmentationGetValue(int buf_idx, int64_t offset) {
-    return current_db->segmentation.GetValue(buf_idx, offset);
-}
-
-int DbManagerSegmentationGetRemoteness(int buf_idx, int64_t offset) {
-    return current_db->segmentation.GetRemoteness(buf_idx, offset);
-}
-
-void DbManagerSegmentationSetValueRemoteness(int buf_idx, int64_t offset,
-                                             Value value, int remoteness) {
-    current_db->segmentation.SetValueRemoteness(buf_idx, offset, value,
-                                                remoteness);
-}
-
-int DbManagerSegmentationConsolidate(int64_t tier_size, int num_segments) {
-    return current_db->segmentation.Consolidate(tier_size, num_segments);
-}
-
-bool DbManagerCheckpointExists(Tier tier) {
-    return current_db->CheckpointExists(tier);
-}
-
-int DbManagerCheckpointSave(const void *status, size_t status_size) {
-    return current_db->CheckpointSave(status, status_size);
-}
-
-int DbManagerCheckpointLoad(Tier tier, int64_t size, void *status,
-                            size_t status_size) {
-    return current_db->CheckpointLoad(tier, size, status, status_size);
-}
-
-int DbManagerCheckpointRemove(Tier tier) {
-    return current_db->CheckpointRemove(tier);
-}
-
-size_t DbManagerTierMemUsage(Tier tier, int64_t size) {
-    return current_db->TierMemUsage(tier, size);
-}
-
-size_t DbManagerConcurrentTierMemUsage(Tier tier, int64_t size) {
-    return current_db->ConcurrentTierMemUsage(tier, size);
-}
-
-int DbManagerLoadTier(Tier tier, int64_t size) {
-    return current_db->LoadTier(tier, size);
-}
-
-int DbManagerUnloadTier(Tier tier) { return current_db->UnloadTier(tier); }
-
-bool DbManagerIsTierLoaded(Tier tier) { return current_db->IsTierLoaded(tier); }
-
-Value DbManagerGetValueFromLoaded(Tier tier, Position position) {
-    return current_db->GetValueFromLoaded(tier, position);
-}
-
-int DbManagerGetRemotenessFromLoaded(Tier tier, Position position) {
-    return current_db->GetRemotenessFromLoaded(tier, position);
-}
-
-int DbManagerProbeInit(DbProbe *probe) { return current_db->ProbeInit(probe); }
-
-int DbManagerProbeDestroy(DbProbe *probe) {
-    return current_db->ProbeDestroy(probe);
-}
-
-Value DbManagerProbeValue(DbProbe *probe, TierPosition tier_position) {
-    return current_db->ProbeValue(probe, tier_position);
-}
-
-int DbManagerProbeRemoteness(DbProbe *probe, TierPosition tier_position) {
-    return current_db->ProbeRemoteness(probe, tier_position);
-}
-
-int DbManagerTierStatus(Tier tier) { return current_db->TierStatus(tier); }
-
-int DbManagerGameStatus(void) { return current_db->GameStatus(); }
-
-const char *DbManagerGetPath(void) { return current_db->GetPath(); }
-
-// -----------------------------------------------------------------------------
-
-static bool BasicDbApiImplemented(const Database *db) {
-    if (!IsValidDbName(db->formal_name)) {
-        fprintf(stderr,
-                "BasicDbApiImplemented: (BUG) A Database does not have its "
-                "name properly initialized. Aborting...\n");
-        exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
-    }
-    if (db->Init == NULL) return false;
-    if (db->FlushSolvingTier == NULL) return false;
-    if (db->Finalize == NULL) return false;
-    if (db->SetValue == NULL) return false;
-    if (db->SetRemoteness == NULL) return false;
-    if (db->GetValue == NULL) return false;
-    if (db->GetRemoteness == NULL) return false;
-
-    return true;
-}
-
-static bool IsValidDbName(ReadOnlyString name) {
-    bool terminates = false;
-    for (int i = 0; i < kDbFormalNameLengthMax + 1; ++i) {
-        if (name[i] == '\0') {
-            terminates = true;
-            break;
-        }
-    }
-    if (!terminates) return false;      // Uninitialized name.
-    if (name[0] == '\0') return false;  // Empty name is not allowed.
-    return true;
-}
-
-static char *SetupDbPath(const Database *db, ReadOnlyString game_name,
-                         int variant, ReadOnlyString data_path,
-                         bool read_only) {
-    // path = "<data_path>/<game_name>/<variant>/<db_name>/"
-    if (data_path == NULL) data_path = "data";
-    char *path = NULL;
-
-    int path_length = (int)strlen(data_path) + 1;  // +1 for '/'.
-    path_length += (int)strlen(game_name) + 1;
-    path_length += kInt32Base10StringLengthMax + 1;
-    path_length += (int)strlen(db->name) + 1;
-    path = (char *)calloc((path_length + 1), sizeof(char));
-    if (path == NULL) {
-        fprintf(stderr, "SetupDbPath: failed to calloc path.\n");
-        return NULL;
-    }
-
-    int actual_length = snprintf(path, path_length, "%s/%s/%d/%s/", data_path,
-                                 game_name, variant, db->name);
-    if (actual_length >= path_length) {
-        fprintf(stderr,
-                "SetupDbPath: (BUG) not enough space was allocated for path. "
-                "Please check the implementation of this function.\n");
-        free(path);
-        return NULL;
-    }
-
-    if (!read_only && MkdirRecursive(path) != 0) {
-        fprintf(stderr,
-                "SetupDbPath: failed to create path in the file system.\n");
-        free(path);
-        return NULL;
-    }
-
-    return path;
 }

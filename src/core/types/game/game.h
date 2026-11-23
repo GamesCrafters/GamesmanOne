@@ -98,7 +98,7 @@ typedef struct Game {
      *
      * @param[in,out] aux Auxiliary parameter.
      *
-     * @returns 0 on success, non-zero error code otherwise.
+     * @return 0 on success, non-zero error code otherwise.
      */
     int (*Init)(void *aux);
 
@@ -107,7 +107,7 @@ typedef struct Game {
      *
      * @note This member function is REQUIRED.
      *
-     * @returns 0 on success, non-zero error code otherwise.
+     * @return 0 on success, non-zero error code otherwise.
      */
     int (*Finalize)(void);
 
@@ -118,7 +118,7 @@ typedef struct Game {
      * @note This member function is optional and can be set to `NULL` if the
      * game has only one variant.
      *
-     * @returns The current variant of the game.
+     * @return The current variant of the game.
      */
     const GameVariant *(*GetCurrentVariant)(void);
 
@@ -132,7 +132,7 @@ typedef struct Game {
      * @param[in] option Index of the option to modify.
      * @param[in] selection Index of the choice to select.
      *
-     * @returns 0 on success, non-zero error code otherwise.
+     * @return 0 on success, non-zero error code otherwise.
      */
     int (*SetVariantOption)(int option, int selection);
 } Game;

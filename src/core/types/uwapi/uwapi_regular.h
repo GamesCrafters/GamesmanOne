@@ -58,7 +58,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] position The position from which moves are generated.
      *
-     * @returns An array of available moves at `position`.
+     * @return An array of available moves at `position`.
      */
     MoveArray (*GenerateMoves)(Position position);
 
@@ -76,7 +76,7 @@ typedef struct UwapiRegular {
      * @param[in] position The position at which the move is made.
      * @param[in] move The move to perform.
      *
-     * @returns The resulting position.
+     * @return The resulting position.
      */
     Position (*DoMove)(Position position, Move move);
 
@@ -93,7 +93,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] position The position to evaluate.
      *
-     * @returns The value of `position` if it is primitive; otherwise,
+     * @return The value of `position` if it is primitive; otherwise,
      * `kUndecided`.
      */
     Value (*Primitive)(Position position);
@@ -115,7 +115,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] formal_position The formal position string to check.
      *
-     * @returns `true` if the formal position is legal; otherwise, `false`.
+     * @return `true` if the formal position is legal; otherwise, `false`.
      */
     bool (*IsLegalFormalPosition)(ReadOnlyString formal_position);
 
@@ -131,7 +131,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] formal_position The formal position string.
      *
-     * @returns The hashed position.
+     * @return The hashed position.
      */
     Position (*FormalPositionToPosition)(ReadOnlyString formal_position);
 
@@ -150,7 +150,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] position The hashed position.
      *
-     * @returns The formal position as a dynamically allocated `CString`.
+     * @return The formal position as a dynamically allocated `CString`.
      * Returns a "null" `CString`, which can be tested using the
      * `CStringIsNull()` function, on error.
      */
@@ -171,7 +171,7 @@ typedef struct UwapiRegular {
      *
      * @param[in] position The hashed position.
      *
-     * @returns The AutoGUI position as a dynamically allocated `CString`.
+     * @return The AutoGUI position as a dynamically allocated `CString`.
      * Returns a "null" `CString`, which can be tested using the
      * `CStringIsNull()` function, on error.
      *
@@ -195,7 +195,7 @@ typedef struct UwapiRegular {
      * @param[in] position The position at which the move can be made.
      * @param[in] move The move.
      *
-     * @returns The formal move as a dynamically allocated `CString`
+     * @return The formal move as a dynamically allocated `CString`
      * corresponding to the given `move` at the given `position`. Returns a
      * "null" `CString`, which can be tested using the `CStringIsNull()`
      * function, on error.
@@ -221,7 +221,7 @@ typedef struct UwapiRegular {
      * @param[in] position The position at which the move can be made.
      * @param[in] move The move.
      *
-     * @returns The AutoGUI move as a dynamically allocated `CString`
+     * @return The AutoGUI move as a dynamically allocated `CString`
      * corresponding to the given `move` at the given `position`. Returns the
      * "null" `CString`, which can be tested with the `CStringIsNull()`
      * function, if `move` is a multipart move. Returns a "null" `CString` on
@@ -241,7 +241,7 @@ typedef struct UwapiRegular {
      * @param[in] position The parent position from which the moves are
      * generated.
      *
-     * @returns An array of all part-moves from `position`, whose ownership is
+     * @return An array of all part-moves from `position`, whose ownership is
      * then transferred to the caller of this function.
      */
     PartmoveArray (*GeneratePartmoves)(Position position);
@@ -252,7 +252,7 @@ typedef struct UwapiRegular {
      * @note This is typically set to the same function used by the regular
      * solver API.
      *
-     * @returns The initial position.
+     * @return The initial position.
      */
     Position (*GetInitialPosition)(void);
 
@@ -261,7 +261,7 @@ typedef struct UwapiRegular {
      *
      * @note This function is optional.
      *
-     * @returns A random position.
+     * @return A random position.
      *
      * @todo Decide if this function should only return legal positions as
      * defined by the game developer. Note that it's hard to determine whether

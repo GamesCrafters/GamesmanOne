@@ -1,4 +1,5 @@
 add_subdirectory(data_structures)
+add_subdirectory(db)
 add_subdirectory(hash)
 add_subdirectory(types)
 
