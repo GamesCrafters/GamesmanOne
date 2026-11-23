@@ -166,7 +166,7 @@ const Game kMttt = {
 typedef enum PossibleBoardPieces { kBlank, kO, kX } BlankOX;
 
 // Powers of 3 - this is the way I encode the position, as an integer.
-static int three_to_the[] = {1, 3, 9, 27, 81, 243, 729, 2187, 6561};
+static const Position three_to_the[] = {1, 3, 9, 27, 81, 243, 729, 2187, 6561};
 
 static const int kNumRowsToCheck = 8;
 static const int kRowsToCheck[8][3] = {
@@ -264,7 +264,7 @@ static Value MtttPrimitive(Position position) {
 static Position MtttDoMove(Position position, Move move) {
     BlankOX board[9] = {0};
     Unhash(position, board);
-    return position + three_to_the[move] * (int)WhoseTurn(board);
+    return position + three_to_the[move] * WhoseTurn(board);
 }
 
 static bool MtttIsLegalPosition(Position position) {
@@ -320,7 +320,7 @@ static int MtttGetCanonicalParentPositions(
     int ret = 0;
     for (int i = 0; i < 9; ++i) {
         if (board[i] == prev_turn) {
-            Position parent = position - (int)prev_turn * three_to_the[i];
+            Position parent = position - prev_turn * three_to_the[i];
             parent = MtttGetCanonicalPosition(parent);
             if (!MtttIsLegalPosition(parent)) continue;  // Illegal.
             if (PositionHashSetAdd(&dedup, parent)) {
