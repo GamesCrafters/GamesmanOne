@@ -177,33 +177,27 @@ static int ReadFromFile(TierPosition tier_position, void *buffer) {
         return kMallocFailureError;  // OOM.
     }
 
-    FILE *file = fopen(full_path, "rb");
+    FILE *file = GuardedFopen(full_path, "rb");
     GamesmanFree(full_path);
 
     if (!file) {
-        perror("fopen");
         return kFileSystemError;
     }
 
     int64_t offset = tier_position.position * (int64_t)sizeof(NaiveDbEntry);
-    if (fseek(file, offset, SEEK_SET) != 0) {
-        perror("fseek");
+    if (GuardedFseek(file, offset, SEEK_SET) != 0) {
         fclose(file);
         return kFileSystemError;
     }
 
     size_t num_entries = kBufferSize / sizeof(NaiveDbEntry);
-    if (fread(buffer, sizeof(NaiveDbEntry), num_entries, file) != num_entries &&
-        !feof(file)) {
-        perror("fread");
+    if (GuardedFread(buffer, sizeof(NaiveDbEntry), num_entries, file, true) !=
+        0) {
         fclose(file);
         return kFileSystemError;
     }
 
-    if (fclose(file) != 0) {
-        perror("fclose");
-    }
-
+    GuardedFclose(file);
     return kSuccess;
 }
 
@@ -280,19 +274,16 @@ static int NaiveDbFlushSolvingTier(void *aux) {
         return kMallocFailureError;
     }
 
-    FILE *file = fopen(full_path, "wb");
+    FILE *file = GuardedFopen(full_path, "wb");
     GamesmanFree(full_path);
 
     if (!file) {
-        perror("fopen");
         return kFileSystemError;
     }
 
     // Write records
-    int64_t n =
-        (int64_t)fwrite(records, sizeof(records[0]), current_tier_size, file);
-    if (n != current_tier_size) {
-        perror("fwrite");
+    if (GuardedFwrite(records, sizeof(records[0]), current_tier_size, file) !=
+        0) {
         fclose(file);
         return kFileSystemError;
     }
@@ -492,7 +483,7 @@ static void *PointerShift(const void *p, int64_t offset) {
 
 static NaiveDbEntry ProbeGetRecord(DbProbe *probe, Position position) {
     int64_t offset = position * (int64_t)sizeof(NaiveDbEntry) - probe->begin;
-    assert(offset >= 0);
+    assert(offset >= 0);  // LCOV_EXCL_BR_LINE
     NaiveDbEntry entry;
     memcpy(&entry, PointerShift(probe->buffer, offset), sizeof(NaiveDbEntry));
     return entry;

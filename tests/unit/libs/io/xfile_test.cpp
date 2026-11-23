@@ -9,16 +9,12 @@
  * (see root COPYING file or accompanying source file)
  */
 
-#include <errno.h>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zlib.h>
-
-#include <vector>
 
 extern "C" {
 #include "libs/io/xfile.h"
@@ -112,6 +108,133 @@ TEST(GuardedFcloseTest, ReturnsEofOnFailure) {
     EXPECT_EQ(GuardedFclose(file), EOF);
 
     GuardedRemove(filename);
+}
+
+// =============================== GuardedFseek ===============================
+
+TEST(GuardedFseekTest, MovesToRequestedOffset) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    EXPECT_EQ(GuardedFseek(file, 2, SEEK_SET), 0);
+    EXPECT_EQ(ftell(file), 2);
+
+    fclose(file);
+}
+
+TEST(GuardedFseekTest, ReturnsErrorForNegativeAbsoluteOffset) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    EXPECT_NE(GuardedFseek(file, -1, SEEK_SET), 0);
+
+    fclose(file);
+}
+
+// =============================== GuardedFread ===============================
+
+TEST(GuardedFreadTest, ReadsAllRequestedElements) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+    const int payload[] = {42, 17};
+    EXPECT_EQ(fwrite(payload, sizeof(int), 2, file), 2u);
+    rewind(file);
+
+    int buffer[2] = {};
+    EXPECT_EQ(GuardedFread(buffer, sizeof(int), 2, file, false), 0);
+    EXPECT_EQ(buffer[0], payload[0]);
+    EXPECT_EQ(buffer[1], payload[1]);
+
+    fclose(file);
+}
+
+TEST(GuardedFreadTest, AcceptsShortReadAtAllowedEof) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+    EXPECT_EQ(fputc('a', file), 'a');
+    rewind(file);
+
+    char buffer[2] = {};
+    EXPECT_EQ(GuardedFread(buffer, 1, sizeof(buffer), file, true), 0);
+    EXPECT_EQ(buffer[0], 'a');
+    EXPECT_TRUE(feof(file));
+
+    fclose(file);
+}
+
+TEST(GuardedFreadTest, ReturnsErrorAtUnexpectedEof) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    char byte;
+    EXPECT_EQ(GuardedFread(&byte, 1, 1, file, false), EOF);
+    EXPECT_TRUE(feof(file));
+
+    fclose(file);
+}
+
+TEST(GuardedFreadTest, ReturnsErrorOnWriteOnlyStream) {
+    FILE* file = fopen("/dev/null", "wb");
+    ASSERT_NE(file, nullptr);
+
+    char byte;
+    EXPECT_EQ(GuardedFread(&byte, 1, 1, file, true), EOF);
+    EXPECT_TRUE(ferror(file));
+
+    fclose(file);
+}
+
+TEST(GuardedFreadTest, AcceptsZeroLengthReads) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    char byte;
+    EXPECT_EQ(GuardedFread(&byte, 0, 1, file, false), 0);
+    EXPECT_EQ(GuardedFread(&byte, 1, 0, file, false), 0);
+    EXPECT_FALSE(feof(file));
+
+    fclose(file);
+}
+
+// =============================== GuardedFwrite ===============================
+
+TEST(GuardedFwriteTest, WritesAllRequestedElements) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    const int payload[] = {42, 17};
+    EXPECT_EQ(GuardedFwrite(payload, sizeof(int), 2, file), 0);
+    rewind(file);
+
+    int buffer[2] = {};
+    EXPECT_EQ(fread(buffer, sizeof(int), 2, file), 2u);
+    EXPECT_EQ(buffer[0], payload[0]);
+    EXPECT_EQ(buffer[1], payload[1]);
+
+    fclose(file);
+}
+
+TEST(GuardedFwriteTest, ReturnsErrorOnReadOnlyStream) {
+    FILE* file = fopen("/dev/null", "rb");
+    ASSERT_NE(file, nullptr);
+
+    const char byte = 'a';
+    EXPECT_EQ(GuardedFwrite(&byte, 1, 1, file), EOF);
+    EXPECT_TRUE(ferror(file));
+
+    fclose(file);
+}
+
+TEST(GuardedFwriteTest, AcceptsZeroLengthWrites) {
+    FILE* file = tmpfile();
+    ASSERT_NE(file, nullptr);
+
+    const char byte = 'a';
+    EXPECT_EQ(GuardedFwrite(&byte, 0, 1, file), 0);
+    EXPECT_EQ(GuardedFwrite(&byte, 1, 0, file), 0);
+    EXPECT_EQ(ftell(file), 0);
+
+    fclose(file);
 }
 
 // ================================ GuardedOpen ================================

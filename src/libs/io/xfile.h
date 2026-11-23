@@ -66,6 +66,44 @@ FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream);
 int GuardedFclose(FILE *stream);
 
 /**
+ * @brief Wrapper for `fseek`. Calls `perror` on failure.
+ *
+ * @param[in,out] stream File stream to seek in.
+ * @param[in] offset Byte offset relative to `whence`.
+ * @param[in] whence Reference position (`SEEK_SET`, `SEEK_CUR`, or `SEEK_END`).
+ *
+ * @return `0` on success, or a non-zero value on error.
+ */
+int GuardedFseek(FILE *stream, long offset, int whence);
+
+/**
+ * @brief Calls `fread` and reports errors or unexpected EOF to `stderr`.
+ *
+ * @param[out] ptr Buffer for up to `count` elements of `size` bytes each.
+ * @param[in] size Size of each element in bytes.
+ * @param[in] count Number of elements to read.
+ * @param[in,out] stream Source file stream.
+ * @param[in] eof_ok Whether to accept EOF before reading `count` elements.
+ *
+ * @return `0` on success, including allowed EOF and zero-length reads, or
+ * `EOF` on a read error or unexpected EOF.
+ */
+int GuardedFread(void *ptr, size_t size, size_t count, FILE *stream,
+                 bool eof_ok);
+
+/**
+ * @brief Calls `fwrite` and calls `perror` if the write is short.
+ *
+ * @param[in] ptr Buffer holding `count` elements of `size` bytes each.
+ * @param[in] size Size of each element in bytes.
+ * @param[in] count Number of elements to write.
+ * @param[in,out] stream Destination file stream.
+ *
+ * @return `0` on success, including zero-length writes, or `EOF` on error.
+ */
+int GuardedFwrite(const void *ptr, size_t size, size_t count, FILE *stream);
+
+/**
  * @brief Wrapper for `open`. Calls `perror` and returns `-1` on failure.
  *
  * @param[in] filename Path to the file to open.
