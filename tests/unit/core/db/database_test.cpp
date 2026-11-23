@@ -7028,6 +7028,32 @@ TEST_P(DatabaseTest, ComponentCheckpointOrdinaryRoundTrip) {
     }));
 }
 
+// A regular checkpoint can be restored after releasing a concurrent tier.
+TEST_P(DatabaseTest, ComponentCheckpointLoadAfterConcurrentTierRelease) {
+    REQUIRE_DATABASE_CHECKPOINT();
+    REQUIRE_DATABASE_MEMBER(CheckpointLoad);
+    REQUIRE_DATABASE_MEMBER(CreateConcurrentSolvingTier);
+    REQUIRE_DATABASE_MEMBER(FreeSolvingTier);
+    REQUIRE_DATABASE_RECORD_READERS();
+    ASSERT_NO_FATAL_FAILURE(RunWithSolvingMode(Db().CreateSolvingTier, [&] {
+        const std::vector<ExpectedRecord> expected = {{kWin, 7}};
+        const std::vector<unsigned char> saved_status = {42};
+        ASSERT_NO_FATAL_FAILURE(
+            SaveCheckpoint(kStoredTier, expected, saved_status));
+
+        ASSERT_NO_FATAL_FAILURE(CreateAndPopulate(
+            kMissingTier, {{kLose, 3}}, Db().CreateConcurrentSolvingTier));
+        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+
+        std::vector<unsigned char> restored_status(saved_status.size(), 0);
+        ASSERT_NO_FATAL_FAILURE(
+            LoadCheckpoint(kStoredTier, 1, restored_status));
+        EXPECT_EQ(restored_status, saved_status);
+        ASSERT_NO_FATAL_FAILURE(AssertRecords(expected));
+        ASSERT_NO_FATAL_FAILURE(ReleaseSolvingTier());
+    }));
+}
+
 // Unsaved changes to records and the caller's status buffer cannot alter A.
 TEST_P(DatabaseTest, ComponentCheckpointRestoresSavedSnapshot) {
     REQUIRE_DATABASE_CHECKPOINT();

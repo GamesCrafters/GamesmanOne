@@ -1049,6 +1049,7 @@ static int ArrayDbCheckpointLoad(Tier tier, int64_t size, void *status,
         return kMallocFailureError;
     }
     current_game.tier = tier;
+    solving.is_concurrent = false;
 
     return kSuccess;
 }
