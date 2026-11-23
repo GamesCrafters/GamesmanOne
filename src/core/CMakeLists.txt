@@ -2,9 +2,13 @@
 add_library(gamesman_memory STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/concurrency.h
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/gamesman_memory.c)
 target_link_libraries(gamesman_memory PRIVATE common_flags)
 target_link_libraries(gamesman_memory PRIVATE lzma_wrapper)
+if(GAMESMAN_ENABLE_TESTING)
+  target_compile_definitions(gamesman_memory PRIVATE GAMESMAN_TEST_ALLOCATION_LIMIT)
+endif()
 if(OpenMP_FOUND) # OpenMP (optional)
   target_link_libraries(gamesman_memory PRIVATE OpenMP::OpenMP_C)
 endif()

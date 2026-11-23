@@ -31,6 +31,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifdef GAMESMAN_TEST_ALLOCATION_LIMIT
+#include <stdatomic.h>
+#endif
+
 #include "config.h"
 
 #ifdef _OPENMP
@@ -39,6 +43,7 @@
 #endif  // _OPENMP
 
 #include "core/concurrency.h"
+#include "core/gamesman_memory_internal.h"
 #include "core/types/gamesman_status.h"
 
 ///////////////
@@ -282,7 +287,43 @@ void GamesmanAllocatorDeallocate(GamesmanAllocator *allocator, void *ptr) {
 // MEMORY ALLOCATION API //
 ///////////////////////////
 
+#ifdef GAMESMAN_TEST_ALLOCATION_LIMIT
+// Database tests enable the limit only around a single call in an isolated
+// child. Allocation requests from any worker thread use the same limit.
+static atomic_size_t test_allocation_limit = SIZE_MAX;
+static atomic_bool test_allocation_rejected;
+
+void GamesmanSetAllocationLimitForTesting(size_t max_bytes) {
+    atomic_store_explicit(&test_allocation_limit, max_bytes,
+                          memory_order_relaxed);
+}
+
+bool GamesmanResetAllocationLimitForTesting(void) {
+    atomic_store_explicit(&test_allocation_limit, SIZE_MAX,
+                          memory_order_relaxed);
+    return atomic_exchange_explicit(&test_allocation_rejected, false,
+                                    memory_order_relaxed);
+}
+
+static bool TestAllocationExceedsLimit(size_t count, size_t size) {
+    const size_t limit =
+        atomic_load_explicit(&test_allocation_limit, memory_order_relaxed);
+    if (limit == SIZE_MAX || count == 0 || size <= limit / count) {
+        return false;
+    }
+
+    atomic_store_explicit(&test_allocation_rejected, true,
+                          memory_order_relaxed);
+    return true;
+}
+#endif  // GAMESMAN_TEST_ALLOCATION_LIMIT
+
 void *GamesmanMalloc(size_t size) {
+#ifdef GAMESMAN_TEST_ALLOCATION_LIMIT
+    if (TestAllocationExceedsLimit(1, size)) {
+        return NULL;
+    }
+#endif
 #ifdef _OPENMP
     // Check for alignment padding overflow
     if (size > SIZE_MAX - (GM_CACHE_LINE_SIZE - 1)) {
@@ -301,6 +342,11 @@ void *GamesmanMalloc(size_t size) {
 }
 
 void *GamesmanCallocWhole(size_t nmemb, size_t size) {
+#ifdef GAMESMAN_TEST_ALLOCATION_LIMIT
+    if (TestAllocationExceedsLimit(nmemb, size)) {
+        return NULL;
+    }
+#endif
 #ifdef _OPENMP
     // Check for multiplication overflow
     if (nmemb != 0 && size > SIZE_MAX / nmemb) {

@@ -102,13 +102,12 @@ to initialize an active probe. Cleanup respects the stop-after-error contract
 and the requirement to destroy probes before finalization.
 
 The three creation failure cases request 2^28 positions in isolated children.
-The normal and TSan builds use a temporary 128 MiB soft address-space limit
-(`RLIMIT_AS`). Each child initializes the database before lowering its limit
-and restores the limit before checking the result and finalizing. The ASan
-build sets a 128 MiB per-allocation maximum in the child so ASan can still
-map memory for its own bookkeeping. The children configure the sanitizer
-allocator to return null on failure. The large request fails on the registered
-implementations independently of host memory pressure or overcommit settings.
+The test build applies a 128 MiB per-allocation limit to `GamesmanMalloc` and
+`GamesmanCallocWhole` during the database call. Each child initializes the
+database before enabling the limit and resets it before checking the result and
+finalizing. The test checks that the allocator rejected a request and that the
+database returned `kMallocFailureError`. The same mechanism works regardless of
+the host's address-space limits or the sanitizer's allocator settings.
 
 The checkpoint and archive load allocation failure cases save a tier of
 2^21 explicitly written records in one child. A second child opens the same

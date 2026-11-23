@@ -32,6 +32,8 @@
 #include <thread>
 #include <vector>
 
+#include "core/gamesman_memory_internal.h"
+
 extern "C" {
 #include "core/constants.h"
 #include "core/db/arraydb/arraydb.h"
@@ -39,14 +41,6 @@ extern "C" {
 #include "core/types/database/database.h"
 #include "core/types/gamesman_status.h"
 }
-
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define DATABASE_TEST_HAS_ASAN
-#endif
-#elif defined(__SANITIZE_ADDRESS__)
-#define DATABASE_TEST_HAS_ASAN
-#endif
 
 namespace {
 
@@ -57,7 +51,8 @@ constexpr Tier kMissingTier = 29;
 constexpr int kSegmentBufferBudget = 16;
 constexpr int kSegmentSize = 17;
 constexpr int64_t kImpracticalTierSize = int64_t{1} << 28;
-constexpr rlim_t kAllocationLimitMiB = 128;
+constexpr size_t kCreateAllocationLimit = size_t{128} << 20;
+constexpr size_t kLoadAllocationLimit = size_t{1} << 20;
 constexpr Value kLegalValues[] = {kUndecided, kLose, kDraw, kTie, kWin};
 constexpr int kRepresentativeRemotenesses[] = {0, 1, kRemotenessMax / 2,
                                                kRemotenessMax};
@@ -407,47 +402,13 @@ class DatabaseTest : public ::testing::TestWithParam<DatabaseImplementation> {
         }
     }
 
-    void RunAllocationFailureCase(
-        rlim_t limit_mib, const std::function<void()> &body,
-        const char *skip_reason = "Runtime capability missing.") {
-        // Sanitizers read allocator options when the child re-executes.
-#ifdef DATABASE_TEST_HAS_ASAN
-        constexpr char kOptionsVariable[] = "ASAN_OPTIONS";
-        const std::string limit_option =
-            ":max_allocation_size_mb=" + std::to_string(limit_mib);
-#else
-        (void)limit_mib;
-        constexpr char kOptionsVariable[] = "TSAN_OPTIONS";
-        const std::string limit_option;
-#endif
-        const char *previous = std::getenv(kOptionsVariable);
-        const ScopedEnvironmentVariable options(
-            kOptionsVariable, std::string(previous ? previous : "") +
-                                  ":allocator_may_return_null=1" +
-                                  limit_option);
-        ASSERT_EQ(options.Error(), 0) << std::strerror(errno);
-        ASSERT_NO_FATAL_FAILURE(RunIsolated(body, skip_reason));
-    }
-
-    void ExpectAllocationFailure(rlim_t limit_mib,
+    void ExpectAllocationFailure(size_t max_bytes,
                                  const std::function<int()> &allocate) {
-#ifdef DATABASE_TEST_HAS_ASAN
-        (void)limit_mib;
-        // ASan's per-allocation limit leaves room for its own bookkeeping.
+        GamesmanSetAllocationLimitForTesting(max_bytes);
         const int result = allocate();
-#else
-        // Cap virtual address space in the isolated child so overcommit
-        // cannot turn the large request into a real allocation.
-        struct rlimit original;
-        ASSERT_EQ(getrlimit(RLIMIT_AS, &original), 0) << std::strerror(errno);
-        struct rlimit limited = original;
-        limited.rlim_cur = std::min(original.rlim_cur, limit_mib << 20);
-        ASSERT_EQ(setrlimit(RLIMIT_AS, &limited), 0) << std::strerror(errno);
-        const int result = allocate();
-        // Restore the limit before assertions, sanitizer checks, and cleanup.
-        ASSERT_EQ(setrlimit(RLIMIT_AS, &original), 0) << std::strerror(errno);
-#endif
+        const bool rejected = GamesmanResetAllocationLimitForTesting();
         StopAfterError();
+        EXPECT_TRUE(rejected) << "No allocation exceeded the test limit.";
         EXPECT_EQ(result, kMallocFailureError);
     }
 
@@ -1703,9 +1664,9 @@ TEST_P(DatabaseTest, UnitCreateConcurrentSolvingTierMinimumSize) {
 // A valid but impractically large ordinary tier exhausts the allocation budget.
 TEST_P(DatabaseTest, UnitCreateSolvingTierAllocationFailure) {
     REQUIRE_DATABASE_MEMBER(CreateSolvingTier);
-    ASSERT_NO_FATAL_FAILURE(RunAllocationFailureCase(kAllocationLimitMiB, [&] {
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
         ASSERT_NO_FATAL_FAILURE(Initialize());
-        ExpectAllocationFailure(kAllocationLimitMiB, [&] {
+        ExpectAllocationFailure(kCreateAllocationLimit, [&] {
             return Db().CreateSolvingTier(kStoredTier, kImpracticalTierSize);
         });
     }));
@@ -1714,9 +1675,9 @@ TEST_P(DatabaseTest, UnitCreateSolvingTierAllocationFailure) {
 // Concurrent creation reports allocation failure under the same budget.
 TEST_P(DatabaseTest, UnitCreateConcurrentSolvingTierAllocationFailure) {
     REQUIRE_DATABASE_MEMBER(CreateConcurrentSolvingTier);
-    ASSERT_NO_FATAL_FAILURE(RunAllocationFailureCase(kAllocationLimitMiB, [&] {
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
         ASSERT_NO_FATAL_FAILURE(Initialize());
-        ExpectAllocationFailure(kAllocationLimitMiB, [&] {
+        ExpectAllocationFailure(kCreateAllocationLimit, [&] {
             return Db().CreateConcurrentSolvingTier(kStoredTier,
                                                     kImpracticalTierSize);
         });
@@ -2654,7 +2615,6 @@ TEST_P(DatabaseTest, UnitCheckpointLoadAllocationFailure) {
     REQUIRE_DATABASE_CHECKPOINT();
     REQUIRE_DATABASE_MEMBER(CheckpointLoad);
     constexpr int64_t kSize = int64_t{1} << 21;
-    constexpr rlim_t kLimitMiB = 1;
     const auto path = SandboxSharedByChildren();
     const std::array<unsigned char, 3> status = {0x00, 0xff, 0x31};
     ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
@@ -2666,13 +2626,13 @@ TEST_P(DatabaseTest, UnitCheckpointLoadAllocationFailure) {
         ASSERT_EQ(Db().CheckpointSave(status.data(), status.size()), kSuccess);
         Finalize();
     }));
-    ASSERT_NO_FATAL_FAILURE(RunAllocationFailureCase(kLimitMiB, [&] {
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
         ASSERT_NO_FATAL_FAILURE(InitializeAt(path));
         if (Db().CheckpointExists != nullptr) {
             ASSERT_TRUE(Db().CheckpointExists(kStoredTier));
         }
         auto restored = status;
-        ExpectAllocationFailure(kLimitMiB, [&] {
+        ExpectAllocationFailure(kLoadAllocationLimit, [&] {
             return Db().CheckpointLoad(kStoredTier, kSize, restored.data(),
                                        restored.size());
         });
@@ -2912,7 +2872,6 @@ TEST_P(DatabaseTest, UnitLoadTierAllocationFailure) {
     REQUIRE_DATABASE_ARCHIVE();
     REQUIRE_DATABASE_MEMBER(LoadTier);
     constexpr int64_t kSize = int64_t{1} << 21;
-    constexpr rlim_t kLimitMiB = 1;
     const auto path = SandboxSharedByChildren();
     ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
         ASSERT_NO_FATAL_FAILURE(InitializeAt(path));
@@ -2923,13 +2882,14 @@ TEST_P(DatabaseTest, UnitLoadTierAllocationFailure) {
         ASSERT_EQ(Db().FlushSolvingTier(nullptr), kSuccess);
         Finalize();
     }));
-    ASSERT_NO_FATAL_FAILURE(RunAllocationFailureCase(kLimitMiB, [&] {
+    ASSERT_NO_FATAL_FAILURE(RunIsolated([&] {
         ASSERT_NO_FATAL_FAILURE(InitializeAt(path));
         if (Db().TierStatus != nullptr) {
             ASSERT_EQ(Db().TierStatus(kStoredTier), kDbTierStatusSolved);
         }
-        ExpectAllocationFailure(
-            kLimitMiB, [&] { return Db().LoadTier(kStoredTier, kSize); });
+        ExpectAllocationFailure(kLoadAllocationLimit, [&] {
+            return Db().LoadTier(kStoredTier, kSize);
+        });
     }));
 }
 
@@ -3990,8 +3950,7 @@ TEST_P(DatabaseTest, UnitSegmentationCreateBuffersMinimumSize) {
 TEST_P(DatabaseTest, UnitSegmentationCreateBuffersAllocationFailure) {
     REQUIRE_DATABASE_MEMBER(segmentation.MaxNumBuffers);
     REQUIRE_DATABASE_MEMBER(segmentation.CreateBuffers);
-    ASSERT_NO_FATAL_FAILURE(RunAllocationFailureCase(
-        kAllocationLimitMiB,
+    ASSERT_NO_FATAL_FAILURE(RunIsolated(
         [&] {
             ASSERT_NO_FATAL_FAILURE(Initialize());
             const int maximum = Db().segmentation.MaxNumBuffers();
@@ -3999,7 +3958,7 @@ TEST_P(DatabaseTest, UnitSegmentationCreateBuffersAllocationFailure) {
             if (maximum == 0) {
                 GTEST_SKIP() << "No positive segment-buffer capacity.";
             }
-            ExpectAllocationFailure(kAllocationLimitMiB, [&] {
+            ExpectAllocationFailure(kCreateAllocationLimit, [&] {
                 return Db().segmentation.CreateBuffers(kStoredTier, 1,
                                                        kImpracticalTierSize);
             });
