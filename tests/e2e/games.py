@@ -15,6 +15,7 @@ per-game CI fan-out. Keep the two in sync when adding/removing games.
 
 
 class Game:
+    BREAKTHROUGH = "breakthrough"
     DSHOGI = "dshogi"
     FSVP = "fsvp"
     GATES = "gates"
@@ -148,6 +149,7 @@ GAME_TESTS_POSTSUBMIT: list[tuple[str, int]] = [
 # Used to compute menu selection indices.
 GAMES: list[str] = [
     Game.MALLQUEENSCHESS,
+    Game.BREAKTHROUGH,
     Game.DSHOGI,
     Game.FSVP,
     Game.GATES,

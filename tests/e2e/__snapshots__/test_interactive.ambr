@@ -37,18 +37,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -56,7 +57,7 @@
   
   
   
-  => 1
+  => 2
   
   	----- Main (Pre-Solved) Menu for Dōbutsu shōgi (variant 0) -----
   
@@ -308,18 +309,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -327,7 +329,7 @@
   
   
   
-  => 2
+  => 3
   
   	----- Main (Pre-Solved) Menu for Fair Shares and Varied Pairs (variant 6) -----
   
@@ -487,18 +489,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -506,7 +509,7 @@
   
   
   
-  => 2
+  => 3
   
   	----- Main (Pre-Solved) Menu for Fair Shares and Varied Pairs (variant 6) -----
   
@@ -672,18 +675,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -691,7 +695,7 @@
   
   
   
-  => 3
+  => 4
   
   	----- Main (Pre-Solved) Menu for Gates (variant 0) -----
   
@@ -1444,18 +1448,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -1463,7 +1468,7 @@
   
   
   
-  => 4
+  => 5
   
   	----- Main (Pre-Solved) Menu for Gobblet Gobblers (variant 0) -----
   
@@ -1700,18 +1705,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -2319,18 +2325,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -2338,7 +2345,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -3584,18 +3591,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -3603,7 +3611,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -4849,18 +4857,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -4868,7 +4877,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -6114,18 +6123,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -6133,7 +6143,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -7379,18 +7389,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -7398,7 +7409,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -8644,18 +8655,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -8663,7 +8675,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -9909,18 +9921,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -9928,7 +9941,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -11174,18 +11187,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -11193,7 +11207,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -12398,18 +12412,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -12417,7 +12432,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -13663,18 +13678,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -13682,7 +13698,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -14928,18 +14944,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -14947,7 +14964,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -16193,18 +16210,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -16212,7 +16230,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -17026,18 +17044,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -17045,7 +17064,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -18087,18 +18106,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -18106,7 +18126,7 @@
   
   
   
-  => 6
+  => 7
   
   	----- Main (Pre-Solved) Menu for Mills (variant 234) -----
   
@@ -18830,18 +18850,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -18849,7 +18870,7 @@
   
   
   
-  => 5
+  => 6
   
   	----- Main (Pre-Solved) Menu for Kaooa (variant 0) -----
   
@@ -19350,18 +19371,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -19369,7 +19391,7 @@
   
   
   
-  => 11
+  => 12
   
   	----- Main (Pre-Solved) Menu for Tic-Tac-Toe (variant 0) -----
   
@@ -19505,18 +19527,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -19524,7 +19547,7 @@
   
   
   
-  => 10
+  => 11
   
   	----- Main (Pre-Solved) Menu for Tic-Tac-Tier (variant 0) -----
   
@@ -19660,18 +19683,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -19679,7 +19703,7 @@
   
   
   
-  => 7
+  => 8
   
   	----- Main (Pre-Solved) Menu for Neutron (variant 0) -----
   
@@ -19942,18 +19966,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -19961,7 +19986,7 @@
   
   
   
-  => 8
+  => 9
   
   	----- Main (Pre-Solved) Menu for Quixo (variant 0) -----
   
@@ -20374,18 +20399,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -20393,7 +20419,7 @@
   
   
   
-  => 8
+  => 9
   
   	----- Main (Pre-Solved) Menu for Quixo (variant 0) -----
   
@@ -20611,18 +20637,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -20630,7 +20657,7 @@
   
   
   
-  => 8
+  => 9
   
   	----- Main (Pre-Solved) Menu for Quixo (variant 0) -----
   
@@ -20807,18 +20834,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -20826,7 +20854,7 @@
   
   
   
-  => 9
+  => 10
   
   	----- Main (Pre-Solved) Menu for Teeko (variant 0) -----
   
@@ -21324,18 +21352,19 @@
   	----- List of All Games -----
   
   	0)  All Queens Chess
-  	1)  Dōbutsu shōgi
-  	2)  Fair Shares and Varied Pairs
-  	3)  Gates
-  	4)  Gobblet Gobblers
-  	5)  Kaooa
-  	6)  Mills
-  	7)  Neutron
-  	8)  Quixo
-  	9)  Teeko
-  	10) Tic-Tac-Tier
-  	11) Tic-Tac-Toe
-  	12) Winkers
+  	1)  Breakthrough
+  	2)  Dōbutsu shōgi
+  	3)  Fair Shares and Varied Pairs
+  	4)  Gates
+  	5)  Gobblet Gobblers
+  	6)  Kaooa
+  	7)  Mills
+  	8)  Neutron
+  	9)  Quixo
+  	10) Teeko
+  	11) Tic-Tac-Tier
+  	12) Tic-Tac-Toe
+  	13) Winkers
   
   	b) Go back
   
@@ -21343,7 +21372,7 @@
   
   
   
-  => 12
+  => 13
   
   	----- Main (Pre-Solved) Menu for Winkers (variant 0) -----
   
