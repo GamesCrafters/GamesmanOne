@@ -308,7 +308,7 @@ static int NaiveDbSetGameSolved(void) {
         return kMallocFailureError;
     }
 
-    FILE *f = fopen(full_path, "w");
+    FILE *f = GuardedFopenForWrite(full_path, 0);
     GamesmanFree(full_path);
     if (!f) {
         return kFileSystemError;
