@@ -1009,13 +1009,13 @@ static int GetChildTiersInternal(
 static int GetChildTiersLaskerInternal(
     MillsTier t, Tier children[static kTierSolverNumChildTiersMax]) {
     //
-    int turn = GetTurnFromLaskerTier(t);
-    if (turn >= 0) {  // Turn can be deduced
+    int forced_turn = GetTurnFromLaskerTier(t);
+    if (forced_turn >= 0) {
         // At least one of the players have no pieces on the board.
         // It must be that player's turn and they must make a placement.
-        assert(t.unpacked.on_board[turn] == 0);
-        --t.unpacked.remaining[turn];
-        t.unpacked.on_board[turn] = 1;
+        assert(t.unpacked.on_board[forced_turn] == 0);
+        --t.unpacked.remaining[forced_turn];
+        t.unpacked.on_board[forced_turn] = 1;
         children[0] = t.hash;
 
         return 1;

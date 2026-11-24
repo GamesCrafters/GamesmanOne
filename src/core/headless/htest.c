@@ -81,7 +81,7 @@ int HeadlessTest(ReadOnlyString game_name, int variant_id, long seed,
         error = TestOneVariant(game_name, variant_id, seed);
     } else {  // Test all variants
         int num_variants;
-        int error = GetNumVarinats(game_name, &num_variants);
+        error = GetNumVarinats(game_name, &num_variants);
         if (error) {
             fprintf(stderr,
                     "HeadlessTest: failed to get the total number of variants "
