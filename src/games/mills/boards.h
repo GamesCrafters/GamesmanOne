@@ -33,7 +33,7 @@
 
 // clang-format off
 
-static const char *const kFormat16 =
+static const char kFormat16[] =
     "\n"
     "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
     "          |       |       |    |       |       |\n"
@@ -45,7 +45,7 @@ static const char *const kFormat16 =
     "          |       |       |    |       |       |\n"
     "          13 ---- 14 ---- 15   %c ----- %c ----- %c\n\n";
 
-static const char *const kFormat17 =
+static const char kFormat17[] =
     "\n"
     "          0 ----- 1 ----- 2    %c ----- %c ----- %c\n"
     "          |       |       |    |       |       |\n"
@@ -57,7 +57,7 @@ static const char *const kFormat17 =
     "          |       |       |    |       |       |\n"
     "          14 ---- 15 ---- 16   %c ----- %c ----- %c\n\n";
 
-static const char *const kFormat24 =
+static const char kFormat24[] =
     "\n"
     "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        |           |           |       |           |           |\n"
@@ -73,7 +73,7 @@ static const char *const kFormat24 =
     "        |           |           |       |           |           |\n"
     "        21 -------- 22 -------- 23      %c --------- %c --------- %c\n\n";
 
-static const char *const kFormat24Plus =
+static const char kFormat24Plus[] =
     "\n"
     "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        | \\         |         / |       | \\         |         / |\n"
@@ -89,7 +89,7 @@ static const char *const kFormat24Plus =
     "        | /         |         \\ |       | /         |         \\ |\n"
     "        21 -------- 22 -------- 23      %c --------- %c --------- %c\n\n";
 
-static const char *const kFormat25 =
+static const char kFormat25[] =
     "\n"
     "        0 --------- 1 --------- 2       %c --------- %c --------- %c\n"
     "        | \\         |         / |       | \\         |         / |\n"
