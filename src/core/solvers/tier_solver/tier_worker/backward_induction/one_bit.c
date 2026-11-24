@@ -61,11 +61,11 @@ enum { kMaxPathLength = 4096 };
 // but increases task generation overhead.
 enum { kOmpLoopTaskPerThread = 8 };
 
-// Dummy variables for dependency management.
+// Storage used only by OpenMP task dependency clauses.
 static struct {
     char cpu;     // Block by a previous task with high CPU usage
     char seg[3];  // Block by one of the three ArrayDb solving segment buffers
-} dep;
+} dep __attribute__((unused));
 #endif  // _OPENMP
 
 static struct {
