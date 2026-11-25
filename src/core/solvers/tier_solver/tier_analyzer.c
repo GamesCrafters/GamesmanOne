@@ -393,9 +393,13 @@ static bool DiscoverProcessThisTierArray(Position child, int tid) {
         ConcurrentBitsetSet(this_tier_map, child, memory_order_relaxed);
 
     // Only add each unique position to the fringe once.
-    if (child_is_discovered) return true;
+    if (child_is_discovered || PositionArrayAppend(&discovered[tid].a, child)) {
+        return true;
+    }
 
-    return PositionArrayAppend(&discovered[tid].a, child);
+    // This thread has already claimed the child in this_tier_map.
+    ConcurrentBitsetSet(bs_discovered, child, memory_order_relaxed);
+    return false;
 }
 
 static void DiscoverProcessThisTierBitset(Position child) {
@@ -459,18 +463,9 @@ static void SwapFringeBitsets(void) {
  * child positions into the discovered array until an OOM occurs. Otherwise, the
  * function begins by collecting child positions into the discovered bitset, in
  * which case no OOM can occur.
- * @return \p true if \c true was passed to \p use_array and the function did
- * not encounter an OOM error (in other words, the function call successfully
- * collected all child positions of \p parent into the discovered array with no
- * error), or
- * @return \p false if OOM occurred and at least one child position has been
- * marked in the discovered bitset instead of the discovered array. There are
- * two cases where this function may return \c false :
- *
- *   1. \c false was passed to \p use_array ;
- *
- *   2. \p use_array was true but the function encountered OOM while trying to
- * push the child positions into the discovered array.
+ * @return \c true if \p use_array was true and no append failed. Returns
+ * \c false if bitset collection was requested or an append failed and the
+ * remaining children are collected in the bitset.
  *
  * Regardless of whether \c true or \c false is returned, the function is
  * guaranteed to discover all child positions of \p parent exactly once.
@@ -478,7 +473,7 @@ static void SwapFringeBitsets(void) {
 static bool Expand(Position parent, Analysis *dest, int tid, bool use_array) {
     TierPosition tp = {.tier = this_tier, .position = parent};
     // Do not generate children of primitive positions.
-    if (IsPrimitive(tp)) return true;
+    if (IsPrimitive(tp)) return use_array;
 
     TierPosition children[kTierSolverNumChildPositionsMax];
     int num_children;
@@ -493,7 +488,6 @@ static bool Expand(Position parent, Analysis *dest, int tid, bool use_array) {
             DiscoverProcessChildTier(children[i]);
         } else if (use_array) {
             use_array = DiscoverProcessThisTierArray(children[i].position, tid);
-            i -= (!use_array);  // Reprocess the i-th child if failed.
         } else {
             // Already OOM, expand to the discovered bitset
             DiscoverProcessThisTierBitset(children[i].position);

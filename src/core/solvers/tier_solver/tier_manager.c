@@ -476,9 +476,9 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
     if (!IsCanonicalTier(parent)) return;
 
     // Check if this is the largest tier.
-    int64_t total_size = api_internal->GetTierSize(parent);
-    if (total_size > max_tier_size) {
-        max_tier_size = total_size;
+    int64_t group_size = api_internal->GetTierSize(parent);
+    if (group_size > max_tier_size) {
+        max_tier_size = group_size;
         largest_tier = parent;
     }
 
@@ -495,15 +495,15 @@ static void BuildTierGraphUpdateAnalysis(Tier parent) {
                 largest_child_size = this_child_size;
             }
         }
-        total_size += largest_child_size;
+        group_size += largest_child_size;
     } else {
         for (int i = 0; i < num_canonical_children; ++i) {
-            total_size += api_internal->GetTierSize(canonical_children[i]);
+            group_size += api_internal->GetTierSize(canonical_children[i]);
         }
     }
 
-    if (total_size > max_tier_group_size) {
-        max_tier_group_size = total_size;
+    if (group_size > max_tier_group_size) {
+        max_tier_group_size = group_size;
         largest_tier_group_parent = parent;
     }
 }

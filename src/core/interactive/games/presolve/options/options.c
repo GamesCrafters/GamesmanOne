@@ -100,11 +100,11 @@ static void UpdateItems(void) {
 }
 
 static char **AllocateItems(int num_items, int item_length) {
-    char **items = (char **)SafeCalloc(num_items, sizeof(char *));
+    char **new_items = (char **)SafeCalloc(num_items, sizeof(char *));
     for (int i = 0; i < num_items; ++i) {
-        items[i] = (char *)SafeCalloc(item_length, sizeof(char));
+        new_items[i] = (char *)SafeCalloc(item_length, sizeof(char));
     }
-    return items;
+    return new_items;
 }
 
 static char **AllocateKeys(int num_items) {

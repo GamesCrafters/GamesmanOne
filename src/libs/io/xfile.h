@@ -42,6 +42,18 @@
 FILE *GuardedFopen(const char *filename, const char *modes);
 
 /**
+ * @brief Opens a file for writing, truncating it if it already exists.
+ *
+ * Newly created files have owner-only read and write permissions.
+ *
+ * @param[in] filename Path to the output file.
+ * @param[in] flags Additional `open` flags, such as `O_NOFOLLOW`, or zero.
+ *
+ * @return The output stream, or `NULL` on error after calling `perror`.
+ */
+FILE *GuardedFopenForWrite(const char *filename, int flags);
+
+/**
  * @brief Wrapper for `freopen`. Calls `perror` and returns `NULL` on failure.
  *
  * @param[in] filename Path to the file to open.

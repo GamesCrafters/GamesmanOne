@@ -308,7 +308,7 @@ static int NaiveDbSetGameSolved(void) {
         return kMallocFailureError;
     }
 
-    FILE *f = fopen(full_path, "w");
+    FILE *f = GuardedFopenForWrite(full_path, 0);
     GamesmanFree(full_path);
     if (!f) {
         return kFileSystemError;
@@ -405,10 +405,10 @@ static NaiveDbEntry GetEntryFromLoaded(Tier tier, Position position) {
         return (NaiveDbEntry){.value = kErrorValue, .remoteness = -1};
     }
 
-    NaiveDbEntry *records =
-        (NaiveDbEntry *)TierToPtrChainedHashMapIteratorValue(&it);
+    const NaiveDbEntry *tier_records =
+        TierToPtrChainedHashMapIteratorValue(&it);
 
-    return records[position];
+    return tier_records[position];
 }
 
 static Value NaiveDbGetValueFromLoaded(Tier tier, Position position) {

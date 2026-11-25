@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "libs/io/xfile.h"
+
 // ================================= Constants =================================
 
 // IO buffer size.
@@ -235,7 +237,7 @@ Lz4UtilsStatus Lz4UtilsCompressBuffersToFile(const void *const *in,
     }
 
     // Create output file or fail.
-    FILE *const f_out = fopen(ofname, "wb");
+    FILE *const f_out = GuardedFopenForWrite(ofname, 0);
     if (f_out == NULL) {
         return LZ4_UTILS_ERR_IO;
     }
@@ -356,7 +358,7 @@ Lz4UtilsStatus Lz4UtilsCompressFileToFile(const char *ifname, int level,
     }
 
     // Create output file or fail.
-    FILE *const f_out = fopen(ofname, "wb");
+    FILE *const f_out = GuardedFopenForWrite(ofname, 0);
     if (f_out == NULL) {
         fclose(f_in);
         return LZ4_UTILS_ERR_IO;
@@ -405,7 +407,7 @@ Lz4UtilsOutStream *Lz4UtilsOutStreamCreate(const char *ofname, int level) {
     bool success = true;
 
     // Create/open output file
-    ret->f_out = fopen(ofname, "wb");
+    ret->f_out = GuardedFopenForWrite(ofname, 0);
     if (ret->f_out == NULL) {
         fprintf(stderr,
                 "Lz4UtilsOutStreamCreate: failed to open output file %s\n",

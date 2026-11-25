@@ -442,27 +442,27 @@ static Position MkaooaDoMove(Position position, Move move) {
 
     int from, to;
     UnhashMove(move, &from, &to);
-    int oppTurn = GenericHashGetTurn(position) == 1 ? C : V;
-    // The code above can be left unchanged
-    if (oppTurn == C) {
+    const bool crow_turn = GenericHashGetTurn(position) == 1;
+    const int next_turn = crow_turn ? 2 : 1;
+    if (crow_turn) {
         if (from == to)  // dropping crow
         {
             // condition to check if TO is blank not needed --> checked in
             // GenMoves
             board[to] = C;
             board[10] = (char)(board[10] + 1);
-            return GenericHashHash(board, oppTurn == C ? 2 : 1);
+            return GenericHashHash(board, next_turn);
         } else {  // moving crow
             board[to] = C;
             board[from] = BLANK;
-            return GenericHashHash(board, oppTurn == C ? 2 : 1);
+            return GenericHashHash(board, next_turn);
         }
     } else {
         // V's turn
         if (from == to) {
             board[to] = V;
 
-            return GenericHashHash(board, oppTurn == C ? 2 : 1);
+            return GenericHashHash(board, next_turn);
         }
         // same to direct move & jump move
         board[to] = V;
@@ -470,7 +470,7 @@ static Position MkaooaDoMove(Position position, Move move) {
         // check if is direct move
         int min_pos = from < to ? from : to;
         if (min_pos > 4) {
-            return GenericHashHash(board, oppTurn == C ? 2 : 1);
+            return GenericHashHash(board, next_turn);
         } else {
             int adjacent_positions[2];
             adjacent_positions[0] =
@@ -478,7 +478,7 @@ static Position MkaooaDoMove(Position position, Move move) {
             adjacent_positions[1] =
                 from + 4 + check_lower_bound(from + 5, 5) * 5;
             if (is_in_adjacent_positions(adjacent_positions, 2, to)) {
-                return GenericHashHash(board, oppTurn == C ? 2 : 1);
+                return GenericHashHash(board, next_turn);
             }
             if (!is_in_adjacent_positions(adjacent_positions, 2, to)) {
                 // jump move
@@ -508,7 +508,7 @@ static Position MkaooaDoMove(Position position, Move move) {
             }
         }
 
-        return GenericHashHash(board, oppTurn == C ? 2 : 1);
+        return GenericHashHash(board, next_turn);
     }
 }
 

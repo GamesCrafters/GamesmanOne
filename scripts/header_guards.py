@@ -78,6 +78,9 @@ def process_file(filepath, project_name, mode):
     mode can be: 'fix', 'dry-run', or 'check'.
     Returns True if the file is compliant (or was fixed successfully), False if it fails check mode.
     """
+    if mode not in ("check", "dry-run", "fix"):
+        raise ValueError(f"Unknown header guard mode: {mode}")
+
     expected_guard = generate_guard(filepath, project_name)
 
     try:
@@ -150,12 +153,11 @@ def process_file(filepath, project_name, mode):
         sys.stdout.writelines(diff)
         return True
 
-    elif mode == "fix":
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-        action = "Fixed malformed" if has_structure else "Added missing"
-        print(f"[{action}] {filepath} -> {expected_guard}")
-        return True
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    action = "Fixed malformed" if has_structure else "Added missing"
+    print(f"[{action}] {filepath} -> {expected_guard}")
+    return True
 
 
 def main():

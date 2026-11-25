@@ -93,6 +93,7 @@ jobs:
           ccache -s
 
       - name: Perform CodeQL Analysis
+        id: analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
@@ -105,11 +106,12 @@ jobs:
         with:
           patterns: |
             -build/**
-          input: sarif-results/${{ matrix.language }}.sarif
-          output: sarif-results/${{ matrix.language }}.sarif
+          # CodeQL names the C/C++ report cpp.sarif.
+          input: ${{ steps.analyze.outputs.sarif-output }}/cpp.sarif
+          output: ${{ steps.analyze.outputs.sarif-output }}/cpp.sarif
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: sarif-results/${{ matrix.language }}.sarif
+          sarif_file: ${{ steps.analyze.outputs.sarif-output }}
           category: "/language:${{ matrix.language }}"

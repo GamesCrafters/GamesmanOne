@@ -45,6 +45,23 @@ FILE *GuardedFopen(const char *filename, const char *modes) {
     return f;
 }
 
+FILE *GuardedFopenForWrite(const char *filename, int flags) {
+    int fd =
+        open(filename, O_WRONLY | O_CREAT | O_TRUNC | flags, S_IRUSR | S_IWUSR);
+    if (fd < 0) {
+        perror("open");
+        return NULL;
+    }
+
+    FILE *file = fdopen(fd, "wb");
+    if (file == NULL) {
+        perror("fdopen");
+        GuardedClose(fd);
+    }
+
+    return file;
+}
+
 FILE *GuardedFreopen(const char *filename, const char *modes, FILE *stream) {
     FILE *ret = freopen(filename, modes, stream);
     if (ret == NULL) {

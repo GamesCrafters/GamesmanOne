@@ -294,7 +294,7 @@ static int MallqueenschessGenerateMoves(
             }
 
             // Right-Up
-            if (originRow > 0 && originCol < sideLength) {
+            if (originRow > 0 && originCol < sideLength - 1) {
                 int row = originRow - 1;
                 int col = originCol + 1;
 
@@ -311,7 +311,7 @@ static int MallqueenschessGenerateMoves(
             }
 
             // Right-Down
-            if (originRow < sideLength && originCol < sideLength) {
+            if (originRow < sideLength - 1 && originCol < sideLength - 1) {
                 int row = originRow + 1;
                 int col = originCol + 1;
 

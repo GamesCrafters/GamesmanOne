@@ -28,8 +28,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+
+#include "libs/io/xfile.h"
 
 // ========================= Common Helper Functions ==========================
 
@@ -199,7 +200,7 @@ XzraStatus XzraCompressFile(const char *ofname, const char *ifname,
         fprintf(stderr, "XzraCompressFile: failed to open input file\n");
         return XZRA_ERR_IN_FILE;
     }
-    FILE *outfile = fopen(ofname, "wb");
+    FILE *outfile = GuardedFopenForWrite(ofname, 0);
     if (outfile == NULL) {
         fprintf(stderr, "XzraCompressFile: failed to open output file\n");
         fclose(infile);
@@ -266,7 +267,7 @@ static bool CompressMemHelper(lzma_stream *strm, const uint8_t *in,
 XzraStatus XzraCompressMem(const char *ofname, const uint8_t *in,
                            size_t in_size, const XzraCodecOptions *options,
                            uint64_t *out_size) {
-    FILE *outfile = fopen(ofname, "wb");
+    FILE *outfile = GuardedFopenForWrite(ofname, 0);
     if (outfile == NULL) {
         fprintf(stderr, "XzraCompressMem: failed to open output file %s\n",
                 ofname);
@@ -309,7 +310,7 @@ XzraOutStream *XzraOutStreamCreate(const char *ofname,
     XzraOutStream *ret = (XzraOutStream *)malloc(sizeof(XzraOutStream));
     if (ret == NULL) return NULL;
 
-    ret->outfile = fopen(ofname, "wb");
+    ret->outfile = GuardedFopenForWrite(ofname, 0);
     if (ret->outfile == NULL) {
         fprintf(stderr, "XzraOutStreamCreate: failed to open output file %s\n",
                 ofname);
